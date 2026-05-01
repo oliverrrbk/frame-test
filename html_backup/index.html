@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Overslagsberegner</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    
+    <!-- Topnav / SaaS Header -->
+    <nav class="saas-nav">
+        <div class="nav-container">
+            <div class="logo">Overslagsportalen</div>
+            <div class="nav-profile">
+                <span class="nav-badge">Powered by William Tømrer</span>
+                <img src="images/william.png" alt="William" class="profile-pic" onerror="this.src='https://ui-avatars.com/api/?name=William+T&background=0D8ABC&color=fff'">
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-container">
+        <!-- Wizard Container -->
+        <main class="wizard-container" id="wizard">
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 25%;"></div>
+            </div>
+
+            <!-- Step 1: Category -->
+            <section class="wizard-step active" id="step-1">
+                <div class="step-header">
+                    <h2>Hvad omfatter byggeprojektet?</h2>
+                    <p>Vælg hovedkategorien for din opgave.</p>
+                </div>
+                <!-- 5 Main Categories as requested -->
+                <div class="card-grid">
+                    <div class="card" data-category="windows">
+                        <img src="https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=400&q=80" alt="Vinduer" class="card-image">
+                        <div class="card-content">
+                            <h3>Vinduer</h3>
+                            <p>Udskiftning eller nye</p>
+                        </div>
+                    </div>
+                    <div class="card" data-category="doors">
+                        <img src="https://images.unsplash.com/photo-1510001099195-2acac8ee09bb?w=400&q=80" alt="Døre" class="card-image">
+                        <div class="card-content">
+                            <h3>Døre</h3>
+                            <p>Yderdøre, terrassedøre</p>
+                        </div>
+                    </div>
+                    <div class="card" data-category="floor">
+                        <img src="images/floor.png" alt="Gulv" class="card-image">
+                        <div class="card-content">
+                            <h3>Nyt Gulv</h3>
+                            <p>Træ, laminat, parket</p>
+                        </div>
+                    </div>
+                    <div class="card" data-category="terrace">
+                        <img src="images/terrace.png" alt="Terrasse" class="card-image">
+                        <div class="card-content">
+                            <h3>Træterrasse</h3>
+                            <p>Lille, stor, overdækket</p>
+                        </div>
+                    </div>
+                    <div class="card" data-category="roof">
+                        <img src="https://images.unsplash.com/photo-1590214878235-93ca1c27ecbc?w=400&q=80" alt="Tag" class="card-image">
+                        <div class="card-content">
+                            <h3>Tagprojekt</h3>
+                            <p>Nyt tag eller renovering</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 2: Advanced Visual Details -->
+            <section class="wizard-step" id="step-2">
+                <div class="step-header">
+                    <h2 id="step2-title">Byg dit projekt</h2>
+                    <p>Vælg materialetype og mængde, så vi kan beregne prisen.</p>
+                </div>
+                
+                <div id="dynamic-fields" class="form-grid">
+                    <!-- Javascript injecter de visuelle materialekort og inputfelter her -->
+                </div>
+
+                <div class="actions">
+                    <button class="btn-secondary" onclick="prevStep()">Tilbage</button>
+                    <button class="btn-primary" onclick="nextStep()" id="btn-next-2">Fortsæt</button>
+                </div>
+            </section>
+
+            <!-- Step 3: Photos and Details -->
+            <section class="wizard-step" id="step-3">
+                <div class="step-header">
+                    <h2>Beskriv de særlige forhold</h2>
+                    <p>Har du nogle specifikke krav, udfordringer eller drømme? Skriv dem her og vedhæft et par billeder.</p>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 30px;">
+                    <label>Eksakt situation og specielle ønsker (Valgfrit men godt)</label>
+                    <textarea id="special-notes" rows="4" placeholder="F.eks. Hej William. Der er ret skæve lister i stuen, og jeg drømmer om at gulvet skal lægges i forlængelse af køkkenet uden overgange..." style="width:100%; border-radius:8px; padding:16px; border:1px solid var(--border); font-family:inherit; resize:vertical;"></textarea>
+                </div>
+
+                <div class="upload-area">
+                    <div class="upload-icon">📸</div>
+                    <h3>Klik for at uploade billeder af området</h3>
+                    <p class="upload-hint">Vis os gerne hvordan det ser ud i dag!</p>
+                </div>
+                <div id="photo-preview" class="photo-preview-container"></div>
+
+                <div class="actions">
+                    <button class="btn-secondary" onclick="prevStep()">Tilbage</button>
+                    <button class="btn-primary" onclick="nextStep()">Gå til beregning</button>
+                </div>
+            </section>
+
+            <!-- Step 4: Contact -->
+            <section class="wizard-step" id="step-4">
+                <div class="step-header">
+                    <h2>Kontaktoplysninger</h2>
+                    <p>Hvem skal vi sende beregningen til?</p>
+                </div>
+                
+                <div class="form-grid dual">
+                    <div class="form-group">
+                        <label>Fornavn</label>
+                        <input type="text" placeholder="Indtast fornavn">
+                    </div>
+                    <div class="form-group">
+                        <label>Efternavn</label>
+                        <input type="text" placeholder="Indtast efternavn">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>E-mail (Forudsat at modtage overslag)</label>
+                    <input type="email" id="email" placeholder="mail@example.com" oninput="checkEmail(this.value)">
+                </div>
+                
+                <div class="actions">
+                    <button class="btn-secondary" onclick="prevStep()">Tilbage</button>
+                    <button class="btn-primary" onclick="calculateEstimate()" id="btn-calculate" disabled>Vis Mit Overslag</button>
+                </div>
+            </section>
+
+            <!-- Result Screen -->
+            <section class="wizard-step" id="step-result">
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3>Vejledende Prisramme</h3>
+                        <span class="badge">SaaS Auto-Estimat</span>
+                    </div>
+                    
+                    <div class="estimate-value-box">
+                        <h1 id="estimate-price">-- kr.</h1>
+                        <p class="tax-info">Prisen er inkl. moms, arbejdstid, valgte maskiner/materialer samt standard kørsel.</p>
+                    </div>
+
+                    <div class="estimate-breakdown">
+                        <h4>Faktorer der påvirker rammen:</h4>
+                        <ul id="breakdown-list">
+                            <!-- Injected by JS -->
+                        </ul>
+                    </div>
+
+                    <div class="disclaimer-alert">
+                        ⚠️ Afvigelser kan forekomme. Billeder og noter sendes til William Tømrer for en eksakt gennemgang før et endeligt, bindende tilbud kan gives.
+                    </div>
+                </div>
+
+                <div class="result-actions">
+                    <button class="btn-primary full-width" onclick="requestFormalQuote()">Ja tak - Anmod om eksakt tilbud</button>
+                    <button class="btn-secondary full-width" onclick="resetWizard()">Nej tak - Start forfra</button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

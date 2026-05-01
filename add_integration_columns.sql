@@ -1,0 +1,4 @@
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS ordrestyring_case_id TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS apacta_case_id TEXT;
+ALTER TABLE carpenters ADD COLUMN IF NOT EXISTS minuba_api_key TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS minuba_case_id TEXT;
