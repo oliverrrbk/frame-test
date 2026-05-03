@@ -38,7 +38,7 @@ const Login = ({ setSession }) => {
             <div className="login-card">
                 <div className="login-header">
                     <div className="login-brand">
-                        <Wrench size={32} color="#64748b" style={{ opacity: 0.7 }} />
+                        <Wrench size={32} color="#6b7280" style={{ opacity: 0.7 }} />
                     </div>
                     <h2>Bison Frame</h2>
                     <p className="text-muted">Log ind på dit system</p>
@@ -100,13 +100,13 @@ const Login = ({ setSession }) => {
                     </button>
                     
                     <div style={{ textAlign: 'center', margin: '24px 0 16px' }}>
-                        <Link to="/register" style={{ color: '#64748b', textDecoration: 'none', fontSize: '14px', fontWeight: '500', display: 'inline-block', padding: '5px', transition: 'color 0.2s' }} onMouseOver={(e) => e.target.style.color = '#334155'} onMouseOut={(e) => e.target.style.color = '#64748b'}>
+                        <Link to="/register" style={{ color: '#6b7280', textDecoration: 'none', fontSize: '14px', fontWeight: '500', display: 'inline-block', padding: '5px', transition: 'color 0.2s' }} onMouseOver={(e) => e.target.style.color = '#374151'} onMouseOut={(e) => e.target.style.color = '#6b7280'}>
                             Ny her? Opret dit tømrer-system her
                         </Link>
                     </div>
                     
-                    <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '12px', color: '#94a3b8' }}>
-                        Ved at logge ind accepterer du vores <a href="/Bison_Frame_Vilkaar.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'underline' }}>Vilkår og Betingelser</a> samt <a href="/Bison_Frame_Databehandleraftale.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'underline' }}>Databehandleraftale (DPA)</a>.
+                    <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '12px', color: '#9ca3af' }}>
+                        Ved at logge ind accepterer du vores <a href="/Bison_Frame_Vilkaar.html" target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'underline' }}>Vilkår og Betingelser</a> samt <a href="/Bison_Frame_Databehandleraftale.html" target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'underline' }}>Databehandleraftale (DPA)</a>.
                     </div>
 
                 </form>

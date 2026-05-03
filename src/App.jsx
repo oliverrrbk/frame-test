@@ -79,6 +79,7 @@ const PublicWizardPage = () => {
       }
     };
     // For at fange hvis dev/brugeren glemmer slug'en på bare / forsiden:
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if(slug) { fetchCarpenter(); } else { setIsError(true); }
   }, [slug]);
 
@@ -128,7 +129,7 @@ function App() {
   const [isInitializing, setIsInitializing] = useState(true);
 
   // Global Google Maps script loader
-  const { isLoaded, loadError } = useLoadScript({
+  const { isLoaded: _isLoaded, loadError } = useLoadScript({
       googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
       id: 'google-map-script',
       libraries: MAP_LIBRARIES

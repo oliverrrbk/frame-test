@@ -75,92 +75,119 @@ const SuperAdminView = () => {
     };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6">
-            <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-8 text-white shadow-xl flex items-center gap-6">
-                <div className="bg-white/10 p-4 rounded-full">
-                    <ShieldAlert size={40} className="text-blue-400" />
-                </div>
-                <div>
-                    <h2 className="text-2xl font-bold mb-2">Bizon Super Admin</h2>
-                    <p className="text-slate-300">Administrer alle tilsluttede tømrervirksomheder og deres medarbejdere.</p>
+        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <div className="settings-card" style={{ background: 'linear-gradient(135deg, var(--surface-bg) 0%, rgba(15, 23, 42, 0.02) 100%)', borderBottom: '1px solid var(--border-light)' }}>
+                <div className="card-body" style={{ padding: '32px', display: 'flex', alignItems: 'center', gap: '24px' }}>
+                    <div className="icon-wrapper" style={{ width: '64px', height: '64px', background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
+                        <ShieldAlert size={32} />
+                    </div>
+                    <div>
+                        <h2 style={{ fontSize: '1.75rem', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Bizon Super Admin</h2>
+                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '1rem' }}>Administrer alle tilsluttede tømrervirksomheder og deres medarbejdere.</p>
+                    </div>
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                        <Building2 size={20} className="text-blue-500" />
-                        Tilmeldte Virksomheder ({companies.length})
-                    </h3>
+            <div className="settings-card">
+                <div className="card-header">
+                    <div className="icon-wrapper">
+                        <Building2 size={24} />
+                    </div>
+                    <h3>Tilmeldte Virksomheder ({companies.length})</h3>
                 </div>
                 
                 {isLoading ? (
-                    <div className="p-12 text-center text-slate-500">Henter virksomheder...</div>
+                    <div className="card-body" style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>Henter virksomheder...</div>
                 ) : (
-                    <div className="divide-y divide-slate-100">
-                        {companies.map(company => (
-                            <div key={company.id} className="p-6 hover:bg-slate-50 transition-colors">
-                                <div className="flex flex-col md:flex-row justify-between gap-4">
-                                    <div>
-                                        <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                            {company.company_name || 'Uden navn'}
-                                            {company.tier === 'enterprise' && (
-                                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Enterprise</span>
-                                            )}
-                                        </h4>
-                                        <p className="text-sm text-slate-500 mb-1">
-                                            Ejer: {company.owner_name} • E-mail: {company.email}
-                                        </p>
-                                        <p className="text-xs text-slate-400">
-                                            Oprettet: {new Date(company.created_at).toLocaleDateString('da-DK')}
-                                        </p>
+                    <div className="card-body" style={{ padding: 0 }}>
+                        <div className="divide-y" style={{ borderColor: 'var(--border-light)' }}>
+                            {companies.map(company => (
+                                <div key={company.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" style={{ padding: '32px' }}>
+                                    <div className="flex flex-col md:flex-row justify-between gap-6 items-start md:items-center">
+                                        <div>
+                                            <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 8px 0' }}>
+                                                {company.company_name || 'Uden navn'}
+                                                {company.tier === 'enterprise' && (
+                                                    <span style={{ fontSize: '0.75rem', background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', padding: '4px 10px', borderRadius: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Enterprise</span>
+                                                )}
+                                            </h4>
+                                            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: '0 0 6px 0' }}>
+                                                Ejer: <span style={{ color: 'var(--text-primary)', fontWeight: '500' }}>{company.owner_name}</span> • E-mail: <span style={{ color: 'var(--text-primary)', fontWeight: '500' }}>{company.email}</span>
+                                            </p>
+                                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                                                Oprettet: {new Date(company.created_at).toLocaleDateString('da-DK')}
+                                            </p>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-4">
+                                            <div style={{ textAlign: 'center', paddingRight: '20px', borderRight: '1px solid var(--border-light)' }}>
+                                                <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0, lineHeight: 1 }}>{company.team.length}</p>
+                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '6px 0 0 0', fontWeight: '600' }}>Medarbejdere</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleImpersonate(company.id)}
+                                                className="btn-primary"
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                                            >
+                                                <ExternalLink size={16} />
+                                                Log ind som
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteUser(company.id, company.company_name || 'Uden navn')}
+                                                style={{ 
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    width: '42px', height: '42px', borderRadius: '12px',
+                                                    background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444',
+                                                    border: '1px solid rgba(239, 68, 68, 0.2)', cursor: 'pointer', transition: 'all 0.2s'
+                                                }}
+                                                className="hover:bg-red-100 dark:hover:bg-red-900/30"
+                                                title="Slet virksomhed permanent"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
                                     </div>
                                     
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-center px-4 border-r border-slate-200">
-                                            <p className="text-2xl font-bold text-slate-700">{company.team.length}</p>
-                                            <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Medarbejdere</p>
+                                    {company.team.length > 0 && (
+                                        <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border-light)' }}>
+                                            <h5 style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-secondary)', margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Users size={16} /> Team Medlemmer
+                                            </h5>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                                                {company.team.map(member => (
+                                                    <div key={member.id} className="glass-panel flex items-center justify-between" style={{ padding: '16px 20px' }}>
+                                                        <div>
+                                                            <p style={{ fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 4px 0', fontSize: '0.95rem' }}>{member.owner_name || member.email}</p>
+                                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{member.email}</p>
+                                                        </div>
+                                                        <span style={{ 
+                                                            fontSize: '0.7rem', 
+                                                            background: 'var(--surface-bg)', 
+                                                            color: 'var(--text-secondary)',
+                                                            border: '1px solid var(--border-light)',
+                                                            padding: '4px 10px', 
+                                                            borderRadius: '12px', 
+                                                            textTransform: 'uppercase', 
+                                                            letterSpacing: '0.05em', 
+                                                            fontWeight: '600' 
+                                                        }}>
+                                                            {member.role === 'sales' ? 'Sælger' : member.role === 'accountant' ? 'Bogholder' : member.role}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <button 
-                                            onClick={() => handleImpersonate(company.id)}
-                                            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
-                                        >
-                                            <ExternalLink size={16} />
-                                            Log ind som
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDeleteUser(company.id, company.company_name || 'Uden navn')}
-                                            className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                                            title="Slet virksomhed permanent"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
+                                    )}
                                 </div>
-                                
-                                {company.team.length > 0 && (
-                                    <div className="mt-4 pt-4 border-t border-slate-100 pl-4 border-l-2 border-l-blue-200">
-                                        <h5 className="text-sm font-semibold text-slate-600 mb-3 flex items-center gap-2">
-                                            <Users size={14} /> Team Medlemmer
-                                        </h5>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                            {company.team.map(member => (
-                                                <div key={member.id} className="bg-white p-3 rounded border border-slate-200 shadow-sm text-sm">
-                                                    <p className="font-medium text-slate-800">{member.owner_name || member.email}</p>
-                                                    <p className="text-xs text-slate-500 capitalize">{member.role === 'sales' ? 'Sælger' : member.role === 'accountant' ? 'Bogholder' : member.role}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                        
-                        {companies.length === 0 && (
-                            <div className="p-12 text-center text-slate-500">
-                                Ingen virksomheder fundet i systemet.
-                            </div>
-                        )}
+                            ))}
+                            
+                            {companies.length === 0 && (
+                                <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                    <Building2 size={48} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
+                                    Ingen virksomheder fundet i systemet.
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

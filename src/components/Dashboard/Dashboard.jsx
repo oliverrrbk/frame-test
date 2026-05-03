@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Home, Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock } from 'lucide-react';
+import { Home, Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
@@ -16,6 +16,7 @@ import SetPasswordModal from './SetPasswordModal';
 import SuperAdminView from './SuperAdminView';
 import MyProfileView from './MyProfileView';
 import SubscriptionSettings from './SubscriptionSettings';
+import DashboardOverview from './DashboardOverview';
 
 // Konfiguration til det nye Google Map
 const MAP_LIBRARIES = ['places'];
@@ -95,6 +96,12 @@ const Dashboard = () => {
     
     // Auth & Profile
     const [session, setSession] = useState(null);
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    
+    // Close profile menu when navigating
+    useEffect(() => {
+        setIsProfileMenuOpen(false);
+    }, [activeTab]);
 
     // Historik auto-check
     const isLeadReadyForHistory = (lead) => {
@@ -114,6 +121,10 @@ const Dashboard = () => {
         id: 'google-map-script',
         libraries: MAP_LIBRARIES
     });
+
+    useEffect(() => {
+        setIsProfileMenuOpen(false);
+    }, [activeTab]);
 
     useEffect(() => {
         // Tjek URL parametre først
@@ -1082,6 +1093,24 @@ const Dashboard = () => {
         fence: 'Hegn'
     };
 
+    const getCategoryIcon = (catKey, size = 20) => {
+        switch(catKey) {
+            case 'roof': return <Tent size={size} />;
+            case 'floor': return <LayoutGrid size={size} />;
+            case 'windows': return <AppWindow size={size} />;
+            case 'doors': return <DoorOpen size={size} />;
+            case 'terrace': return <Layers size={size} />;
+            case 'ceilings': return <ArrowUpToLine size={size} />;
+            case 'facades': return <PanelRight size={size} />;
+            case 'kitchen': return <Utensils size={size} />;
+            case 'extensions': return <PlusSquare size={size} />;
+            case 'annex': return <Home size={size} />;
+            case 'carport': return <Car size={size} />;
+            case 'fence': return <AlignJustify size={size} />;
+            default: return <Package size={size} />;
+        }
+    };
+
     const getTooltipText = (catKey) => {
         if (catKey === 'doors' || catKey === 'windows') {
             return "Beregneren tager udgangspunkt i din rene indkøbspris for selve elementet ekskl. avance. Når kunden vælger f.eks. 6 vinduer, ganger systemet automatisk din indtastede stykpris op med kundens antal, lægger din valgte materialeavance oveni og tilføjer til sidst din timepris for arbejdet. Indtast derfor blot, hvad materialet koster dig at købe hjem pr. stk.";
@@ -1214,6 +1243,32 @@ const Dashboard = () => {
     }
     // ---------------------
 
+    const getTabHeaderInfo = () => {
+        switch (activeTab) {
+            case 'leads':
+                return { title: 'Kunder & Forespørgsler', desc: 'Her kan du styre dine kundeemner hele vejen gennem salgsprocessen.' };
+            case 'map':
+                return { title: 'Geografisk Overblik', desc: 'Se dine leads og nuværende forespørgsler direkte på Danmarkskortet.' };
+            case 'materials':
+                return { title: 'Standard Indkøbspriser (Ekskl. moms DKK)', desc: 'Disse priser danner grundlag for materialeberegningen. Din valgte system-avance lægges oveni.' };
+            case 'settings':
+                return { title: 'Prisberegner & System', desc: 'Opsæt timepriser, avance, kørsel og notifikationer for AI-tilbud.' };
+            case 'integrations':
+                return { title: 'Integrationer', desc: 'Forbind din profil automatisk til dit foretrukne regnskabsprogram for let overførsel.' };
+            case 'team':
+                return { title: 'Bison Team', desc: 'Administrer dine medarbejdere og deres adgangsniveau.' };
+            case 'superadmin':
+                return { title: 'Bizon Admin', desc: 'Håndter alle systemets brugere og konfiguration.' };
+            case 'profile':
+                return { title: 'Min Profil', desc: 'Administrer dine personlige oplysninger og præferencer.' };
+            case 'account_settings':
+                return { title: 'Konto Indstillinger', desc: 'Administrer din virksomheds indstillinger.' };
+            default:
+                return null;
+        }
+    };
+    const headerInfo = getTabHeaderInfo();
+
     return (
         <div className="dashboard-layout">
             {showOnboarding && carpenterProfile && (
@@ -1238,7 +1293,7 @@ const Dashboard = () => {
             
             <aside className="dashboard-sidebar">
                 <div className="sidebar-header">
-                    <Wrench className="brand-icon" />
+                    <img src="/clean-transparent.png" alt="Bison Frame" className="brand-icon" style={{ width: 'auto', height: '36px', maxHeight: '36px', objectFit: 'contain' }} />
                     <h2>Bison Frame</h2>
                 </div>
                 <nav className="sidebar-nav">
@@ -1250,9 +1305,6 @@ const Dashboard = () => {
                             <ShieldAlert size={20} /> Bizon Admin
                         </button>
                     )}
-                    <button className={activeTab === 'profile' ? 'active' : ''} onClick={() => setActiveTab('profile')}>
-                        <User size={20} /> Min Profil
-                    </button>
 
                     <button className={activeTab === 'leads' ? 'active' : ''} onClick={() => setActiveTab('leads')} style={{ position: 'relative' }}>
                         <Users size={20} /> Kunder & Leads
@@ -1263,7 +1315,7 @@ const Dashboard = () => {
                                     <span style={{
                                         position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
                                         backgroundColor: '#ef4444', color: '#fff', fontSize: '0.75rem', fontWeight: 'bold',
-                                        padding: '2px 8px', borderRadius: '12px', minWidth: '24px', textAlign: 'center'
+                                        padding: '2px 8px', borderRadius: '14px', minWidth: '24px', textAlign: 'center'
                                     }}>
                                         {unreadCount}
                                     </span>
@@ -1284,30 +1336,21 @@ const Dashboard = () => {
                     )}
                     {(carpenterProfile?.role === 'admin' || carpenterProfile?.permissions?.view_pricing) && (
                         <button className={activeTab === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>
-                            <Settings size={20} /> Prisberegning
+                            <Sliders size={20} /> Prisberegning
                         </button>
                     )}
                     {(carpenterProfile?.role !== 'sales' || carpenterProfile?.permissions?.view_integrations) && (
                         <button className={activeTab === 'integrations' ? 'active' : ''} onClick={() => setActiveTab('integrations')}>
-                            <Link size={20} /> Integration med regnskabsprogram
+                            <Link size={20} /> Integrationer
                         </button>
                     )}
                     {carpenterProfile?.role === 'admin' && (
                         <button className={activeTab === 'team' ? 'active' : ''} onClick={() => setActiveTab('team')}>
-                            <Users size={20} /> Team & Medarbejdere
+                            <HardHat size={20} /> Team & Medarbejdere
                         </button>
                     )}
                     
-                    <button className={activeTab === 'account_settings' ? 'active' : ''} onClick={() => setActiveTab('account_settings')} style={{ marginTop: 'auto' }}>
-                        <Sliders size={20} /> Firma & Indstillinger
-                    </button>
-                    <button onClick={() => setIsFeedbackModalOpen(true)} style={{ marginTop: '10px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <MessageSquare size={18} /> Giv Feedback
-                    </button>
-                    
-                    <button style={{marginTop: '10px', color: '#ef4444'}} onClick={() => supabase.auth.signOut()}>
-                        <LogOut size={20} /> Log ud
-                    </button>
+                    <div style={{ marginTop: 'auto' }}></div>
                 </nav>
             </aside>
 
@@ -1316,31 +1359,111 @@ const Dashboard = () => {
                     <div className="mobile-menu">
                         <Menu />
                     </div>
-                    <div>
-                        <h1>Dashboard</h1>
-                        <p className="text-muted">Styr dine forespørgsler og tilbud lynhurtigt.</p>
-                    </div>
-                    <div className="user-profile flex items-center gap-3">
-                        <div className="user-info text-right">
-                            <strong className="block text-slate-900 dark:text-white leading-tight">
-                                {myProfile?.owner_name || myProfile?.company_name || 'Henter...'}
-                            </strong>
-                            <span className="text-xs text-blue-500 font-medium">
-                                {myProfile?.role === 'sales' ? 'Sælger / Projektleder' : myProfile?.role === 'accountant' ? 'Bogholder' : myProfile?.role === 'admin' && myProfile?.email === 'team@bisoncompany.dk' ? 'Bizon Admin' : 'Mester'}
-                            </span>
+
+                    {headerInfo && activeTab !== 'overview' && (
+                        <div className="page-title-section" style={{ flex: 1, paddingLeft: '0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div>
+                                <h2 style={{ margin: '0 0 6px', fontSize: '1.75rem', color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '-0.5px' }}>{headerInfo.title}</h2>
+                                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{headerInfo.desc}</p>
+                            </div>
+                            
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                {activeTab === 'leads' && (
+                                    <button className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                        Opret Ny Kunde
+                                    </button>
+                                )}
+                                {activeTab === 'materials' && !isMaterialsLoading && materialsData.length > 0 && (
+                                    <button className="btn-primary" onClick={handleSaveMaterials}>
+                                        {isSaving ? 'Gemmer...' : 'Gem Materialer'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                        <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-300 dark:border-slate-600">
-                            {myProfile?.avatar_url ? (
-                                <img src={myProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                            ) : (
-                                <span className="text-slate-500 font-bold text-sm">
-                                    {(myProfile?.owner_name || myProfile?.company_name || 'T')?.charAt(0).toUpperCase()}
+                    )}
+
+                    <div className="user-profile flex items-center gap-3 relative" style={{ marginLeft: 'auto' }}>
+                        <button 
+                            onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                            style={{ 
+                                display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', 
+                                border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '30px',
+                                transition: 'all 0.2s'
+                            }}
+                            className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                        >
+                            <div className="user-info text-right hidden sm:block" style={{ marginRight: '8px' }}>
+                                <strong className="block text-slate-900 dark:text-white leading-tight">
+                                    {myProfile?.owner_name || myProfile?.company_name || 'Henter...'}
+                                </strong>
+                                <span className="text-xs text-blue-500 font-medium">
+                                    {myProfile?.role === 'sales' ? 'Sælger / Projektleder' : myProfile?.role === 'accountant' ? 'Bogholder' : myProfile?.role === 'admin' && myProfile?.email === 'team@bisoncompany.dk' ? 'Bizon Admin' : 'Mester'}
                                 </span>
-                            )}
-                        </div>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-300 dark:border-slate-600">
+                                {myProfile?.avatar_url ? (
+                                    <img src={myProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-slate-500 font-bold text-sm">
+                                        {(myProfile?.owner_name || myProfile?.company_name || 'T')?.charAt(0).toUpperCase()}
+                                    </span>
+                                )}
+                            </div>
+                        </button>
+
+                        {isProfileMenuOpen && (
+                            <>
+                                <div 
+                                    style={{ position: 'fixed', inset: 0, zIndex: 40 }} 
+                                    onClick={() => setIsProfileMenuOpen(false)}
+                                ></div>
+                                <div 
+                                    className="glass-panel"
+                                    style={{ 
+                                        position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 50,
+                                        width: '240px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px',
+                                        boxShadow: '0 10px 40px -10px rgba(0,0,0,0.15)'
+                                    }}
+                                >
+                                    <button 
+                                        onClick={() => { setActiveTab('profile'); setIsProfileMenuOpen(false); }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', color: 'var(--text-primary)', fontWeight: '500', transition: 'background 0.2s' }}
+                                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                                    >
+                                        <User size={18} className="text-blue-500" />
+                                        Min Profil
+                                    </button>
+                                    <button 
+                                        onClick={() => { setActiveTab('account_settings'); setIsProfileMenuOpen(false); }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', color: 'var(--text-primary)', fontWeight: '500', transition: 'background 0.2s' }}
+                                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                                    >
+                                        <Settings size={18} className="text-blue-500" />
+                                        Indstillinger
+                                    </button>
+                                    <button 
+                                        onClick={() => { setIsFeedbackModalOpen(true); setIsProfileMenuOpen(false); }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', color: 'var(--text-primary)', fontWeight: '500', transition: 'background 0.2s' }}
+                                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                                    >
+                                        <MessageSquare size={18} className="text-blue-500" />
+                                        Giv feedback
+                                    </button>
+                                    <div style={{ height: '1px', background: 'var(--border-light)', margin: '4px 0' }}></div>
+                                    <button 
+                                        onClick={() => { supabase.auth.signOut(); setIsProfileMenuOpen(false); }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', color: '#ef4444', fontWeight: '500', transition: 'background 0.2s' }}
+                                        className="hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    >
+                                        <LogOut size={18} />
+                                        Log ud
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </header>
-
                 {/* Integration Success Modal */}
                 {integrationSuccessData && createPortal(
                     <div 
@@ -1349,7 +1472,7 @@ const Dashboard = () => {
                     >
                         <div 
                             className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-md relative"
-                            style={{ animation: 'fadeUp 0.3s ease-out forwards', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', overflow: 'hidden', width: '100%', maxWidth: '450px' }}
+                            style={{ animation: 'fadeUp 0.3s ease-out forwards', backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', overflow: 'hidden', width: '100%', maxWidth: '450px' }}
                         >
                             <div style={{ padding: '32px', textAlign: 'center', position: 'relative', zIndex: 10 }}>
                                 <div style={{ 
@@ -1361,10 +1484,10 @@ const Dashboard = () => {
                                 }}>
                                     🚀
                                 </div>
-                                <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#0f172a', marginBottom: '12px', marginTop: 0 }}>
+                                <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a1a1a', marginBottom: '12px', marginTop: 0 }}>
                                     Succes! Data er overført
                                 </h2>
-                                <p style={{ color: '#475569', marginBottom: '32px', lineHeight: '1.6', fontSize: '15px' }}>
+                                <p style={{ color: '#6b7280', marginBottom: '32px', lineHeight: '1.6', fontSize: '15px' }}>
                                     Kunden og opgaven er nu sikkert oprettet og ligger klar i <strong>{integrationSuccessData.platform}</strong>.
                                 </p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1374,7 +1497,7 @@ const Dashboard = () => {
                                         rel="noopener noreferrer" 
                                         onClick={() => setIntegrationSuccessData(null)}
                                         style={{ 
-                                            width: '100%', padding: '16px', borderRadius: '12px', 
+                                            width: '100%', padding: '16px', borderRadius: '14px', 
                                             backgroundColor: integrationSuccessData.platform === 'Ordrestyring' ? '#be185d' : integrationSuccessData.platform === 'Minuba' ? '#10b981' : '#3730a3', 
                                             color: '#ffffff', fontWeight: '600', textDecoration: 'none', 
                                             display: 'block', transition: 'opacity 0.2s'
@@ -1387,7 +1510,7 @@ const Dashboard = () => {
                                     
                                     {/* Debug hjælp til os (kun synlig hvis platform er Ordrestyring og der er debugData) */}
                                     {integrationSuccessData.platform === 'Ordrestyring' && integrationSuccessData.debugData?.fullCaseData && (
-                                        <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '8px', wordBreak: 'break-all' }}>
+                                        <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '8px', wordBreak: 'break-all' }}>
                                             [Debug: fullCase={JSON.stringify(integrationSuccessData.debugData.fullCaseData || {}).substring(0, 100)}...
                                             casesList={(JSON.stringify(integrationSuccessData.debugData.casesList) || "").substring(0, 100)}...
                                             locHeader={integrationSuccessData.debugData.locationHeader || 'null'}]
@@ -1396,8 +1519,8 @@ const Dashboard = () => {
                                     <button 
                                         onClick={() => setIntegrationSuccessData(null)}
                                         style={{ 
-                                            width: '100%', padding: '16px', borderRadius: '12px', 
-                                            backgroundColor: '#f1f5f9', color: '#475569', 
+                                            width: '100%', padding: '16px', borderRadius: '14px', 
+                                            backgroundColor: '#f3f1ed', color: '#6b7280', 
                                             fontWeight: '600', border: 'none', cursor: 'pointer',
                                             transition: 'background-color 0.2s'
                                         }}
@@ -1413,14 +1536,14 @@ const Dashboard = () => {
                     document.body
                 )}
 
-                {trialDaysLeft > 0 && !isPaywallActive && activeTab !== 'account_settings' && (
-                    <div style={{ margin: '20px 40px 0 40px', padding: '16px 24px', background: 'linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1))', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                {trialDaysLeft > 0 && !isPaywallActive && activeTab === 'overview' && (
+                    <div style={{ margin: '20px 40px 0 40px', padding: '16px 24px', background: '#f7f6f3', border: '1px solid #e8e6e1', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f8fafc', fontWeight: 'bold', fontSize: '15px' }}>
-                                <span style={{ background: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '12px' }}>GRATIS PRØVE</span>
+                                <span style={{ background: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '14px', fontSize: '12px' }}>GRATIS PRØVE</span>
                                 {14 - trialDaysLeft} ud af 14 dage brugt ({trialDaysLeft} dage tilbage)
                             </div>
-                            <p style={{ color: '#cbd5e1', margin: '4px 0 0 0', fontSize: '14px' }}>Når prøveperioden udløber, vil du blive bedt om at tilknytte et kort for at fortsætte uden afbrydelser.</p>
+                            <p style={{ color: '#9ca3af', margin: '4px 0 0 0', fontSize: '14px' }}>Når prøveperioden udløber, vil du blive bedt om at tilknytte et kort for at fortsætte uden afbrydelser.</p>
                         </div>
                         <button 
                             onClick={() => setActiveTab('account_settings')}
@@ -1434,7 +1557,7 @@ const Dashboard = () => {
                 <div className="dashboard-content">
                     {isPaywallActive && activeTab !== 'account_settings' ? (
                         <div className="smooth-fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center' }}>
-                            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '40px', borderRadius: '16px', maxWidth: '600px', boxShadow: '0 10px 25px -5px rgba(239, 68, 68, 0.1)' }}>
+                            <div style={{ background: '#fef2f2', border: '1px solid #e8e6e1', padding: '40px', borderRadius: '20px', maxWidth: '600px', boxShadow: '0 10px 25px -5px rgba(239, 68, 68, 0.1)' }}>
                                 <ShieldAlert size={64} color="#ef4444" style={{ margin: '0 auto 24px' }} />
                                 <h2 style={{ fontSize: '24px', color: '#7f1d1d', marginBottom: '16px', fontWeight: 'bold' }}>
                                     {paywallReason === 'trial_expired' ? 'Din prøveperiode er udløbet' : 'Abonnement inaktivt'}
@@ -1460,160 +1583,7 @@ const Dashboard = () => {
                         <SuperAdminView />
                     )}
                     {activeTab === 'overview' && (
-                        <div className="overview-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <div style={{ backgroundColor: '#fff', padding: '32px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                                <h2 style={{ margin: '0 0 8px', color: '#0f172a' }}>Velkommen tilbage, {(carpenterProfile?.company_name || 'Tømrer').split(' ')[0]}!</h2>
-                                <p style={{ color: '#64748b', margin: 0, fontSize: '1.1rem' }}>Her er et hurtigt overblik over din forretning i Bison Frame.</p>
-                            </div>
-                            
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-                                <div style={{ backgroundColor: '#eff6ff', padding: '24px', borderRadius: '16px', border: '1px solid #bfdbfe' }}>
-                                    <h3 style={{ color: '#1e3a8a', margin: '0 0 8px', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nye Forespørgsler</h3>
-                                    <p style={{ fontSize: '3rem', fontWeight: 'bold', color: '#1d4ed8', margin: 0 }}>
-                                        {leadsData.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel').length}
-                                    </p>
-                                    <p style={{ color: '#3b82f6', margin: '8px 0 0', fontSize: '0.9rem' }}>Venter på dit svar</p>
-                                </div>
-                                
-                                <div style={{ backgroundColor: '#f0fdf4', padding: '24px', borderRadius: '16px', border: '1px solid #bbf7d0' }}>
-                                    <div className="tooltip-wrapper" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                                        <h3 style={{ color: '#14532d', margin: 0, fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>I Alt Estimeret Værdi</h3>
-                                        <Info size={14} className="info-icon" style={{ color: '#14532d', cursor: 'help' }} />
-                                        <div className="tooltip-content" style={{ bottom: '150%' }}>
-                                            Beregnes ud fra den totale værdi af alle indkomne forespørgsler, uanset status. Viser den potentielle værdi i dit samlede pipeline.
-                                        </div>
-                                    </div>
-                                    <p style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#15803d', margin: 0 }}>
-                                        {leadsData.reduce((total, lead) => {
-                                            const calc = lead.raw_data?.calc_data;
-                                            if (!calc) return total;
-                                            
-                                            // Beregn gennemsnittet af det spænd kunden har fået vist
-                                            const strictPrice = parseFloat(calc.strictPrice || 0);
-                                            const marginFactor = 1.25;
-                                            const priceTop = strictPrice * marginFactor;
-                                            
-                                            let minPrice = Math.floor(strictPrice / 1000) * 1000;
-                                            let maxPrice = Math.ceil(priceTop / 1000) * 1000;
-                                            
-                                            // Læg moms til
-                                            minPrice = minPrice * 1.25;
-                                            maxPrice = maxPrice * 1.25;
-                                            
-                                            const averageEstimate = (minPrice + maxPrice) / 2;
-                                            
-                                            return total + averageEstimate;
-                                        }, 0).toLocaleString('da-DK')} <span style={{fontSize: '1.2rem'}}>DKK</span>
-                                    </p>
-                                    <p style={{ color: '#16a34a', margin: '8px 0 0', fontSize: '0.9rem' }}>Baseret på alle dine leads</p>
-                                </div>
-
-                                <div style={{ backgroundColor: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                                    <h3 style={{ color: '#334155', margin: '0 0 8px', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Aktive Sager</h3>
-                                    <p style={{ fontSize: '3rem', fontWeight: 'bold', color: '#475569', margin: 0 }}>
-                                        {leadsData.filter(l => ['Sendt tilbud', 'Bekræftet opgave'].includes(l.status || '')).length}
-                                    </p>
-                                    <p style={{ color: '#64748b', margin: '8px 0 0', fontSize: '0.9rem' }}>Igangværende projekter & tilbud</p>
-                                </div>
-
-                                <div style={{ backgroundColor: '#fdf4ff', padding: '24px', borderRadius: '16px', border: '1px solid #fbcfe8' }}>
-                                    <div className="tooltip-wrapper" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                                        <h3 style={{ color: '#86198f', margin: 0, fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vundet Omsætning</h3>
-                                        <Info size={14} className="info-icon" style={{ color: '#86198f', cursor: 'help' }} />
-                                        <div className="tooltip-content" style={{ bottom: '150%' }}>
-                                            Værdien af de opgaver, du har markeret som 'Bekræftet opgave' eller flyttet til 'Historik'. Repræsenterer din reelle indtjening gennem platformen.
-                                        </div>
-                                    </div>
-                                    <p style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#a21caf', margin: 0 }}>
-                                        {leadsData.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status || '')).reduce((total, lead) => {
-                                            return total + calcWonRevenue(lead);
-                                        }, 0).toLocaleString('da-DK')} <span style={{fontSize: '1.2rem'}}>DKK</span>
-                                    </p>
-                                    <p style={{ color: '#c026d3', margin: '8px 0 0', fontSize: '0.9rem' }}>Reelt lukkede aftaler</p>
-                                </div>
-
-                                <div style={{ backgroundColor: '#fff7ed', padding: '24px', borderRadius: '16px', border: '1px solid #ffedd5' }}>
-                                    <div className="tooltip-wrapper" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                                        <h3 style={{ color: '#c2410c', margin: 0, fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Estimeret Tid Besparet</h3>
-                                        <Info size={14} className="info-icon" style={{ color: '#c2410c', cursor: 'help' }} />
-                                        <div className="tooltip-content" style={{ bottom: '150%' }}>
-                                            Beregnet ud fra en branchestandard på ca. 1,5 time sparet pr. online tilbud (sparet tid på kørsel, opmåling og manuel beregning), ganget med en anslået timeløn på 500 kr.
-                                        </div>
-                                    </div>
-                                    <p style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#ea580c', margin: 0 }}>
-                                        {timeSavedHours} <span style={{fontSize: '1.2rem'}}>timer</span>
-                                    </p>
-                                    <p style={{ color: '#f97316', margin: '8px 0 0', fontSize: '0.9rem' }}>(Værdi: ~{timeSavedValue.toLocaleString('da-DK')} kr.)</p>
-                                </div>
-
-                                <div style={{ backgroundColor: '#f0fdfa', padding: '24px', borderRadius: '16px', border: '1px solid #ccfbf1' }}>
-                                    <div className="tooltip-wrapper" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                                        <h3 style={{ color: '#0f766e', margin: 0, fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Konverteringsrate</h3>
-                                        <Info size={14} className="info-icon" style={{ color: '#0f766e', cursor: 'help' }} />
-                                        <div className="tooltip-content" style={{ bottom: '150%' }}>
-                                            Hvor stor en procentdel af alle dine modtagne forespørgsler ender som bekræftede opgaver?
-                                        </div>
-                                    </div>
-                                    <p style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#0f766e', margin: 0 }}>
-                                        {conversionRate} <span style={{fontSize: '1.2rem'}}>%</span>
-                                    </p>
-                                    <p style={{ color: '#14b8a6', margin: '8px 0 0', fontSize: '0.9rem' }}>Vundne leads vs. alle forespørgsler</p>
-                                </div>
-
-                                <div style={{ backgroundColor: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                                    <div className="tooltip-wrapper" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                                        <h3 style={{ color: '#334155', margin: 0, fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gennemsnitlig Svartid</h3>
-                                        <Info size={14} className="info-icon" style={{ color: '#334155', cursor: 'help' }} />
-                                        <div className="tooltip-content" style={{ bottom: '150%' }}>
-                                            Den gennemsnitlige tid det tager fra en kunde sender en forespørgsel, til du første gang ændrer status på den. (Måler kun på nye leads fra nu af).
-                                        </div>
-                                    </div>
-                                    <p style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#475569', margin: 0 }}>
-                                        {respondedLeads.length > 0 ? avgResponseTimeHours.toFixed(1) : '-'} <span style={{fontSize: '1.2rem'}}>timer</span>
-                                    </p>
-                                    <p style={{ color: '#64748b', margin: '8px 0 0', fontSize: '0.9rem' }}>Hurtigt svar giver flere kunder</p>
-                                </div>
-                            </div>
-
-                            {/* Performance Graf (Måned for Måned) */}
-                            <div style={{ backgroundColor: '#fff', padding: '32px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                                <div style={{ marginBottom: '32px' }}>
-                                    <h3 style={{ margin: '0 0 8px', color: '#0f172a', fontSize: '1.2rem' }}>Omsætning: Seneste 6 Måneder</h3>
-                                    <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>En oversigt over den samlede estimerede værdi af dine vundne leads det seneste halve år.</p>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '240px', paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
-                                    {chartData.map((data, index) => {
-                                        const barHeight = Math.max(0, Math.round((data.value / maxChartVal) * 100));
-                                        return (
-                                            <div key={index} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', flex: 1, maxWidth: '80px', height: '100%' }}>
-                                                <span style={{ fontSize: '0.8rem', color: data.isCurrentMonth ? '#2563eb' : '#64748b', fontWeight: 'bold' }}>
-                                                    {data.value.toLocaleString('da-DK')} kr.
-                                                </span>
-                                                <div 
-                                                    style={{ 
-                                                        width: '100%', 
-                                                        maxWidth: '40px', 
-                                                        height: `${barHeight}%`, 
-                                                        backgroundColor: data.isCurrentMonth ? '#3b82f6' : '#cbd5e1', 
-                                                        borderRadius: '4px 4px 0 0', 
-                                                        transition: 'height 0.5s ease-out',
-                                                        boxShadow: data.isCurrentMonth ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none',
-                                                        minHeight: '4px' 
-                                                    }}
-                                                ></div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '16px' }}>
-                                    {chartData.map((data, index) => (
-                                        <div key={index} style={{ flex: 1, maxWidth: '80px', textAlign: 'center', fontSize: '0.9rem', color: data.isCurrentMonth ? '#0f172a' : '#64748b', fontWeight: data.isCurrentMonth ? '600' : '500' }}>
-                                            {data.label}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+                        <DashboardOverview leadsData={leadsData} carpenterProfile={carpenterProfile} />
                     )}
 
                     {activeTab === 'team' && carpenterProfile?.role === 'admin' && (
@@ -1621,12 +1591,13 @@ const Dashboard = () => {
                             {carpenterProfile?.tier === 'enterprise' ? (
                                 <TeamManagement profile={carpenterProfile} leadsData={leadsData} />
                             ) : (
-                                <div style={{ maxWidth: '600px', margin: '60px auto', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '40px', textAlign: 'center' }}>
+                                <div className="settings-card" style={{ maxWidth: '600px', margin: '60px auto' }}>
+                                    <div className="card-body" style={{ padding: '40px', textAlign: 'center' }}>
                                     <div style={{ width: '64px', height: '64px', background: '#fef2f2', color: '#ef4444', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 20px' }}>
                                         <Lock size={32} />
                                     </div>
-                                    <h2 style={{ fontSize: '24px', color: '#0f172a', marginBottom: '16px' }}>Låst Premium Funktion</h2>
-                                    <p style={{ color: '#64748b', fontSize: '16px', lineHeight: '1.6', marginBottom: '32px' }}>
+                                    <h2 style={{ fontSize: '24px', color: '#1a1a1a', marginBottom: '16px' }}>Låst Premium Funktion</h2>
+                                    <p style={{ color: '#6b7280', fontSize: '16px', lineHeight: '1.6', marginBottom: '32px' }}>
                                         "Team & Medarbejdere" funktionen er forbeholdt vores <strong>Enterprise</strong> pakkeløsning.<br/><br/>
                                         Få fuld kontrol over dit team, tildel opgaver og styr rettigheder ned til mindste detalje.
                                     </p>
@@ -1638,6 +1609,7 @@ const Dashboard = () => {
                                     >
                                         Gå til Indstillinger for at opgradere
                                     </button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -1645,13 +1617,7 @@ const Dashboard = () => {
 
                     {activeTab === 'profile' && myProfile && (
                         <div className="space-y-8" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                            <div className="settings-card" style={{ padding: '32px', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-                                <div style={{ marginBottom: '24px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
-                                    <h3 style={{ margin: '0 0 8px', color: '#0f172a', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}><User size={24} color="#3b82f6" /> Din Personlige Profil</h3>
-                                    <p style={{ color: '#64748b', margin: 0, fontSize: '1rem' }}>Dine egne brugerindstillinger (kun synligt for dig).</p>
-                                </div>
-                                <MyProfileView myProfile={myProfile} setMyProfile={setMyProfile} />
-                            </div>
+                            <MyProfileView myProfile={myProfile} setMyProfile={setMyProfile} />
                         </div>
                     )}
                     
@@ -1662,71 +1628,66 @@ const Dashboard = () => {
                                 <div className="admin-settings-section" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                                     
                                     <div className="settings-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', alignItems: 'stretch', display: 'grid', gap: '32px' }}>
-                                        <div className="settings-card" style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', display: 'flex', flexDirection: 'column' }}>
-                                            <div className="card-header" style={{ padding: '24px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div className="icon-wrapper" style={{ background: '#fef2f2', color: '#ef4444', padding: '10px', borderRadius: '12px', display: 'flex' }}>
-                                                        <Shield size={24} />
-                                                    </div>
-                                                    <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Firmaoplysninger (Internt)</h3>
+                                        <div className="settings-card">
+                                            <div className="card-header">
+                                                <div className="icon-wrapper">
+                                                    <Shield size={24} />
                                                 </div>
+                                                <h3>Firmaoplysninger (Internt)</h3>
                                             </div>
-                                            <div className="card-body" style={{ padding: '24px', flex: 1 }}>
-                                                <div className="input-group" style={{ marginBottom: '16px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#334155' }}>System Login E-mail (Brugernavn)</label>
+                                            <div className="card-body">
+                                                <div className="input-group">
+                                                    <label>System Login E-mail (Brugernavn)</label>
                                                     <input 
                                                         type="text" 
                                                         value={new URLSearchParams(window.location.search).get('impersonate') ? 'Skjult under Admin-adgang' : (session?.user?.email || 'Ingen session')} 
                                                         disabled 
-                                                        style={{ backgroundColor: '#f1f5f9', color: '#64748b', width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px' }} 
                                                     />
                                                 </div>
-                                                <div className="input-group" style={{ marginBottom: '16px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#334155' }}>Firmanavn</label>
-                                                    <input type="text" value={carpenterProfile.company_name || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, company_name: e.target.value }))} placeholder="Eks. Vestkystens Tømrer A/S" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px' }} />
-                                                </div>
-                                                <div className="input-group" style={{ marginBottom: '16px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#334155' }}>Ejer / Kontaktperson</label>
-                                                    <input type="text" value={carpenterProfile.owner_name || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, owner_name: e.target.value }))} placeholder="Jens Jensen" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px' }} />
-                                                </div>
-                                                <div className="input-group" style={{ marginBottom: '16px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#334155' }}>Firma Adresse</label>
-                                                    <input type="text" value={carpenterProfile.address || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, address: e.target.value }))} placeholder="Skovvejen 15, 8000 Aarhus" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px' }} />
-                                                </div>
-                                                <div className="input-group" style={{ marginBottom: '16px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#334155' }}>CVR-nummer</label>
-                                                    <input type="text" value={carpenterProfile.cvr || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, cvr: e.target.value }))} placeholder="12345678" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px' }} />
-                                                </div>
-                                                <div className="input-group" style={{ marginBottom: '16px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#334155' }}>Telefonnummer</label>
-                                                    <input type="text" value={carpenterProfile.phone || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, phone: e.target.value }))} placeholder="+45 12 34 56 78" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px' }} />
+                                                <div className="input-group">
+                                                    <label>Firmanavn</label>
+                                                    <input type="text" value={carpenterProfile.company_name || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, company_name: e.target.value }))} placeholder="Eks. Vestkystens Tømrer A/S" />
                                                 </div>
                                                 <div className="input-group">
-                                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#334155' }}>Fakturerings E-mail</label>
-                                                    <input type="text" value={carpenterProfile.email || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, email: e.target.value }))} placeholder="regnskab@mit-firma.dk" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px' }} />
+                                                    <label>Ejer / Kontaktperson</label>
+                                                    <input type="text" value={carpenterProfile.owner_name || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, owner_name: e.target.value }))} placeholder="Jens Jensen" />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Firma Adresse</label>
+                                                    <input type="text" value={carpenterProfile.address || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, address: e.target.value }))} placeholder="Skovvejen 15, 8000 Aarhus" />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>CVR-nummer</label>
+                                                    <input type="text" value={carpenterProfile.cvr || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, cvr: e.target.value }))} placeholder="12345678" />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Telefonnummer</label>
+                                                    <input type="text" value={carpenterProfile.phone || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, phone: e.target.value }))} placeholder="+45 12 34 56 78" />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Fakturerings E-mail</label>
+                                                    <input type="text" value={carpenterProfile.email || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, email: e.target.value }))} placeholder="regnskab@mit-firma.dk" />
                                                 </div>
                                             </div>
-                                            <div className="card-footer" style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', background: '#fafafa', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
-                                                <button className="btn-primary full-width" onClick={handleProfileSave} style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#3b82f6', color: 'white', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{isSaving ? 'Gemmer...' : 'Gem Firma-Oplysninger'}</button>
+                                            <div className="card-footer">
+                                                <button className="btn-primary" onClick={handleProfileSave}>{isSaving ? 'Gemmer...' : 'Gem Firma-Oplysninger'}</button>
                                             </div>
                                         </div>
 
-                                        <div className="settings-card" style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', display: 'flex', flexDirection: 'column' }}>
-                                            <div className="card-header" style={{ padding: '24px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div className="icon-wrapper" style={{ background: '#eff6ff', color: '#3b82f6', padding: '10px', borderRadius: '12px', display: 'flex' }}>
-                                                        <Globe size={24} />
-                                                    </div>
-                                                    <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Kunde-Portal (Offentlig)</h3>
+                                        <div className="settings-card">
+                                            <div className="card-header">
+                                                <div className="icon-wrapper">
+                                                    <Globe size={24} />
                                                 </div>
+                                                <h3>Kunde-Portal (Offentlig)</h3>
                                             </div>
-                                            <div className="card-body" style={{ padding: '24px', flex: 1 }}>
-                                                <div className="input-group" style={{ marginBottom: '24px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#334155' }}>Dit kunde-link</label>
+                                            <div className="card-body">
+                                                <div className="input-group">
+                                                    <label>Dit kunde-link</label>
                                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0 12px', flex: 1 }}>
-                                                            <span style={{ color: '#94a3b8', userSelect: 'none' }}>bisonframe.dk/</span>
-                                                            <input type="text" value={carpenterProfile.slug || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, slug: e.target.value }))} style={{ border: 'none', background: 'transparent', padding: '12px 0', flex: 1, outline: 'none', fontWeight: 'bold', color: '#0f172a' }} />
+                                                        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '0 12px', flex: 1 }}>
+                                                            <span style={{ color: 'var(--text-muted)', userSelect: 'none' }}>bisonframe.dk/</span>
+                                                            <input type="text" value={carpenterProfile.slug || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, slug: e.target.value }))} style={{ border: 'none', background: 'transparent', padding: '12px 0', flex: 1, outline: 'none', fontWeight: 'bold', color: 'var(--text-primary)' }} />
                                                         </div>
                                                         <button 
                                                             onClick={() => {
@@ -1734,64 +1695,61 @@ const Dashboard = () => {
                                                                 toast.success('Kunde-linket er kopieret til din udklipsholder!');
                                                             }}
                                                             className="btn-primary"
-                                                            style={{ background: '#10b981', padding: '0 16px', borderRadius: '8px', border: 'none', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
                                                         >Kopiér Link</button>
                                                     </div>
-                                                    <span className="help-text" style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginTop: '8px' }}>Dette er linket du sender til dine kunder, når de skal ind og have udført et lynhurtigt overslag.</span>
+                                                    <span className="help-text">Dette er linket du sender til dine kunder, når de skal ind og have udført et lynhurtigt overslag.</span>
                                                 </div>
-                                                <div className="input-group" style={{ marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                                    <label style={{ display: 'block', marginBottom: '12px', fontWeight: '500', color: '#334155' }}>Dit Firmalogo (PNG/JPG)</label>
+                                                <div className="input-group">
+                                                    <label>Dit Firmalogo (PNG/JPG)</label>
                                                     <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                                                         {carpenterProfile.logo_url && (
-                                                            <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1', backgroundColor: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
+                                                            <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-light)', backgroundColor: 'var(--card-bg)', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
                                                                 <img src={carpenterProfile.logo_url} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                                                             </div>
                                                         )}
                                                         <div style={{ flex: 1, overflow: 'hidden' }}>
                                                             <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'logo')} disabled={isUploadingLogo} style={{ width: '100%', fontSize: '0.9rem' }} />
-                                                            {isUploadingLogo && <span style={{ color: '#3b82f6', fontSize: '0.85rem', display: 'block', marginTop: '4px' }}>Uploader logo til databasen...</span>}
+                                                            {isUploadingLogo && <span className="help-text" style={{ color: 'var(--accent-primary)' }}>Uploader logo til databasen...</span>}
                                                         </div>
                                                     </div>
-                                                    <span className="help-text" style={{ marginTop: '12px', display: 'block', fontSize: '0.85rem', color: '#64748b' }}>Det her vises i bekræftelsesmails og inde i kundeportalen.</span>
+                                                    <span className="help-text">Det her vises i bekræftelsesmails og inde i kundeportalen.</span>
                                                 </div>
-                                                <div className="input-group" style={{ marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                                    <label style={{ display: 'block', marginBottom: '12px', fontWeight: '500', color: '#334155' }}>Personligt Billede / Portræt</label>
+                                                <div className="input-group">
+                                                    <label>Personligt Billede / Portræt</label>
                                                     <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                                                         {carpenterProfile.portrait_url && (
-                                                            <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', border: '1px solid #cbd5e1', backgroundColor: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
+                                                            <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-light)', backgroundColor: 'var(--card-bg)', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
                                                                 <img src={carpenterProfile.portrait_url} alt="Portræt" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                             </div>
                                                         )}
                                                         <div style={{ flex: 1, overflow: 'hidden' }}>
                                                             <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'portrait')} disabled={isUploadingPortrait} style={{ width: '100%', fontSize: '0.9rem' }} />
-                                                            {isUploadingPortrait && <span style={{ color: '#3b82f6', fontSize: '0.85rem', display: 'block', marginTop: '4px' }}>Uploader portræt til databasen...</span>}
+                                                            {isUploadingPortrait && <span className="help-text" style={{ color: 'var(--accent-primary)' }}>Uploader portræt til databasen...</span>}
                                                         </div>
                                                     </div>
-                                                    <span className="help-text" style={{ marginTop: '12px', display: 'block', fontSize: '0.85rem', color: '#64748b' }}>Menneskelighed konverterer! Det her vises ved siden af prisen i portalen.</span>
+                                                    <span className="help-text">Menneskelighed konverterer! Det her vises ved siden af prisen i portalen.</span>
                                                 </div>
                                                 <div className="input-group">
-                                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#334155' }}>Afslutningsbesked til kunden</label>
-                                                    <textarea value={carpenterProfile.success_message || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, success_message: e.target.value }))} rows="3" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', resize: 'vertical' }} placeholder="Tusind tak fordi du valgte os! Vi vender tilbage hurtigst muligt med næste skridt."></textarea>
+                                                    <label>Afslutningsbesked til kunden</label>
+                                                    <textarea value={carpenterProfile.success_message || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, success_message: e.target.value }))} rows="3" placeholder="Tusind tak fordi du valgte os! Vi vender tilbage hurtigst muligt med næste skridt."></textarea>
                                                 </div>
                                             </div>
-                                            <div className="card-footer" style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', background: '#fafafa', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
-                                                <button className="btn-primary full-width" onClick={handleProfileSave} style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#3b82f6', color: 'white', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{isSaving ? 'Gemmer...' : 'Gem Kunde-Portal'}</button>
+                                            <div className="card-footer">
+                                                <button className="btn-primary" onClick={handleProfileSave}>{isSaving ? 'Gemmer...' : 'Gem Kunde-Portal'}</button>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Nyt Panel til Valg af Kategorier / Arbejdsområder */}
-                                    <div className="settings-card" style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-                                        <div className="card-header" style={{ padding: '24px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div className="icon-wrapper" style={{ background: '#ecfdf5', color: '#10b981', padding: '10px', borderRadius: '12px', display: 'flex' }}>
-                                                    <Wrench size={24} />
-                                                </div>
-                                                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Dine Arbejdsområder (Filtrering)</h3>
+                                    <div className="settings-card">
+                                        <div className="card-header">
+                                            <div className="icon-wrapper">
+                                                <Wrench size={24} />
                                             </div>
+                                            <h3>Dine Arbejdsområder (Filtrering)</h3>
                                         </div>
-                                        <div className="card-body" style={{ padding: '24px' }}>
-                                            <p className="help-text" style={{ marginBottom: '24px', fontSize: '0.95rem', color: '#64748b' }}>Vælg hvilke hovedkategorier kunden må se i din prisberegner. Sluk for dem du ikke tilbyder.</p>
+                                        <div className="card-body">
+                                            <p className="help-text" style={{ marginBottom: '24px' }}>Vælg hvilke hovedkategorier kunden må se i din prisberegner. Sluk for dem du ikke tilbyder.</p>
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                                                 {initialCategories.map(cat => {
                                                     const isActive = !disabledCategories.includes(cat.id);
@@ -1799,11 +1757,12 @@ const Dashboard = () => {
                                                         <div 
                                                             key={cat.id} 
                                                             onClick={() => toggleCategoryActive(cat.id)}
+                                                            className="category-toggle-card"
                                                             style={{
                                                                 padding: '16px',
-                                                                borderRadius: '12px',
-                                                                border: `2px solid ${isActive ? '#10b981' : '#e2e8f0'}`,
-                                                                backgroundColor: isActive ? '#f0fdf4' : '#fff',
+                                                                borderRadius: 'var(--radius-md)',
+                                                                border: `1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-light)'}`,
+                                                                backgroundColor: isActive ? 'var(--surface-bg)' : 'rgba(0,0,0,0.2)',
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 gap: '12px',
@@ -1811,19 +1770,13 @@ const Dashboard = () => {
                                                                 transition: 'all 0.2s',
                                                                 opacity: isSaving ? 0.6 : 1
                                                             }}
-                                                            onMouseOver={(e) => {
-                                                                if(!isActive) e.currentTarget.style.backgroundColor = '#f8fafc';
-                                                            }}
-                                                            onMouseOut={(e) => {
-                                                                if(!isActive) e.currentTarget.style.backgroundColor = '#fff';
-                                                            }}
                                                         >
-                                                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: `2px solid ${isActive ? '#10b981' : '#cbd5e1'}`, display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: isActive ? '#10b981' : 'transparent', flexShrink: 0 }}>
-                                                                {isActive && <Check size={14} color="white" />}
+                                                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: `2px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-light)'}`, display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: isActive ? 'var(--accent-primary)' : 'transparent', flexShrink: 0 }}>
+                                                                {isActive && <Check size={14} color="var(--bg-primary)" />}
                                                             </div>
                                                             <div>
-                                                                <strong style={{ display: 'block', color: isActive ? '#065f46' : '#334155', fontSize: '1rem' }}>{cat.label}</strong>
-                                                                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{isActive ? 'Synlig for kunden' : 'Skjult i beregneren'}</span>
+                                                                <strong style={{ display: 'block', color: 'var(--text-primary)', fontSize: '1rem' }}>{cat.label}</strong>
+                                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{isActive ? 'Synlig for kunden' : 'Skjult i beregneren'}</span>
                                                             </div>
                                                         </div>
                                                     );
@@ -1833,11 +1786,7 @@ const Dashboard = () => {
                                     </div>
                                     
                                     {/* Subscription Settings Container */}
-                                    <div style={{ borderTop: '2px dashed #e2e8f0', paddingTop: '32px', paddingBottom: '32px' }}>
-                                        <div style={{ marginBottom: '16px' }}>
-                                            <h3 style={{ margin: '0 0 8px', color: '#0f172a', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}><CreditCard size={24} color="#3b82f6" /> Abonnement & Fakturering</h3>
-                                            <p style={{ color: '#64748b', margin: 0, fontSize: '1rem' }}>Administrer dit B2B abonnement og betalingsmetode.</p>
-                                        </div>
+                                    <div className="subscription-wrapper">
                                         <SubscriptionSettings />
                                     </div>
 
@@ -1846,20 +1795,12 @@ const Dashboard = () => {
                         </div>
                     )}
                     {activeTab === 'leads' && (
-                        <div className="leads-container">
-                            <div className="materials-header">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <div>
-                                        <h2>Kunder & Forespørgsler</h2>
-                                        <p className="text-muted">Her kan du styre dine kundeemner hele vejen gennem salgsprocessen.</p>
-                                    </div>
-                                    <button className="primary-btn" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                        Opret Ny Kunde
-                                    </button>
-                                </div>
+                        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                            <div className="settings-card">
                                 
-                                {/* Pipeline Menu */}
+                                
+                                <div className="card-body">
+                                    {/* Pipeline Menu */}
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
                                     {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Udgået opgave', 'Historik']
                                         .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
@@ -1873,64 +1814,57 @@ const Dashboard = () => {
                                                 border: '1px solid',
                                                 borderColor: leadFilter === status 
                                                     ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Historik' ? '#6b7280' : '#ef4444') 
-                                                    : '#e2e8f0',
+                                                    : 'rgba(255,255,255,0.2)',
                                                 backgroundColor: leadFilter === status 
-                                                    ? (status === 'Ny forespørgsel' ? '#eff6ff' : status === 'Sendt tilbud' ? '#fefce8' : status === 'Bekræftet opgave' ? '#ecfdf5' : status === 'Historik' ? '#f3f4f6' : '#fef2f2') 
-                                                    : '#f8fafc',
+                                                    ? (status === 'Ny forespørgsel' ? 'rgba(59, 130, 246, 0.1)' : status === 'Sendt tilbud' ? 'rgba(234, 179, 8, 0.1)' : status === 'Bekræftet opgave' ? 'rgba(16, 185, 129, 0.1)' : status === 'Historik' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)') 
+                                                    : 'rgba(255,255,255,0.05)',
                                                 color: leadFilter === status 
-                                                    ? (status === 'Ny forespørgsel' ? '#1d4ed8' : status === 'Sendt tilbud' ? '#a16207' : status === 'Bekræftet opgave' ? '#047857' : status === 'Historik' ? '#374151' : '#b91c1c') 
-                                                    : '#64748b',
+                                                    ? (status === 'Ny forespørgsel' ? '#60a5fa' : status === 'Sendt tilbud' ? '#facc15' : status === 'Bekræftet opgave' ? '#34d399' : status === 'Historik' ? '#9ca3af' : '#f87171') 
+                                                    : 'var(--text-primary)',
                                                 fontWeight: leadFilter === status ? 'bold' : 'normal',
                                                 cursor: 'pointer',
                                                 whiteSpace: 'nowrap',
-                                                transition: 'all 0.2s'
+                                                transition: 'all 0.2s',
+                                                backdropFilter: 'blur(10px)'
                                             }}
                                         >
                                             {status}
-                                            <span style={{ marginLeft: '8px', background: leadFilter === status ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Historik' ? '#6b7280' : '#ef4444') : '#e2e8f0', color: leadFilter === status ? '#fff' : '#64748b', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem' }}>
+                                            <span style={{ marginLeft: '8px', background: leadFilter === status ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Historik' ? '#6b7280' : '#ef4444') : 'rgba(255,255,255,0.2)', color: leadFilter === status ? '#fff' : 'var(--text-secondary)', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem' }}>
                                                 {leadsData.filter(l => (l.status || 'Ny forespørgsel') === status).length}
                                             </span>
                                         </button>
                                     ))}
                                 </div>
-                            </div>
-                            
-                            <div style={{ marginBottom: '20px', position: 'relative' }}>
-                                <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                                
+                                <div style={{ marginBottom: '20px', position: 'relative' }}>
+                                <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}>
                                     <Search size={20} />
                                 </div>
-                                <input
-                                    type="text"
-                                    placeholder={`Søg i "${leadFilter}" på kundenavn, adresse, email, telefon eller opgavetype...`}
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '14px 16px 14px 44px',
-                                        borderRadius: '12px',
-                                        border: '1px solid #cbd5e1',
-                                        fontSize: '15px',
-                                        backgroundColor: '#fff',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                                        transition: 'all 0.2s',
-                                        outline: 'none'
-                                    }}
-                                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                                    onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                                />
+                                <div className="input-group">
+                                    <input
+                                        type="text"
+                                        placeholder={`Søg i "${leadFilter}" på kundenavn, adresse, email, telefon eller opgavetype...`}
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            paddingLeft: '44px'
+                                        }}
+                                    />
+                                </div>
                             </div>
                             
                             {isLeadsLoading ? (
                                 <div className="placeholder-state"><h3>Henter kunder fra databasen...</h3></div>
                             ) : filteredLeads.length === 0 ? (
-                                <div className="placeholder-state" style={{ backgroundColor: '#f8fafc', borderColor: '#e2e8f0', padding: '48px 24px', textAlign: 'center' }}>
+                                <div className="placeholder-state" style={{ backgroundColor: '#f3f1ed', borderColor: '#e2e8f0', padding: '48px 24px', textAlign: 'center' }}>
                                     <div style={{ width: '64px', height: '64px', backgroundColor: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
                                         <Users size={32} color="#64748b" />
                                     </div>
                                     {leadFilter === 'Ny forespørgsel' ? (
                                         <>
-                                            <h3 style={{ color: '#1e293b', marginBottom: '12px' }}>Din indbakke er tom lige nu</h3>
-                                            <p style={{ color: '#64748b', maxWidth: '400px', margin: '0 auto 24px', lineHeight: '1.6' }}>
+                                            <h3 style={{ color: '#1a1a1a', marginBottom: '12px' }}>Din indbakke er tom lige nu</h3>
+                                            <p style={{ color: '#6b7280', maxWidth: '400px', margin: '0 auto 24px', lineHeight: '1.6' }}>
                                                 Når kunder udfylder din prisberegner, vil de dukke op her automatisk. Kopiér dit booking-link herunder og del det på din hjemmeside eller sociale medier for at komme i gang.
                                             </p>
                                             <button 
@@ -1945,8 +1879,8 @@ const Dashboard = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <h3 style={{ color: '#475569' }}>Ingen kunder i "{leadFilter}"</h3>
-                                            <p style={{ color: '#64748b' }}>Skift fane for at se dine andre leads.</p>
+                                            <h3 style={{ color: '#6b7280' }}>Ingen kunder i "{leadFilter}"</h3>
+                                            <p style={{ color: '#6b7280' }}>Skift fane for at se dine andre leads.</p>
                                         </>
                                     )}
                                 </div>
@@ -1956,15 +1890,14 @@ const Dashboard = () => {
                                         <div 
                                             key={lead.id} 
                                             onClick={() => handleSelectLead(lead)}
-                                            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
-                                            style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'center', cursor: 'pointer', transition: 'box-shadow 0.2s' }}
+                                            className="glass-panel"
+                                            style={{ padding: '24px', display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
                                         >
                                             <div style={{ flex: '1 1 250px' }}>
-                                                <h3 style={{ margin: '0 0 8px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <h3 style={{ margin: '0 0 8px', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     {lead.customer_name} 
                                                     <span style={{ 
-                                                        fontSize: '0.75rem', padding: '4px 8px', borderRadius: '12px', fontWeight: 'bold',
+                                                        fontSize: '0.75rem', padding: '4px 8px', borderRadius: '14px', fontWeight: 'bold',
                                                         backgroundColor: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#eff6ff' : ((lead.status || '') === 'Sendt tilbud' ? '#fefce8' : (lead.status || '') === 'Bekræftet opgave' ? '#ecfdf5' : '#fef2f2'),
                                                         color: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#2563eb' : ((lead.status || '') === 'Sendt tilbud' ? '#ca8a04' : (lead.status || '') === 'Bekræftet opgave' ? '#059669' : '#dc2626')
                                                     }}>{lead.status || 'Ny forespørgsel'}</span>
@@ -1979,59 +1912,61 @@ const Dashboard = () => {
                                                                 <Eye size={14} /> Åbnet af kunde
                                                             </span>
                                                         ) : (
-                                                            <span style={{ fontSize: '0.8rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #e2e8f0' }}>
+                                                            <span style={{ fontSize: '0.8rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#f3f1ed', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #e8e6e1' }}>
                                                                 <Mail size={14} /> Afventer kunde
                                                             </span>
                                                         )
                                                     )}
                                                 </h3>
-                                                <p style={{ margin: '0 0 4px', color: '#475569', fontSize: '0.9rem' }}><strong>Opgave:</strong> {categoryNames[lead.project_category] || lead.project_category}</p>
-                                                <p style={{ margin: '0 0 4px', color: '#475569', fontSize: '0.9rem' }}><strong>Estimat givet:</strong> {lead.price_estimate}</p>
-                                                <p style={{ margin: '0 0 0', color: '#475569', fontSize: '0.85rem' }}><em>Modtaget: {new Date(lead.created_at).toLocaleDateString('da-DK')} kl. {new Date(lead.created_at).toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'})}</em></p>
+                                                <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: '0.9rem' }}><strong>Opgave:</strong> {categoryNames[lead.project_category] || lead.project_category}</p>
+                                                <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: '0.9rem' }}><strong>Estimat givet:</strong> {lead.price_estimate}</p>
+                                                <p style={{ margin: '0 0 0', color: '#6b7280', fontSize: '0.85rem' }}><em>Modtaget: {new Date(lead.created_at).toLocaleDateString('da-DK')} kl. {new Date(lead.created_at).toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'})}</em></p>
                                             </div>
-                                            <div style={{ flex: '1 1 250px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                                                <h4 style={{ margin: '0 0 8px', color: '#1e293b', fontSize: '0.9rem', textTransform: 'uppercase' }}>Kontaktinfo</h4>
-                                                <p style={{ margin: '0 0 4px', color: '#334155', fontSize: '0.9rem' }}>📞 {lead.customer_phone}</p>
-                                                <p style={{ margin: '0 0 4px', color: '#334155', fontSize: '0.9rem' }}>📧 {lead.customer_email}</p>
-                                                <p style={{ margin: '0 0 4px', color: '#334155', fontSize: '0.9rem' }}>🏠 {lead.customer_address}</p>
-                                                <p style={{ margin: '0', color: '#3b82f6', fontSize: '0.9rem', fontWeight: 'bold' }}>🗓️ Ring/Besøg: {lead.contact_preference}</p>
+                                            <div style={{ flex: '1 1 250px', backgroundColor: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                                <h4 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '0.9rem', textTransform: 'uppercase' }}>Kontaktinfo</h4>
+                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>📞 {lead.customer_phone}</p>
+                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>📧 {lead.customer_email}</p>
+                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>🏠 {lead.customer_address}</p>
+                                                <p style={{ margin: '0', color: '#60a5fa', fontSize: '0.9rem', fontWeight: 'bold' }}>🗓️ Ring/Besøg: {lead.contact_preference}</p>
                                             </div>
                                             <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                <select 
-                                                    value={lead.status || 'Ny forespørgsel'}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    onChange={(e) => { e.stopPropagation(); updateLeadStatus(lead.id, e.target.value); }}
-                                                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', fontWeight: 'bold', color: '#334155', cursor: 'pointer', outline: 'none' }}
-                                                >
-                                                    <option value="Ny forespørgsel">Mappe: Ny forespørgsel</option>
-                                                    <option value="Sendt tilbud">Mappe: Sendt tilbud</option>
-                                                    <option value="Bekræftet opgave">Mappe: Bekræftet opgave</option>
-                                                    <option value="Udgået opgave">Mappe: Udgået opgave</option>
-                                                    <option value="Historik">Mappe: Historik (Afsluttet)</option>
-                                                </select>
+                                                <div className="input-group">
+                                                    <select 
+                                                        value={lead.status || 'Ny forespørgsel'}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        onChange={(e) => { e.stopPropagation(); updateLeadStatus(lead.id, e.target.value); }}
+                                                    >
+                                                        <option value="Ny forespørgsel">Mappe: Ny forespørgsel</option>
+                                                        <option value="Sendt tilbud">Mappe: Sendt tilbud</option>
+                                                        <option value="Bekræftet opgave">Mappe: Bekræftet opgave</option>
+                                                        <option value="Udgået opgave">Mappe: Udgået opgave</option>
+                                                        <option value="Historik">Mappe: Historik (Afsluttet)</option>
+                                                    </select>
+                                                </div>
 
                                                 {carpenterProfile?.role === 'admin' && teamMembers.length > 0 && (
-                                                    <select
-                                                        value={lead.assigned_to || ''}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onChange={async (e) => { 
-                                                            e.stopPropagation(); 
-                                                            const empId = e.target.value;
-                                                            const { error } = await supabase.from('leads').update({ assigned_to: empId || null }).eq('id', lead.id);
-                                                            if (!error) {
-                                                                setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...l, assigned_to: empId || null } : l));
-                                                                toast.success("Lead tildelt!");
-                                                            } else {
-                                                                toast.error("Fejl ved tildeling.");
-                                                            }
-                                                        }}
-                                                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#334155', cursor: 'pointer', outline: 'none', fontSize: '0.9rem' }}
-                                                    >
-                                                        <option value="">Ikke tildelt</option>
-                                                        {teamMembers.map(member => (
-                                                            <option key={member.id} value={member.id}>👤 {member.owner_name} ({member.role})</option>
-                                                        ))}
-                                                    </select>
+                                                    <div className="input-group">
+                                                        <select
+                                                            value={lead.assigned_to || ''}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onChange={async (e) => { 
+                                                                e.stopPropagation(); 
+                                                                const empId = e.target.value;
+                                                                const { error } = await supabase.from('leads').update({ assigned_to: empId || null }).eq('id', lead.id);
+                                                                if (!error) {
+                                                                    setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...l, assigned_to: empId || null } : l));
+                                                                    toast.success("Lead tildelt!");
+                                                                } else {
+                                                                    toast.error("Fejl ved tildeling.");
+                                                                }
+                                                            }}
+                                                        >
+                                                            <option value="">Ikke tildelt</option>
+                                                            {teamMembers.map(member => (
+                                                                <option key={member.id} value={member.id}>👤 {member.owner_name} ({member.role})</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
                                                 )}
 
                                                 <button className="btn-primary" onClick={(e) => { e.stopPropagation(); handleSelectLead(lead); }}>
@@ -2102,10 +2037,10 @@ const Dashboard = () => {
 
                             {selectedLead && createPortal(
                                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setSelectedLead(null)}>
-                                    <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', padding: '32px', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                                        <button onClick={() => setSelectedLead(null)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
+                                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', padding: '32px', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                                        <button onClick={() => setSelectedLead(null)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
                                         
-                                        <h2 style={{ color: '#0f172a', borderBottom: '2px solid #e2e8f0', paddingBottom: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', paddingRight: '40px' }}>
+                                        <h2 style={{ color: '#1a1a1a', borderBottom: '2px solid #e8e6e1', paddingBottom: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', paddingRight: '40px' }}>
                                             Kunde: {selectedLead.customer_name}
                                         </h2>
 
@@ -2222,7 +2157,7 @@ const Dashboard = () => {
                                             )}
                                             
                                             {selectedLead.raw_data?.quote_pdf_url && (
-                                                <a href={selectedLead.raw_data.quote_pdf_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                                                <a href={selectedLead.raw_data.quote_pdf_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#f3f1ed', border: '1px solid #e8e6e1', color: '#374151', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
                                                     <FileText size={18} /> PDF-tilbud
                                                 </a>
                                             )}
@@ -2233,7 +2168,7 @@ const Dashboard = () => {
                                                         navigator.clipboard.writeText(url);
                                                         toast.success('Link til interaktivt tilbud kopieret til udklipsholderen!');
                                                     }}
-                                                    style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                    style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#eff6ff', border: '1px solid #e8e6e1', color: '#1d4ed8', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
                                                 >
                                                     <Globe size={18} /> Kopiér Web-Link
                                                 </button>
@@ -2241,9 +2176,9 @@ const Dashboard = () => {
                                         </div>
 
                                         {selectedLead.status === 'Bekræftet opgave' && isLeadReadyForHistory(selectedLead) && (
-                                            <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fcd34d', padding: '20px', borderRadius: '12px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fcd34d', padding: '20px', borderRadius: '14px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div>
-                                                    <strong style={{ color: '#b45309', display: 'block', fontSize: '1.1rem', marginBottom: '4px' }}>Er byggeriet afsluttet?</strong>
+                                                    <strong style={{ color: '#6b7280', display: 'block', fontSize: '1.1rem', marginBottom: '4px' }}>Er byggeriet afsluttet?</strong>
                                                     <span style={{ color: '#d97706', fontSize: '0.95rem' }}>Den forventede byggeperiode er overskredet. Er du klar til at afslutte sagen og smide den i Historik?</span>
                                                 </div>
                                                 <button 
@@ -2259,7 +2194,7 @@ const Dashboard = () => {
                                         )}
 
                                         {selectedLead.status === 'Bekræftet opgave' && selectedLead.raw_data?.audit_trail && (
-                                            <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '16px', borderRadius: '12px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                            <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '16px', borderRadius: '14px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'center' }}>
                                                 <div style={{ fontSize: '2rem' }}>⚖️</div>
                                                 <div>
                                                     <strong style={{ color: '#065f46', display: 'block', fontSize: '1rem', marginBottom: '4px' }}>Juridisk Bindende Accept (Digital Signatur)</strong>
@@ -2273,17 +2208,17 @@ const Dashboard = () => {
                                         )}
 
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
-                                            <div style={{ padding: '16px', backgroundColor: '#f1f5f9', borderRadius: '12px' }}>
-                                                <span style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kategori</span>
-                                                <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#0f172a', fontSize: '1.1rem' }}>{categoryNames[selectedLead.project_category] || selectedLead.project_category}</p>
+                                            <div style={{ padding: '16px', backgroundColor: '#f3f1ed', borderRadius: '14px' }}>
+                                                <span style={{ fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kategori</span>
+                                                <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem' }}>{categoryNames[selectedLead.project_category] || selectedLead.project_category}</p>
                                             </div>
-                                            <div style={{ padding: '16px', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
+                                            <div style={{ padding: '16px', backgroundColor: '#f7f6f3', borderRadius: '14px', border: '1px solid #e8e6e1' }}>
                                                 <span style={{ fontSize: '0.85rem', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Auto-Estimat</span>
                                                 <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#1d4ed8', fontSize: '1.1rem' }}>{selectedLead.price_estimate}</p>
                                             </div>
                                         </div>
 
-                                        <h3 style={{ color: '#334155', marginBottom: '16px' }}>Kundens Valg i Beregneren</h3>
+                                        <h3 style={{ color: '#374151', marginBottom: '16px' }}>Kundens Valg i Beregneren</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                             {selectedLead.raw_data && selectedLead.raw_data.details && (() => {
                                                 const categoryQuestions = QUESTIONS[selectedLead.raw_data.category] || [];
@@ -2302,11 +2237,11 @@ const Dashboard = () => {
                                                         const isFileArray = rawValue.length > 0 && typeof rawValue[0] === 'object' && rawValue[0].preview;
                                                         if (isFileArray) {
                                                             return (
-                                                                <div key={keyInput} style={{ padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                                    <strong style={{ color: '#475569' }}>{label}</strong>
+                                                                <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                                    <strong style={{ color: '#6b7280' }}>{label}</strong>
                                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                                                                         {rawValue.map((file, idx) => (
-                                                                            <a key={idx} href={file.preview} target="_blank" rel="noopener noreferrer" style={{ display: 'block', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', width: '120px', height: '120px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
+                                                                            <a key={idx} href={file.preview} target="_blank" rel="noopener noreferrer" style={{ display: 'block', border: '1px solid #e8e6e1', borderRadius: '8px', overflow: 'hidden', width: '120px', height: '120px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
                                                                                 <img 
                                                                                     src={file.preview} 
                                                                                     alt={file.name || 'Kundebillede'} 
@@ -2334,7 +2269,7 @@ const Dashboard = () => {
                                                     if (displayVal.toLowerCase() === 'no') displayVal = 'Nej';
                                                     
                                                     // Håndter Links og Orddeling
-                                                    let finalValElement = <span style={{ color: '#0f172a', textAlign: 'right', fontWeight: '500', maxWidth: '55%', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{displayVal}</span>;
+                                                    let finalValElement = <span style={{ color: '#1a1a1a', textAlign: 'right', fontWeight: '500', maxWidth: '55%', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{displayVal}</span>;
                                                     
                                                     if (displayVal.includes('http://') || displayVal.includes('https://') || displayVal.includes('www.')) {
                                                         const words = displayVal.split(' ');
@@ -2345,12 +2280,12 @@ const Dashboard = () => {
                                                             }
                                                             return w + ' ';
                                                         });
-                                                        finalValElement = <span style={{ color: '#0f172a', textAlign: 'right', fontWeight: '500', maxWidth: '55%', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{formattedWords}</span>;
+                                                        finalValElement = <span style={{ color: '#1a1a1a', textAlign: 'right', fontWeight: '500', maxWidth: '55%', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{formattedWords}</span>;
                                                     }
                                                     
                                                     return (
-                                                        <div key={keyInput} style={{ padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                            <strong style={{ color: '#475569', maxWidth: '40%' }}>{label}</strong>
+                                                        <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                            <strong style={{ color: '#6b7280', maxWidth: '40%' }}>{label}</strong>
                                                             {finalValElement}
                                                         </div>
                                                     );
@@ -2364,9 +2299,9 @@ const Dashboard = () => {
                                                 
                                                 if (details.isAiEstimate && details.chatLog) {
                                                     renderElements.push(
-                                                        <div key="ai_chat" style={{ padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                            <strong style={{ color: '#475569' }}>Samtale med AI-Tømrer (Kundens Ønsker)</strong>
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto', padding: '8px', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
+                                                        <div key="ai_chat" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                            <strong style={{ color: '#6b7280' }}>Samtale med AI-Tømrer (Kundens Ønsker)</strong>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto', padding: '8px', backgroundColor: '#f3f1ed', borderRadius: '6px' }}>
                                                                 {details.chatLog.filter(m => m.role !== 'system').map((msg, idx) => (
                                                                     <div key={idx} style={{ 
                                                                         padding: '10px 14px', 
@@ -2411,11 +2346,11 @@ const Dashboard = () => {
 
                                                 if (details.photos && details.photos.length > 0) {
                                                     renderElements.push(
-                                                        <div key="photos" style={{ padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                            <strong style={{ color: '#475569' }}>Kundens Billeder</strong>
+                                                        <div key="photos" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                            <strong style={{ color: '#6b7280' }}>Kundens Billeder</strong>
                                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
                                                                 {details.photos.map((url, idx) => (
-                                                                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer" style={{ position: 'relative', paddingTop: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1', display: 'block' }}>
+                                                                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer" style={{ position: 'relative', paddingTop: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e8e6e1', display: 'block' }}>
                                                                         <img 
                                                                             src={url} 
                                                                             alt={`Kundebillede ${idx + 1}`} 
@@ -2434,26 +2369,26 @@ const Dashboard = () => {
 
                                         {/* QUOTE BUILDER SEKTION */}
                                         {selectedLead.status !== 'Bekræftet opgave' && (quoteBuilder ? (
-                                            <div style={{ marginTop: '24px', padding: '24px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                <h3 style={{ margin: '0', color: '#1e293b' }}>Tilpas & Send Endeligt Tilbud</h3>
-                                                <p style={{ margin: '0', color: '#64748b', fontSize: '0.95rem' }}>Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig.</p>
+                                            <div style={{ marginTop: '24px', padding: '24px', backgroundColor: '#f3f1ed', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                <h3 style={{ margin: '0', color: '#1a1a1a' }}>Tilpas & Send Endeligt Tilbud</h3>
+                                                <p style={{ margin: '0', color: '#6b7280', fontSize: '0.95rem' }}>Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig.</p>
                                                 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
                                                     <div className="input-group">
                                                         <label>Arbejdstimer (antal)</label>
-                                                        <input type="number" value={quoteBuilder.laborHours} onChange={(e) => setQuoteBuilder({...quoteBuilder, laborHours: Number(e.target.value)})} style={{ border: '1px solid #cbd5e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                        <input type="number" value={quoteBuilder.laborHours} onChange={(e) => setQuoteBuilder({...quoteBuilder, laborHours: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                     </div>
                                                     <div className="input-group">
                                                         <label>Timepris (kr)</label>
-                                                        <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #cbd5e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                        <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                     </div>
                                                     <div className="input-group">
                                                         <label>Materialer eks. moms (kr)</label>
-                                                        <input type="number" value={quoteBuilder.materialCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, materialCost: Number(e.target.value)})} style={{ border: '1px solid #cbd5e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                        <input type="number" value={quoteBuilder.materialCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, materialCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                     </div>
                                                     <div className="input-group">
                                                         <label>Kørsel/Øvrigt eks. moms (kr)</label>
-                                                        <input type="number" value={quoteBuilder.drivingCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, drivingCost: Number(e.target.value)})} style={{ border: '1px solid #cbd5e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                        <input type="number" value={quoteBuilder.drivingCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, drivingCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                     </div>
                                                 </div>
 
@@ -2465,26 +2400,26 @@ const Dashboard = () => {
                                                                     const newLines = [...quoteBuilder.customLines];
                                                                     newLines[idx].description = e.target.value;
                                                                     setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                }} style={{ border: '1px solid #cbd5e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                             </div>
                                                             <div className="input-group" style={{ display: 'flex', gap: '8px' }}>
                                                                 <input type="number" placeholder="Pris (kr)" value={line.price || ''} onChange={(e) => {
                                                                     const newLines = [...quoteBuilder.customLines];
                                                                     newLines[idx].price = Number(e.target.value);
                                                                     setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                }} style={{ border: '1px solid #cbd5e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                                 <button onClick={() => {
                                                                     const newLines = [...quoteBuilder.customLines];
                                                                     newLines.splice(idx, 1);
                                                                     setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                }} style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', padding: '10px', borderRadius: '6px', cursor: 'pointer' }}>✖</button>
+                                                                }} style={{ background: '#fef2f2', border: '1px solid #e8e6e1', color: '#ef4444', padding: '10px', borderRadius: '6px', cursor: 'pointer' }}>✖</button>
                                                             </div>
                                                         </div>
                                                     ))}
-                                                    <button onClick={() => setQuoteBuilder({...quoteBuilder, customLines: [...(quoteBuilder.customLines || []), { description: '', price: 0 }] })} style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed #94a3b8', color: '#475569', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Tilføj ekstra linje</button>
+                                                    <button onClick={() => setQuoteBuilder({...quoteBuilder, customLines: [...(quoteBuilder.customLines || []), { description: '', price: 0 }] })} style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed #94a3b8', color: '#6b7280', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Tilføj ekstra linje</button>
                                                 </div>
 
-                                                <div style={{ padding: '16px', background: '#e2e8f0', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                                                <div style={{ padding: '16px', background: '#e8e6e1', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
                                                     <span style={{ fontWeight: 'bold' }}>Total inkl. 25% moms:</span>
                                                     <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1d4ed8' }}>
                                                         {new Intl.NumberFormat('da-DK').format(((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25)} kr.
@@ -2492,8 +2427,8 @@ const Dashboard = () => {
                                                 </div>
 
                                                 {/* PDF Customization UI */}
-                                                <div style={{ marginTop: '16px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#fff' }}>
-                                                    <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem', color: '#1e293b' }}>Tilpas PDF-udseende til kunden</h4>
+                                                <div style={{ marginTop: '16px', padding: '16px', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(12px)' }}>
+                                                    <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem', color: '#1a1a1a' }}>Tilpas PDF-udseende til kunden</h4>
                                                     
                                                     <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', marginBottom: '16px' }}>
                                                         <input 
@@ -2503,18 +2438,18 @@ const Dashboard = () => {
                                                             style={{ width: '18px', height: '18px', marginTop: '2px' }}
                                                         />
                                                         <div>
-                                                            <strong style={{ display: 'block', fontSize: '0.95rem', color: '#0f172a' }}>Skjul detaljer (Vis kun samlet pris)</strong>
-                                                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Fravælger du detaljer, skjules tømrer-timer, materialer og ekstra ydelser på PDF'en. Kunden ser kun én samlet "Entreprise" pris.</span>
+                                                            <strong style={{ display: 'block', fontSize: '0.95rem', color: '#1a1a1a' }}>Skjul detaljer (Vis kun samlet pris)</strong>
+                                                            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Fravælger du detaljer, skjules tømrer-timer, materialer og ekstra ydelser på PDF'en. Kunden ser kun én samlet "Entreprise" pris.</span>
                                                         </div>
                                                     </label>
 
                                                     <div>
-                                                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', color: '#334155', marginBottom: '6px' }}>Bemærkninger / Beskrivelse til kunden</label>
+                                                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', color: '#374151', marginBottom: '6px' }}>Bemærkninger / Beskrivelse til kunden</label>
                                                         <textarea 
                                                             value={quoteBuilder.customMessage || ''} 
                                                             onChange={(e) => setQuoteBuilder({...quoteBuilder, customMessage: e.target.value})}
                                                             placeholder="F.eks. 'Tak for god snak. I tilbuddet er der taget højde for...'"
-                                                            style={{ width: '100%', minHeight: '80px', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', resize: 'vertical' }}
+                                                            style={{ width: '100%', minHeight: '80px', padding: '10px', borderRadius: '6px', border: '1px solid #e8e6e1', resize: 'vertical' }}
                                                         />
                                                     </div>
                                                 </div>
@@ -2535,16 +2470,16 @@ const Dashboard = () => {
 
                                                 {selectedLead.status !== 'Sendt tilbud' && (
                                                     <div style={{ marginTop: '24px', borderTop: '1px solid #cbd5e1', paddingTop: '20px' }}>
-                                                        <p style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#64748b', textAlign: 'center', fontWeight: '500' }}>— Eller brug dit eget vante system —</p>
+                                                        <p style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#6b7280', textAlign: 'center', fontWeight: '500' }}>— Eller brug dit eget vante system —</p>
                                                         <div style={{ display: 'flex', gap: '10px' }}>
                                                             <input 
                                                                 type="file" 
                                                                 accept="application/pdf" 
                                                                 onChange={(e) => setSelectedPdfFile(e.target.files[0])}
-                                                                style={{ border: '1px dashed #94a3b8', padding: '10px', borderRadius: '6px', flex: 1, backgroundColor: '#fff', fontSize: '0.9rem', cursor: 'pointer', color: '#475569' }}
+                                                                style={{ border: '1px dashed rgba(255, 255, 255, 0.4)', padding: '10px', borderRadius: '6px', flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(12px)', fontSize: '0.9rem', cursor: 'pointer', color: '#1a1a1a' }}
                                                             />
                                                             <button 
-                                                                style={{ padding: '0 24px', borderRadius: '6px', border: '1px solid #94a3b8', backgroundColor: '#f8fafc', color: '#1e293b', cursor: selectedPdfFile ? 'pointer' : 'not-allowed', opacity: selectedPdfFile ? 1 : 0.5, fontWeight: 'bold' }}
+                                                                style={{ padding: '0 24px', borderRadius: '6px', border: '1px solid #94a3b8', backgroundColor: '#f3f1ed', color: '#1a1a1a', cursor: selectedPdfFile ? 'pointer' : 'not-allowed', opacity: selectedPdfFile ? 1 : 0.5, fontWeight: 'bold' }}
                                                                 disabled={!selectedPdfFile || isUploadingPdf}
                                                                 onClick={() => handleUploadAndSendQuote(selectedLead.id, carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst')}
                                                             >
@@ -2555,7 +2490,7 @@ const Dashboard = () => {
                                                 )}
                                             </div>
                                         ) : (
-                                            <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', border: '1px solid #f87171' }}>
+                                            <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#fff5f5', color: '#991b1b', borderRadius: '8px', border: '1px solid #f87171' }}>
                                                 <strong>Hov!</strong> Dette lead blev oprettet <em>før</em> vi integrerede Tilbuds-generatoren. Værdier til auto-udfyldelse mangler i databasen. Generer dog et nyt test-lead for at se det nye system.
                                             </div>
                                         ))}
@@ -2567,7 +2502,7 @@ const Dashboard = () => {
                                                         updateLeadStatus(selectedLead.id, 'Historik');
                                                         setSelectedLead(null);
                                                     }} 
-                                                    style={{ padding: '16px 32px', fontSize: '1.1rem', background: '#f1f5f9', color: '#334155', border: '2px solid #cbd5e1', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' }}
+                                                    style={{ padding: '16px 32px', fontSize: '1.1rem', background: '#f3f1ed', color: '#374151', border: '2px solid #cbd5e1', borderRadius: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' }}
                                                     onMouseEnter={(e) => e.target.style.background = '#e2e8f0'}
                                                     onMouseLeave={(e) => e.target.style.background = '#f1f5f9'}
                                                 >
@@ -2591,20 +2526,20 @@ const Dashboard = () => {
                                         {quoteBuilder && quoteBuilder.showPreview && createPortal(
                                             <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.9)', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
                                                 
-                                                <div style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#fff', position: 'relative', boxShadow: '0 0 30px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }}>
-                                                    <div ref={invoiceRef} style={{ width: '210mm', height: '297mm', padding: '25mm', boxSizing: 'border-box', backgroundColor: '#fff', color: '#1e293b', fontFamily: 'sans-serif' }}>
+                                                <div style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff', position: 'relative', boxShadow: '0 0 30px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }}>
+                                                    <div ref={invoiceRef} style={{ width: '210mm', height: '297mm', padding: '25mm', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif' }}>
                                                         
                                                         {/* Invoice Header */}
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #e2e8f0', paddingBottom: '20px', marginBottom: '30px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #e8e6e1', paddingBottom: '20px', marginBottom: '30px' }}>
                                                             <div>
                                                                 {carpenterProfile?.logo_url ? (
                                                                     <img src={carpenterProfile.logo_url} alt="Logo" style={{ maxHeight: '60px', marginBottom: '10px' }} crossOrigin="anonymous" />
                                                                 ) : (
-                                                                    <h1 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>{carpenterProfile?.company_name || 'Tømrervirksomhed'}</h1>
+                                                                    <h1 style={{ margin: 0, fontSize: '24px', color: '#1a1a1a' }}>{carpenterProfile?.company_name || 'Tømrervirksomhed'}</h1>
                                                                 )}
-                                                                <p style={{ margin: '4px 0', fontSize: '12px', color: '#64748b' }}>CVR: {carpenterProfile?.cvr || 'Under oprettelse'}</p>
-                                                                <p style={{ margin: '4px 0', fontSize: '12px', color: '#64748b' }}>{carpenterProfile?.address || ''}</p>
-                                                                <p style={{ margin: '4px 0', fontSize: '12px', color: '#64748b' }}>{carpenterProfile?.phone || ''} | {carpenterProfile?.email || ''}</p>
+                                                                <p style={{ margin: '4px 0', fontSize: '12px', color: '#6b7280' }}>CVR: {carpenterProfile?.cvr || 'Under oprettelse'}</p>
+                                                                <p style={{ margin: '4px 0', fontSize: '12px', color: '#6b7280' }}>{carpenterProfile?.address || ''}</p>
+                                                                <p style={{ margin: '4px 0', fontSize: '12px', color: '#6b7280' }}>{carpenterProfile?.phone || ''} | {carpenterProfile?.email || ''}</p>
                                                             </div>
                                                             <div style={{ textAlign: 'right' }}>
                                                                 <h2 style={{ margin: 0, fontSize: '28px', color: '#10b981' }}>TILBUD</h2>
@@ -2615,7 +2550,7 @@ const Dashboard = () => {
 
                                                         {/* Customer Details */}
                                                         <div style={{ marginBottom: '40px' }}>
-                                                            <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#475569' }}>Kunde:</h3>
+                                                            <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#6b7280' }}>Kunde:</h3>
                                                             <strong style={{ fontSize: '14px', display: 'block' }}>{selectedLead.customer_name}</strong>
                                                             <span style={{ fontSize: '14px', display: 'block' }}>{selectedLead.customer_address}</span>
                                                             <span style={{ fontSize: '14px', display: 'block' }}>{selectedLead.customer_phone} | {selectedLead.customer_email}</span>
@@ -2627,8 +2562,8 @@ const Dashboard = () => {
 
                                                         {/* Custom Message */}
                                                         {quoteBuilder.customMessage && quoteBuilder.customMessage.trim() !== '' && (
-                                                            <div style={{ marginBottom: '30px', padding: '15px', backgroundColor: '#f8fafc', borderLeft: '4px solid #10b981', borderRadius: '4px' }}>
-                                                                <p style={{ margin: 0, fontSize: '14px', color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                                                            <div style={{ marginBottom: '30px', padding: '15px', backgroundColor: '#f3f1ed', borderLeft: '4px solid #10b981', borderRadius: '4px' }}>
+                                                                <p style={{ margin: 0, fontSize: '14px', color: '#374151', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
                                                                     {quoteBuilder.customMessage}
                                                                 </p>
                                                             </div>
@@ -2637,7 +2572,7 @@ const Dashboard = () => {
                                                         {/* Line Items Table */}
                                                         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px' }}>
                                                             <thead>
-                                                                <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '2px solid #cbd5e1' }}>
+                                                                <tr style={{ backgroundColor: '#f3f1ed', borderBottom: '2px solid #cbd5e1' }}>
                                                                     <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px' }}>Beskrivelse</th>
                                                                     <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>Antal/Mængde</th>
                                                                     <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>Enhedspris</th>
@@ -2647,26 +2582,26 @@ const Dashboard = () => {
                                                             <tbody>
                                                                 {quoteBuilder.showDetailedBreakdown ? (
                                                                     <>
-                                                                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                                        <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
                                                                             <td style={{ padding: '12px', fontSize: '14px' }}>Håndværker - Arbejdstid</td>
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{quoteBuilder.laborHours} timer</td>
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{quoteBuilder.hourlyRate} kr.</td>
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.laborHours * quoteBuilder.hourlyRate)} kr.</td>
                                                                         </tr>
-                                                                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                                        <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
                                                                             <td style={{ padding: '12px', fontSize: '14px' }}>Materialer (ihht. besigtigelse)</td>
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 pck.</td>
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.materialCost)} kr.</td>
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.materialCost)} kr.</td>
                                                                         </tr>
-                                                                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                                        <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
                                                                             <td style={{ padding: '12px', fontSize: '14px' }}>Kørsel, logistik og øvrigt</td>
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 stk.</td>
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.drivingCost)} kr.</td>
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.drivingCost)} kr.</td>
                                                                         </tr>
                                                                         {(quoteBuilder.customLines || []).map((line, idx) => (
-                                                                            <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                                            <tr key={idx} style={{ borderBottom: '1px solid #e8e6e1' }}>
                                                                                 <td style={{ padding: '12px', fontSize: '14px' }}>{line.description || 'Ekstra ydelser'}</td>
                                                                                 <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 stk.</td>
                                                                                 <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(line.price || 0)} kr.</td>
@@ -2675,7 +2610,7 @@ const Dashboard = () => {
                                                                         ))}
                                                                     </>
                                                                 ) : (
-                                                                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                                    <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
                                                                         <td style={{ padding: '12px', fontSize: '14px', fontWeight: 'bold' }}>Samlet entreprise på opgaven jf. aftale</td>
                                                                         <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 stk.</td>
                                                                         <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>
@@ -2705,11 +2640,11 @@ const Dashboard = () => {
                                                                             <span>Subtotal (eks. moms)</span>
                                                                             <span>{new Intl.NumberFormat('da-DK').format(subTotalEx)} kr.</span>
                                                                         </div>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', fontSize: '14px', borderBottom: '2px solid #e2e8f0' }}>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', fontSize: '14px', borderBottom: '2px solid #e8e6e1' }}>
                                                                             <span>Moms (25%)</span>
                                                                             <span>{new Intl.NumberFormat('da-DK').format(subTotalEx * 0.25)} kr.</span>
                                                                         </div>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '12px', fontSize: '18px', fontWeight: 'bold', color: '#0f172a' }}>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '12px', fontSize: '18px', fontWeight: 'bold', color: '#1a1a1a' }}>
                                                                             <span>TOTAL AT BETALE</span>
                                                                             <span>{new Intl.NumberFormat('da-DK').format(subTotalEx * 1.25)} kr.</span>
                                                                         </div>
@@ -2718,14 +2653,14 @@ const Dashboard = () => {
                                                             })()}
                                                         </div>
 
-                                                        <div style={{ position: 'absolute', bottom: '15mm', left: '25mm', right: '25mm', fontSize: '10px', color: '#64748b', borderTop: '1px solid #e2e8f0', paddingTop: '15px', lineHeight: '1.4' }}>
-                                                            <p style={{ margin: '0 0 6px', fontSize: '12px', color: '#334155', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i 30 dage fra ovenstående dato.</p>
+                                                        <div style={{ position: 'absolute', bottom: '15mm', left: '25mm', right: '25mm', fontSize: '10px', color: '#6b7280', borderTop: '1px solid #e8e6e1', paddingTop: '15px', lineHeight: '1.4' }}>
+                                                            <p style={{ margin: '0 0 6px', fontSize: '12px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i 30 dage fra ovenstående dato.</p>
                                                             <p style={{ margin: 0 }}>Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.</p>
                                                         </div>
                                                     </div>
 
                                                     {/* ActionBar fixed til bunden for funktionalitet */}
-                                                    <div style={{ position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#1e293b', padding: '16px 24px', borderRadius: '12px', display: 'flex', gap: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 10001, alignItems: 'center' }}>
+                                                    <div style={{ position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#1e293b', padding: '16px 24px', borderRadius: '14px', display: 'flex', gap: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 10001, alignItems: 'center' }}>
                                                         <button 
                                                             onClick={(e) => { e.stopPropagation(); setQuoteBuilder({...quoteBuilder, showPreview: false}); }} 
                                                             style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #475569', backgroundColor: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
@@ -2816,16 +2751,18 @@ const Dashboard = () => {
                                     </div>
                                 </div>
                             , document.body)}
+                                </div> {/* Close card-body */}
+                            </div> {/* Close settings-card */}
                         </div>
                     )}
                     
                     {activeTab === 'map' && (
-                        <div className="map-view-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '600px' }}>
-                            <div className="materials-header">
-                                <h2>Geografisk Overblik</h2>
-                                <p className="text-muted">Se dine leads og nuværende forespørgsler direkte på Danmarkskortet.</p>
-                                <div style={{ marginTop: '12px', padding: '20px', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: '700px' }}>
-                                    <h4 style={{ margin: '0 0 16px', color: '#1e293b', fontSize: '0.95rem', fontWeight: '600' }}>Filtrér visningen på kortet</h4>
+                        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+                            <div className="settings-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                
+                                <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                    <div className="glass-panel" style={{ padding: '20px', marginBottom: '20px' }}>
+                                        <h4 style={{ margin: '0 0 16px', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>Filtrér visningen på kortet</h4>
                                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                                         <button 
                                             onClick={() => setMapFilters(p => ({...p, showNew: !p.showNew}))}
@@ -2867,14 +2804,13 @@ const Dashboard = () => {
                                             Bekræftet opgave
                                         </button>
                                     </div>
-                                    <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', borderLeft: '3px solid #cbd5e1', fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f3f1ed', borderRadius: '8px', borderLeft: '3px solid #cbd5e1', fontSize: '0.85rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                                         <span>Opgaver i "Historik" og "Udgået opgave" er automatisk skjult for at holde kortet rent. Zoom ind hvis prikkerne ligger tæt.</span>
                                     </div>
                                 </div>
-                            </div>
                             
-                            <div style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', marginTop: '16px', position: 'relative', zIndex: 0 }}>
+                            <div style={{ flex: 1, border: '1px solid #e8e6e1', borderRadius: '14px', overflow: 'hidden', marginTop: '16px', position: 'relative', zIndex: 0 }}>
                                 {!isLoaded ? (
                                     <div style={{ padding: '40px', textAlign: 'center' }}>Henter Google Maps HD miljøet...</div>
                                 ) : loadError ? (
@@ -2923,9 +2859,11 @@ const Dashboard = () => {
                                 )}
                             </div>
                             
-                            <div style={{ marginTop: '16px', display: 'flex', gap: '16px', fontSize: '0.9rem', color: '#64748b' }}>
+                            <div style={{ marginTop: '16px', display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                                 <span><strong style={{color: '#10b981'}}>{leadsData.filter(l => l.status !== 'Udgået opgave' && l.status !== 'Historik' && geocodedLeads[l.id]).length}</strong> / {leadsData.filter(l => l.status !== 'Udgået opgave' && l.status !== 'Historik').length} aktive adresser fundet på kortet.</span>
                             </div>
+                                </div> {/* Close card-body */}
+                            </div> {/* Close settings-card */}
                         </div>
                     )}
                     
@@ -2947,7 +2885,7 @@ const Dashboard = () => {
                                 <div className="card-body">
                                     <div className="input-group">
                                         <label>Firmaets Adresse (Dit Værksted/Kontor)</label>
-                                        <div style={{ padding: '12px', background: '#f1f5f9', borderRadius: '8px', color: '#475569', border: '1px solid #e2e8f0', fontWeight: '500' }}>
+                                        <div style={{ padding: '12px', background: '#f3f1ed', borderRadius: '8px', color: '#6b7280', border: '1px solid #e8e6e1', fontWeight: '500' }}>
                                             {carpenterProfile?.address || 'Ingen adresse angivet på profilen.'}
                                         </div>
                                         <span className="help-text">Dette er dit præcise startpunkt til kørselsberegning i overslagene. Adressen hentes direkte fra din Profil-fane.</span>
@@ -2957,7 +2895,7 @@ const Dashboard = () => {
                                         <select 
                                             value={settingsData.driving_calc_method || 'slitage'} 
                                             onChange={(e) => setSettingsData(prev => ({ ...prev, driving_calc_method: e.target.value }))}
-                                            style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }}
+                                            style={{ padding: '12px', borderRadius: '8px', border: '1px solid #e8e6e1', width: '100%' }}
                                         >
                                             <option value="slitage">Slitage & Timer (Statens takst + din timepris under kørsel)</option>
                                             <option value="timer">Kun Timepris (Min. 1 time, rundes op til hele arbejdstimer)</option>
@@ -2993,7 +2931,7 @@ const Dashboard = () => {
                                     <h3>Notifikationer & Alarmer</h3>
                                 </div>
                                 <div className="card-body">
-                                    <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                    <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#f3f1ed', borderRadius: '8px', border: '1px solid #e8e6e1' }}>
                                         <label className="toggle-switch" style={{ margin: 0 }}>
                                             <input 
                                                 type="checkbox" 
@@ -3017,8 +2955,8 @@ const Dashboard = () => {
                                             <span className="slider"></span>
                                         </label>
                                         <div style={{ flex: 1 }}>
-                                            <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', color: '#1e293b' }}>SMS ved Nye Opgaver</h4>
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.4' }}>Modtag en lynhurtig SMS på telefonen hver gang en kunde udfylder tilbudsberegneren, så du kan reagere hurtigt, mens du står på byggepladsen.</p>
+                                            <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', color: '#1a1a1a' }}>SMS ved Nye Opgaver</h4>
+                                            <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.4' }}>Modtag en lynhurtig SMS på telefonen hver gang en kunde udfylder tilbudsberegneren, så du kan reagere hurtigt, mens du står på byggepladsen.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -3062,7 +3000,7 @@ const Dashboard = () => {
                     )}
                     {/* Fejlhåndtering: Hvis det er hvidt skærm, vis hvorfor her! */}
                     {activeTab === 'materials' && !isMaterialsLoading && materialsData.length === 0 && (
-                        <div style={{ padding: '40px', textAlign: 'center', background: '#fee2e2', borderRadius: '12px', color: '#b91c1c', border: '1px solid #f87171', margin: '20px' }}>
+                        <div style={{ padding: '40px', textAlign: 'center', background: '#fee2e2', borderRadius: '14px', color: '#b91c1c', border: '1px solid #f87171', margin: '20px' }}>
                            <h3>Hov! Kunne ikke oprette dine 40 standard-materialer.</h3>
                            <p>Der er et rettighedsproblem i din database der forhindrer systemet i at skubbe prislisten ind.</p>
                            <pre style={{textAlign: 'left', background: '#1e293b', color: '#10b981', padding: '15px', borderRadius: '8px', overflowX: 'auto', marginTop: '20px'}}>
@@ -3071,40 +3009,35 @@ const Dashboard = () => {
                         </div>
                     )}
                     {activeTab === 'materials' && !isMaterialsLoading && materialsData.length > 0 && (
-                        <div className="materials-container">
-                            <div className="materials-header">
-                                <h2>Standard Indkøbspriser (Ekskl. moms DKK)</h2>
-                                <p className="text-muted">Disse priser danner grundlag for materialeberegningen. Din valgte system-avance (markup) lægges automatisk oveni disse priser i salgsøjemed.</p>
-                                <button style={{marginTop: '16px'}} className="btn-primary" onClick={handleSaveMaterials}>
-                                    {isSaving ? 'Gemmer alle materialer...' : 'Gem Alle Materialer'}
-                                </button>
-                            </div>
-                            
-                            <div className="settings-grid">
+                        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                            <div className="settings-card">
+                                
+                                <div className="card-body">
+                            <div className="settings-grid" style={{ alignItems: 'flex-start' }}>
                                 {Object.keys(groupedMaterials).filter(k => k !== 'SYSTEM').map(catKey => (
-                                    <div className="settings-card" key={catKey}>
+                                    <div className="glass-panel" key={catKey} style={{ alignSelf: 'flex-start' }}>
                                         <div 
                                             className="card-header" 
                                             style={{ cursor: 'pointer', userSelect: 'none' }}
                                             onClick={() => toggleMaterialCategory(catKey)}
                                         >
                                             <div className="icon-wrapper">
-                                                <Package size={20} />
+                                                {getCategoryIcon(catKey, 20)}
                                             </div>
                                             <div className="card-title-group" style={{ flex: 1 }}>
                                                 <h3 style={{ margin: 0 }}>{categoryNames[catKey] || catKey}</h3>
                                             </div>
-                                            <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                            <div style={{ color: '#6b7280', fontSize: '0.9rem', fontWeight: 'bold' }}>
                                                 {expandedMaterialCategories[catKey] ? '▲ Fold ind' : '▼ Fold ud'}
                                             </div>
                                         </div>
                                         {expandedMaterialCategories[catKey] && (
-                                            <div className="card-body" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                                            <div className="card-body" style={{ borderTop: '1px solid #e8e6e1', paddingTop: '16px' }}>
                                                 <p className="category-description text-muted" style={{ margin: '0 0 12px 0', fontSize: '0.85rem' }}>
                                                     {getTooltipText(catKey)}
                                                 </p>
                                                 
-                                                <div style={{display: 'flex', alignItems: 'center', padding: '0 0 8px 0', borderBottom: '1px solid #e2e8f0', marginBottom: '12px', fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold'}}>
+                                                <div style={{display: 'flex', alignItems: 'center', padding: '0 0 8px 0', borderBottom: '1px solid #e8e6e1', marginBottom: '12px', fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold'}}>
                                                     <span style={{ flex: '1' }}>Materiale</span>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '195px' }}>
                                                         <span style={{ width: '120px' }}>Indkøbspris</span>
@@ -3171,8 +3104,10 @@ const Dashboard = () => {
                                         )}
                                     </div>
                                 ))}
-                            </div>
-                        </div>
+                                </div> 
+                                </div> 
+                            </div> 
+                        </div> 
                     )}
 
                     {activeTab !== 'profile' && activeTab !== 'leads' && activeTab !== 'map' && activeTab !== 'settings' && activeTab !== 'materials' && activeTab !== 'integrations' && activeTab !== 'ai-training' && (
@@ -3191,32 +3126,30 @@ const Dashboard = () => {
                     
                     {/* INTEGRATIONER */}
                     {activeTab === 'integrations' && (
-                        <div className="tab-content fade-in">
-                            <div className="dashboard-header-text">
-                                <h2>Integration med regnskabsprogram</h2>
-                                <p>Forbind din profil automatisk til dit foretrukne regnskabsprogram for let overførsel af vundne tilbud.</p>
-                            </div>
-
-                            <div className="dashboard-grid">
-                                <div className="card">
+                        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                            <div className="settings-card">
+                                
+                                <div className="card-body">
+                                    <div className="settings-grid">
+                                <div className="glass-panel">
                                     <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => setExpandedIntegration(prev => prev === 'dinero' ? null : 'dinero')}>
                                         <div style={{ width: '40px', height: '40px', background: '#e0f2fe', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#0ea5e9' }}>
                                             <Link size={24} />
                                         </div>
                                         <div style={{ flex: 1 }}>
                                             <h3 style={{ margin: 0, fontSize: '18px' }}>Dinero Regnskab</h3>
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Overfør tilbud som fakturakladder</p>
+                                            <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>Overfør tilbud som fakturakladder</p>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                             {carpenterProfile?.dinero_api_key && carpenterProfile?.dinero_api_key !== 'pending_authorization' && (
-                                                <span style={{ fontSize: '12px', background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold' }}>Forbundet</span>
+                                                <span style={{ fontSize: '12px', background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '14px', fontWeight: 'bold' }}>Forbundet</span>
                                             )}
                                             <svg style={{ transform: expandedIntegration === 'dinero' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                                         </div>
                                     </div>
                                     {expandedIntegration === 'dinero' && (
                                         <div className="card-body" style={{ borderTop: '1px solid #f1f5f9', marginTop: '10px', paddingTop: '20px' }}>
-                                        <p style={{ fontSize: '14px', color: '#475569', marginBottom: '20px' }}>
+                                        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
                                             Når du har bekræftet en opgave, kan du med ét klik overføre kunden og opgaven til dit Dinero regnskab som en fakturakladde. Tryk på knappen for at godkende adgangen.
                                         </p>
                                         
@@ -3258,25 +3191,25 @@ const Dashboard = () => {
                                     )}
                                 </div>
 
-                                <div className="card">
+                                <div className="glass-panel">
                                     <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => setExpandedIntegration(prev => prev === 'economic' ? null : 'economic')}>
                                         <div style={{ width: '40px', height: '40px', background: '#dcfce7', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#22c55e' }}>
                                             <Link size={24} />
                                         </div>
                                         <div style={{ flex: 1 }}>
                                             <h3 style={{ margin: 0, fontSize: '18px' }}>e-conomic</h3>
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Danmarks mest brugte regnskabsprogram</p>
+                                            <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>Danmarks mest brugte regnskabsprogram</p>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                             {carpenterProfile?.economic_api_key && carpenterProfile?.economic_api_key !== 'pending_authorization' && (
-                                                <span style={{ fontSize: '12px', background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold' }}>Forbundet</span>
+                                                <span style={{ fontSize: '12px', background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '14px', fontWeight: 'bold' }}>Forbundet</span>
                                             )}
                                             <svg style={{ transform: expandedIntegration === 'economic' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                                         </div>
                                     </div>
                                     {expandedIntegration === 'economic' && (
                                         <div className="card-body" style={{ borderTop: '1px solid #f1f5f9', marginTop: '10px', paddingTop: '20px' }}>
-                                        <p style={{ fontSize: '14px', color: '#475569', marginBottom: '20px' }}>
+                                        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
                                             Når du har bekræftet en opgave, kan du med ét klik overføre kunden og opgaven til dit e-conomic regnskab som en fakturakladde. Tryk på knappen for at godkende adgangen.
                                         </p>
                                         
@@ -3316,25 +3249,25 @@ const Dashboard = () => {
                                     )}
                                 </div>
 
-                                <div className="card">
+                                <div className="glass-panel">
                                     <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => setExpandedIntegration(prev => prev === 'ordrestyring' ? null : 'ordrestyring')}>
                                         <div style={{ width: '40px', height: '40px', background: '#fce7f3', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#db2777' }}>
                                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                                         </div>
                                         <div style={{ flex: 1 }}>
                                             <h3 style={{ margin: 0, fontSize: '18px' }}>Ordrestyring</h3>
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Sagsstyring og tidsregistrering</p>
+                                            <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>Sagsstyring og tidsregistrering</p>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                             {carpenterProfile?.ordrestyring_api_key && (
-                                                <span style={{ fontSize: '12px', background: '#fce7f3', color: '#be185d', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold' }}>Forbundet</span>
+                                                <span style={{ fontSize: '12px', background: '#fce7f3', color: '#be185d', padding: '4px 10px', borderRadius: '14px', fontWeight: 'bold' }}>Forbundet</span>
                                             )}
                                             <svg style={{ transform: expandedIntegration === 'ordrestyring' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                                         </div>
                                     </div>
                                     {expandedIntegration === 'ordrestyring' && (
                                         <div className="card-body" style={{ borderTop: '1px solid #f1f5f9', marginTop: '10px', paddingTop: '20px' }}>
-                                        <p style={{ fontSize: '14px', color: '#475569', marginBottom: '20px' }}>
+                                        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
                                             Forbind Ordrestyring for automatisk at oprette kunder og sager, når et tilbud bekræftes. Du finder din API-nøgle inde i Ordrestyring under Indstillinger.
                                         </p>
                                         
@@ -3344,7 +3277,7 @@ const Dashboard = () => {
                                                 value={carpenterProfile?.ordrestyring_api_key || ''} 
                                                 onChange={(e) => setCarpenterProfile(prev => ({ ...prev, ordrestyring_api_key: e.target.value }))} 
                                                 placeholder="Indsæt API-nøgle fra Ordrestyring" 
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1' }}
                                             />
                                         </div>
                                         
@@ -3384,25 +3317,25 @@ const Dashboard = () => {
                                     )}
                                 </div>
 
-                                <div className="card">
+                                <div className="glass-panel">
                                     <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => setExpandedIntegration(prev => prev === 'apacta' ? null : 'apacta')}>
                                         <div style={{ width: '40px', height: '40px', background: '#e0e7ff', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#4f46e5' }}>
                                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
                                         </div>
                                         <div style={{ flex: 1 }}>
                                             <h3 style={{ margin: 0, fontSize: '18px' }}>Apacta</h3>
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Sagsstyring og tidsregistrering</p>
+                                            <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>Sagsstyring og tidsregistrering</p>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                             {carpenterProfile?.apacta_api_key && (
-                                                <span style={{ fontSize: '12px', background: '#e0e7ff', color: '#3730a3', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold' }}>Forbundet</span>
+                                                <span style={{ fontSize: '12px', background: '#e0e7ff', color: '#3730a3', padding: '4px 10px', borderRadius: '14px', fontWeight: 'bold' }}>Forbundet</span>
                                             )}
                                             <svg style={{ transform: expandedIntegration === 'apacta' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                                         </div>
                                     </div>
                                     {expandedIntegration === 'apacta' && (
                                         <div className="card-body" style={{ borderTop: '1px solid #f1f5f9', marginTop: '10px', paddingTop: '20px' }}>
-                                        <p style={{ fontSize: '14px', color: '#475569', marginBottom: '20px' }}>
+                                        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
                                             Forbind Apacta for automatisk at oprette kunder og projekter, når et tilbud bekræftes. Du finder din API-nøgle inde i Apacta under Indstillinger.
                                         </p>
                                         
@@ -3412,7 +3345,7 @@ const Dashboard = () => {
                                                 value={carpenterProfile?.apacta_api_key || ''} 
                                                 onChange={(e) => setCarpenterProfile(prev => ({ ...prev, apacta_api_key: e.target.value }))} 
                                                 placeholder="Indsæt API-nøgle fra Apacta" 
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1' }}
                                             />
                                         </div>
                                         
@@ -3452,25 +3385,25 @@ const Dashboard = () => {
                                     )}
                                 </div>
 
-                                <div className="card">
+                                <div className="glass-panel">
                                     <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => setExpandedIntegration(prev => prev === 'minuba' ? null : 'minuba')}>
                                         <div style={{ width: '40px', height: '40px', background: '#ecfdf5', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#10b981' }}>
                                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
                                         </div>
                                         <div style={{ flex: 1 }}>
                                             <h3 style={{ margin: 0, fontSize: '18px' }}>Minuba</h3>
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Ordrer, planlægning og sagsstyring</p>
+                                            <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>Ordrer, planlægning og sagsstyring</p>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                             {carpenterProfile?.minuba_api_key && (
-                                                <span style={{ fontSize: '12px', background: '#ecfdf5', color: '#047857', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold' }}>Forbundet</span>
+                                                <span style={{ fontSize: '12px', background: '#ecfdf5', color: '#047857', padding: '4px 10px', borderRadius: '14px', fontWeight: 'bold' }}>Forbundet</span>
                                             )}
                                             <svg style={{ transform: expandedIntegration === 'minuba' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                                         </div>
                                     </div>
                                     {expandedIntegration === 'minuba' && (
                                         <div className="card-body" style={{ borderTop: '1px solid #f1f5f9', marginTop: '10px', paddingTop: '20px' }}>
-                                        <p style={{ fontSize: '14px', color: '#475569', marginBottom: '20px' }}>
+                                        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
                                             Forbind Minuba for automatisk at oprette kunder og opgaver (sager), når et tilbud bekræftes. Du finder din API-nøgle inde i Minuba.
                                         </p>
                                         
@@ -3480,7 +3413,7 @@ const Dashboard = () => {
                                                 value={carpenterProfile?.minuba_api_key || ''} 
                                                 onChange={(e) => setCarpenterProfile(prev => ({ ...prev, minuba_api_key: e.target.value }))} 
                                                 placeholder="Indsæt API-nøgle fra Minuba" 
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1' }}
                                             />
                                         </div>
                                         
@@ -3519,7 +3452,9 @@ const Dashboard = () => {
                                     </div>
                                     )}
                                 </div>
-                            </div>
+                                    </div>
+                                </div> {/* Close card-body */}
+                            </div> {/* Close settings-card */}
                         </div>
                     )}
                         </div>
@@ -3530,14 +3465,14 @@ const Dashboard = () => {
             {/* Feedback Modal Portal */}
             {isFeedbackModalOpen && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => setIsFeedbackModalOpen(false)}>
-                    <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '500px', padding: '32px', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => setIsFeedbackModalOpen(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
+                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '500px', padding: '32px', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setIsFeedbackModalOpen(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
                         
-                        <h2 style={{ margin: '0 0 16px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h2 style={{ margin: '0 0 16px 0', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ fontSize: '1.5rem' }}>💡</span> Hjælp os med at forbedre
                         </h2>
                         
-                        <p style={{ color: '#475569', marginBottom: '24px', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                        <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.95rem', lineHeight: '1.5' }}>
                             Sidder du med en tanke om, hvordan Bison Frame kan blive endnu bedre? Mangler der et materiale, eller er priserne skæve i dit lokalområde? Skriv det til os her!
                         </p>
                         
@@ -3545,16 +3480,16 @@ const Dashboard = () => {
                             value={feedbackText}
                             onChange={(e) => setFeedbackText(e.target.value)}
                             placeholder="F.eks. 'Træpriserne for taghældninger er sat ca. 10% for lavt i Jylland...'"
-                            style={{ width: '100%', height: '150px', padding: '16px', borderRadius: '12px', border: '1px solid #cbd5e1', resize: 'none', marginBottom: '24px', fontSize: '1rem', outline: 'none' }}
+                            style={{ width: '100%', height: '150px', padding: '16px', borderRadius: '14px', border: '1px solid #e8e6e1', resize: 'none', marginBottom: '24px', fontSize: '1rem', outline: 'none' }}
                         />
                         
-                        <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', padding: '16px', borderRadius: '12px', marginBottom: '24px', fontSize: '0.9rem', color: '#64748b' }}>
-                            <strong style={{ color: '#0f172a' }}>Har du akut brug for hjælp?</strong><br />
+                        <div style={{ background: '#f3f1ed', border: '1px dashed #cbd5e1', padding: '16px', borderRadius: '14px', marginBottom: '24px', fontSize: '0.9rem', color: '#6b7280' }}>
+                            <strong style={{ color: '#1a1a1a' }}>Har du akut brug for hjælp?</strong><br />
                             Ring direkte til os på: <strong style={{ color: '#10b981' }}>40 26 50 02</strong>
                         </div>
                         
                         <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setIsFeedbackModalOpen(false)} style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#64748b', fontWeight: 'bold', cursor: 'pointer' }}>
+                            <button onClick={() => setIsFeedbackModalOpen(false)} style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#6b7280', fontWeight: 'bold', cursor: 'pointer' }}>
                                 Fortryd
                             </button>
                             <button 
@@ -3573,8 +3508,8 @@ const Dashboard = () => {
             {/* Create Lead Modal */}
             {isCreateLeadModalOpen && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => setIsCreateLeadModalOpen(false)}>
-                    <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => setIsCreateLeadModalOpen(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f1f5f9', border: 'none', fontSize: '1.2rem', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#64748b', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>×</button>
+                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setIsCreateLeadModalOpen(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f3f1ed', border: 'none', fontSize: '1.2rem', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>×</button>
                         <div style={{ padding: '0' }}>
                             <Wizard 
                                 carpenter={carpenterProfile} 
@@ -3596,18 +3531,18 @@ const Dashboard = () => {
             {/* Delete Lead Confirm Modal */}
             {showDeleteConfirm && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => setShowDeleteConfirm(false)}>
-                    <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '400px', padding: '32px', textAlign: 'center', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ width: '64px', height: '64px', backgroundColor: '#fef2f2', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 24px' }}>
+                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '400px', padding: '32px', textAlign: 'center', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ width: '64px', height: '64px', backgroundColor: '#fff5f5', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 24px' }}>
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </div>
-                        <h2 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '1.5rem' }}>Slet sag permanent?</h2>
-                        <p style={{ color: '#475569', marginBottom: '32px', lineHeight: '1.5' }}>
+                        <h2 style={{ margin: '0 0 12px 0', color: '#1a1a1a', fontSize: '1.5rem' }}>Slet sag permanent?</h2>
+                        <p style={{ color: '#6b7280', marginBottom: '32px', lineHeight: '1.5' }}>
                             Er du sikker på, at du vil slette <strong>{selectedLead?.customer_name}</strong> permanent? Dette kan ikke fortrydes.
                         </p>
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button 
                                 onClick={() => setShowDeleteConfirm(false)}
-                                style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                                style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e8e6e1', background: 'rgba(255, 255, 255, 0.4)', color: '#6b7280', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
                             >
                                 Fortryd
                             </button>

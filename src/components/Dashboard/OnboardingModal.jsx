@@ -11,6 +11,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMounted(true);
         return () => setMounted(false);
     }, []);
@@ -39,7 +40,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden w-full max-w-lg relative"
+                className="glass-panel rounded-2xl shadow-2xl w-full max-w-lg relative"
             >
                 {/* Subtil Bison Logo i baggrunden */}
                 <div className="absolute -right-20 -bottom-20 opacity-[0.03] pointer-events-none">

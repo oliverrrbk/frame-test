@@ -65,7 +65,7 @@ const SetPasswordModal = ({ profile, onComplete }) => {
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden w-full max-w-md relative"
+                className="glass-panel w-full max-w-md relative"
             >
                 <div className="p-8 relative z-10">
                     <div className="text-center mb-6">

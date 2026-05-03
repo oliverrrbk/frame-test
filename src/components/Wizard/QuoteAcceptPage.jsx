@@ -4,8 +4,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
 const QuoteAcceptPage = () => {
-    const { slug, lead_id } = useParams();
-    const navigate = useNavigate();
+    const { lead_id } = useParams();
     
     const [lead, setLead] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -54,7 +53,9 @@ const QuoteAcceptPage = () => {
                         const ipRes = await fetch('https://api.ipify.org?format=json');
                         const ipData = await ipRes.json();
                         ipAddress = ipData.ip;
-                    } catch(e) {}
+                    } catch(_e) {
+                        // ignore error
+                    }
                     
                     const auditTrailOpened = {
                         opened_at: now,
@@ -99,8 +100,8 @@ const QuoteAcceptPage = () => {
                 const ipRes = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipRes.json();
                 ipAddress = ipData.ip;
-            } catch (e) {
-                console.warn("Kunne ikke hente IP-adresse", e);
+            } catch (_e) {
+                console.warn("Kunne ikke hente IP-adresse", _e);
             }
 
             const auditTrail = {

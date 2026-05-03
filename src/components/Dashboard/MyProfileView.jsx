@@ -104,32 +104,28 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
     };
 
     return (
-        <div className="settings-card mb-8">
-            <div className="card-header">
-                <div className="icon-wrapper" style={{ background: '#eef2ff', color: '#6366f1' }}>
-                    <User size={24} />
-                </div>
-                <h3>Personlig Profil</h3>
-            </div>
+        <div className="settings-card">
+
             <div className="card-body">
+                {message && <div className="glass-panel" style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.05)', borderLeft: '4px solid #10b981', color: '#047857', marginBottom: '24px' }}>{message}</div>}
+                {error && <div className="glass-panel" style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.05)', borderLeft: '4px solid #ef4444', color: '#b91c1c', marginBottom: '24px' }}>{error}</div>}
                 
-                {message && <div className="bg-emerald-50 text-emerald-600 p-3 rounded-lg mb-4 text-sm font-medium border border-emerald-200">{message}</div>}
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm font-medium border border-red-200">{error}</div>}
-                
-                <div className="flex flex-col md:flex-row gap-8 items-start mb-6">
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="w-24 h-24 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden border-2 border-slate-300 relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-32 h-32 rounded-full flex items-center justify-center overflow-hidden relative group cursor-pointer" 
+                            style={{ background: 'var(--surface-bg)', border: '1px solid var(--border-light)' }}
+                            onClick={() => fileInputRef.current?.click()}>
                             {myProfile?.avatar_url ? (
                                 <img src={myProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
-                                <span className="text-slate-500 font-bold text-2xl">
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '2rem', fontWeight: '600' }}>
                                     {(myProfile?.owner_name || 'T')?.charAt(0).toUpperCase()}
                                 </span>
                             )}
                             
                             <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Camera size={20} className="text-white mb-1" />
-                                <span className="text-white text-xs font-medium">Skift</span>
+                                <Camera size={24} className="text-white mb-2" />
+                                <span className="text-white text-sm font-medium">Skift</span>
                             </div>
                         </div>
                         <input 
@@ -140,15 +136,16 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                             onChange={handleAvatarUpload} 
                         />
                         <button 
-                            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                            className="btn-secondary"
+                            style={{ width: '100%', justifyContent: 'center' }}
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}
                         >
-                            {isUploading ? 'Uploader...' : 'Skift profilbillede'}
+                            {isUploading ? 'Uploader...' : 'Skift billede'}
                         </button>
                     </div>
                     
-                    <div className="flex-1 w-full space-y-4">
+                    <div className="flex-1 w-full space-y-6">
                         <div className="input-group">
                             <label>Dit Navn</label>
                             <input 
@@ -168,24 +165,27 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                             />
                         </div>
                         <div className="input-group">
-                            <label>Skift Kodeord <span className="text-slate-400 font-normal">(efterlad blank for at beholde nuværende)</span></label>
+                            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                Skift Kodeord
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'normal' }}>Efterlad blank for at beholde nuværende</span>
+                            </label>
                             <div className="relative">
-                                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
                                 <input 
                                     type="password" 
                                     value={formData.newPassword} 
                                     onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))} 
                                     placeholder="Nyt kodeord" 
-                                    className="pl-9"
+                                    style={{ paddingLeft: '44px' }}
                                 />
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div className="card-footer">
+            <div className="card-footer" style={{ display: 'flex', justifyContent: 'flex-end', padding: '24px' }}>
                 <button className="btn-primary" onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? 'Gemmer...' : 'Gem Personlige Oplysninger'}
+                    {isSaving ? 'Gemmer...' : 'Gem Oplysninger'}
                 </button>
             </div>
         </div>

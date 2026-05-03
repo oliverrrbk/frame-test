@@ -18,6 +18,7 @@
     "@react-google-maps/api": "^2.20.8",
     "@supabase/supabase-js": "^2.103.2",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
     "framer-motion": "^12.38.0",
     "html2canvas": "^1.4.1",
@@ -30,6 +31,7 @@
     "react-dom": "^19.2.4",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.14.1",
+    "recharts": "^3.8.1",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

@@ -159,10 +159,10 @@ const Register = ({ setSession }) => {
                         <Mail size={40} />
                     </div>
                     <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>Tjek din e-mail</h2>
-                    <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '24px' }}>
+                    <p style={{ color: '#6b7280', lineHeight: '1.6', marginBottom: '24px' }}>
                         Tak for din oprettelse! Vi har sendt en bekræftelsesmail til <strong>{email}</strong>. Klik på linket i mailen for at aktivere din platform.
                     </p>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '32px' }}>
+                    <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '32px' }}>
                         Husk at tjekke dit spam-filter, hvis du ikke kan finde den.
                     </p>
                     <Link to="/" className="btn-primary" style={{ background: '#3b82f6', textDecoration: 'none', display: 'inline-block', padding: '12px 24px', borderRadius: '8px', color: '#fff', fontWeight: 'bold' }}>
@@ -191,7 +191,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group">
                             <label>Firmanavn *</label>
                             <div style={{ position: 'relative' }}>
-                                <Building size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#94a3b8' }} />
+                                <Building size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
                                 <input 
                                     type="text" 
                                     placeholder="Dit Firma ApS"
@@ -206,7 +206,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group">
                             <label>CVR-nummer *</label>
                             <div style={{ position: 'relative' }}>
-                                <FileText size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#94a3b8' }} />
+                                <FileText size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
                                 <input 
                                     type="text" 
                                     placeholder="12345678"
@@ -221,7 +221,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                             <label>Ejer / Kontaktperson *</label>
                             <div style={{ position: 'relative' }}>
-                                <User size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#94a3b8' }} />
+                                <User size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
                                 <input 
                                     type="text" 
                                     placeholder="Jens Jensen"
@@ -236,7 +236,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                             <label>Firmaadresse *</label>
                             <div style={{ position: 'relative' }}>
-                                <MapPin size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#94a3b8' }} />
+                                <MapPin size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
                                 {window.google && window.google.maps && window.google.maps.places ? (
                                     <Autocomplete 
                                         onLoad={onLoad} 
@@ -254,7 +254,7 @@ const Register = ({ setSession }) => {
                                                 setAddress(e.target.value);
                                                 setIsAddressValid(false);
                                             }}
-                                            style={{ paddingLeft: '36px', width: '100%', border: '1px solid #e2e8f0' }}
+                                            style={{ paddingLeft: '36px', width: '100%', border: '1px solid #e8e6e1' }}
                                             required 
                                             onKeyDown={(e) => {
                                                 if(e.key === 'Enter') e.preventDefault();
@@ -277,7 +277,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group">
                             <label>Telefonnummer *</label>
                             <div style={{ position: 'relative' }}>
-                                <Phone size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#94a3b8' }} />
+                                <Phone size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
                                 <input 
                                     type="tel" 
                                     placeholder="+45 12 34 56 78"
@@ -292,7 +292,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group">
                             <label>Bruger E-mail (og Faktura) *</label>
                             <div style={{ position: 'relative' }}>
-                                <Mail size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#94a3b8' }} />
+                                <Mail size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
                                 <input 
                                     type="email" 
                                     placeholder="kontakt@firma.dk"
@@ -308,7 +308,7 @@ const Register = ({ setSession }) => {
                     <div className="input-group" style={{ marginTop: '15px' }}>
                         <label>Vælg Adgangskode (Min. 6 tegn) *</label>
                         <div style={{ position: 'relative' }}>
-                            <Lock size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#94a3b8' }} />
+                            <Lock size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
                             <input 
                                 type="password" 
                                 placeholder="••••••••"
@@ -333,7 +333,7 @@ const Register = ({ setSession }) => {
                                     key={tier.id}
                                     onClick={() => setSelectedTier(tier.id)}
                                     style={{
-                                        border: `2px solid ${selectedTier === tier.id ? '#10b981' : '#e2e8f0'}`,
+                                        border: `2px solid ${selectedTier === tier.id ? '#10b981' : '#e8e6e1'}`,
                                         borderRadius: '8px',
                                         padding: '12px',
                                         cursor: 'pointer',
@@ -342,18 +342,18 @@ const Register = ({ setSession }) => {
                                         transition: 'all 0.2s'
                                     }}
                                 >
-                                    <div style={{ fontWeight: 'bold', color: selectedTier === tier.id ? '#065f46' : '#334155', fontSize: '14px' }}>{tier.name}</div>
-                                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>{tier.price} /md</div>
+                                    <div style={{ fontWeight: 'bold', color: selectedTier === tier.id ? '#065f46' : '#374151', fontSize: '14px' }}>{tier.name}</div>
+                                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>{tier.price} /md</div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
                     <div className="terms-checkbox" style={{ marginTop: '20px', marginBottom: '20px', display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }} onClick={() => setAcceptedTerms(!acceptedTerms)}>
-                        <div style={{ color: acceptedTerms ? '#10b981' : '#94a3b8', marginTop: '2px' }}>
+                        <div style={{ color: acceptedTerms ? '#10b981' : '#9ca3af', marginTop: '2px' }}>
                             {acceptedTerms ? <CheckSquare size={20} /> : <Square size={20} />}
                         </div>
-                        <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.4' }}>
+                        <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.4' }}>
                             Jeg accepterer hermed <a href="/Bison_Frame_Vilkaar.html" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#3b82f6', textDecoration: 'underline' }}>handelsbetingelserne</a> samt <a href="/Bison_Frame_Databehandleraftale.html" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#3b82f6', textDecoration: 'underline' }}>Databehandleraftalen (DPA)</a>, og bekræfter, at alle angivne oplysninger er korrekte, samt at Bison Frame optræder som databehandler for mine kunde-estimater.
                         </p>
                     </div>
@@ -375,7 +375,7 @@ const Register = ({ setSession }) => {
                 </form>
             </div>
             
-            <div className="login-footer" style={{ marginTop: '20px', color: '#64748b' }}>
+            <div className="login-footer" style={{ marginTop: '20px', color: '#6b7280' }}>
                 <p>Opret nemt din platform. Data lagres krypteret i EU.</p>
             </div>
         </div>
