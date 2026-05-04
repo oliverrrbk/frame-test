@@ -47,6 +47,7 @@ export default function PricingPage({ setSession }) {
                     </Link>
                     
                     <div className="hidden md:flex gap-8">
+                        <Link to="/calculate" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Beregner</Link>
                         <Link to="/features" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Funktioner</Link>
                         <Link to="/pricing" className="text-slate-800 dark:text-slate-100 font-medium bg-slate-100/50 dark:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Priser</Link>
                         <Link to="/about" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Om os</Link>
@@ -100,7 +101,7 @@ export default function PricingPage({ setSession }) {
                         transition={{ delay: 0.1 }}
                         className="text-[clamp(3.5rem,6vw,4.5rem)] font-bold text-slate-900 dark:text-slate-50 tracking-tight leading-[1.1] max-w-3xl"
                     >
-                        Gennemskuelige Priser for Håndværkere.
+                        Gennemskuelige <span className="text-orange-600 dark:text-orange-400">Priser</span> for Håndværkere.
                     </motion.h1>
                     
                     <motion.p 
@@ -118,6 +119,10 @@ export default function PricingPage({ setSession }) {
                     {/* Tier 1: Starter / Basis */}
                     <motion.div 
                         whileHover={{ y: -5 }}
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1, duration: 0.5 }}
+                        viewport={{ once: true, margin: "-50px" }}
                         style={{ WebkitTransform: "translateZ(0)", willChange: "transform", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
                         className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 flex flex-col gap-8 relative overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-300 group"
                     >
@@ -164,6 +169,10 @@ export default function PricingPage({ setSession }) {
 
                     {/* Tier 2: Growth / Premium (Highlighted) */}
                     <motion.div 
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2, duration: 0.5 }}
+                        viewport={{ once: true, margin: "-50px" }}
                         style={{ WebkitTransform: "translateZ(0)", willChange: "transform", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
                         className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 flex flex-col gap-8 relative overflow-hidden shadow-xl border-2 border-blue-600/30 dark:border-blue-500/30 z-20 md:scale-105"
                     >
@@ -217,6 +226,10 @@ export default function PricingPage({ setSession }) {
                     {/* Tier 3: Enterprise / Mester */}
                     <motion.div 
                         whileHover={{ y: -5 }}
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3, duration: 0.5 }}
+                        viewport={{ once: true, margin: "-50px" }}
                         style={{ WebkitTransform: "translateZ(0)", willChange: "transform", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
                         className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 flex flex-col gap-8 relative overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-300 group"
                     >
@@ -269,7 +282,13 @@ export default function PricingPage({ setSession }) {
                         <h2 className="text-[clamp(1.5rem,2vw,1.75rem)] font-bold text-slate-900 dark:text-slate-100">Ofte Stillede Spørgsmål</h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
-                        <div className="flex flex-col gap-3">
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.1 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            className="flex flex-col gap-3"
+                        >
                             <h4 className="text-[clamp(1rem,1.2vw,1.125rem)] font-semibold text-slate-900 dark:text-slate-100 flex items-start gap-2">
                                 <span className="text-blue-600 dark:text-blue-400 font-mono text-xs mt-1 shrink-0">01.</span>
                                 Kan jeg ændre mit abonnement senere?
@@ -277,8 +296,14 @@ export default function PricingPage({ setSession }) {
                             <p className="text-sm text-slate-500 dark:text-slate-400 pl-6 leading-relaxed">
                                 Ja, absolut. Dine krav ud til kunderne kan skifte. Du kan opgradere eller nedgradere din plan når som helst fra din konto, og alle differencer refunderes fuldt automatisk.
                             </p>
-                        </div>
-                        <div className="flex flex-col gap-3">
+                        </motion.div>
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            className="flex flex-col gap-3"
+                        >
                             <h4 className="text-[clamp(1rem,1.2vw,1.125rem)] font-semibold text-slate-900 dark:text-slate-100 flex items-start gap-2">
                                 <span className="text-blue-600 dark:text-blue-400 font-mono text-xs mt-1 shrink-0">02.</span>
                                 Hvordan fungerer den digitale løsning?
@@ -286,8 +311,14 @@ export default function PricingPage({ setSession }) {
                             <p className="text-sm text-slate-500 dark:text-slate-400 pl-6 leading-relaxed">
                                 Bison Frame bygger bro direkte i systemet og sørger for, at alt automatisk udregnes præcist for dig. Der sørges for at både kunde og mester holdes fuldt opdateret.
                             </p>
-                        </div>
-                        <div className="flex flex-col gap-3">
+                        </motion.div>
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.3 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            className="flex flex-col gap-3"
+                        >
                             <h4 className="text-[clamp(1rem,1.2vw,1.125rem)] font-semibold text-slate-900 dark:text-slate-100 flex items-start gap-2">
                                 <span className="text-blue-600 dark:text-blue-400 font-mono text-xs mt-1 shrink-0">03.</span>
                                 Er al min gemte data og info sikker?
@@ -295,8 +326,14 @@ export default function PricingPage({ setSession }) {
                             <p className="text-sm text-slate-500 dark:text-slate-400 pl-6 leading-relaxed">
                                 Vi benytter den bedste sikkerhed og top-kryptering til at levere præcist arbejdsflow, så du roligt kan skrive alt inde i appen, da alt beskyttes hundrede procent.
                             </p>
-                        </div>
-                        <div className="flex flex-col gap-3">
+                        </motion.div>
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.4 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            className="flex flex-col gap-3"
+                        >
                             <h4 className="text-[clamp(1rem,1.2vw,1.125rem)] font-semibold text-slate-900 dark:text-slate-100 flex items-start gap-2">
                                 <span className="text-blue-600 dark:text-blue-400 font-mono text-xs mt-1 shrink-0">04.</span>
                                 Hvad tæller reelt set som et 'projekt'?
@@ -304,7 +341,7 @@ export default function PricingPage({ setSession }) {
                             <p className="text-sm text-slate-500 dark:text-slate-400 pl-6 leading-relaxed">
                                 Et aktivt projekt er alle tilbud der lige nu er under udarbejdelse, som afventer godkendelse eller netop opfølges på. Arkiverede gamle tilbud tæller ikke med i grænsen overhovedet.
                             </p>
-                        </div>
+                        </motion.div>
                     </div>
                 </section>
 

@@ -3,9 +3,10 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import { useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
-import { X, Check, Compass, Calculator, Send, ArrowRight } from 'lucide-react';
+import { X, Check, Compass, Calculator, Send, ArrowRight, ArrowLeft, Heart, Star } from 'lucide-react';
 import { TheInfiniteGrid } from '../ui/the-infinite-grid';
 import { AnimatedTestimonials } from '../ui/animated-testimonials';
+import { StaggerTestimonials } from '../ui/stagger-testimonials';
 import Lenis from 'lenis';
 
 const LandingPage = ({ setSession }) => {
@@ -47,6 +48,7 @@ const LandingPage = ({ setSession }) => {
                     </div>
                     
                     <div className="hidden md:flex gap-8">
+                        <a className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md" href="/calculate">Beregner</a>
                         <a className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md" href="/features">Funktioner</a>
                         <a className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md" href="/pricing">Priser</a>
                         <a className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md" href="/about">Om os</a>
@@ -81,46 +83,12 @@ const LandingPage = ({ setSession }) => {
                 {/* Hero Section */}
                 <TheInfiniteGrid />
 
+                <div className="mt-16 md:mt-28 mb-12 md:mb-16">
+                    <StaggerTestimonials />
+                </div>
 
-                {/* Social Proof Section (Animated Testimonials) */}
-                <AnimatedTestimonials
-                    testimonials={[
-                        {
-                        id: 1,
-                        name: "Mads Jensen",
-                        role: "Tømrermester",
-                        company: "Jensen Byg ApS",
-                        content:
-                            "Dette system har sparet mig for uendelig meget tid. Før mistede vi ofte opgaver, fordi tilbuddene trak ud. Nu får kunderne et lynhurtigt overslag automatisk, og min kalender er fyldt.",
-                        rating: 5,
-                        avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=200&auto=format&fit=crop",
-                        },
-                        {
-                        id: 2,
-                        name: "Sarah Møller",
-                        role: "Ejer",
-                        company: "Skov Entreprise",
-                        content:
-                            "Jeg har prøvet meget software, men dette skiller sig ud. Den regner automatisk vores kørsel og slitage ud fra vores adresse. Det betyder præcise tilbud hver gang uden gætværk.",
-                        rating: 5,
-                        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop",
-                        },
-                        {
-                        id: 3,
-                        name: "Christian Holm",
-                        role: "Byggeleder",
-                        company: "Holm Håndværk",
-                        content:
-                            "Kunderne elsker gennemsigtigheden. De besvarer blot et par spørgsmål på 5 minutter, og bagefter står der en professionel PDF-fil klar til os. Det har markant øget vores succesrate.",
-                        rating: 5,
-                        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200&auto=format&fit=crop",
-                        },
-                    ]}
-                    trustedCompanies={["Stark", "Bygma", "Optimera", "XL Byg", "Davidsen"]}
-                />
-
-                    {/* Process Section (New Comparison Design) */}
-                    <section className="max-w-[1440px] mx-auto px-8 pt-[clamp(5rem,8vw,8rem)] pb-[clamp(4rem,8vw,8rem)] relative z-10 font-body">
+                {/* Process Section (New Comparison Design) */}
+                <section className="max-w-[1440px] mx-auto px-8 pt-[clamp(1rem,2vw,2rem)] pb-[clamp(4rem,8vw,8rem)] relative z-10 font-body">
                     <motion.h2 
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -140,7 +108,7 @@ const LandingPage = ({ setSession }) => {
                         Lad ikke et uprofessionelt tilbud koste dig opgaven.
                     </motion.p>
 
-                    <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16 items-stretch">
+                    <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-28 items-stretch">
                         {/* The Messy Way */}
                         <div className="rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col p-8 md:p-14 items-center text-center h-full">
                             {/* Title Area */}
@@ -210,7 +178,7 @@ const LandingPage = ({ setSession }) => {
                     </div>
 
                     {/* Step Process */}
-                    <div className="max-w-6xl mx-auto relative pt-8 pb-24 mt-8">
+                    <div className="max-w-6xl mx-auto relative pt-8 pb-24 mt-28">
                         <div className="grid md:grid-cols-3 gap-12 md:gap-8 text-center relative z-10">
                             {/* Step 1 */}
                             <div className="flex flex-col items-center relative group">

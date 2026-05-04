@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Wizard from './components/Wizard/Wizard';
 import Dashboard from './components/Dashboard/Dashboard';
 import LandingPage from './components/Landing/LandingPage';
+import CalculatorPage from './components/Landing/CalculatorPage';
 import FeaturesPage from './components/Landing/FeaturesPage';
 import PricingPage from './components/Landing/PricingPage';
 import GetStartedPage from './components/Landing/GetStartedPage';
@@ -172,6 +173,7 @@ function App() {
                   : <Navigate to="/dashboard" replace />
               ) : <LandingPage setSession={setSession} />
             } />
+            <Route path="/calculate" element={<CalculatorPage setSession={setSession} />} />
             <Route path="/features" element={<FeaturesPage setSession={setSession} />} />
             <Route path="/pricing" element={<PricingPage setSession={setSession} />} />
             <Route path="/about" element={<AboutUsPage setSession={setSession} />} />

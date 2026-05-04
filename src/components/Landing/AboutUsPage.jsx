@@ -48,6 +48,7 @@ export default function AboutUsPage({ setSession }) {
                     </Link>
                     
                     <div className="hidden md:flex gap-8">
+                        <Link to="/calculate" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Beregner</Link>
                         <Link to="/features" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Funktioner</Link>
                         <Link to="/pricing" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Priser</Link>
                         <Link to="/about" className="text-slate-800 dark:text-slate-100 font-medium bg-slate-100/50 dark:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Om os</Link>
@@ -103,7 +104,7 @@ export default function AboutUsPage({ setSession }) {
                             viewport={{ once: true }}
                             className="text-[clamp(3.5rem,6vw,4.5rem)] font-bold leading-tight tracking-[-0.03em] text-slate-900 dark:text-slate-50 mb-6"
                         >
-                            Vores DNA er Håndværk.
+                            Vores DNA er <span className="text-orange-600 dark:text-orange-400 opacity-90">Håndværk.</span>
                         </motion.h1>
                         <motion.p 
                             initial={{ opacity: 0 }}
@@ -250,7 +251,7 @@ export default function AboutUsPage({ setSession }) {
                         {/* Decorative technical marks */}
                         <div className="absolute top-6 left-6 w-5 h-5 border-t-2 border-l-2 border-slate-200 dark:border-slate-800 pointer-events-none z-0"></div>
                         <div className="absolute bottom-6 right-6 w-5 h-5 border-b-2 border-r-2 border-slate-200 dark:border-slate-800 pointer-events-none z-0"></div>
-                        <motion.div style={{ opacity: glowOpacity }} className="absolute top-[-50%] left-[-10%] w-[60%] h-[150%] bg-orange-600/5 blur-[100px] rounded-full pointer-events-none"></motion.div>
+                        <motion.div style={{ opacity: glowOpacity }} className="absolute top-[-50%] left-[-10%] w-[60%] h-[150%] bg-blue-600/5 blur-[100px] rounded-full pointer-events-none"></motion.div>
                         
                         <div className="flex flex-col gap-4 relative z-10 max-w-xl text-center md:text-left">
                             <span className="text-[0.75rem] font-bold uppercase tracking-widest text-slate-400 block dark:text-slate-500">Systemet Er Klar</span>

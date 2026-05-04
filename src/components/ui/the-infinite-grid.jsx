@@ -1,9 +1,10 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { 
   motion, 
   useMotionValue, 
   useMotionTemplate, 
-  useAnimationFrame 
+  useAnimationFrame,
+  AnimatePresence
 } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
@@ -36,26 +37,27 @@ export const TheInfiniteGrid = () => {
   const maskImage = useMotionTemplate`radial-gradient(300px circle at ${mouseX}px ${mouseY}px, black, transparent)`;
 
   return (
-    <div
+    <section
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="relative w-full h-[90svh] flex flex-col items-center justify-center overflow-hidden bg-surface"
-      style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}
+      className="relative w-full h-[90svh] flex flex-col items-center justify-center bg-surface"
     >
-      <div className="absolute inset-0 z-0 opacity-[0.15]">
-        <GridPattern offsetX={gridOffsetX} offsetY={gridOffsetY} id="grid-pattern-bg" />
-      </div>
-      <motion.div 
-        className="absolute inset-0 z-0 opacity-100"
-        style={{ maskImage, WebkitMaskImage: maskImage }}
-      >
-        <GridPattern offsetX={gridOffsetX} offsetY={gridOffsetY} id="grid-pattern-mask" />
-      </motion.div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}>
+        <div className="absolute inset-0 z-0 opacity-[0.15]">
+          <GridPattern offsetX={gridOffsetX} offsetY={gridOffsetY} id="grid-pattern-bg" />
+        </div>
+        <motion.div 
+          className="absolute inset-0 z-0 opacity-100"
+          style={{ maskImage, WebkitMaskImage: maskImage }}
+        >
+          <GridPattern offsetX={gridOffsetX} offsetY={gridOffsetY} id="grid-pattern-mask" />
+        </motion.div>
 
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute right-[-20%] top-[-20%] w-[40%] h-[40%] rounded-full bg-orange-500/40 blur-[120px]" />
-        <div className="absolute right-[10%] top-[-10%] w-[20%] h-[20%] rounded-full bg-slate-400/30 blur-[100px]" />
-        <div className="absolute left-[-10%] bottom-[-20%] w-[40%] h-[40%] rounded-full bg-blue-500/40 blur-[120px]" />
+        <div className="absolute inset-0 pointer-events-none z-0">
+          <div className="absolute right-[-20%] top-[-20%] w-[40%] h-[40%] rounded-full bg-orange-500/40 blur-[120px]" />
+          <div className="absolute right-[10%] top-[-10%] w-[20%] h-[20%] rounded-full bg-slate-400/30 blur-[100px]" />
+          <div className="absolute left-[-10%] bottom-[-20%] w-[40%] h-[40%] rounded-full bg-blue-500/40 blur-[120px]" />
+        </div>
       </div>
 
       <div className="relative z-10 flex flex-col items-center text-center px-4 max-w-[1440px] mx-auto space-y-8 pointer-events-none">
@@ -88,17 +90,20 @@ export const TheInfiniteGrid = () => {
           >
               Start Prøveperiode
           </motion.button>
-          <motion.button 
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}
-              className="bg-surface-container-high text-on-surface rounded-full px-8 py-4 font-medium hover:bg-surface-container-highest transition-colors shadow-sm border border-outline-variant/10"
-          >
-              Book Fremvisning
-          </motion.button>
+          <div className="relative z-50">
+            <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate('/calculate')}
+                style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}
+                className="bg-surface-container-high text-on-surface rounded-full px-8 py-4 font-medium hover:bg-surface-container-highest transition-colors shadow-sm border border-outline-variant/10"
+            >
+                Beregn din profit
+            </motion.button>
+          </div>
         </motion.div>
       </div>
-    </div>
+    </section>
   );
 };
 

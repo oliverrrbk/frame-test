@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
-import { Mail, Hammer, ArrowRight, X } from 'lucide-react';
+import { ROICalculator } from '../ui/roi-calculator';
 import Lenis from 'lenis';
 
-export default function GetStartedPage({ setSession }) {
+export default function CalculatorPage({ setSession }) {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const navigate = useNavigate();
 
@@ -15,6 +15,7 @@ export default function GetStartedPage({ setSession }) {
             autoRaf: true,
         });
 
+        // Ensure page starts at top
         window.scrollTo(0, 0);
 
         return () => {
@@ -38,7 +39,7 @@ export default function GetStartedPage({ setSession }) {
                     </Link>
                     
                     <div className="hidden md:flex gap-8">
-                        <Link to="/calculate" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Beregner</Link>
+                        <Link to="/calculate" className="text-slate-800 dark:text-slate-100 font-medium bg-slate-100/50 dark:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Beregner</Link>
                         <Link to="/features" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Funktioner</Link>
                         <Link to="/pricing" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Priser</Link>
                         <Link to="/about" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Om os</Link>
@@ -50,7 +51,7 @@ export default function GetStartedPage({ setSession }) {
                             whileTap={{ scale: 0.95 }}
                             style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}
                             onClick={() => setIsLoginOpen(true)}
-                            className="text-slate-500 font-medium hover:text-slate-800 transition-colors"
+                            className="hidden md:block text-slate-500 font-medium hover:text-slate-800 transition-colors"
                         >
                             Log ind
                         </motion.button>
@@ -58,71 +59,65 @@ export default function GetStartedPage({ setSession }) {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}
-                            onClick={() => navigate('/get-started')}
+                            onClick={() => navigate('/register')}
                             className="bg-inverse-surface text-inverse-primary rounded-full px-6 py-2.5 font-medium hover:bg-primary shadow-sm hover:shadow-md transition-all duration-300"
                         >
                             Kom i gang
                         </motion.button>
                     </div>
                 </div>
-                <div className="h-px w-full bg-slate-100 dark:bg-slate-900 border-none"></div>
+                <div className="h-px w-full bg-slate-100 dark:bg-slate-900"></div>
             </nav>
 
-            <main className="flex-1 flex flex-col justify-center relative z-10 w-full mb-10 mt-[clamp(5rem,10vw,12rem)]">
-                {/* Notice Block Container */}
-                <section className="w-full max-w-4xl px-8 mx-auto mb-32 relative z-10">
+            {/* Main Content Canvas */}
+            <main className="flex-grow flex flex-col items-center w-full px-6 md:px-12 pt-16 pb-24 z-10 relative">
+                
+                {/* Header Section */}
+                <header className="text-center w-full max-w-4xl mx-auto mb-16 mt-12 relative z-10">
+                    {/* Decorative Background Glows */}
+                    <div className="absolute -top-20 -left-48 w-[500px] h-[500px] bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-[120px] pointer-events-none z-[-1]"></div>
+                    <div className="absolute top-24 -right-32 w-[400px] h-[400px] bg-orange-500/10 dark:bg-orange-400/10 rounded-full blur-[120px] pointer-events-none z-[-1]"></div>
+                    
                     <motion.div 
-                        initial={{ opacity: 0, scale: 0.95, y: 30 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        style={{ WebkitTransform: "translateZ(0)", WebkitBackfaceVisibility: "hidden", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
-                        className="bg-white dark:bg-slate-900 rounded-[3rem] p-[clamp(3rem,6vw,5rem)] flex flex-col items-center text-center gap-8 relative overflow-hidden shadow-xl border border-slate-100 dark:border-slate-800/[0.5]"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="inline-flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-600 dark:text-slate-300 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-8 border border-slate-200/50 dark:border-slate-700/50"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 z-0 pointer-events-none"></div>
-                        
-                        {/* Decorative technical marks */}
-                        <div className="absolute top-6 left-6 w-5 h-5 border-t-2 border-l-2 border-slate-200 dark:border-slate-800 pointer-events-none z-0"></div>
-                        <div className="absolute bottom-6 right-6 w-5 h-5 border-b-2 border-r-2 border-slate-200 dark:border-slate-800 pointer-events-none z-0"></div>
-                        <div className="absolute top-[-50%] left-[-10%] w-[60%] h-[150%] bg-blue-600/5 blur-[100px] rounded-full pointer-events-none"></div>
-                        
-                        <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center shrink-0 mb-2 relative z-10">
-                            <Hammer size={32} strokeWidth={2} />
-                        </div>
-                        
-                        <div className="flex flex-col gap-6 relative z-10 max-w-2xl">
-                            <h1 className="text-[clamp(2.5rem,4vw,3.5rem)] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
-                                Tilmelding er i øjeblikket lukket.
-                            </h1>
-                            <p className="text-[clamp(1.125rem,1.5vw,1.25rem)] text-slate-600 dark:text-slate-400 font-medium">
-                                For at sikre den absolut højeste kvalitet tager vi i øjeblikket kun et meget begrænset antal udvalgte, tidlige partnere ind. Offentlig tilmelding er midlertidigt sat på pause, mens vi gradvist ruller systemet ud.
-                            </p>
-                            <p className="text-slate-500 dark:text-slate-500 font-medium mt-2">
-                                Hvis du matcher vores målprofil og ønsker at springe køen over, så kontakt vores team for at anmode om et link.
-                            </p>
-                        </div>
-                        
-                        <div className="relative z-10 flex flex-col items-center justify-center gap-4 mt-8 w-full md:w-auto">
-                            <a href="mailto:partner@blueprintquoting.com">
-                                <motion.button 
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    style={{ WebkitTransform: "translateZ(0)" }}
-                                    className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-8 py-4 rounded-full font-bold text-[clamp(1rem,1.5vw,1.125rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl flex items-center gap-3 justify-center group w-full"
-                                >
-                                    <Mail className="w-5 h-5" />
-                                    Anmod om invitation
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform ml-2" />
-                                </motion.button>
-                            </a>
-                            <Link to="/" className="text-sm font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 tracking-wider uppercase mt-4 transition-colors">
-                                Tilbage til forsiden
-                            </Link>
-                        </div>
+                        <span className="w-2 h-2 rounded-full bg-orange-600 dark:bg-orange-400"></span>
+                        Kend Tallene
+                    </motion.div>
+                    
+                    <motion.h1 
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="text-[clamp(3rem,5vw,4rem)] font-bold leading-tight tracking-[-0.03em] text-slate-900 dark:text-slate-50 mb-6"
+                    >
+                        Beregn din <span className="text-orange-600 dark:text-orange-400 opacity-90">profit.</span>
+                    </motion.h1>
+                    
+                    <motion.p 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-[clamp(1.125rem,2vw,1.25rem)] text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
+                    >
+                        Beregn præcist hvor meget tid og penge du kan spare hver måned ved at digitalisere din tilbudsproces med Bison Frame.
+                    </motion.p>
+                </header>
+
+                {/* Calculator Section */}
+                <section className="w-full max-w-4xl mx-auto relative z-10 mb-20">
+                    <motion.div
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3, duration: 0.5 }}
+                    >
+                        <ROICalculator />
                     </motion.div>
                 </section>
             </main>
 
-            {/* Footer */}
             <Footer />
 
             {/* SLIDE-OUT LOGIN DRAWER */}
@@ -142,7 +137,6 @@ export default function GetStartedPage({ setSession }) {
                             }}
                             onClick={() => setIsLoginOpen(false)}
                         />
-
                         <motion.div 
                             initial={{ x: '100%' }}
                             animate={{ x: 0 }}
@@ -163,10 +157,9 @@ export default function GetStartedPage({ setSession }) {
                             }}
                             className="shadow-[-10px_0_40px_rgba(0,0,0,0.2)]"
                         >
-
-                <div style={{ position: 'relative', zIndex: 110, minHeight: '100svh' }}>
-                    <Login setSession={setSession} />
-                </div>
+                            <div style={{ padding: '60px 40px', height: '100%' }}>
+                                <Login />
+                            </div>
                         </motion.div>
                     </>
                 )}
