@@ -176,15 +176,15 @@ const Register = ({ setSession }) => {
     return (
         <div className="login-container relative overflow-hidden" style={{ padding: '40px 10px', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {/* Background Gradients */}
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-orange-400/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[150px] translate-y-1/3 -translate-x-1/3 pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 w-[800px] h-[800px] bg-blue-500/20 rounded-full blur-[150px] -translate-y-[70%] -translate-x-[70%] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 w-[800px] h-[800px] bg-orange-400/20 rounded-full blur-[150px] -translate-y-[30%] -translate-x-[30%] pointer-events-none" />
 
             <div className="login-card relative z-10" style={{ maxWidth: '640px', width: '100%' }}>
                 <div className="login-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <img src="/logo.png" alt="Bison Logo" style={{ height: '42px', objectFit: 'contain' }} />
+                    <div style={{ marginBottom: '0.75rem' }}>
+                        <img src="/logo.png" alt="Bison Logo" style={{ height: '64px', objectFit: 'contain' }} />
                     </div>
-                    <h2>Opret tømrer-system</h2>
+                    <h2 style={{ marginTop: '0' }}>Opret tømrer-system</h2>
                     <p className="text-muted">Få fuld adgang til Bison Frame på under 1 minut.</p>
                 </div>
 
@@ -201,7 +201,7 @@ const Register = ({ setSession }) => {
                                     placeholder="Dit Firma ApS"
                                     value={companyName}
                                     onChange={(e) => setCompanyName(e.target.value)}
-                                    style={{ paddingLeft: '36px' }}
+                                    style={{ paddingLeft: '36px', width: '100%' }}
                                     required 
                                 />
                             </div>
@@ -216,7 +216,7 @@ const Register = ({ setSession }) => {
                                     placeholder="12345678"
                                     value={cvr}
                                     onChange={(e) => setCvr(e.target.value)}
-                                    style={{ paddingLeft: '36px' }}
+                                    style={{ paddingLeft: '36px', width: '100%' }}
                                     required 
                                 />
                             </div>
@@ -231,7 +231,7 @@ const Register = ({ setSession }) => {
                                     placeholder="Jens Jensen"
                                     value={ownerName}
                                     onChange={(e) => setOwnerName(e.target.value)}
-                                    style={{ paddingLeft: '36px' }}
+                                    style={{ paddingLeft: '36px', width: '100%' }}
                                     required 
                                 />
                             </div>
@@ -271,7 +271,7 @@ const Register = ({ setSession }) => {
                                         placeholder="Byggevej 12, 1234 Byen"
                                         value={address}
                                         onChange={(e) => setAddress(e.target.value)}
-                                        style={{ paddingLeft: '36px' }}
+                                        style={{ paddingLeft: '36px', width: '100%' }}
                                         required 
                                     />
                                 )}
@@ -287,7 +287,7 @@ const Register = ({ setSession }) => {
                                     placeholder="+45 12 34 56 78"
                                     value={phone}
                                     onChange={handlePhoneChange}
-                                    style={{ paddingLeft: '36px' }}
+                                    style={{ paddingLeft: '36px', width: '100%' }}
                                     required 
                                 />
                             </div>
@@ -302,7 +302,7 @@ const Register = ({ setSession }) => {
                                     placeholder="kontakt@firma.dk"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    style={{ paddingLeft: '36px' }}
+                                    style={{ paddingLeft: '36px', width: '100%' }}
                                     required 
                                 />
                             </div>
@@ -319,7 +319,7 @@ const Register = ({ setSession }) => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 minLength={6}
-                                style={{ paddingLeft: '36px' }}
+                                style={{ paddingLeft: '36px', width: '100%' }}
                                 required 
                             />
                         </div>
