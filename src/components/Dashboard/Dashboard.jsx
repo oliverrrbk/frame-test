@@ -197,9 +197,8 @@ const Dashboard = () => {
             // For e-conomic er tokenet selve AgreementGrantToken, som kan gemmes direkte!
             supabase.auth.getSession().then(({ data: { session } }) => {
                 if (session && session.user) {
-                    supabase.from('carpenters')
-                        .update({ economic_api_key: token })
-                        .eq('id', session.user.id)
+                    supabase.from('carpenter_secrets')
+                        .upsert({ carpenter_id: session.user.id, economic_api_key: token })
                         .then(({ error }) => {
                             if (!error) {
                                 setCarpenterProfile(prev => prev ? {...prev, economic_api_key: token} : null);
@@ -300,6 +299,15 @@ const Dashboard = () => {
         const { data: profile } = await supabase.from('carpenters').select('*').eq('id', targetId).single();
         
         if (profile) {
+            const { data: secrets } = await supabase.from('carpenter_secrets').select('*').eq('carpenter_id', profile.company_id || profile.id).single();
+            if (secrets) {
+                profile.economic_api_key = secrets.economic_api_key;
+                profile.dinero_api_key = secrets.dinero_api_key;
+                profile.ordrestyring_api_key = secrets.ordrestyring_api_key;
+                profile.apacta_api_key = secrets.apacta_api_key;
+                profile.minuba_api_key = secrets.minuba_api_key;
+            }
+            
             userProfile = profile;
             setCarpenterProfile(profile);
             
@@ -309,10 +317,10 @@ const Dashboard = () => {
                 if (teamData) setTeamMembers(teamData);
             } else if (profile.role === 'accountant') {
                 setLeadFilter('Bekræftet opgave');
-                const { data: adminProfile } = await supabase.from('carpenters').select('economic_api_key, dinero_api_key').eq('id', profile.company_id).single();
-                if (adminProfile) {
-                    profile.economic_api_key = adminProfile.economic_api_key;
-                    profile.dinero_api_key = adminProfile.dinero_api_key;
+                const { data: adminSecrets } = await supabase.from('carpenter_secrets').select('economic_api_key, dinero_api_key').eq('carpenter_id', profile.company_id).single();
+                if (adminSecrets) {
+                    profile.economic_api_key = adminSecrets.economic_api_key;
+                    profile.dinero_api_key = adminSecrets.dinero_api_key;
                     setCarpenterProfile(profile);
                 }
             }
@@ -959,12 +967,19 @@ const Dashboard = () => {
             phone: carpenterProfile.phone,
             email: carpenterProfile.email,
             cvr: carpenterProfile.cvr,
-            address: carpenterProfile.address,
-            dinero_api_key: carpenterProfile.dinero_api_key,
-            economic_api_key: carpenterProfile.economic_api_key,
-            ordrestyring_api_key: carpenterProfile.ordrestyring_api_key,
-            apacta_api_key: carpenterProfile.apacta_api_key
+            address: carpenterProfile.address
         }).eq('id', carpenterProfile.id);
+        
+        if (!error) {
+            await supabase.from('carpenter_secrets').upsert({
+                carpenter_id: carpenterProfile.id,
+                dinero_api_key: carpenterProfile.dinero_api_key,
+                economic_api_key: carpenterProfile.economic_api_key,
+                ordrestyring_api_key: carpenterProfile.ordrestyring_api_key,
+                apacta_api_key: carpenterProfile.apacta_api_key,
+                minuba_api_key: carpenterProfile.minuba_api_key
+            });
+        }
         
         setIsSaving(false);
         if(!error) toast.success('Profil og URL-link opdateret succesfuldt! 🚀');
@@ -3180,7 +3195,7 @@ const Dashboard = () => {
                                             <button 
                                                 style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
                                                 onClick={async () => {
-                                                    const { error } = await supabase.from('carpenters').update({ dinero_api_key: null }).eq('id', carpenterProfile.id);
+                                                    const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, dinero_api_key: null });
                                                     if (!error) setCarpenterProfile(prev => ({...prev, dinero_api_key: null}));
                                                 }}
                                             >
@@ -3238,7 +3253,7 @@ const Dashboard = () => {
                                             <button 
                                                 style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
                                                 onClick={async () => {
-                                                    const { error } = await supabase.from('carpenters').update({ economic_api_key: null }).eq('id', carpenterProfile.id);
+                                                    const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, economic_api_key: null });
                                                     if (!error) setCarpenterProfile(prev => ({...prev, economic_api_key: null}));
                                                 }}
                                             >
@@ -3286,7 +3301,7 @@ const Dashboard = () => {
                                             style={{ width: '100%', background: '#db2777', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
                                             onClick={async () => {
                                                 if (!carpenterProfile?.ordrestyring_api_key) return;
-                                                const { error } = await supabase.from('carpenters').update({ ordrestyring_api_key: carpenterProfile.ordrestyring_api_key }).eq('id', carpenterProfile.id);
+                                                const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, ordrestyring_api_key: carpenterProfile.ordrestyring_api_key });
                                                 if (!error) {
                                                     alert("Ordrestyring API-nøgle gemt!");
                                                 } else {
@@ -3305,7 +3320,7 @@ const Dashboard = () => {
                                                 <button 
                                                     style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
                                                     onClick={async () => {
-                                                        const { error } = await supabase.from('carpenters').update({ ordrestyring_api_key: null }).eq('id', carpenterProfile.id);
+                                                        const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, ordrestyring_api_key: null });
                                                         if (!error) setCarpenterProfile(prev => ({...prev, ordrestyring_api_key: null}));
                                                     }}
                                                 >
@@ -3354,7 +3369,7 @@ const Dashboard = () => {
                                             style={{ width: '100%', background: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
                                             onClick={async () => {
                                                 if (!carpenterProfile?.apacta_api_key) return;
-                                                const { error } = await supabase.from('carpenters').update({ apacta_api_key: carpenterProfile.apacta_api_key }).eq('id', carpenterProfile.id);
+                                                const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, apacta_api_key: carpenterProfile.apacta_api_key });
                                                 if (!error) {
                                                     alert("Apacta API-nøgle gemt!");
                                                 } else {
@@ -3373,7 +3388,7 @@ const Dashboard = () => {
                                                 <button 
                                                     style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
                                                     onClick={async () => {
-                                                        const { error } = await supabase.from('carpenters').update({ apacta_api_key: null }).eq('id', carpenterProfile.id);
+                                                        const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, apacta_api_key: null });
                                                         if (!error) setCarpenterProfile(prev => ({...prev, apacta_api_key: null}));
                                                     }}
                                                 >
@@ -3422,7 +3437,7 @@ const Dashboard = () => {
                                             style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
                                             onClick={async () => {
                                                 if (!carpenterProfile?.minuba_api_key) return;
-                                                const { error } = await supabase.from('carpenters').update({ minuba_api_key: carpenterProfile.minuba_api_key }).eq('id', carpenterProfile.id);
+                                                const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, minuba_api_key: carpenterProfile.minuba_api_key });
                                                 if (!error) {
                                                     alert("Minuba API-nøgle gemt!");
                                                 } else {
@@ -3441,7 +3456,7 @@ const Dashboard = () => {
                                                 <button 
                                                     style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
                                                     onClick={async () => {
-                                                        const { error } = await supabase.from('carpenters').update({ minuba_api_key: null }).eq('id', carpenterProfile.id);
+                                                        const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, minuba_api_key: null });
                                                         if (!error) setCarpenterProfile(prev => ({...prev, minuba_api_key: null}));
                                                     }}
                                                 >

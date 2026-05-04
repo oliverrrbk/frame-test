@@ -174,11 +174,15 @@ const Register = ({ setSession }) => {
     }
 
     return (
-        <div className="login-container" style={{ padding: '40px 10px', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div className="login-card" style={{ maxWidth: '550px', width: '100%' }}>
-                <div className="login-header">
-                    <div className="login-brand" style={{ background: '#ecfdf5', color: '#10b981' }}>
-                        <Wrench size={32} className="brand-icon" style={{ color: '#10b981' }} />
+        <div className="login-container relative overflow-hidden" style={{ padding: '40px 10px', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Background Gradients */}
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-orange-400/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[150px] translate-y-1/3 -translate-x-1/3 pointer-events-none" />
+
+            <div className="login-card relative z-10" style={{ maxWidth: '640px', width: '100%' }}>
+                <div className="login-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <img src="/logo.png" alt="Bison Logo" style={{ height: '42px', objectFit: 'contain' }} />
                     </div>
                     <h2>Opret tømrer-system</h2>
                     <p className="text-muted">Få fuld adgang til Bison Frame på under 1 minut.</p>
@@ -325,9 +329,9 @@ const Register = ({ setSession }) => {
                         <label>Vælg din pakke (14 dages gratis prøveperiode) *</label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '8px' }}>
                             {[
-                                { id: 'basis', name: 'Basis', price: '390 kr. ex. moms' },
-                                { id: 'standard', name: 'Professionel', price: '790 kr. ex. moms' },
-                                { id: 'enterprise', name: 'Enterprise', price: '1.890 kr. ex. moms' }
+                                { id: 'basis', name: 'Basis', price: '390 kr.', period: 'ekskl. moms / md.' },
+                                { id: 'standard', name: 'Professionel', price: '790 kr.', period: 'ekskl. moms / md.' },
+                                { id: 'enterprise', name: 'Enterprise', price: '1.890 kr.', period: 'ekskl. moms / md.' }
                             ].map(tier => (
                                 <div 
                                     key={tier.id}
@@ -339,11 +343,15 @@ const Register = ({ setSession }) => {
                                         cursor: 'pointer',
                                         textAlign: 'center',
                                         backgroundColor: selectedTier === tier.id ? '#ecfdf5' : '#fff',
-                                        transition: 'all 0.2s'
+                                        transition: 'all 0.2s',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'center'
                                     }}
                                 >
                                     <div style={{ fontWeight: 'bold', color: selectedTier === tier.id ? '#065f46' : '#374151', fontSize: '14px' }}>{tier.name}</div>
-                                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>{tier.price} /md</div>
+                                    <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#374151', marginTop: '6px' }}>{tier.price}</div>
+                                    <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{tier.period}</div>
                                 </div>
                             ))}
                         </div>

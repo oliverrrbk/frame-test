@@ -85,9 +85,11 @@ serve(async (req) => {
 
     // Opdater databasen med Service Role for at være 100% sikker på at RLS ikke blokerer
     const { error: dbError } = await supabaseClient
-      .from('carpenters')
-      .update({ dinero_api_key: JSON.stringify(dineroAuthData) })
-      .eq('id', user.id)
+      .from('carpenter_secrets')
+      .upsert({ 
+          carpenter_id: user.id, 
+          dinero_api_key: JSON.stringify(dineroAuthData) 
+      })
 
     if (dbError) {
       throw new Error(`Fejl ved opdatering af profil: ${dbError.message}`)

@@ -35,9 +35,9 @@ serve(async (req) => {
 
     // 1. Hent tokens fra DB
     const { data: profile, error: dbError } = await supabaseClient
-      .from('carpenters')
+      .from('carpenter_secrets')
       .select('dinero_api_key')
-      .eq('id', user.id)
+      .eq('carpenter_id', user.id)
       .single()
 
     if (dbError || !profile || !profile.dinero_api_key) {
