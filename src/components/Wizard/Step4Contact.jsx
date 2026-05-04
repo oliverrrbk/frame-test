@@ -8,9 +8,9 @@ const Step4Contact = ({ calculateEstimate, prevStep }) => {
     const [zip, setZip] = useState('');
     const [city, setCity] = useState('');
     const [phone, setPhone] = useState('');
+    const [acceptedTerms, setAcceptedTerms] = useState(false); // NY: GDPR State
     
     const [autocomplete, setAutocomplete] = useState(null);
-
     const onLoad = (autoC) => setAutocomplete(autoC);
     
     const onPlaceChanged = () => {
@@ -35,12 +35,25 @@ const Step4Contact = ({ calculateEstimate, prevStep }) => {
                 if (postalCode) setZip(postalCode);
                 if (locality) setCity(locality);
             } else if (place && place.name) {
-                setStreet(place.name); // Fallback hvis de bare trykker enter uden at vælge
+                setStreet(place.name); 
             }
         }
     };
 
-    const isValid = email.length >= 5 && email.includes('@') && fullName.length > 2 && phone.length > 7 && street.length > 3 && zip.length === 4;
+    // NY: Smart formatering af telefonnummer (som i Register.jsx)
+    const handlePhoneChange = (e) => {
+        let val = e.target.value.replace(/[^\d+]/g, '');
+        let hasPlus45 = val.startsWith('+45');
+        let numbersOnly = hasPlus45 ? val.slice(3) : val;
+        let blocks = numbersOnly.match(/.{1,2}/g) || [];
+        let result = blocks.join(' ');
+        if (hasPlus45) result = result ? `+45 ${result}` : '+45';
+        setPhone(result);
+    };
+
+    // NY: Strengere validering inkl. regex og GDPR-tjek
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isValid = emailRegex.test(email) && fullName.length > 2 && phone.length > 7 && street.length > 3 && zip.length === 4 && acceptedTerms;
 
     const handleCalculate = () => {
         calculateEstimate({
@@ -62,7 +75,7 @@ const Step4Contact = ({ calculateEstimate, prevStep }) => {
             
             <div className="form-grid">
                 <div className="form-group">
-                    <label>Fulde navn</label>
+                    <label>Fulde navn <span style={{ color: '#ef4444' }}>*</span></label>
                     <input type="text" placeholder="Indtast fulde navn" value={fullName} onChange={(e) => setFullName(e.target.value)} />
                 </div>
                 <div className="form-group" style={{ position: 'relative' }}>
@@ -84,7 +97,7 @@ const Step4Contact = ({ calculateEstimate, prevStep }) => {
                                 onChange={(e) => setStreet(e.target.value)} 
                                 style={{ width: '100%', border: '2px solid #3b82f6', background: '#f8fafc', fontWeight: '500' }}
                                 onKeyDown={(e) => {
-                                    if(e.key === 'Enter') e.preventDefault(); // Undgå submit af form på Enter (bedre UX)
+                                    if(e.key === 'Enter') e.preventDefault();
                                 }}
                             />
                         </Autocomplete>
@@ -105,16 +118,28 @@ const Step4Contact = ({ calculateEstimate, prevStep }) => {
                 </div>
                 <div className="form-grid dual" style={{ marginBottom: 0, marginTop: '20px' }}>
                     <div className="form-group">
-                        <label>Telefon</label>
-                        <input type="tel" placeholder="Indtast telefonnummer" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                        <label>Telefon <span style={{ color: '#ef4444' }}>*</span></label>
+                        <input type="tel" placeholder="+45 20 30 40 50" value={phone} onChange={handlePhoneChange} />
                     </div>
                     <div className="form-group">
-                        <label>E-mail</label>
+                        <label>E-mail <span style={{ color: '#ef4444' }}>*</span></label>
                         <input type="email" placeholder="mail@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                     </div>
                 </div>
             </div>
             
+            {/* NY: GDPR Checkbox før actions */}
+            <div style={{ marginTop: '20px', marginBottom: '10px', display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }} onClick={() => setAcceptedTerms(!acceptedTerms)}>
+                <input 
+                    type="checkbox" 
+                    checked={acceptedTerms} 
+                    onChange={() => setAcceptedTerms(!acceptedTerms)}
+                    style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer' }}
+                />
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.4' }}>
+                    Jeg accepterer, at mine indtastede oplysninger gemmes og behandles med det formål at modtage et estimat, samt at jeg kan blive kontaktet af det pågældende tømrerfirma i forbindelse med min forespørgsel.
+                </p>
+            </div>
             <div className="actions">
                 <button className="btn-secondary" onClick={prevStep}>Tilbage</button>
                 <button className="btn-primary" onClick={handleCalculate} disabled={!isValid}>Vis Mit Overslag</button>

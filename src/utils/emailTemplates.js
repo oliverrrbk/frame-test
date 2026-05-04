@@ -65,8 +65,10 @@ const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
                 <p style="margin: 2px 0; color: #64748b;">${carpenter.address || ''}</p>
             </div>
             <p style="margin: 0 0 8px 0; font-size: 12px;">Dette tilbudssystem er leveret af Bison Frame - Din sikkerhed for en professionel byggeproces.</p>
+            <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8; font-style: italic;">Denne e-mail indeholder persondata. Ønsker du at gøre brug af din ret til at få slettet dine oplysninger (GDPR), kan du blot besvare denne e-mail direkte til virksomheden.</p>
           `
-        : `<p style="margin: 0 0 8px 0;">Denne e-mail er sendt via Bison Frame - Din professionelle tilbudsplatform.</p>`;
+        : `<p style="margin: 0 0 8px 0;">Denne e-mail er sendt via Bison Frame - Din professionelle tilbudsplatform.</p>
+           <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8; font-style: italic;">Denne e-mail indeholder persondata. Ønsker du at gøre brug af din ret til at få slettet dine oplysninger (GDPR), kan du blot besvare denne e-mail direkte til virksomheden.</p>`;
 
     return `
 <!DOCTYPE html>
