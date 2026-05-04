@@ -24,8 +24,8 @@ export const TheInfiniteGrid = () => {
   const gridOffsetX = useMotionValue(0);
   const gridOffsetY = useMotionValue(0);
 
-  const speedX = 0.375; 
-  const speedY = 0.375;
+  const speedX = 0.2625; 
+  const speedY = 0.2625;
 
   useAnimationFrame(() => {
     const currentX = gridOffsetX.get();
