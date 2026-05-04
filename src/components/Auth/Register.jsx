@@ -174,28 +174,28 @@ const Register = ({ setSession }) => {
     }
 
     return (
-        <div className="login-container relative overflow-hidden" style={{ padding: '40px 10px', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="login-container relative overflow-hidden" style={{ padding: '20px 10px', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {/* Background Gradients */}
             <div className="absolute top-1/2 left-1/2 w-[800px] h-[800px] bg-blue-500/20 rounded-full blur-[150px] -translate-y-[70%] -translate-x-[70%] pointer-events-none" />
             <div className="absolute top-1/2 left-1/2 w-[800px] h-[800px] bg-orange-400/20 rounded-full blur-[150px] -translate-y-[30%] -translate-x-[30%] pointer-events-none" />
 
-            <div className="login-card relative z-10" style={{ maxWidth: '640px', width: '100%' }}>
-                <div className="login-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{ marginBottom: '0.75rem' }}>
-                        <img src="/logo.png" alt="Bison Logo" style={{ height: '64px', objectFit: 'contain' }} />
+            <div className="login-card relative z-10" style={{ maxWidth: '640px', width: '100%', padding: '24px 32px', zoom: 1.15 }}>
+                <div className="login-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ marginBottom: '0.25rem' }}>
+                        <img src="/logo.png" alt="Bison Logo" style={{ height: '48px', objectFit: 'contain' }} />
                     </div>
-                    <h2 style={{ marginTop: '0' }}>Opret tømrer-system</h2>
-                    <p className="text-muted">Få fuld adgang til Bison Frame på under 1 minut.</p>
+                    <h2 style={{ marginTop: '0', marginBottom: '0.25rem', fontSize: '1.5rem' }}>Opret tømrer-system</h2>
+                    <p className="text-muted" style={{ margin: '0', fontSize: '0.9rem' }}>Få fuld adgang til Bison Frame på under 1 minut.</p>
                 </div>
 
                 <form onSubmit={handleRegister} className="login-form">
-                    {errorMsg && <div className="login-error" style={{ marginBottom: '20px' }}>{errorMsg}</div>}
+                    {errorMsg && <div className="login-error" style={{ marginBottom: '16px' }}>{errorMsg}</div>}
                     
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <div className="input-group">
                             <label>Firmanavn *</label>
                             <div style={{ position: 'relative' }}>
-                                <Building size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
+                                <Building size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
                                 <input 
                                     type="text" 
                                     placeholder="Dit Firma ApS"
@@ -210,7 +210,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group">
                             <label>CVR-nummer *</label>
                             <div style={{ position: 'relative' }}>
-                                <FileText size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
+                                <FileText size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
                                 <input 
                                     type="text" 
                                     placeholder="12345678"
@@ -225,7 +225,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                             <label>Ejer / Kontaktperson *</label>
                             <div style={{ position: 'relative' }}>
-                                <User size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
+                                <User size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
                                 <input 
                                     type="text" 
                                     placeholder="Jens Jensen"
@@ -240,7 +240,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                             <label>Firmaadresse *</label>
                             <div style={{ position: 'relative' }}>
-                                <MapPin size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
+                                <MapPin size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
                                 {window.google && window.google.maps && window.google.maps.places ? (
                                     <Autocomplete 
                                         onLoad={onLoad} 
@@ -281,7 +281,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group">
                             <label>Telefonnummer *</label>
                             <div style={{ position: 'relative' }}>
-                                <Phone size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
+                                <Phone size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
                                 <input 
                                     type="tel" 
                                     placeholder="+45 12 34 56 78"
@@ -296,7 +296,7 @@ const Register = ({ setSession }) => {
                         <div className="input-group">
                             <label>Bruger E-mail (og Faktura) *</label>
                             <div style={{ position: 'relative' }}>
-                                <Mail size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
+                                <Mail size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
                                 <input 
                                     type="email" 
                                     placeholder="kontakt@firma.dk"
@@ -309,10 +309,10 @@ const Register = ({ setSession }) => {
                         </div>
                     </div>
 
-                    <div className="input-group" style={{ marginTop: '15px' }}>
+                    <div className="input-group" style={{ marginTop: '12px' }}>
                         <label>Vælg Adgangskode (Min. 6 tegn) *</label>
                         <div style={{ position: 'relative' }}>
-                            <Lock size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: '#9ca3af' }} />
+                            <Lock size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
                             <input 
                                 type="password" 
                                 placeholder="••••••••"
@@ -325,7 +325,7 @@ const Register = ({ setSession }) => {
                         </div>
                     </div>
 
-                    <div className="input-group" style={{ marginTop: '20px' }}>
+                    <div className="input-group" style={{ marginTop: '16px' }}>
                         <label>Vælg din pakke (14 dages gratis prøveperiode) *</label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '8px' }}>
                             {[
@@ -339,7 +339,7 @@ const Register = ({ setSession }) => {
                                     style={{
                                         border: `2px solid ${selectedTier === tier.id ? '#10b981' : '#e8e6e1'}`,
                                         borderRadius: '8px',
-                                        padding: '12px',
+                                        padding: '10px',
                                         cursor: 'pointer',
                                         textAlign: 'center',
                                         backgroundColor: selectedTier === tier.id ? '#ecfdf5' : '#fff',
@@ -349,24 +349,24 @@ const Register = ({ setSession }) => {
                                         justifyContent: 'center'
                                     }}
                                 >
-                                    <div style={{ fontWeight: 'bold', color: selectedTier === tier.id ? '#065f46' : '#374151', fontSize: '14px' }}>{tier.name}</div>
-                                    <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#374151', marginTop: '6px' }}>{tier.price}</div>
-                                    <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{tier.period}</div>
+                                    <div style={{ fontWeight: 'bold', color: selectedTier === tier.id ? '#065f46' : '#374151', fontSize: '13px' }}>{tier.name}</div>
+                                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151', marginTop: '4px' }}>{tier.price}</div>
+                                    <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>{tier.period}</div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="terms-checkbox" style={{ marginTop: '20px', marginBottom: '20px', display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }} onClick={() => setAcceptedTerms(!acceptedTerms)}>
-                        <div style={{ color: acceptedTerms ? '#10b981' : '#9ca3af', marginTop: '2px' }}>
-                            {acceptedTerms ? <CheckSquare size={20} /> : <Square size={20} />}
+                    <div className="terms-checkbox" style={{ marginTop: '16px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }} onClick={() => setAcceptedTerms(!acceptedTerms)}>
+                        <div style={{ color: acceptedTerms ? '#10b981' : '#c5cdd6', marginTop: '2px' }}>
+                            {acceptedTerms ? <CheckSquare size={18} /> : <Square size={18} />}
                         </div>
-                        <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.4' }}>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#6b7280', lineHeight: '1.4' }}>
                             Jeg accepterer hermed <a href="/Bison_Frame_Vilkaar.html" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#3b82f6', textDecoration: 'underline' }}>handelsbetingelserne</a> samt <a href="/Bison_Frame_Databehandleraftale.html" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#3b82f6', textDecoration: 'underline' }}>Databehandleraftalen (DPA)</a>, og bekræfter, at alle angivne oplysninger er korrekte, samt at Bison Frame optræder som databehandler for mine kunde-estimater.
                         </p>
                     </div>
                     
-                    <button type="submit" disabled={loading} className="btn-primary login-btn" style={{ background: '#10b981', width: '100%' }}>
+                    <button type="submit" disabled={loading} className="btn-primary login-btn" style={{ background: '#10b981', width: '100%', padding: '10px 20px', fontSize: '15px' }}>
                         {loading ? 'Opretter system...' : (
                             <>
                                 <UserPlus size={18} />
@@ -375,8 +375,8 @@ const Register = ({ setSession }) => {
                         )}
                     </button>
                     
-                    <div style={{ textAlign: 'center', marginTop: '25px' }}>
-                        <Link to="/" style={{ color: '#3b82f6', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', padding: '5px' }}>
+                    <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                        <Link to="/" style={{ color: '#3b82f6', textDecoration: 'none', fontSize: '13px', fontWeight: 'bold', display: 'inline-block', padding: '5px' }}>
                             Har du allerede et system? Log ind her
                         </Link>
                     </div>
