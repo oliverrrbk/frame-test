@@ -201,7 +201,7 @@ const Register = ({ setSession }) => {
                                     placeholder="Dit Firma ApS"
                                     value={companyName}
                                     onChange={(e) => setCompanyName(e.target.value)}
-                                    style={{ paddingLeft: '36px', width: '100%' }}
+                                    style={{ paddingLeft: '44px', width: '100%' }}
                                     required 
                                 />
                             </div>
@@ -216,7 +216,7 @@ const Register = ({ setSession }) => {
                                     placeholder="12345678"
                                     value={cvr}
                                     onChange={(e) => setCvr(e.target.value)}
-                                    style={{ paddingLeft: '36px', width: '100%' }}
+                                    style={{ paddingLeft: '44px', width: '100%' }}
                                     required 
                                 />
                             </div>
@@ -231,7 +231,7 @@ const Register = ({ setSession }) => {
                                     placeholder="Jens Jensen"
                                     value={ownerName}
                                     onChange={(e) => setOwnerName(e.target.value)}
-                                    style={{ paddingLeft: '36px', width: '100%' }}
+                                    style={{ paddingLeft: '44px', width: '100%' }}
                                     required 
                                 />
                             </div>
@@ -258,7 +258,7 @@ const Register = ({ setSession }) => {
                                                 setAddress(e.target.value);
                                                 setIsAddressValid(false);
                                             }}
-                                            style={{ paddingLeft: '36px', width: '100%', border: '1px solid #e8e6e1' }}
+                                            style={{ paddingLeft: '44px', width: '100%', border: '1px solid #e8e6e1' }}
                                             required 
                                             onKeyDown={(e) => {
                                                 if(e.key === 'Enter') e.preventDefault();
@@ -271,7 +271,7 @@ const Register = ({ setSession }) => {
                                         placeholder="Byggevej 12, 1234 Byen"
                                         value={address}
                                         onChange={(e) => setAddress(e.target.value)}
-                                        style={{ paddingLeft: '36px', width: '100%' }}
+                                        style={{ paddingLeft: '44px', width: '100%' }}
                                         required 
                                     />
                                 )}
@@ -287,7 +287,7 @@ const Register = ({ setSession }) => {
                                     placeholder="+45 12 34 56 78"
                                     value={phone}
                                     onChange={handlePhoneChange}
-                                    style={{ paddingLeft: '36px', width: '100%' }}
+                                    style={{ paddingLeft: '44px', width: '100%' }}
                                     required 
                                 />
                             </div>
@@ -302,7 +302,7 @@ const Register = ({ setSession }) => {
                                     placeholder="kontakt@firma.dk"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    style={{ paddingLeft: '36px', width: '100%' }}
+                                    style={{ paddingLeft: '44px', width: '100%' }}
                                     required 
                                 />
                             </div>
@@ -319,7 +319,7 @@ const Register = ({ setSession }) => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 minLength={6}
-                                style={{ paddingLeft: '36px', width: '100%' }}
+                                style={{ paddingLeft: '44px', width: '100%' }}
                                 required 
                             />
                         </div>
