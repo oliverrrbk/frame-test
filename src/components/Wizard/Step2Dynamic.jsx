@@ -3,6 +3,11 @@ import { QUESTIONS } from './questionsConfig';
 
 const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) => {
     const questions = QUESTIONS[category] || [];
+    const [openTooltips, setOpenTooltips] = React.useState({});
+
+    const toggleTooltip = (id) => {
+        setOpenTooltips(prev => ({ ...prev, [id]: !prev[id] }));
+    };
 
     const handleInputChange = (id, value) => {
         updateDetails(id, value);
@@ -85,7 +90,53 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) 
 
         return (
             <div key={q.id} className="form-group" style={{ marginBottom: '20px' }}>
-                <label style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>{q.label}</label>
+                <label style={{ fontWeight: '600', display: 'flex', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
+                    {q.label}
+                    {q.tooltip && (
+                        <div style={{ marginLeft: '10px', position: 'relative' }}>
+                            <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); toggleTooltip(q.id); }}
+                                style={{
+                                    background: '#f0f4f8',
+                                    border: '1px solid #cce3f6',
+                                    color: '#005b9f',
+                                    borderRadius: '50%',
+                                    width: '24px',
+                                    height: '24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                ?
+                            </button>
+                            {openTooltips[q.id] && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '30px',
+                                    left: '0',
+                                    background: '#fff',
+                                    border: '1px solid #e2e8f0',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    width: '250px',
+                                    zIndex: 100,
+                                    fontSize: '13px',
+                                    color: '#334155',
+                                    lineHeight: '1.5'
+                                }}>
+                                    {q.tooltip}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </label>
                 
                 {q.type === 'select' && (
                     <select 

@@ -16,10 +16,10 @@ export const initialCategories = [
 
 export const QUESTIONS = {
     roof: [
-        { id: 'amount', type: 'number', label: 'Hvor stort er grundplanet af huset cirka i m2?' },
+        { id: 'amount', type: 'number', label: 'Hvor stort er grundplanet af huset cirka i m2?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl. Tømreren dobbelttjekker altid de faktiske forhold ved en besigtigelse.' },
         { id: 'floors', type: 'select', label: 'Hvor mange plan/etager er huset?', options: ['1-plan (Stueplan)', '1½-plan / 2-plan / Mere'] },
         { id: 'roofPitch', type: 'select', label: 'Hvordan er hældningen på taget?', options: ['Fladt tag / Meget lav hældning', 'Høj rejsning / Normal hældning'] },
-        { id: 'houseAge', type: 'number', label: 'Hvor gammelt er huset ca. (årstal)?' },
+        { id: 'houseAge', type: 'number', label: 'Hvor gammelt er huset ca. (årstal)?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl.' },
         
         { id: 'disposal', type: 'select', label: 'Skal det gamle tag afmonteres og afskaffes?', options: ['Ja', 'Nej, lægges ovenpå / ikke relevant'] },
         { 
@@ -113,7 +113,7 @@ export const QUESTIONS = {
         },
 
         // --- Standard (Ikke-blanding) ---
-        { id: 'amount', type: 'number', label: 'Hvor mange vinduer drejer opgaven sig om i alt?', condition: (d) => d.windowType && d.windowType !== 'Blanding' },
+        { id: 'amount', type: 'number', label: 'Hvor mange vinduer drejer opgaven sig om i alt?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise antal og mål fastsættes ved tømrerens opmåling.', condition: (d) => d.windowType && d.windowType !== 'Blanding' },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -136,7 +136,7 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet, eller hvis der er noget særligt ved fx panorama/skylines?' }
     ],
     floor: [
-        { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven cirka?' },
+        { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven cirka?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise areal måles op senere af tømreren.' },
         { id: 'disposal', type: 'select', label: 'Skal det gamle gulv afmonteres og fjernes?', options: ['Ja', 'Nej'] },
         { 
             id: 'oldFloorType', 
@@ -225,7 +225,7 @@ export const QUESTIONS = {
         },
 
         // --- Standard (Ikke-blanding) ---
-        { id: 'amount', type: 'number', label: 'Hvor mange døre drejer opgaven sig om i alt?', condition: (d) => d.doorType === 'Indvendige døre' || d.doorType === 'Ude/fordøre' },
+        { id: 'amount', type: 'number', label: 'Hvor mange døre drejer opgaven sig om i alt?', tooltip: 'Giv dit eget kvalificerede bud. Det endelige antal og mål bekræftes af tømreren.', condition: (d) => d.doorType === 'Indvendige døre' || d.doorType === 'Ude/fordøre' },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -250,7 +250,7 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet?' }
     ],
     terrace: [
-        { id: 'amount', type: 'number', label: 'Hvor mange m2 terrasse skal der bygges?' },
+        { id: 'amount', type: 'number', label: 'Hvor mange m2 terrasse skal der bygges?', tooltip: 'Giv dit eget kvalificerede bud. Arealet dobbelttjekkes ved en fysisk besigtigelse.' },
         { id: 'elevation', type: 'select', label: 'Hvilken type terrasse er der tale om?', options: ['Jordniveau (Almindelig træterrasse på jorden)', 'Hævet terrasse (Hævet mere end 0,5m fra jorden, fx på stolper)', 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)'] },
         { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja', 'Nej'] },
         { id: 'terrain', type: 'select', label: 'Underlag: Hvad skal den nye terrasse bygges på?', condition: (d) => d.elevation !== 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)', options: ['Græs/Jord (Kræver at tømreren graver ud, lægger dug og sætter punktfundament)', 'Eksisterende fliser/beton (Lige til at bygge ovenpå)'] },

@@ -1,7 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CheckCircle, CalendarDays, Phone, Mail } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 const Step5Success = ({ resetWizard, carpenter }) => {
+    useEffect(() => {
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+    }, []);
+
     return (
         <section className="wizard-step active" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 20px' }}>
             <div style={{ marginBottom: '24px', position: 'relative' }}>

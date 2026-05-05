@@ -106,7 +106,6 @@ const PublicWizardPage = () => {
         <div className="nav-container">
           <div className="logo">{carpenterData.company_name}</div>
           <div className="nav-profile">
-            <span className="nav-badge">Powered by Bison Frame SaaS</span>
             <img 
               src={carpenterData.logo_url || `https://ui-avatars.com/api/?name=${carpenterData.company_name}&background=1e293b&color=fff`} 
               alt={carpenterData.company_name} 

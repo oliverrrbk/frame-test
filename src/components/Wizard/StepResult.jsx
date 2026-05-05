@@ -129,7 +129,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
 
                 <div className="disclaimer-alert" style={{ background: '#fef2f2', borderColor: '#f87171', color: '#991b1b', marginTop: '24px', padding: '16px', borderRadius: '8px' }}>
                     <strong style={{ display: 'block', marginBottom: '8px' }}>⚠️ Vigtig information om overslaget</strong>
-                    Dette er udelukkende et <strong>automatisk genereret overslag</strong>. For at sikre dig bedst muligt, regner vores system bevidst med "sikre marginer". Det betyder, at den faktiske pris <em>oftest vil være lavere</em> end estimatet heroppe, når jeg personligt har vurderet opgaven. Dette estimat udgør ikke et juridisk bindende tilbud.
+                    Dette er udelukkende et <strong>vejledende pris-overslag</strong> for at give dig en idé om lejet. Tømreren tager altid ud og besigtiger opgaven fysisk, før der udarbejdes et endeligt og bindende tilbud. Dette estimat udgør ikke et juridisk bindende tilbud.
                 </div>
             </div>
 

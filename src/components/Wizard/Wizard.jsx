@@ -195,10 +195,15 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     }
 
     return (
-        <main className="wizard-container">
+        <main className="wizard-container" style={{ position: 'relative', paddingBottom: '40px' }}>
             {currentStep < 5 && (
-                <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${progressPercentage}%` }}></div>
+                <div className="progress-section" style={{ marginBottom: '24px' }}>
+                    <div className="progress-text" style={{ fontSize: '14px', fontWeight: '500', color: '#64748b', marginBottom: '8px', textAlign: 'center' }}>
+                        Trin {currentStep === 'special_chat' ? 2 : currentStep} af {totalSteps} - {currentStep === 1 ? 'Vælg opgave' : currentStep === 2 || currentStep === 'special_chat' ? 'Detaljer' : currentStep === 3 ? 'Billeder' : 'Kontaktoplysninger'}
+                    </div>
+                    <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${progressPercentage}%` }}></div>
+                    </div>
                 </div>
             )}
 
@@ -219,6 +224,10 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             {currentStep === 4 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} />}
             {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details.notes} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} />}
             {currentStep === 6 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
+
+            <div style={{ position: 'absolute', bottom: '16px', left: '0', right: '0', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
+                Overslaget er sikkert udarbejdet med platformen Bison Frame
+            </div>
         </main>
     );
 };
