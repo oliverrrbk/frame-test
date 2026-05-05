@@ -215,7 +215,10 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
 };
 
 export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, carpenter, quoteUrl) => {
-    const carpenterName = carpenter?.company_name || 'Tømreren';
+    const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
+    const carpenterOwnerName = carpenter?.owner_name || carpenter?.contact_person || '';
+    const signatureName = carpenterOwnerName ? `${carpenterOwnerName} fra ${carpenterCompanyName}` : carpenterCompanyName;
+    
     const phone = carpenter?.phone || '';
     const email = carpenter?.email || '';
 
@@ -238,7 +241,7 @@ export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, car
         
         <p style="color: #334155;">Hej ${customerName},</p>
         <p style="color: #334155;">Fantastisk! Du har nu formelt accepteret tilbuddet på dit projekt (<strong>${categoryName}</strong>).</p>
-        <p style="color: #334155;">Jeg har fået direkte besked i mit system her hos <strong>${carpenterName}</strong>. Jeg vil nu planlægge det videre forløb og kontakte dig snarest for at aftale de nærmere detaljer, såsom opstartsdato og bestilling af materialer.</p>
+        <p style="color: #334155;">Jeg har fået direkte besked i mit system her hos <strong>${carpenterCompanyName}</strong>. Jeg vil nu planlægge det videre forløb og kontakte dig snarest for at aftale de nærmere detaljer, såsom opstartsdato og bestilling af materialer.</p>
         
         ${quoteButtonHtml}
 
@@ -249,14 +252,14 @@ export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, car
         <p style="color: #334155; margin-bottom: 0;">Tak for tilliden. Jeg glæder mig til samarbejdet!</p>
         <br/>
         <p style="color: #334155; margin-bottom: 0;">Med venlig hilsen,</p>
-        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${carpenterName}</p>
+        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
     `;
     return getBaseTemplate("Dit tilbud er bekræftet", content, "Tillykke! Din opgave er bekræftet og sat i gang.", carpenter);
 };
 
 export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, categoryName, appUrl = 'https://app.bisonframe.dk', carpenter = null, leadId = null) => {
-    const economicLink = carpenter?.economic_api_key ? `<a href="https://secure.e-conomic.com/sales/invoices/drafts" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-left: 10px;">Åbn E-conomic Regnskab</a>` : '';
-    const dineroLink = carpenter?.dinero_api_key ? `<a href="https://dinero.dk/app/sales/drafts" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-left: 10px;">Åbn Dinero Regnskab</a>` : '';
+    const economicLink = `<a href="https://secure.e-conomic.com/sales/invoices/drafts" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-left: 10px; margin-top: 10px;">Åbn E-conomic</a>`;
+    const dineroLink = `<a href="https://dinero.dk/app/sales/drafts" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-left: 10px; margin-top: 10px;">Åbn Dinero</a>`;
     
     const content = `
         <div style="text-align: center; margin-bottom: 32px;">
@@ -269,12 +272,14 @@ export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, c
         <p style="color: #334155;">Opgaven er nu bekræftet og klar til at blive sat i gang. Har du tilknyttet dit regnskabsprogram eller sagsstyringssystem, ligger sagen allerede klar til dig som en kladde!</p>
         
         <div style="text-align: center; margin: 32px 0;">
-            <a href="${appUrl}/dashboard?tab=Bekræftet+opgave${leadId ? `&leadId=${leadId}` : ''}" style="${buttonStyle}">Gå til dit Dashboard</a>
+            <a href="${appUrl}/dashboard?tab=Bekræftet+opgave${leadId ? `&leadId=${leadId}` : ''}" style="${buttonStyle}">Gå til Dashboard</a>
+            <br/><br/>
+            <p style="color: #64748b; font-size: 14px; margin-bottom: 12px;">Hurtig adgang til dit regnskabsprogram:</p>
             ${economicLink}
             ${dineroLink}
         </div>
     `;
-    return getBaseTemplate("Et tilbud er blevet accepteret", content, `${customerName} har accepteret dit tilbud!`);
+    return getBaseTemplate("Et tilbud er blevet accepteret", content, `${customerName} har accepteret dit tilbud!`, carpenter);
 };
 
 export const getFeedbackTemplate = (carpenter, feedbackText) => {
