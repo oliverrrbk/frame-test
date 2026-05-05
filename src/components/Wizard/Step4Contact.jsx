@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Autocomplete } from '@react-google-maps/api';
 
 const Step4Contact = ({ calculateEstimate, prevStep }) => {
@@ -10,6 +10,15 @@ const Step4Contact = ({ calculateEstimate, prevStep }) => {
     const [phone, setPhone] = useState('');
     const [acceptedTerms, setAcceptedTerms] = useState(false); // NY: GDPR State
     
+    const nameInputRef = useRef(null);
+
+    useEffect(() => {
+        // Autofokus på navn feltet når trinnet indlæses
+        if (nameInputRef.current) {
+            nameInputRef.current.focus();
+        }
+    }, []);
+
     const [autocomplete, setAutocomplete] = useState(null);
     const onLoad = (autoC) => setAutocomplete(autoC);
     
@@ -53,96 +62,207 @@ const Step4Contact = ({ calculateEstimate, prevStep }) => {
 
     // NY: Strengere validering inkl. regex og GDPR-tjek
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isValid = emailRegex.test(email) && fullName.length > 2 && phone.length > 7 && street.length > 3 && zip.length === 4 && acceptedTerms;
-
+    
     const handleCalculate = () => {
+        if (fullName.trim().length < 2) {
+            toast.error("Indtast venligst dit fulde navn.");
+            return;
+        }
+        if (street.trim().length < 3) {
+            toast.error("Indtast venligst din adresse.");
+            return;
+        }
+        if (zip.length !== 4) {
+            toast.error("Indtast venligst et gyldigt dansk postnummer (4 cifre).");
+            return;
+        }
+        if (city.trim().length < 2) {
+            toast.error("Indtast venligst din by.");
+            return;
+        }
+        if (phone.replace(/\s+/g, '').length < 8) {
+            toast.error("Indtast venligst et gyldigt telefonnummer.");
+            return;
+        }
+        if (!emailRegex.test(email)) {
+            toast.error("Indtast venligst en gyldig e-mailadresse.");
+            return;
+        }
+        if (!acceptedTerms) {
+            toast.error("Du skal acceptere betingelserne for at fortsætte.");
+            return;
+        }
+
         calculateEstimate({
-            fullName,
-            email,
-            phone,
-            street,
-            zip,
-            city
+            fullName: fullName.trim(),
+            email: email.trim(),
+            phone: phone.trim(),
+            street: street.trim(),
+            zip: zip.trim(),
+            city: city.trim()
         });
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleCalculate();
+        }
     };
 
     return (
         <section className="wizard-step active">
             <div className="step-header">
-                <h2>Kontaktoplysninger</h2>
-                <p>For at jeg kan kontakte dig, skal jeg bruge nogle oplysninger omkring dig.</p>
+                <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>Kontaktoplysninger</h2>
+                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>For at jeg kan kontakte dig med dit personlige overslag, skal jeg bruge et par oplysninger om dig.</p>
             </div>
             
-            <div className="form-grid">
-                <div className="form-group">
-                    <label>Fulde navn <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input type="text" placeholder="Indtast fulde navn" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                </div>
-                <div className="form-group" style={{ position: 'relative' }}>
-                    <label>Vejnavn og Husnummer <span style={{ color: '#ef4444' }}>*</span></label>
-                    {window.google && window.google.maps && window.google.maps.places ? (
-                        <Autocomplete 
-                            onLoad={onLoad} 
-                            onPlaceChanged={onPlaceChanged} 
-                            options={{ 
-                                componentRestrictions: { country: "dk" },
-                                types: ['address'],
-                                fields: ['address_components', 'formatted_address', 'name']
-                            }}
-                        >
+            <div className="form-group" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '32px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                <div className="form-grid">
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                        <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Fulde navn <span style={{ color: '#ef4444' }}>*</span></label>
+                        <input 
+                            type="text" 
+                            name="name"
+                            autoComplete="name"
+                            placeholder="Indtast dit fulde navn" 
+                            value={fullName} 
+                            onChange={(e) => setFullName(e.target.value)} 
+                            ref={nameInputRef}
+                            onKeyDown={handleKeyDown}
+                            style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
+                            onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
+                            onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                        />
+                    </div>
+                    <div className="form-group" style={{ position: 'relative', marginBottom: '20px' }}>
+                        <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Vejnavn og Husnummer <span style={{ color: '#ef4444' }}>*</span></label>
+                        {window.google && window.google.maps && window.google.maps.places ? (
+                            <Autocomplete 
+                                onLoad={onLoad} 
+                                onPlaceChanged={onPlaceChanged} 
+                                options={{ 
+                                    componentRestrictions: { country: "dk" },
+                                    types: ['address'],
+                                    fields: ['address_components', 'formatted_address', 'name']
+                                }}
+                            >
+                                <input 
+                                    type="text" 
+                                    name="address"
+                                    autoComplete="street-address"
+                                    placeholder="Søg på din adresse (fx Skovvejen 15)" 
+                                    value={street} 
+                                    onChange={(e) => setStreet(e.target.value)} 
+                                    style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--accent)', fontSize: '1rem', background: '#f0f9ff', transition: 'var(--transition-fast)' }}
+                                    onFocus={(e) => { e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)'; }}
+                                    onBlur={(e) => { e.target.style.boxShadow = 'none'; }}
+                                    onKeyDown={(e) => {
+                                        if(e.key === 'Enter') e.preventDefault();
+                                    }}
+                                />
+                            </Autocomplete>
+                        ) : (
                             <input 
                                 type="text" 
-                                placeholder="Søg på din adresse (fx Skovvejen 15)" 
+                                name="address"
+                                autoComplete="street-address"
+                                placeholder="Skovvejen 15" 
                                 value={street} 
                                 onChange={(e) => setStreet(e.target.value)} 
-                                style={{ width: '100%', border: '2px solid #3b82f6', background: '#f8fafc', fontWeight: '500' }}
-                                onKeyDown={(e) => {
-                                    if(e.key === 'Enter') e.preventDefault();
-                                }}
+                                style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
+                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
+                                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
                             />
-                        </Autocomplete>
-                    ) : (
-                        <input type="text" placeholder="Skovvejen 15" value={street} onChange={(e) => setStreet(e.target.value)} />
-                    )}
-                    <span style={{ fontSize: '0.75rem', color: '#10b981', position: 'absolute', bottom: '-20px', left: '4px' }}>✓ Google Maps integreret</span>
-                </div>
-                <div className="form-grid dual" style={{ marginBottom: 0, marginTop: '20px' }}>
-                    <div className="form-group">
-                        <label>Postnummer <span style={{ color: '#ef4444' }}>*</span></label>
-                        <input type="text" placeholder="8000" value={zip} onChange={(e) => setZip(e.target.value)} maxLength="4" />
+                        )}
+                        <span style={{ fontSize: '0.8rem', color: '#10b981', position: 'absolute', bottom: '-22px', left: '4px', fontWeight: '500' }}>✓ Google Maps integreret for hurtig indtastning</span>
                     </div>
-                    <div className="form-group">
-                        <label>By <span style={{ color: '#ef4444' }}>*</span></label>
-                        <input type="text" placeholder="Aarhus C" value={city} onChange={(e) => setCity(e.target.value)} />
+                    <div className="form-grid dual" style={{ marginBottom: '20px', marginTop: '28px' }}>
+                        <div className="form-group">
+                            <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Postnummer <span style={{ color: '#ef4444' }}>*</span></label>
+                            <input 
+                                type="text" 
+                                name="postal-code"
+                                autoComplete="postal-code"
+                                placeholder="8000" 
+                                value={zip} 
+                                onChange={(e) => setZip(e.target.value)} 
+                                onKeyDown={handleKeyDown}
+                                maxLength="4" 
+                                style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
+                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
+                                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>By <span style={{ color: '#ef4444' }}>*</span></label>
+                            <input 
+                                type="text" 
+                                name="address-level2"
+                                autoComplete="address-level2"
+                                placeholder="Aarhus C" 
+                                value={city} 
+                                onChange={(e) => setCity(e.target.value)} 
+                                onKeyDown={handleKeyDown}
+                                style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
+                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
+                                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                            />
+                        </div>
                     </div>
-                </div>
-                <div className="form-grid dual" style={{ marginBottom: 0, marginTop: '20px' }}>
-                    <div className="form-group">
-                        <label>Telefon <span style={{ color: '#ef4444' }}>*</span></label>
-                        <input type="tel" placeholder="+45 20 30 40 50" value={phone} onChange={handlePhoneChange} />
-                    </div>
-                    <div className="form-group">
-                        <label>E-mail <span style={{ color: '#ef4444' }}>*</span></label>
-                        <input type="email" placeholder="mail@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <div className="form-grid dual" style={{ marginBottom: 0 }}>
+                        <div className="form-group">
+                            <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Telefon <span style={{ color: '#ef4444' }}>*</span></label>
+                            <input 
+                                type="tel" 
+                                name="tel"
+                                autoComplete="tel"
+                                placeholder="+45 20 30 40 50" 
+                                value={phone} 
+                                onChange={handlePhoneChange} 
+                                onKeyDown={handleKeyDown}
+                                style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
+                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
+                                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>E-mail <span style={{ color: '#ef4444' }}>*</span></label>
+                            <input 
+                                type="email" 
+                                name="email"
+                                autoComplete="email"
+                                placeholder="din@mail.dk" 
+                                value={email} 
+                                onChange={(e) => setEmail(e.target.value)} 
+                                onKeyDown={handleKeyDown}
+                                style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
+                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
+                                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
             
             {/* NY: GDPR Checkbox før actions */}
-            <div style={{ marginTop: '20px', marginBottom: '10px', display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }} onClick={() => setAcceptedTerms(!acceptedTerms)}>
+            <div style={{ marginTop: '24px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', background: 'var(--bg-muted)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }} onClick={() => setAcceptedTerms(!acceptedTerms)}>
                 <input 
                     type="checkbox" 
                     checked={acceptedTerms} 
                     onChange={() => setAcceptedTerms(!acceptedTerms)}
-                    style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer' }}
+                    style={{ width: '20px', height: '20px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--accent)' }}
                 />
-                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.4' }}>
+                <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
                     Jeg accepterer, at mine indtastede oplysninger gemmes og behandles med det formål at modtage et estimat, samt at jeg kan blive kontaktet af det pågældende tømrerfirma i forbindelse med min forespørgsel.
                 </p>
             </div>
-            <div className="actions">
-                <button className="btn-secondary" onClick={prevStep}>Tilbage</button>
-                <button className="btn-primary" onClick={handleCalculate} disabled={!isValid}>Vis Mit Overslag</button>
+            
+            <div className="actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+                <button className="wizard-btn wizard-btn-secondary" onClick={prevStep}>← Tilbage</button>
+                <button className="wizard-btn wizard-btn-primary" onClick={handleCalculate} style={{ boxShadow: '0 10px 25px rgba(59,130,246,0.3)' }}>
+                    Vis Mit Overslag →
+                </button>
             </div>
         </section>
     );

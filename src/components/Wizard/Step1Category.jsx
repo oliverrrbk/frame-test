@@ -27,6 +27,14 @@ const Step1Category = ({ projectData, updateCategory, disabledCategories, carpen
                         key={cat.id} 
                         className={`card ${projectData.category === cat.id ? 'selected' : ''}`}
                         onClick={() => handleSelect(cat.id)}
+                        tabIndex="0"
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleSelect(cat.id);
+                            }
+                        }}
+                        style={{ cursor: 'pointer' }}
                     >
                         <img src={cat.img} alt={cat.title} className="card-image" />
                         <div className="card-content">

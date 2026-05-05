@@ -21,6 +21,10 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     const [isCalculating, setIsCalculating] = useState(false);
 
     React.useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [currentStep]);
+
+    React.useEffect(() => {
         const fetchDb = async () => {
             if (!carpenter) return;
             const [settingsRes, materialsRes] = await Promise.all([
@@ -166,6 +170,9 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             setCurrentStep(5);
         } catch (error) {
             console.error(error);
+            import('react-hot-toast').then(toast => {
+                toast.default.error('Der skete en fejl under beregningen. Kontroller din internetforbindelse og prøv igen.');
+            });
             setIsCalculating(false);
         }
     };
@@ -194,15 +201,50 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
         );
     }
 
+    const activeStepNum = currentStep === 'special_chat' ? 2 : currentStep;
+
     return (
         <main className="wizard-container" style={{ position: 'relative', paddingBottom: '40px' }}>
-            {currentStep < 5 && (
-                <div className="progress-section" style={{ marginBottom: '24px' }}>
-                    <div className="progress-text" style={{ fontSize: '14px', fontWeight: '500', color: '#64748b', marginBottom: '8px', textAlign: 'center' }}>
-                        Trin {currentStep === 'special_chat' ? 2 : currentStep} af {totalSteps} - {currentStep === 1 ? 'Vælg opgave' : currentStep === 2 || currentStep === 'special_chat' ? 'Detaljer' : currentStep === 3 ? 'Billeder' : 'Kontaktoplysninger'}
+            {activeStepNum < 5 && (
+                <div className="progress-section" style={{ marginBottom: '32px', maxWidth: '800px', marginInline: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
+                        <div style={{ position: 'absolute', top: '16px', left: '10%', right: '10%', height: '3px', background: '#e2e8f0', zIndex: 0 }}>
+                            <div style={{ width: `${(activeStepNum - 1) / (totalSteps - 1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #10b981, #2563eb)', transition: 'width 0.4s ease' }}></div>
+                        </div>
+                        {['Opgave', 'Detaljer', 'Billeder', 'Kontakt'].map((name, idx) => {
+                            const stepNum = idx + 1;
+                            const activeStepIndex = currentStep === 'special_chat' ? 2 : currentStep;
+                            const isCompleted = activeStepIndex > stepNum;
+                            const isActive = activeStepIndex === stepNum;
+                            return (
+                                <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, position: 'relative', background: 'transparent' }}>
+                                    <div style={{ 
+                                        width: '34px', height: '34px', borderRadius: '50%', 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                        background: isCompleted ? '#10b981' : (isActive ? '#2563eb' : '#f1f5f9'),
+                                        color: isCompleted || isActive ? 'white' : '#94a3b8',
+                                        fontWeight: 'bold', fontSize: '0.95rem',
+                                        border: `3px solid ${isCompleted ? '#10b981' : (isActive ? '#eff6ff' : '#f1f5f9')}`,
+                                        boxShadow: isActive ? '0 0 0 3px #bfdbfe' : 'none',
+                                        transition: 'all 0.3s ease'
+                                    }}>
+                                        {isCompleted ? '✓' : stepNum}
+                                    </div>
+                                    <span style={{ fontSize: '0.85rem', marginTop: '8px', color: isActive ? '#1e293b' : '#64748b', fontWeight: isActive ? '700' : '500' }}>{name}</span>
+                                </div>
+                            );
+                        })}
                     </div>
-                    <div className="progress-bar">
-                        <div className="progress-fill" style={{ width: `${progressPercentage}%` }}></div>
+                </div>
+            )}
+
+            {/* Sticky Tømrer Profil for Steps 2-4 */}
+            {activeStepNum > 1 && activeStepNum < 5 && (
+                <div style={{ maxWidth: '800px', margin: '0 auto 24px auto', display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px' }}>
+                    <img src={carpenter?.portrait_url || `https://ui-avatars.com/api/?name=${carpenter?.owner_name || 'Tømrer'}&background=0f172a&color=fff&size=250`} alt="Tømrer" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: '0.9rem', color: '#64748b', fontWeight: '500', marginBottom: '2px' }}>Dit tilbud udarbejdes af:</span>
+                        <span style={{ display: 'block', fontSize: '1.15rem', color: '#0f172a', fontWeight: '800', wordBreak: 'break-word' }}>{carpenter?.owner_name || 'Tømreren'} fra {carpenter?.company_name || 'Tømrerfirmaet'}</span>
                     </div>
                 </div>
             )}
@@ -213,6 +255,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                     carpenter={carpenter} 
                     settingsData={dbSettings} 
                     materialsData={dbMaterials}
+                    prevStep={prevStep}
                     onComplete={(aiData) => {
                         setProjectData(prev => ({ ...prev, details: { ...prev.details, ...aiData } }));
                         setCurrentStep(3); // Gå til foto-upload
@@ -222,7 +265,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} />}
             {currentStep === 3 && <Step3Photos category={projectData.category} photos={projectData.details.photos || []} setPhotos={(photos) => updateDetails('photos', photos)} notes={projectData.details.notes || ''} setNotes={(notes) => updateDetails('notes', notes)} nextStep={nextStep} prevStep={() => projectData.category === 'special' ? setCurrentStep('special_chat') : prevStep()} />}
             {currentStep === 4 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} />}
-            {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details.notes} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} />}
+            {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details.notes} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => setCurrentStep(projectData.category === 'special' ? 'special_chat' : 2)} />}
             {currentStep === 6 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
 
             <div style={{ position: 'absolute', bottom: '16px', left: '0', right: '0', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>

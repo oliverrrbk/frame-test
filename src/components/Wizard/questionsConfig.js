@@ -18,7 +18,7 @@ export const QUESTIONS = {
     roof: [
         { id: 'amount', type: 'number', label: 'Hvor stort er grundplanet af huset cirka i m2?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl. Tømreren dobbelttjekker altid de faktiske forhold ved en besigtigelse.' },
         { id: 'floors', type: 'select', label: 'Hvor mange plan/etager er huset?', options: ['1-plan (Stueplan)', '1½-plan / 2-plan / Mere'] },
-        { id: 'roofPitch', type: 'select', label: 'Hvordan er hældningen på taget?', options: ['Fladt tag / Meget lav hældning', 'Høj rejsning / Normal hældning'] },
+        { id: 'roofPitch', type: 'select', label: 'Hvordan er hældningen på taget?', tooltip: 'Høj rejsning betyder at taget har en stejl vinkel, ofte over 15 grader (typisk huse med loftrum). Fladt tag har kun en svag hældning for at lede vandet væk.', options: ['Fladt tag / Meget lav hældning', 'Høj rejsning / Normal hældning'] },
         { id: 'houseAge', type: 'number', label: 'Hvor gammelt er huset ca. (årstal)?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl.' },
         
         { id: 'disposal', type: 'select', label: 'Skal det gamle tag afmonteres og afskaffes?', options: ['Ja', 'Nej, lægges ovenpå / ikke relevant'] },
@@ -43,8 +43,8 @@ export const QUESTIONS = {
             ] 
         },
         
-        { id: 'leveling', type: 'select', label: 'Spæropretning: Skal det gamle spærlag rettes op i vater, før det nye tag lægges?', condition: { field: 'roofPitch', value: 'Høj rejsning / Normal hældning' }, options: ['Ja, det buer / er skævt (Påforing kræves)', 'Nej, det er snorlige / nybyg'] },
-        { id: 'underroof', type: 'select', label: 'Undertag: Skal der monteres nyt undertag (dug/plader)?', condition: { field: 'roofPitch', value: 'Høj rejsning / Normal hældning' }, options: ['Ja', 'Nej, lægges uden / Ikke relevant for valgt tag'] },
+        { id: 'leveling', type: 'select', label: 'Spæropretning: Skal det gamle spærlag rettes op i vater, før det nye tag lægges?', tooltip: 'Hvis det gamle træskelet (spærene) under taget buer eller er skævt, skal tømreren montere nye brædder (påforing) på siden af dem, så det nye tag kommer til at ligge helt plant.', condition: { field: 'roofPitch', value: 'Høj rejsning / Normal hældning' }, options: ['Ja, det buer / er skævt (Påforing kræves)', 'Nej, det er snorlige / nybyg'] },
+        { id: 'underroof', type: 'select', label: 'Undertag: Skal der monteres nyt undertag (dug/plader)?', tooltip: 'Et undertag er en beskyttende dug eller tynd plade, der ligger usynligt under selve tagbelægningen og beskytter loftet mod fygesne og kondensvand.', condition: { field: 'roofPitch', value: 'Høj rejsning / Normal hældning' }, options: ['Ja', 'Nej, lægges uden / Ikke relevant for valgt tag'] },
         { id: 'insulation', type: 'select', label: 'Skal der efterisoleres udefra, mens taget er af?', options: ['Ja (fx 50-100mm ekstra)', 'Nej'] },
         
         { id: 'eaves', type: 'select', label: 'Træværk: Skal stern og udhæng (underbeklædning) skiftes ud med nyt?', options: ['Ja, alt træværk langs kanten skiftes', 'Nej, vi beholder det gamle'] },
@@ -132,7 +132,7 @@ export const QUESTIONS = {
         { id: 'openableCount', type: 'number', label: 'Hvor mange af det samlede antal vinduer skal kunne åbnes?' },
         { id: 'windowMeasurementType', type: 'select', label: 'Er der tale om store panoramavinduer/gulv-til-loft (specialmål)?', options: ['Nej, standard mål', 'Ja, store specialmål / panorama'] },
         { id: 'photos', type: 'file', label: 'Upload meget gerne et billede af vinduerne (indefra/udefra), så vi kan vurdere opgaven:' },
-        { id: 'finish', type: 'select', label: 'Skal indvendig finish (fuge og lister) inkluderes propotionalt?', options: ['Ja', 'Nej'] },
+        { id: 'finish', type: 'select', label: 'Skal indvendig finish (fuge og lister) inkluderes propotionalt?', tooltip: 'Indvendig finish betyder, at tømreren sørger for at montere de indvendige trælister (gerigter) rundt om vinduet, og evt. fuge tæt til muren, så det er helt færdigt og pænt.', options: ['Ja', 'Nej'] },
         { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet, eller hvis der er noget særligt ved fx panorama/skylines?' }
     ],
     floor: [
@@ -150,9 +150,9 @@ export const QUESTIONS = {
                 { label: 'Beton', img: '/images/floor_concrete_1776266134608.png' }
             ]
         },
-        { id: 'subfloor', type: 'select', label: 'Undergulv: Ligger det nuværende undergulv helt lige og i vater?', options: ['Ja, det er lige og klar til at lægge nyt på', 'Nej, tømreren skal rette det op først (strøer/flydespartel)'] },
+        { id: 'subfloor', type: 'select', label: 'Undergulv: Ligger det nuværende undergulv helt lige og i vater?', tooltip: 'Et undergulv er det bærende lag under selve trægulvet (fx beton eller spånplader). Hvis det slår buler eller hælder, skal tømreren bruge ekstra tid og materialer (strøer/flydespartel) på at rette det op først.', options: ['Ja, det er lige og klar til at lægge nyt på', 'Nej, tømreren skal rette det op først (strøer/flydespartel)'] },
         { id: 'underfloorHeating', type: 'select', label: 'Er der (eller skal der etableres) varme i gulvet?', options: ['Ja', 'Nej'] },
-        { id: 'underlay', type: 'select', label: 'Underlag: Skal tømreren lægge trinlydsdæmpende underlag (foam/pap) under det nye gulv?', options: ['Ja', 'Nej, ikke relevant'] },
+        { id: 'underlay', type: 'select', label: 'Underlag: Skal tømreren lægge trinlydsdæmpende underlag (foam/pap) under det nye gulv?', tooltip: 'Trinlydsdæmpende underlag er en tynd skummåtte eller tykt pap, der lægges mellem undergulvet og det nye gulv. Det reducerer "klik-klak" lyde når man går på det, og fjerner små ujævnheder.', options: ['Ja', 'Nej, ikke relevant'] },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -246,7 +246,7 @@ export const QUESTIONS = {
         { id: 'doorMeasurementType', type: 'select', label: 'Er der tale om store dobbeltdøre/fløjdøre eller specialmål?', options: ['Nej, det er standard døre', 'Ja, der er dobbeltdøre/specialmål iblandt'] },
         { id: 'doorPhotos', type: 'file', label: 'Upload evt. gerne et billede af døråbningerne, så kan jeg vurdere dem på forhånd:' },
         
-        { id: 'finish', type: 'select', label: 'Gerigter/Finish: Skal vi levere og montere nye indvendige gerigter (lister) og fuge?', condition: (d) => d.frameOrLeaf === 'Hele karmen inkl. dør skal skiftes', options: ['Ja', 'Nej, kun dør og karm / Vi sætter selv lister op'] },
+        { id: 'finish', type: 'select', label: 'Gerigter/Finish: Skal vi levere og montere nye indvendige gerigter (lister) og fuge?', tooltip: 'Gerigter er de trælister, der sidder rundt om dørkarmen for at skjule overgangen mellem karmen og væggen. Typisk udskiftes de sammen med dørkarmen for det pæneste resultat.', condition: (d) => d.frameOrLeaf === 'Hele karmen inkl. dør skal skiftes', options: ['Ja', 'Nej, kun dør og karm / Vi sætter selv lister op'] },
         { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet?' }
     ],
     terrace: [
@@ -299,15 +299,15 @@ export const QUESTIONS = {
             ] 
         },
         { id: 'amount', type: 'number', label: 'Anslået antal skabe og skuffer (elementer) i alt:', placeholder: 'Fx 15' },
-        { id: 'worktop', type: 'select', label: 'Bordplade: Skal tømreren tilpasse og montere en bordplade i træ/laminat (inkl. udskæring til vask/kogeplade)?', options: ['Ja, træ/laminat som skal tilpasses på stedet', 'Nej, vi får leveret sten/corian (typisk montør) / Gør det selv'] },
+        { id: 'worktop', type: 'select', label: 'Bordplade: Skal tømreren tilpasse og montere en bordplade i træ/laminat (inkl. udskæring til vask/kogeplade)?', tooltip: 'Nogle specialbordplader (fx sten, marmor eller Corian) bliver ofte opmålt og monteret direkte af leverandøren (stenhuggeren). Tømreren skærer typisk kun standard træ- og laminatbordplader til på stedet.', options: ['Ja, træ/laminat som skal tilpasses på stedet', 'Nej, vi får leveret sten/corian (typisk montør) / Gør det selv'] },
         { id: 'integratedAppliances', type: 'select', label: 'Hvidevarer: Er der fuldt integrerede hvidevarer (hvor tømreren skal finjustere træfronter på køleskab/opvaskemaskine)?', options: ['Ja, der er integrerede træfronter', 'Nej, fritstående hvidevarer / standard'] },
         { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til projektet (fx særlige paneler, emhætte)?' }
     ],
     ceilings: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 loft skal der laves cirka?' },
         { id: 'disposal', type: 'select', label: 'Skal nuværende loft afmonteres og afskaffes?', options: ['Ja', 'Nej'] },
-        { id: 'battensAndLeveling', type: 'select', label: 'Underlag: Skal der laves ny forskalling (træskelet), og evt. rettes op i vater?', options: ['Nej, monteres direkte på eksisterende lige underlag', 'Ja, standard forskalling', 'Ja, forskalling inkl. stor opretning (skævt loft)'] },
-        { id: 'vaporAndInsulation', type: 'select', label: 'Dampspærre/Isolering: Ligger loftet op mod et koldt tagrum?', options: ['Nej', 'Ja, monter kun dampspærre', 'Ja, monter dampspærre og isolering (50-100mm)'] },
+        { id: 'battensAndLeveling', type: 'select', label: 'Underlag: Skal der laves ny forskalling (træskelet), og evt. rettes op i vater?', tooltip: 'Forskalling er et underlag af trælister, som det nye loft skal skrues fast i. Hvis det gamle loft er skævt, retter tømreren listerne op, så det nye loft bliver snorlige.', options: ['Nej, monteres direkte på eksisterende lige underlag', 'Ja, standard forskalling', 'Ja, forskalling inkl. stor opretning (skævt loft)'] },
+        { id: 'vaporAndInsulation', type: 'select', label: 'Dampspærre/Isolering: Ligger loftet op mod et koldt tagrum?', tooltip: 'En dampspærre er et tyndt lag plast, der forhindrer varm, fugtig luft fra boligen i at trænge op i det kolde loft og skabe råd og svamp. Dette er især kritisk i huse fra før 1970.', options: ['Nej', 'Ja, monter kun dampspærre', 'Ja, monter dampspærre og isolering (50-100mm)'] },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -357,7 +357,7 @@ export const QUESTIONS = {
                 { label: 'Ved ikke / Andet' }
             ] 
         },
-        { id: 'windBarrier', type: 'select', label: 'Underkonstruktion: Skal vi opsætte ny vindspærre og klemlister (anbefales for ventilation)?', options: ['Ja', 'Nej, det eksisterende er i orden / ikke nødvendigt'] },
+        { id: 'windBarrier', type: 'select', label: 'Underkonstruktion: Skal vi opsætte ny vindspærre og klemlister (anbefales for ventilation)?', tooltip: 'Vindspærre er en sort vind- og vandtæt membran, der beskytter isoleringen bag facaden. Klemlister er de trælister, der skaber et nødvendigt hulrum til luftcirkulation bag de nye brædder.', options: ['Ja', 'Nej, det eksisterende er i orden / ikke nødvendigt'] },
         { id: 'insulation', type: 'select', label: 'Efterisolering: Skal facaden isoleres yderligere udefra, nu hvor vi er i gang?', options: ['Nej', 'Ja (ca. 50-100mm)'] },
         { 
             id: 'material', 

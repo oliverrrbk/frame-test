@@ -3,7 +3,7 @@ import { Send, User, Bot, Loader2 } from 'lucide-react';
 import { WORK_FORMULAS } from '../../prices';
 import { QUESTIONS } from './questionsConfig';
 
-const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete }) => {
+const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, prevStep }) => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -201,12 +201,34 @@ Når - og KUN når - du med sikkerhed har afdækket opgaven fyldestgørende og f
 
     return (
         <div className="wizard-step active" style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', height: '60vh', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}>
-                <img src={carpenter?.portrait_url || `https://ui-avatars.com/api/?name=${carpenter?.owner_name || 'Tømrer'}&background=0f172a&color=fff&size=50`} alt="Avatar" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
-                <div>
-                    <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Chat med {carpenter?.owner_name?.split(' ')[0] || 'Tømreren'}</h3>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>AI Tømrer Assistent</p>
+            <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img src={carpenter?.portrait_url || `https://ui-avatars.com/api/?name=${carpenter?.owner_name || 'Tømrer'}&background=0f172a&color=fff&size=50`} alt="Avatar" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Chat med {carpenter?.owner_name?.split(' ')[0] || 'Tømreren'}</h3>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>AI Tømrer Assistent</p>
+                    </div>
                 </div>
+                {prevStep && (
+                    <button 
+                        onClick={prevStep} 
+                        style={{ 
+                            background: 'transparent', 
+                            border: '1px solid #cbd5e1', 
+                            padding: '6px 12px', 
+                            borderRadius: '6px', 
+                            cursor: 'pointer', 
+                            color: '#475569', 
+                            fontSize: '14px', 
+                            fontWeight: '500',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = '#e2e8f0'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                        ← Tilbage
+                    </button>
+                )}
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>

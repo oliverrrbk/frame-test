@@ -1,4 +1,5 @@
 import React from 'react';
+import toast from 'react-hot-toast';
 import { QUESTIONS } from './questionsConfig';
 
 const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) => {
@@ -85,74 +86,138 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) 
         return visible;
     };
 
+    const handleNextStep = () => {
+        const questionsForCategory = QUESTIONS[category] || [];
+        const visibleQuestions = questionsForCategory.filter(q => isVisible(q.condition));
+        
+        // Find if any mandatory field is missing
+        const missingField = visibleQuestions.find(q => {
+            if (q.type === 'textarea' || q.type === 'file') return false; // optional
+            
+            const value = details[q.id];
+            return value === undefined || value === null || value === '';
+        });
+
+        if (missingField) {
+            toast.error(`Du mangler at udfylde dette felt for at du kan fortsætte, og du kan få dit overslag på den pris: "${missingField.label}"`, {
+                position: 'bottom-center',
+                style: { borderRadius: '10px', background: '#333', color: '#fff', maxWidth: '500px', lineHeight: '1.5' },
+                duration: 4000
+            });
+            return;
+        }
+
+        nextStep();
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleNextStep();
+        }
+    };
+
     const renderQuestion = (q) => {
         if (!isVisible(q.condition)) return null;
 
         return (
-            <div key={q.id} className="form-group" style={{ marginBottom: '20px' }}>
-                <label style={{ fontWeight: '600', display: 'flex', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
-                    {q.label}
+            <div key={q.id} className="form-group" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <label style={{ fontWeight: '700', margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
+                        {q.label}
+                    </label>
                     {q.tooltip && (
-                        <div style={{ marginLeft: '10px', position: 'relative' }}>
-                            <button
+                        <div style={{ position: 'relative' }}>
+                            <button 
                                 type="button"
                                 onClick={(e) => { e.preventDefault(); toggleTooltip(q.id); }}
-                                style={{
-                                    background: '#f0f4f8',
-                                    border: '1px solid #cce3f6',
-                                    color: '#005b9f',
-                                    borderRadius: '50%',
-                                    width: '24px',
-                                    height: '24px',
+                                style={{ 
+                                    background: openTooltips[q.id] ? 'var(--accent)' : '#e2e8f0', 
+                                    color: openTooltips[q.id] ? 'white' : '#64748b', 
+                                    border: 'none', 
+                                    borderRadius: '50%', 
+                                    width: '24px', 
+                                    height: '24px', 
+                                    fontSize: '13px', 
+                                    fontWeight: 'bold', 
+                                    cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontSize: '14px',
-                                    cursor: 'pointer',
                                     padding: 0,
-                                    fontWeight: 'bold'
+                                    flexShrink: 0,
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: openTooltips[q.id] ? '0 0 0 3px rgba(59, 130, 246, 0.2)' : 'none'
                                 }}
+                                title="Læs mere"
                             >
                                 ?
                             </button>
                             {openTooltips[q.id] && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '30px',
-                                    left: '0',
-                                    background: '#fff',
-                                    border: '1px solid #e2e8f0',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                    padding: '12px',
-                                    borderRadius: '8px',
-                                    width: '250px',
-                                    zIndex: 100,
-                                    fontSize: '13px',
-                                    color: '#334155',
-                                    lineHeight: '1.5'
-                                }}>
-                                    {q.tooltip}
-                                </div>
+                                <>
+                                    <div 
+                                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 }} 
+                                        onClick={() => toggleTooltip(q.id)}
+                                    />
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '32px',
+                                        left: '0',
+                                        background: '#fff',
+                                        border: '1px solid var(--border)',
+                                        boxShadow: 'var(--shadow-lg)',
+                                        padding: '16px',
+                                        borderRadius: '12px',
+                                        width: 'max(280px, 100%)',
+                                        maxWidth: '350px',
+                                        zIndex: 100,
+                                        fontSize: '0.95rem',
+                                        color: 'var(--text-secondary)',
+                                        lineHeight: '1.5',
+                                        borderLeft: '4px solid var(--accent)'
+                                    }}>
+                                        <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '4px' }}>Hvad betyder det?</div>
+                                        {q.tooltip}
+                                    </div>
+                                </>
                             )}
                         </div>
                     )}
-                </label>
+                </div>
                 
                 {q.type === 'select' && (
-                    <select 
-                        value={details[q.id] || ''} 
-                        onChange={(e) => handleInputChange(q.id, e.target.value)}
-                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
-                    >
-                        <option value="" disabled>-- Vælg en mulighed --</option>
-                        {q.options.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                    </select>
+                    <div style={{ position: 'relative' }}>
+                        <select 
+                            value={details[q.id] || ''} 
+                            onChange={(e) => handleInputChange(q.id, e.target.value)}
+                            style={{ 
+                                width: '100%', 
+                                padding: '14px 20px', 
+                                borderRadius: '12px', 
+                                border: '2px solid var(--border)', 
+                                fontSize: '1rem',
+                                color: 'var(--text-primary)',
+                                background: 'rgba(255, 255, 255, 0.8)',
+                                cursor: 'pointer',
+                                appearance: 'none',
+                                transition: 'var(--transition-fast)'
+                            }}
+                            onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
+                            onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                        >
+                            <option value="" disabled>-- Vælg en mulighed --</option>
+                            {q.options.map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                        </select>
+                        <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-secondary)' }}>
+                            ▼
+                        </div>
+                    </div>
                 )}
 
                 {q.type === 'visual_select' && (
-                    <div className="material-grid">
+                    <div className="materials-grid" style={{ marginTop: '12px' }}>
                         {q.options.map((opt, idx) => (
                             <div 
                                 key={idx} 
@@ -160,7 +225,9 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) 
                                 onClick={() => handleInputChange(q.id, opt.label)}
                             >
                                 {opt.img && <img src={opt.img} alt={opt.label} className="material-img" />}
-                                <div className="material-label">{opt.label}</div>
+                                <div className="material-label">
+                                    <h3 style={{ fontSize: '1rem', margin: 0 }}>{opt.label}</h3>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -172,8 +239,20 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) 
                         min="0"
                         value={details[q.id] || ''} 
                         onChange={(e) => handleInputChange(q.id, parseFloat(e.target.value))} 
+                        onKeyDown={handleKeyDown}
                         placeholder={q.placeholder || ''}
-                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
+                        style={{ 
+                            width: '100%', 
+                            padding: '14px 20px', 
+                            borderRadius: '12px', 
+                            border: '2px solid var(--border)', 
+                            fontSize: '1rem',
+                            color: 'var(--text-primary)',
+                            background: 'rgba(255, 255, 255, 0.8)',
+                            transition: 'var(--transition-fast)'
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
+                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
                     />
                 )}
 
@@ -182,8 +261,20 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) 
                         type="text" 
                         value={details[q.id] || ''} 
                         onChange={(e) => handleInputChange(q.id, e.target.value)} 
+                        onKeyDown={handleKeyDown}
                         placeholder={q.placeholder || ''}
-                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
+                        style={{ 
+                            width: '100%', 
+                            padding: '14px 20px', 
+                            borderRadius: '12px', 
+                            border: '2px solid var(--border)', 
+                            fontSize: '1rem',
+                            color: 'var(--text-primary)',
+                            background: 'rgba(255, 255, 255, 0.8)',
+                            transition: 'var(--transition-fast)'
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
+                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
                     />
                 )}
 
@@ -193,15 +284,27 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) 
                         onChange={(e) => handleInputChange(q.id, e.target.value)} 
                         placeholder={q.placeholder || ''}
                         rows={4}
-                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', resize: 'vertical' }}
+                        style={{ 
+                            width: '100%', 
+                            padding: '14px 20px', 
+                            borderRadius: '12px', 
+                            border: '2px solid var(--border)', 
+                            fontSize: '1rem',
+                            color: 'var(--text-primary)',
+                            background: 'rgba(255, 255, 255, 0.8)',
+                            resize: 'vertical',
+                            transition: 'var(--transition-fast)'
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
+                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
                     />
                 )}
 
                 {q.type === 'file' && (
-                    <div style={{ marginBottom: '10px' }}>
-                        <label className="upload-area" style={{ display: 'block', padding: '20px', border: '2px dashed #ccc', textAlign: 'center', borderRadius: '4px', background: '#f9fafb', cursor: 'pointer' }}>
-                            <span className="upload-icon">📷</span>
-                            <p style={{ margin: '10px 0', fontSize: '14px' }}>Klik her for at uploade billede(r)</p>
+                    <div style={{ marginTop: '10px' }}>
+                        <label className="upload-area" style={{ display: 'block', padding: '32px 20px', border: '2px dashed var(--border)', textAlign: 'center', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer', transition: 'var(--transition-fast)' }} onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--accent)'} onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border)'}>
+                            <span className="upload-icon" style={{ fontSize: '32px' }}>📸</span>
+                            <p style={{ margin: '12px 0 0 0', fontSize: '1rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Klik her for at uploade billede(r)</p>
                             <input 
                                 type="file" 
                                 multiple 
@@ -212,15 +315,15 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) 
                         </label>
                         
                         {(details[q.id] || []).length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '16px' }}>
                                 {details[q.id].map((fileObj, idx) => (
-                                    <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '4px', overflow: 'hidden', border: '1px solid #ccc' }}>
+                                    <div key={idx} style={{ position: 'relative', width: '90px', height: '90px', borderRadius: '8px', overflow: 'hidden', border: '2px solid var(--border)', boxShadow: 'var(--shadow-xs)' }}>
                                         <img src={fileObj.preview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         <button 
                                             onClick={(e) => { e.preventDefault(); removeFile(q.id, idx); }}
-                                            style={{ position: 'absolute', top: '2px', right: '2px', background: 'red', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '10px', cursor: 'pointer', padding: 0 }}
+                                            style={{ position: 'absolute', top: '4px', right: '4px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
                                         >
-                                            X
+                                            ✕
                                         </button>
                                     </div>
                                 ))}
@@ -235,17 +338,26 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) 
     return (
         <section className="wizard-step active">
             <div className="step-header">
-                <h2>Specifikation af projekt</h2>
-                <p>For at jeg bedst muligt kan give dig det rigtige estimat og forstå opgaven, bedes du svare på følgende få spørgsmål om projektet.</p>
+                <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>Specifikation af projekt</h2>
+                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>For at jeg bedst muligt kan give dig det rigtige estimat og forstå opgaven, bedes du svare på følgende spørgsmål om projektet.</p>
+                
+                <div style={{ padding: '20px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '12px', borderLeft: '4px solid #3b82f6', marginBottom: '32px' }}>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '1.05rem', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>💡</span> Giv blot dit kvalificerede bud
+                    </h3>
+                    <p style={{ margin: '0', fontSize: '0.95rem', color: '#1e40af', lineHeight: '1.6' }}>
+                        Du vil aldrig blive holdt ansvarlig for nøjagtigheden af dine mål eller valg. Tømreren kommer <strong>altid</strong> ud og kigger på projektet inden en endelig aftale indgås. Overslaget her er udelukkende til for at give dig et hurtigt og realistisk prisleje.
+                    </p>
+                </div>
             </div>
             
             <div className="form-grid" style={{ display: 'block' }}>
                 {questions.map(q => renderQuestion(q))}
             </div>
 
-            <div className="actions">
-                <button className="btn-secondary" onClick={prevStep}>Tilbage</button>
-                <button className="btn-primary" onClick={nextStep}>Bekræft & Fortsæt</button>
+            <div className="actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+                <button className="wizard-btn wizard-btn-secondary" onClick={prevStep}>← Tilbage</button>
+                <button className="wizard-btn wizard-btn-primary" onClick={handleNextStep}>Bekræft & Fortsæt →</button>
             </div>
         </section>
     );
