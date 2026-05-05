@@ -864,23 +864,21 @@ const Dashboard = () => {
         setIsUploadingPdf(true);
         try {
             const fileExt = fileToUpload.name.split('.').pop() || 'pdf';
-            const fileName = `quote_${leadId}.${fileExt}`;
+            const fileName = `quote_${leadId}_${Date.now()}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('uploads')
-                .upload(fileName, fileToUpload, { upsert: true, cacheControl: '0' });
+                .upload(fileName, fileToUpload);
 
             if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage
                 .from('uploads')
                 .getPublicUrl(fileName);
-                
-            const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
 
             const targetLead = leadsData.find(l => l.id === leadId);
             const currentRawData = targetLead.raw_data || {};
-            const newRawData = { ...currentRawData, ...extraRawData, quote_pdf_url: cacheBustedUrl };
+            const newRawData = { ...currentRawData, ...extraRawData, quote_pdf_url: publicUrl };
             if (finalPrice !== null) {
                 newRawData.actual_quote_price = finalPrice;
             }
@@ -2228,20 +2226,9 @@ const Dashboard = () => {
                                                 <span style={{ fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kategori</span>
                                                 <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem' }}>{categoryNames[selectedLead.project_category] || selectedLead.project_category}</p>
                                             </div>
-                                            <div style={{ padding: '16px', backgroundColor: selectedLead.status === 'Bekræftet opgave' ? '#ecfdf5' : '#f7f6f3', borderRadius: '14px', border: selectedLead.status === 'Bekræftet opgave' ? '1px solid #10b981' : '1px solid #e8e6e1' }}>
-                                                {selectedLead.status === 'Bekræftet opgave' ? (
-                                                    <>
-                                                        <span style={{ fontSize: '0.85rem', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tilbud givet og accepteret</span>
-                                                        <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#065f46', fontSize: '1.1rem' }}>
-                                                            {selectedLead.raw_data?.actual_quote_price ? Math.round(selectedLead.raw_data.actual_quote_price).toLocaleString('da-DK') : '?'} kr. inkl. moms
-                                                        </p>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span style={{ fontSize: '0.85rem', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Auto-Estimat</span>
-                                                        <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#1d4ed8', fontSize: '1.1rem' }}>{selectedLead.price_estimate}</p>
-                                                    </>
-                                                )}
+                                            <div style={{ padding: '16px', backgroundColor: '#f7f6f3', borderRadius: '14px', border: '1px solid #e8e6e1' }}>
+                                                <span style={{ fontSize: '0.85rem', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Auto-Estimat</span>
+                                                <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#1d4ed8', fontSize: '1.1rem' }}>{selectedLead.price_estimate}</p>
                                             </div>
                                         </div>
 
@@ -2396,27 +2383,6 @@ const Dashboard = () => {
 
                                         {/* QUOTE BUILDER SEKTION */}
                                         {selectedLead.status !== 'Bekræftet opgave' && (quoteBuilder ? (
-                                            selectedLead.status === 'Sendt tilbud' && !quoteBuilder.forceEdit ? (
-                                                <div style={{ marginTop: '24px', padding: '40px 20px', backgroundColor: '#ecfdf5', borderRadius: '14px', border: '1px solid #10b981', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📨</div>
-                                                    <h3 style={{ margin: '0 0 12px', color: '#065f46', fontSize: '1.5rem' }}>Nu har jeg sendt tilbuddet på mail til kunden!</h3>
-                                                    <p style={{ margin: '0 0 32px', color: '#047857', fontSize: '1rem', maxWidth: '400px' }}>
-                                                        Kunden afventer nu, og du får direkte besked (samt en ny mail), så snart de accepterer opgaven.
-                                                    </p>
-                                                    <button 
-                                                        onClick={() => setSelectedLead(null)}
-                                                        style={{ padding: '14px 28px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', marginBottom: '24px' }}
-                                                    >
-                                                        Gå tilbage til dashboardet
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setQuoteBuilder(p => ({...p, forceEdit: true}))}
-                                                        style={{ background: 'none', border: 'none', color: '#6b7280', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.9rem' }}
-                                                    >
-                                                        Har du lavet en fejl? Tryk her for at rette og sende igen
-                                                    </button>
-                                                </div>
-                                            ) : (
                                             <div style={{ marginTop: '24px', padding: '24px', backgroundColor: '#f3f1ed', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                                 <h3 style={{ margin: '0', color: '#1a1a1a' }}>Tilpas & Send Endeligt Tilbud</h3>
                                                 <p style={{ margin: '0', color: '#6b7280', fontSize: '0.95rem' }}>Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig.</p>
@@ -2537,7 +2503,6 @@ const Dashboard = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                            )
                                         ) : (
                                             <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#fff5f5', color: '#991b1b', borderRadius: '8px', border: '1px solid #f87171' }}>
                                                 <strong>Hov!</strong> Dette lead blev oprettet <em>før</em> vi integrerede Tilbuds-generatoren. Værdier til auto-udfyldelse mangler i databasen. Generer dog et nyt test-lead for at se det nye system.
