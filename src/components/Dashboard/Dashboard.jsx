@@ -829,8 +829,9 @@ const Dashboard = () => {
             setLeadsData(prev => prev.map(lead => {
                 if (lead.id === leadId) {
                     const updatedLead = { ...lead, ...updates };
-                    // Kør regnskabsintegrationen, hvis ordren er Vundet
-                    if (newStatus === 'Vundet') {
+                    // Kør regnskabsintegrationen, hvis ordren er Vundet og brugeren har rettigheder
+                    const hasSyncPermission = ['admin', 'accountant'].includes(carpenterProfile?.role);
+                    if (newStatus === 'Vundet' && hasSyncPermission) {
                         syncToAccounting(updatedLead);
                     }
                     return updatedLead;
@@ -1990,7 +1991,7 @@ const Dashboard = () => {
                                                 {/* Integrationsknapper vist dynamisk hvis de er valgt i indstillinger */}
                                                 {lead.status === 'Bekræftet opgave' && (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                                                        {carpenterProfile?.economic_api_key && (
+                                                        {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(carpenterProfile?.role) && (
                                                             <button 
                                                                 onClick={(e) => { e.stopPropagation(); syncToAccounting(lead); }}
                                                                 style={{ padding: '8px', borderRadius: '8px', border: '1px solid #10b981', backgroundColor: '#ecfdf5', color: '#059669', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
@@ -1998,7 +1999,7 @@ const Dashboard = () => {
                                                                 <FileText size={16} /> Regnskabsprogram
                                                             </button>
                                                         )}
-                                                        {carpenterProfile?.ordrestyring_token && (
+                                                        {carpenterProfile?.ordrestyring_token && ['admin', 'accountant'].includes(carpenterProfile?.role) && (
                                                             lead.ordrestyring_case_id ? (
                                                                 <a 
                                                                     href={
@@ -2022,7 +2023,7 @@ const Dashboard = () => {
                                                                 </button>
                                                             )
                                                         )}
-                                                        {carpenterProfile?.apacta_api_key && (
+                                                        {carpenterProfile?.apacta_api_key && ['admin', 'accountant'].includes(carpenterProfile?.role) && (
                                                             lead.apacta_case_id ? (
                                                                 <a 
                                                                     href={`https://control-panel.apacta.com/projects/${lead.apacta_case_id}`}
@@ -2125,9 +2126,9 @@ const Dashboard = () => {
 
                                         {/* Tjekket top-menu for integrationer med ensartede knapper */}
                                         <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', marginBottom: '32px' }}>
-                                            {selectedLead.status === 'Bekræftet opgave' && (
+                                            {selectedLead.status === 'Bekræftet opgave' && ['admin', 'accountant'].includes(carpenterProfile?.role) && (
                                                 <>
-                                                    {carpenterProfile?.economic_api_key && (
+                                                    {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && (
                                                         <button onClick={() => syncToAccounting(selectedLead)} style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s' }}>
                                                             <FileText size={18}/> Regnskab
                                                         </button>

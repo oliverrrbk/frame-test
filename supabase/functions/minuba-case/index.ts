@@ -31,7 +31,21 @@ serve(async (req) => {
       throw new Error("Mangler lead data")
     }
 
-    if (!api_key) {
+    let finalApiKey = api_key;
+
+    // Hent altid API nøglen via backend for at undgå at frontend RLS blokerer medarbejdere
+    const targetCarpenterId = lead.carpenter_id || user.id;
+    const { data: profile, error: dbError } = await supabaseClient
+      .from('carpenter_secrets')
+      .select('minuba_api_key')
+      .eq('carpenter_id', targetCarpenterId)
+      .single()
+
+    if (profile && profile.minuba_api_key) {
+        finalApiKey = profile.minuba_api_key;
+    }
+
+    if (!finalApiKey) {
       throw new Error("Mangler Minuba API-nøgle")
     }
 
@@ -56,7 +70,7 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${btoa(api_key + ':')}` // Typisk Basic Auth for API nøgler
+        'Authorization': `Basic ${btoa(finalApiKey + ':')}` // Typisk Basic Auth for API nøgler
       },
       body: JSON.stringify(contactPayload)
     });
@@ -80,7 +94,7 @@ serve(async (req) => {
     const projectPayload = {
       title: `${lead.project_category || 'Bison Frame Opgave'} - ${lead.customer_name || 'Kunde'}`,
       customer_id: contactId,
-      description: `Estimat givet: ${lead.price_estimate || '0'} kr.\nAdresse: ${lead.customer_address}`
+      description: `Tilbudspris (Ekskl. moms): ${lead.raw_data?.actual_quote_price || lead.price_estimate || '0'} kr.\nAdresse: ${lead.customer_address}`
     };
 
     console.log("Opretter ordre i Minuba...");
@@ -88,7 +102,7 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${btoa(api_key + ':')}`
+        'Authorization': `Basic ${btoa(finalApiKey + ':')}`
       },
       body: JSON.stringify(projectPayload)
     });

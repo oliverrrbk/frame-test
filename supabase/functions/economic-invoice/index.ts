@@ -34,10 +34,11 @@ serve(async (req) => {
     console.log("Starter e-conomic overførsel for:", lead.customer_name);
 
     // 1. Hent tokens fra DB (læg mærke til at tabellen hedder carpenters!)
+    const targetCarpenterId = lead.carpenter_id || user.id;
     const { data: profile, error: dbError } = await supabaseClient
       .from('carpenter_secrets')
       .select('economic_api_key')
-      .eq('carpenter_id', user.id)
+      .eq('carpenter_id', targetCarpenterId)
       .single()
 
     if (dbError || !profile || !profile.economic_api_key) {
@@ -90,11 +91,16 @@ serve(async (req) => {
     let address = lead.customer_address || '';
     let zipCode = '';
     let city = '';
-    const zipCityMatch = address.match(/(\d{4})\s+(.+)$/);
-    if (zipCityMatch) {
-        zipCode = zipCityMatch[1];
-        city = zipCityMatch[2].trim();
-        address = address.replace(zipCityMatch[0], '').replace(/,\s*$/, '').trim();
+    // Fix: Undgå at overskrive mangelfulde/tomme adresser utilsigtet
+    if (address && address.length > 3 && address !== ",  ") {
+        const zipCityMatch = address.match(/(\d{4})\s+(.+)$/);
+        if (zipCityMatch) {
+            zipCode = zipCityMatch[1];
+            city = zipCityMatch[2].trim();
+            address = address.replace(zipCityMatch[0], '').replace(/,\s*$/, '').trim();
+        }
+    } else {
+        address = 'Ikke oplyst';
     }
 
     // 3. Opret Kontakt (Kunde)
@@ -141,9 +147,18 @@ serve(async (req) => {
     const productNumber = products.collection[0].productNumber;
 
     // Udtræk pris og fjern moms (pris er inkl. moms, så vi dividerer med 1.25)
-    const rawPrice = typeof lead.price_estimate === 'number' 
-      ? lead.price_estimate 
-      : parseInt((lead.price_estimate || '0').replace(/[^0-9]/g, '').substring(0, 5)) || 0;
+    let rawPrice = 0;
+    if (lead.raw_data?.actual_quote_price) {
+        rawPrice = typeof lead.raw_data.actual_quote_price === 'number' 
+            ? lead.raw_data.actual_quote_price 
+            : parseInt(String(lead.raw_data.actual_quote_price).replace(/[^0-9]/g, '')) || 0;
+    } else if (typeof lead.price_estimate === 'number') {
+        rawPrice = lead.price_estimate;
+    } else {
+        const priceStr = lead.price_estimate || '0';
+        const firstPricePart = priceStr.split('-')[0] || priceStr;
+        rawPrice = parseInt(firstPricePart.replace(/[^0-9]/g, '')) || 0;
+    }
     const priceExVat = Math.round(rawPrice / 1.25);
 
     // 5. Opret Fakturakladde

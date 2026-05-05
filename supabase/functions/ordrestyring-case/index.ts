@@ -31,14 +31,28 @@ serve(async (req) => {
       throw new Error("Mangler lead data")
     }
 
-    if (!api_key) {
+    let finalApiKey = api_key;
+
+    // Hent altid API nøglen via backend for at undgå at frontend RLS blokerer medarbejdere
+    const targetCarpenterId = lead.carpenter_id || user.id;
+    const { data: profile, error: dbError } = await supabaseClient
+      .from('carpenter_secrets')
+      .select('ordrestyring_api_key')
+      .eq('carpenter_id', targetCarpenterId)
+      .single()
+
+    if (profile && profile.ordrestyring_api_key) {
+        finalApiKey = profile.ordrestyring_api_key;
+    }
+
+    if (!finalApiKey) {
       throw new Error("Mangler Ordrestyring API-nøgle")
     }
 
     console.log("Starter ægte Ordrestyring overførsel for:", lead.customer_name);
 
     // Basic Auth til Ordrestyring v2
-    const authString = btoa(`${api_key}:api`);
+    const authString = btoa(`${finalApiKey}:api`);
     const baseUrl = "https://v2.api.ordrestyring.dk";
 
     // Unikt kundenummer
@@ -97,12 +111,13 @@ serve(async (req) => {
 
     // Byg en god og detaljeret beskrivelse til sagen
     const category = lead.project_category || 'Opgave';
-    const estimate = lead.price_estimate || '0';
+    const estimate = lead.raw_data?.actual_quote_price || lead.price_estimate || '0';
     
-    let description = `Opgave: ${category}\nEstimeret pris: ${estimate} kr.\n\n`;
+    let description = `Opgave: ${category}\nTilbudspris (Ekskl. moms): ${estimate} kr.\n\n`;
     
-    if (lead.details) {
-        let detailsObj = typeof lead.details === 'string' ? JSON.parse(lead.details) : lead.details;
+    const detailsSource = lead.raw_data?.details || lead.details;
+    if (detailsSource) {
+        let detailsObj = typeof detailsSource === 'string' ? JSON.parse(detailsSource) : detailsSource;
         
         if (detailsObj.notes) {
             description += `Bemærkninger fra kunden:\n${detailsObj.notes}\n\n`;
@@ -178,7 +193,7 @@ serve(async (req) => {
                 const getRes = await fetch(`https://graphql.ordrestyring.dk/graphql`, {
                     method: 'POST',
                     headers: { 
-                        'Authorization': `Bearer ${api_key}`,
+                        'Authorization': `Bearer ${finalApiKey}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(graphqlQuery)

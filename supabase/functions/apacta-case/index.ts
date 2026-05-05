@@ -31,7 +31,21 @@ serve(async (req) => {
       throw new Error("Mangler lead data")
     }
 
-    if (!api_key) {
+    let finalApiKey = api_key;
+
+    // Hent altid API nøglen via backend for at undgå at frontend RLS blokerer medarbejdere
+    const targetCarpenterId = lead.carpenter_id || user.id;
+    const { data: profile, error: dbError } = await supabaseClient
+      .from('carpenter_secrets')
+      .select('apacta_api_key')
+      .eq('carpenter_id', targetCarpenterId)
+      .single()
+
+    if (profile && profile.apacta_api_key) {
+        finalApiKey = profile.apacta_api_key;
+    }
+
+    if (!finalApiKey) {
       throw new Error("Mangler Apacta API-nøgle")
     }
 
@@ -78,12 +92,12 @@ serve(async (req) => {
     const projectPayload = {
       name: `${lead.project_category || 'Bison Frame Opgave'} - ${lead.customer_name || 'Kunde'}`,
       contact_id: contactId,
-      description: `Estimat givet: ${lead.price_estimate || '0'} kr.\nAdresse: ${lead.customer_address}`,
+      description: `Tilbudspris (Ekskl. moms): ${lead.raw_data?.actual_quote_price || lead.price_estimate || '0'} kr.\nAdresse: ${lead.customer_address}`,
       street_name: lead.customer_address || ""
     };
 
     console.log("Opretter projekt i Apacta...");
-    const projectRes = await fetch(`${baseUrl}/projects?api_key=${api_key}`, {
+    const projectRes = await fetch(`${baseUrl}/projects?api_key=${finalApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
