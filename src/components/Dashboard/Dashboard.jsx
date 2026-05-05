@@ -92,6 +92,7 @@ const Dashboard = () => {
     
     const [quoteBuilder, setQuoteBuilder] = useState(null);
     const [integrationSuccessData, setIntegrationSuccessData] = useState(null);
+    const [showEmailPreview, setShowEmailPreview] = useState(false);
     const invoiceRef = useRef(null);
     
     // Auth & Profile
@@ -587,6 +588,7 @@ const Dashboard = () => {
              const { data: nData } = await supabase.from('leads').select('*').eq('carpenter_id', targetId).order('created_at', { ascending: false });
              workingLeads = nData || [];
         }
+        workingLeads = workingLeads.filter(l => l.status !== 'Slettet');
         
         // --- Granulær Data-filtrering ---
         const userRole = profile?.role;
@@ -899,10 +901,12 @@ const Dashboard = () => {
                     const senderName = getCarpenterSenderName(carpenterProfile);
                     // Brug produktions URL hvis online, ellers window.location.origin (localhost)
                     const quoteUrl = `${window.location.origin}/${carpenterSlug}/tilbud/${targetLead.quote_token || leadId}`;
+                    const isUpdate = targetLead.status === 'Sendt tilbud';
+                    const subjectText = isUpdate ? `Dit opdaterede tilbud fra ${carpenterName} er klar` : `Dit tilbud fra ${carpenterName} er klar`;
                     sendEmail({
                         to: targetLead.customer_email,
-                        subject: `Dit tilbud fra ${carpenterName} er klar`,
-                        html: getCustomerOfferSentTemplate(targetLead.customer_name, quoteUrl, targetLead.project_category, carpenterProfile, publicUrl),
+                        subject: subjectText,
+                        html: getCustomerOfferSentTemplate(targetLead.customer_name, quoteUrl, targetLead.project_category, carpenterProfile, publicUrl, isUpdate),
                         fromName: senderName,
                         replyTo: carpenterProfile?.email
                     });
@@ -2561,6 +2565,22 @@ const Dashboard = () => {
                                             </div>
                                         )}
 
+                                        {selectedLead.status !== 'Udgået opgave' && selectedLead.status !== 'Historik' && (
+                                            <div style={{ marginTop: selectedLead.status !== 'Bekræftet opgave' ? '32px' : '16px', borderTop: selectedLead.status !== 'Bekræftet opgave' ? '2px solid #e2e8f0' : 'none', paddingTop: selectedLead.status !== 'Bekræftet opgave' ? '24px' : '0', display: 'flex', justifyContent: 'center' }}>
+                                                <button 
+                                                    onClick={() => {
+                                                        updateLeadStatus(selectedLead.id, 'Udgået opgave');
+                                                        setSelectedLead(null);
+                                                    }} 
+                                                    style={{ padding: '12px 24px', fontSize: '1rem', background: 'transparent', color: '#64748b', border: '2px solid #cbd5e1', borderRadius: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+                                                    onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; e.target.style.color = '#334155'; }}
+                                                    onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#64748b'; }}
+                                                >
+                                                    👎 Marker som tabt / afvist opgave
+                                                </button>
+                                            </div>
+                                        )}
+
                                         {/* Slet sag (Permanent) */}
                                         <div style={{ marginTop: '32px', borderTop: '1px solid #fee2e2', paddingTop: '16px', display: 'flex', justifyContent: 'center' }}>
                                             <button 
@@ -2721,7 +2741,7 @@ const Dashboard = () => {
                                                             disabled={quoteBuilder.isGeneratingPdf}
                                                             onClick={async (e) => {
                                                                 e.stopPropagation();
-                                                                setQuoteBuilder(p => ({...p, isGeneratingPdf: true}));
+                                                                setQuoteBuilder(p => ({...p, isGeneratingPdf: true, uploadStepText: '⏳ Tegner PDF...'}));
                                                                 try {
                                                                     const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
                                                                     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -2729,6 +2749,8 @@ const Dashboard = () => {
                                                                     pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
                                                                     const pdfBlob = pdf.output('blob');
                                                                     
+                                                                    setQuoteBuilder(p => ({...p, uploadStepText: '☁️ Gemmer sikkert i skyen...'}));
+
                                                                     const cleanProjectTitle = (categoryNames[selectedLead.project_category] || selectedLead.project_category).replace(/\//g, '-').replace(/\s+/g, '_');
                                                                     const cleanName = (selectedLead.customer_name || 'Kunde').split(' ')[0].replace(/[^a-zA-ZæøåÆØÅ]/g, '');
                                                                     const cleanAddress = (selectedLead.customer_address || 'Adresse').split(',')[0].replace(/[^a-zA-Z0-9æøåÆØÅ\s]/g, '').replace(/\s+/g, '_');
@@ -2749,6 +2771,7 @@ const Dashboard = () => {
                                                                         custom_message: quoteBuilder.customMessage
                                                                     };
                                                                     
+                                                                    setQuoteBuilder(p => ({...p, uploadStepText: '📧 Sender e-mail...'}));
                                                                     await handleUploadAndSendQuote(selectedLead.id, slug, file, finalPrice, extraRawData);
                                                                     
                                                                     setQuoteBuilder(p => ({...p, isGeneratingPdf: false, showPreview: false}));
@@ -2760,7 +2783,20 @@ const Dashboard = () => {
                                                             }} 
                                                             style={{ padding: '16px 32px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', flex: 1, transition: 'background-color 0.2s', fontSize: '1rem', opacity: quoteBuilder.isGeneratingPdf ? 0.7 : 1, boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)' }}
                                                         >
-                                                            {quoteBuilder.isGeneratingPdf ? '⏳ Sender Tilbud...' : (selectedLead.status === 'Sendt tilbud' ? 'SENDT. TILBUD TIL KUNDE (Send igen)' : 'SEND TILBUD TIL KUNDE (PDF + Web)')}
+                                                            {quoteBuilder.isGeneratingPdf ? quoteBuilder.uploadStepText : (selectedLead.status === 'Sendt tilbud' ? 'SENDT. TILBUD TIL KUNDE (Send igen)' : 'SEND TILBUD TIL KUNDE (PDF + Web)')}
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setShowEmailPreview(true);
+                                                            }}
+                                                            style={{ background: 'none', border: 'none', color: '#10b981', fontSize: '0.9rem', cursor: 'pointer', textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                        >
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                                            Se forhåndsvisning af e-mail til kunden
                                                         </button>
                                                     </div>
                                                 </div>
@@ -3539,7 +3575,7 @@ const Dashboard = () => {
                                     // Genindlæs leads
                                     const { data } = await supabase.from('leads').select('*').eq('carpenter_id', carpenterProfile.id).order('created_at', { ascending: false });
                                     if (data && data.length > 0) {
-                                        setLeadsData(data);
+                                        setLeadsData(data.filter(l => l.status !== 'Slettet'));
                                         setActiveTab('leads');
                                         setLeadFilter('Ny forespørgsel');
                                         setSelectedLead(data[0]); // Vælg og åbn det nyeste lead automatisk!
@@ -3572,11 +3608,11 @@ const Dashboard = () => {
                             </button>
                             <button 
                                 onClick={async () => {
-                                    const { error } = await supabase.from('leads').delete().eq('id', selectedLead.id);
+                                    const { error } = await supabase.from('leads').update({ status: 'Slettet' }).eq('id', selectedLead.id);
                                     if (error) {
-                                        toast.error("Kunne ikke slette kunden.");
+                                        toast.error("Kunne ikke fjerne kunden.");
                                     } else {
-                                        toast.success("Kunde slettet permanent.");
+                                        toast.success("Kunde fjernet permanent fra din oversigt.");
                                         setLeadsData(prev => prev.filter(l => l.id !== selectedLead.id));
                                         setShowDeleteConfirm(false);
                                         setSelectedLead(null);
@@ -3586,6 +3622,30 @@ const Dashboard = () => {
                             >
                                 Ja, slet sag
                             </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Email Preview Modal */}
+            {showEmailPreview && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => setShowEmailPreview(false)}>
+                    <div style={{ backgroundColor: '#f1f5f9', borderRadius: '16px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '0', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ position: 'sticky', top: 0, background: '#ffffff', padding: '16px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+                            <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.1rem' }}>Forhåndsvisning af e-mail til kunden</h3>
+                            <button onClick={() => setShowEmailPreview(false)} style={{ background: 'none', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer' }}>&times;</button>
+                        </div>
+                        <div style={{ padding: '24px' }}>
+                            <div style={{ background: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '16px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '8px' }}><strong>Fra:</strong> {getCarpenterSenderName(carpenterProfile)}</div>
+                                <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '8px' }}><strong>Til:</strong> {selectedLead?.customer_email}</div>
+                                <div style={{ fontSize: '13px', color: '#64748b' }}><strong>Emne:</strong> {selectedLead?.status === 'Sendt tilbud' ? `Dit opdaterede tilbud fra ${carpenterProfile?.company_name || 'Tømreren'} er klar` : `Dit tilbud fra ${carpenterProfile?.company_name || 'Tømreren'} er klar`}</div>
+                            </div>
+                            <div 
+                                style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}
+                                dangerouslySetInnerHTML={{ __html: getCustomerOfferSentTemplate(selectedLead?.customer_name || 'Kunde', '#', selectedLead?.project_category || 'Opgave', carpenterProfile, '#', selectedLead?.status === 'Sendt tilbud') }}
+                            />
                         </div>
                     </div>
                 </div>,

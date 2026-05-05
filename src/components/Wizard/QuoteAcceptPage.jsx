@@ -250,11 +250,15 @@ const QuoteAcceptPage = () => {
             <div style={{ maxWidth: '800px', width: '100%', background: '#fff', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 
                 {(accepted || lead.status === 'Bekræftet opgave') && (
-                    <div style={{ backgroundColor: '#ecfdf5', borderBottom: '1px solid #10b981', padding: '24px 32px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>✓</div>
+                    <div style={{ backgroundColor: '#ecfdf5', borderBottom: '1px solid #10b981', padding: '24px 32px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                        <div style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, marginTop: '4px' }}>✓</div>
                         <div>
                             <h2 style={{ margin: '0 0 4px 0', color: '#065f46', fontSize: '1.4rem' }}>Tilbuddet er bekræftet</h2>
-                            <p style={{ margin: 0, color: '#047857', fontSize: '0.95rem' }}>Mange tak for din accept. Vi glæder os til at gå i gang med opgaven.</p>
+                            <p style={{ margin: '0 0 8px 0', color: '#047857', fontSize: '0.95rem' }}>Mange tak for din accept. Vi glæder os til at gå i gang med opgaven.</p>
+                            <p style={{ margin: 0, color: '#065f46', fontSize: '0.85rem', opacity: 0.8 }}>
+                                Du bekræftede denne opgave den {lead.updated_at ? new Date(lead.updated_at).toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.<br/>
+                                Har du spørgsmål til opstart, kan du altid ringe direkte til {carpenter?.owner_name ? carpenter.owner_name.split(' ')[0] : (carpenter?.company_name || 'tømreren')}{carpenter?.phone ? ` på ${carpenter.phone}` : ''}.
+                            </p>
                         </div>
                     </div>
                 )}

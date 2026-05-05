@@ -192,14 +192,24 @@ export const getAdminNewSignupTemplate = (companyName, cvr, ownerName, email, ph
     return getBaseTemplate("Ny Tømrer Oprettet", content, `Ny bruger: ${companyName}`);
 };
 
-export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null) => {
+export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null, isUpdate = false) => {
     const signatureName = getCarpenterSenderName(carpenter);
+
+    const title = isUpdate ? "Dit opdaterede tilbud er klar!" : "Dit tilbud er klar!";
+    const headerTitle = isUpdate ? "Opdateret tilbud" : "Dit tilbud er klar";
+    const subtext = isUpdate ? "Jeg har opdateret dit tilbud med de seneste ændringer." : "Jeg har sendt et tilbud til dig.";
 
     const content = `
         <div style="text-align: center; margin-bottom: 32px;">
-            <h2 style="margin: 0; color: #0f172a; font-size: 24px;">Dit tilbud er klar!</h2>
+            <h2 style="margin: 0; color: #0f172a; font-size: 24px;">${title}</h2>
         </div>
         
+        ${isUpdate ? `<div style="background-color: #fffbeb; padding: 12px; border-left: 3px solid #f59e0b; margin-bottom: 24px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 13px; color: #b45309; font-weight: 500;">
+                Bemærk: Dette er en opdateret version af dit tidligere tilbud.
+            </p>
+        </div>` : ''}
+
         <p style="color: #334155;">Hej ${customerName},</p>
         <p style="color: #334155;">Jeg har nu gennemgået dine ønsker vedrørende dit projekt (<strong>${categoryName}</strong>) og har udarbejdet et officielt tilbud til dig.</p>
         
@@ -215,7 +225,7 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
         <p style="color: #334155; margin-bottom: 0;">Med venlig hilsen,</p>
         <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
     `;
-    return getBaseTemplate("Dit tilbud er klar", content, `Jeg har sendt et tilbud til dig.`, carpenter);
+    return getBaseTemplate(headerTitle, content, subtext, carpenter);
 };
 
 export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, carpenter, quoteUrl) => {
