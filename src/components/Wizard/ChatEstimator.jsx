@@ -146,7 +146,9 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                         aiProjectTitle: args.projectTitle || 'Specialopgave',
                         aiLaborHours: Math.max(0, Number(args.laborHours) || 0),
                         aiMaterialCost: Math.max(0, Number(args.materialCost) || 0),
-                        aiBreakdown: args.breakdown
+                        aiBreakdown: args.breakdown,
+                        summaryBullets: args.summaryBullets || [],
+                        obsNotes: args.obsNotes || "Ingen særlige forbehold"
                     });
                     
                     setIsLoading(false);

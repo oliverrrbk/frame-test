@@ -2330,26 +2330,61 @@ const Dashboard = () => {
                                                 });
                                                 
                                                 if (details.isAiEstimate && details.chatLog) {
+                                                    const hasSummary = details.summaryBullets && details.summaryBullets.length > 0;
+                                                    
                                                     renderElements.push(
-                                                        <div key="ai_chat" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                            <strong style={{ color: '#6b7280' }}>Samtale med AI-Tømrer (Kundens Ønsker)</strong>
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto', padding: '8px', backgroundColor: '#f3f1ed', borderRadius: '6px' }}>
-                                                                {details.chatLog.filter(m => m.role !== 'system').map((msg, idx) => (
-                                                                    <div key={idx} style={{ 
-                                                                        padding: '10px 14px', 
-                                                                        borderRadius: '8px', 
-                                                                        maxWidth: '90%', 
-                                                                        alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                                                                        backgroundColor: msg.role === 'user' ? '#3b82f6' : '#e2e8f0',
-                                                                        color: msg.role === 'user' ? 'white' : '#1e293b',
-                                                                        fontSize: '0.95rem'
-                                                                    }}>
-                                                                        <strong style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px', display: 'block' }}>{msg.role === 'user' ? 'Kunde' : 'AI-Assistent'}</strong>
-                                                                        <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content.replace(/\[KLAR_TIL_TILBUD.*?\]/i, '').trim()}</span>
-                                                                    </div>
-                                                                ))}
+                                                        <div key="ai_chat" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: 'white' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <span style={{ fontSize: '1.2rem' }}>🤖</span>
+                                                                <strong style={{ color: '#1a1a1a', fontSize: '1.05rem' }}>AI Opsummering af Kundens Ønsker</strong>
                                                             </div>
                                                             
+                                                            {hasSummary ? (
+                                                                <>
+                                                                    <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                            {details.summaryBullets.map((bullet, idx) => (
+                                                                                <li key={idx} style={{ fontSize: '0.95rem' }}>{bullet}</li>
+                                                                            ))}
+                                                                        </ul>
+                                                                    </div>
+                                                                    
+                                                                    {details.obsNotes && details.obsNotes.toLowerCase() !== 'ingen særlige forbehold' && (
+                                                                        <div style={{ backgroundColor: '#fffbeb', padding: '16px', borderRadius: '8px', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b' }}>
+                                                                            <strong style={{ color: '#b45309', display: 'block', marginBottom: '4px', fontSize: '0.9rem' }}>⚠️ OBS / Særlige Forbehold:</strong>
+                                                                            <span style={{ color: '#92400e', fontSize: '0.95rem' }}>{details.obsNotes}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b', fontStyle: 'italic' }}>
+                                                                    (Ældre opgave uden automatisk opsummering. Se chatlog herunder.)
+                                                                </p>
+                                                            )}
+
+                                                            <details style={{ marginTop: hasSummary ? '8px' : '0' }}>
+                                                                <summary style={{ cursor: 'pointer', color: '#2563eb', fontWeight: '500', fontSize: '0.9rem', userSelect: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '8px 12px', backgroundColor: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                                                                    💬 {hasSummary ? 'Læs hele samtalen med kunden' : 'Vis rå chatlog'} ({details.chatLog.filter(m => m.role !== 'system').length} beskeder)
+                                                                </summary>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto', padding: '12px', backgroundColor: '#f1f5f9', borderRadius: '6px', marginTop: '12px', border: '1px solid #e2e8f0' }}>
+                                                                    {details.chatLog.filter(m => m.role !== 'system').map((msg, idx) => (
+                                                                        <div key={idx} style={{ 
+                                                                            padding: '10px 14px', 
+                                                                            borderRadius: '8px', 
+                                                                            maxWidth: '90%', 
+                                                                            alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                                                                            backgroundColor: msg.role === 'user' ? '#3b82f6' : 'white',
+                                                                            color: msg.role === 'user' ? 'white' : '#1e293b',
+                                                                            border: msg.role === 'user' ? 'none' : '1px solid #cbd5e1',
+                                                                            fontSize: '0.95rem',
+                                                                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                                        }}>
+                                                                            <strong style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px', display: 'block' }}>{msg.role === 'user' ? 'Kunde' : 'AI-Assistent'}</strong>
+                                                                            <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content.replace(/\[KLAR_TIL_TILBUD.*?\]/i, '').trim()}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </details>
                                                             <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', color: '#065f46' }}>
                                                                 <strong>AI'ens skjulte estimat:</strong><br/>
                                                                 Arbejdstid: {details.aiLaborHours} timer<br/>

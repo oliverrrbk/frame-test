@@ -114,9 +114,18 @@ Når du er HELT sikker på at have al info til at regne et overslag ud fra tjekl
                                     required: ["item", "hours", "materials"],
                                     additionalProperties: false
                                 }
+                            },
+                            summaryBullets: {
+                                type: "array",
+                                description: "En kort, ultra-præcis punktliste med de hårde facts fra samtalen (fx 'Opgave: Nyt gulv', 'Areal: 30 m2', 'Materiale: Egetræ'). Ingen fluff.",
+                                items: { type: "string" }
+                            },
+                            obsNotes: {
+                                type: "string",
+                                description: "Vigtige forbehold, advarsler eller faldgruber nævnt i chatten (fx 'Undergulvet knirker. Kræver muligvis opretning'). Skriv 'Ingen særlige forbehold', hvis der ikke er nogen."
                             }
                         },
-                        required: ["reasoning", "projectTitle", "laborHours", "materialCost", "breakdown"],
+                        required: ["reasoning", "projectTitle", "laborHours", "materialCost", "breakdown", "summaryBullets", "obsNotes"],
                         additionalProperties: false
                     },
                     strict: true
