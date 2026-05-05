@@ -98,11 +98,14 @@ const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
 };
 
 export const getCustomerRequestReceivedTemplate = (customerName, categoryName, carpenter) => {
-    const carpenterName = carpenter?.company_name || 'Tømreren';
+    const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
+    const carpenterOwnerName = carpenter?.owner_name || carpenter?.contact_person || '';
+    const signatureName = carpenterOwnerName ? `${carpenterOwnerName} fra ${carpenterCompanyName}` : carpenterCompanyName;
+
     const content = `
         <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Kære ${customerName},</h2>
         <p style="color: #334155;">Mange tak for din henvendelse vedrørende dit byggeprojekt: <strong>${categoryName}</strong>.</p>
-        <p style="color: #334155;">Jeg har modtaget dine oplysninger her hos <strong>${carpenterName}</strong>, og jeg glæder mig til at kigge dit materiale igennem.</p>
+        <p style="color: #334155;">Jeg har modtaget dine oplysninger her hos <strong>${carpenterCompanyName}</strong>, og jeg glæder mig til at kigge dit materiale igennem.</p>
         <p style="color: #334155;">Såfremt jeg har brug for at få uddybet nogle detaljer for at kunne give dig det bedst mulige tilbud, vil jeg kontakte dig inden for de dage, du har valgt i formularen. Jeg vil tage dig trygt i hånden, og måske aftaler vi at jeg kommer ud og kigger fysisk på dit projekt, så vi kan få en rigtig god og personlig snak om dine drømme og muligheder.</p>
         <p style="color: #334155;">Jeg ser frem til et rigtig godt samarbejde!</p>
         <br/>
@@ -114,7 +117,7 @@ export const getCustomerRequestReceivedTemplate = (customerName, categoryName, c
         </div>
 
         <p style="color: #334155; margin-bottom: 0;">De bedste hilsner,</p>
-        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${carpenterName}</p>
+        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
     `;
     return getBaseTemplate("Tak for din forespørgsel", content, "Jeg glæder mig til at kigge på dit projekt.", carpenter);
 };
@@ -184,7 +187,10 @@ export const getAdminNewSignupTemplate = (companyName, cvr, ownerName, email, ph
 };
 
 export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null) => {
-    const carpenterName = carpenter?.company_name || 'Tømreren';
+    const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
+    const carpenterOwnerName = carpenter?.owner_name || carpenter?.contact_person || '';
+    const signatureName = carpenterOwnerName ? `${carpenterOwnerName} fra ${carpenterCompanyName}` : carpenterCompanyName;
+
     const content = `
         <div style="text-align: center; margin-bottom: 32px;">
             <h2 style="margin: 0; color: #0f172a; font-size: 24px;">Dit tilbud er klar!</h2>
@@ -194,8 +200,8 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
         <p style="color: #334155;">Jeg har nu gennemgået dine ønsker vedrørende dit projekt (<strong>${categoryName}</strong>) og har udarbejdet et officielt tilbud til dig.</p>
         
         <div style="text-align: center; margin: 32px 0;">
-            <a href="${quoteUrl}" style="${buttonStyle}">Se aftale (Interaktivt)</a>
-            ${pdfUrl ? `<a href="${pdfUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #f1f5f9; color: #334155; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #cbd5e1; margin-left: 10px;">Se som PDF</a>` : ''}
+            ${pdfUrl ? `<div style="margin-bottom: 16px;"><a href="${pdfUrl}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #f1f5f9; color: #334155; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; border: 1px solid #cbd5e1;">Se som PDF</a></div>` : ''}
+            <div><a href="${quoteUrl}" style="${buttonStyle}; padding: 18px 36px; font-size: 18px;">Bekræft tilbud her</a></div>
         </div>
         
         <p style="color: #334155; font-size: 14px;"><em>Linket fører dig til en sikker portal, hvor du kan læse hele tilbuddet og bekræfte opgaven direkte til mig, når du er klar.</em></p>
@@ -203,7 +209,7 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
         
         <p style="color: #334155; margin-bottom: 0;">Med venlig hilsen,</p>
-        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${carpenterName}</p>
+        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
     `;
     return getBaseTemplate("Dit tilbud er klar", content, `Jeg har sendt et tilbud til dig.`, carpenter);
 };
@@ -248,7 +254,7 @@ export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, car
     return getBaseTemplate("Dit tilbud er bekræftet", content, "Tillykke! Din opgave er bekræftet og sat i gang.", carpenter);
 };
 
-export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, categoryName, appUrl = 'https://app.bisonframe.dk', carpenter = null) => {
+export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, categoryName, appUrl = 'https://app.bisonframe.dk', carpenter = null, leadId = null) => {
     const economicLink = carpenter?.economic_api_key ? `<a href="https://secure.e-conomic.com/sales/invoices/drafts" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-left: 10px;">Åbn E-conomic Regnskab</a>` : '';
     const dineroLink = carpenter?.dinero_api_key ? `<a href="https://dinero.dk/app/sales/drafts" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-left: 10px;">Åbn Dinero Regnskab</a>` : '';
     
@@ -263,7 +269,7 @@ export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, c
         <p style="color: #334155;">Opgaven er nu bekræftet og klar til at blive sat i gang. Har du tilknyttet dit regnskabsprogram eller sagsstyringssystem, ligger sagen allerede klar til dig som en kladde!</p>
         
         <div style="text-align: center; margin: 32px 0;">
-            <a href="${appUrl}/dashboard" style="${buttonStyle}">Gå til dit Dashboard</a>
+            <a href="${appUrl}/dashboard?tab=Bekræftet+opgave${leadId ? `&leadId=${leadId}` : ''}" style="${buttonStyle}">Gå til dit Dashboard</a>
             ${economicLink}
             ${dineroLink}
         </div>

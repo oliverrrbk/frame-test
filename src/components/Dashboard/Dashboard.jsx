@@ -1946,7 +1946,13 @@ const Dashboard = () => {
                                                     )}
                                                 </h3>
                                                 <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: '0.9rem' }}><strong>Opgave:</strong> {categoryNames[lead.project_category] || lead.project_category}</p>
-                                                <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: '0.9rem' }}><strong>Estimat givet:</strong> {lead.price_estimate}</p>
+                                                {lead.status === 'Bekræftet opgave' ? (
+                                                    <p style={{ margin: '0 0 4px', color: '#10b981', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                                        Tilbud givet og accepteret: {lead.raw_data?.actual_quote_price ? Math.round(lead.raw_data.actual_quote_price).toLocaleString('da-DK') : '?'} kr. inkl. moms
+                                                    </p>
+                                                ) : (
+                                                    <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: '0.9rem' }}><strong>Estimat givet:</strong> {lead.price_estimate}</p>
+                                                )}
                                                 <p style={{ margin: '0 0 0', color: '#6b7280', fontSize: '0.85rem' }}><em>Modtaget: {new Date(lead.created_at).toLocaleDateString('da-DK')} kl. {new Date(lead.created_at).toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'})}</em></p>
                                             </div>
                                             <div style={{ flex: '1 1 250px', backgroundColor: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
@@ -2073,43 +2079,6 @@ const Dashboard = () => {
 
                                         {/* Manuel Overslag Email Afsendelse / Vis Tilbud */}
                                         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                                            {selectedLead.status !== 'Bekræftet opgave' && (
-                                                <button 
-                                                    onClick={() => {
-                                                        import('../../utils/sendEmail').then(({ sendEmail }) => {
-                                                            const customerEmail = selectedLead.customer_email || selectedLead.raw_data?.customerDetails?.email;
-                                                            if (!customerEmail || customerEmail === 'Ukendt') {
-                                                                toast.error("Ingen e-mail fundet på denne kunde.");
-                                                                return;
-                                                            }
-                                                            const carpenterName = carpenterProfile?.owner_name || carpenterProfile?.company_name || 'Tømrer';
-                                                            sendEmail({
-                                                                to: customerEmail,
-                                                                subject: `Tak for din forespørgsel - ${carpenterName}`,
-                                                                html: getCustomerRequestReceivedTemplate(selectedLead.customer_name, selectedLead.project_category, carpenterProfile),
-                                                                fromName: carpenterName,
-                                                                replyTo: carpenterProfile?.email
-                                                            });
-                                                            toast.success("Overslag sendt til kunden!");
-                                                        });
-                                                    }}
-                                                    style={{
-                                                        padding: '10px 16px', 
-                                                        borderRadius: '8px', 
-                                                        background: '#10b981', 
-                                                        color: 'white', 
-                                                        border: 'none', 
-                                                        fontWeight: 'bold', 
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '8px'
-                                                    }}
-                                                >
-                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                                                    SEND OVERSLAG TIL KUNDE
-                                                </button>
-                                            )}
 
                                             {['Sendt tilbud', 'Bekræftet opgave'].includes(selectedLead.status) && (
                                                 <a 
