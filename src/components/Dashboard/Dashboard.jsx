@@ -2509,15 +2509,14 @@ const Dashboard = () => {
 
                                                 <button  
                                                     className="btn-primary" 
-                                                    style={{ width: '100%', marginTop: '10px', background: '#10b981', opacity: selectedLead.status === 'Sendt tilbud' ? 0.5 : 1 }}
+                                                    style={{ width: '100%', marginTop: '10px', background: '#10b981' }}
                                                     onClick={() => setQuoteBuilder({...quoteBuilder, showPreview: true})}
-                                                    disabled={selectedLead.status === 'Sendt tilbud'}
                                                 >
-                                                    {selectedLead.status === 'Sendt tilbud' ? 'Tilbuddet er sendt' : 'Generer & Gennemse 👉'}
+                                                    {selectedLead.status === 'Sendt tilbud' ? 'Se PDF & Opdateringsmuligheder 👉' : 'Generer & Gennemse 👉'}
                                                 </button>
                                                 {selectedLead.status === 'Sendt tilbud' && (
                                                     <div style={{ padding: '12px', background: '#ecfdf5', color: '#065f46', borderRadius: '8px', fontWeight: '500', fontSize: '0.9rem', marginTop: '10px', textAlign: 'center' }}>
-                                                        ✅ Et tilbud (PDF) ligger gemt på sagen.
+                                                        ✅ Et tilbud (PDF) ligger gemt på sagen. Tryk ovenfor for at ændre det.
                                                     </div>
                                                 )}
 
