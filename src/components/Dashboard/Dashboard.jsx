@@ -2790,6 +2790,7 @@ const Dashboard = () => {
                                                         </div>
 
                                                         {selectedLead.status === 'Sendt tilbud' && (
+                                                            <>
                                                             <button 
                                                                 disabled={quoteBuilder.isGeneratingPdf}
                                                                 onClick={async (e) => {
@@ -2837,6 +2838,10 @@ const Dashboard = () => {
                                                             >
                                                                 OPDATER TILBUD LIGE STILLE (Uden at sende e-mail)
                                                             </button>
+                                                            <div style={{ textAlign: 'center', marginTop: '-4px', fontSize: '0.75rem', color: '#94a3b8' }}>
+                                                                Perfekt hvis du lige har opdaget en tastefejl og kunden endnu ikke har åbnet e-mailen.
+                                                            </div>
+                                                        </>
                                                         )}
                                                     </div>
                                                     
