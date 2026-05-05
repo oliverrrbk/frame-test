@@ -160,8 +160,9 @@ const QuoteAcceptPage = () => {
                 
                 if (carpenter) {
                     import('../../utils/sendEmail').then(({ sendEmail }) => {
-                        import('../../utils/emailTemplates').then(({ getCustomerOfferAcceptedTemplate, getCarpenterOfferAcceptedTemplate }) => {
+                        import('../../utils/emailTemplates').then(({ getCustomerOfferAcceptedTemplate, getCarpenterOfferAcceptedTemplate, getCarpenterSenderName }) => {
                             const carpenterName = carpenter.company_name || carpenter.owner_name || 'Bison Frame Tømrer';
+                            const senderName = getCarpenterSenderName(carpenter);
                             const customerName = lead.customer_name;
                             const categoryName = lead.project_category;
                             
@@ -171,7 +172,7 @@ const QuoteAcceptPage = () => {
                                     to: lead.customer_email,
                                     subject: `Dit tilbud fra ${carpenterName} er bekræftet!`,
                                     html: getCustomerOfferAcceptedTemplate(customerName, categoryName, carpenter, lead.raw_data?.quote_pdf_url),
-                                    fromName: carpenterName,
+                                    fromName: senderName,
                                     replyTo: carpenter.email
                                 });
                             }

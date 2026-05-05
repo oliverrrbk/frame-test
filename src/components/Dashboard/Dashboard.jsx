@@ -8,7 +8,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { QUESTIONS, initialCategories } from '../Wizard/questionsConfig';
 import Wizard from '../Wizard/Wizard';
-import { getFeedbackTemplate, getCustomerOfferSentTemplate, getCustomerRequestReceivedTemplate } from '../../utils/emailTemplates';
+import { getFeedbackTemplate, getCustomerOfferSentTemplate, getCustomerRequestReceivedTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
 import AiTrainingView from './AiTrainingView';
 import TeamManagement from './TeamManagement';
 import OnboardingModal from './OnboardingModal';
@@ -896,13 +896,14 @@ const Dashboard = () => {
             if (targetLead.customer_email && targetLead.customer_email !== 'Ukendt') {
                 import('../../utils/sendEmail').then(({ sendEmail }) => {
                     const carpenterName = carpenterProfile?.company_name || carpenterProfile?.owner_name || 'Din Tømrer';
+                    const senderName = getCarpenterSenderName(carpenterProfile);
                     // Brug produktions URL hvis online, ellers window.location.origin (localhost)
                     const quoteUrl = `${window.location.origin}/${carpenterSlug}/tilbud/${targetLead.quote_token || leadId}`;
                     sendEmail({
                         to: targetLead.customer_email,
                         subject: `Dit tilbud fra ${carpenterName} er klar`,
                         html: getCustomerOfferSentTemplate(targetLead.customer_name, quoteUrl, targetLead.project_category, carpenterProfile, publicUrl),
-                        fromName: carpenterName,
+                        fromName: senderName,
                         replyTo: carpenterProfile?.email
                     });
                 });

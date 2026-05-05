@@ -30,16 +30,23 @@ const contentStyle = `
 
 const buttonStyle = `
     display: inline-block;
+    padding: 14px 28px;
     background-color: #10b981;
     color: #ffffff;
     text-decoration: none;
-    padding: 16px 32px;
     border-radius: 8px;
-    font-weight: 600;
-    margin: 24px 0;
+    font-weight: bold;
+    font-size: 16px;
     text-align: center;
     box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
 `;
+
+export const getCarpenterSenderName = (carpenter) => {
+    const companyName = carpenter?.company_name || 'Tømreren';
+    const fullName = carpenter?.owner_name || carpenter?.contact_person || '';
+    const firstName = fullName.split(' ')[0];
+    return firstName ? `${firstName} fra ${companyName}` : companyName;
+};
 
 const footerStyle = `
     padding: 24px 40px;
@@ -99,8 +106,7 @@ const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
 
 export const getCustomerRequestReceivedTemplate = (customerName, categoryName, carpenter) => {
     const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
-    const carpenterOwnerName = carpenter?.owner_name || carpenter?.contact_person || '';
-    const signatureName = carpenterOwnerName ? `${carpenterOwnerName} fra ${carpenterCompanyName}` : carpenterCompanyName;
+    const signatureName = getCarpenterSenderName(carpenter);
 
     const content = `
         <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Kære ${customerName},</h2>
@@ -187,9 +193,7 @@ export const getAdminNewSignupTemplate = (companyName, cvr, ownerName, email, ph
 };
 
 export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null) => {
-    const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
-    const carpenterOwnerName = carpenter?.owner_name || carpenter?.contact_person || '';
-    const signatureName = carpenterOwnerName ? `${carpenterOwnerName} fra ${carpenterCompanyName}` : carpenterCompanyName;
+    const signatureName = getCarpenterSenderName(carpenter);
 
     const content = `
         <div style="text-align: center; margin-bottom: 32px;">
@@ -216,8 +220,7 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
 
 export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, carpenter, quoteUrl) => {
     const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
-    const carpenterOwnerName = carpenter?.owner_name || carpenter?.contact_person || '';
-    const signatureName = carpenterOwnerName ? `${carpenterOwnerName} fra ${carpenterCompanyName}` : carpenterCompanyName;
+    const signatureName = getCarpenterSenderName(carpenter);
     
     const phone = carpenter?.phone || '';
     const email = carpenter?.email || '';

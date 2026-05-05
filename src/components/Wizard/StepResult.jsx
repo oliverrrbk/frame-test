@@ -65,13 +65,14 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
             // Send emails (async so we don't block the UI)
             if (customerEmail !== 'Ukendt' && !isManualCreation) {
                 import('../../utils/sendEmail').then(({ sendEmail }) => {
-                    import('../../utils/emailTemplates').then(({ getCustomerRequestReceivedTemplate, getCarpenterNewRequestTemplate }) => {
+                    import('../../utils/emailTemplates').then(({ getCustomerRequestReceivedTemplate, getCarpenterNewRequestTemplate, getCarpenterSenderName }) => {
+                        const senderName = getCarpenterSenderName(carpenter);
                         // Email to customer
                         sendEmail({
                             to: customerEmail,
                             subject: `Tak for din forespørgsel - ${carpenterName}`,
                             html: getCustomerRequestReceivedTemplate(customerName, categoryName, carpenter),
-                            fromName: carpenterName,
+                            fromName: senderName,
                             replyTo: carpenterEmail
                         });
                         
