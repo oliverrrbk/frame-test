@@ -856,7 +856,7 @@ const Dashboard = () => {
         }
     };
 
-    const handleUploadAndSendQuote = async (leadId, carpenterSlug, providedFile = null, finalPrice = null, extraRawData = {}) => {
+    const handleUploadAndSendQuote = async (leadId, carpenterSlug, providedFile = null, finalPrice = null, extraRawData = {}, sendEmail = true) => {
         const fileToUpload = providedFile || selectedPdfFile;
         if (!fileToUpload) {
             toast.error('Du skal vedhæfte en PDF, før du kan udsende tilbuddet!');
@@ -895,7 +895,7 @@ const Dashboard = () => {
             if (updateError) throw updateError;
 
             // Udsend mail til kunden
-            if (targetLead.customer_email && targetLead.customer_email !== 'Ukendt') {
+            if (sendEmail && targetLead.customer_email && targetLead.customer_email !== 'Ukendt') {
                 import('../../utils/sendEmail').then(({ sendEmail }) => {
                     const carpenterName = carpenterProfile?.company_name || carpenterProfile?.owner_name || 'Din Tømrer';
                     const senderName = getCarpenterSenderName(carpenterProfile);
@@ -2730,61 +2730,114 @@ const Dashboard = () => {
                                                     </div>
 
                                                     {/* ActionBar fixed til bunden for funktionalitet */}
-                                                    <div style={{ position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#1e293b', padding: '16px 24px', borderRadius: '14px', display: 'flex', gap: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 10001, alignItems: 'center' }}>
-                                                        <button 
-                                                            onClick={(e) => { e.stopPropagation(); setQuoteBuilder({...quoteBuilder, showPreview: false}); }} 
-                                                            style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #475569', backgroundColor: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
-                                                        >
-                                                            ← Tilbage og redigér
-                                                        </button>
-                                                        <button 
-                                                            disabled={quoteBuilder.isGeneratingPdf}
-                                                            onClick={async (e) => {
-                                                                e.stopPropagation();
-                                                                setQuoteBuilder(p => ({...p, isGeneratingPdf: true, uploadStepText: '⏳ Tegner PDF...'}));
-                                                                try {
-                                                                    const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
-                                                                    const pdf = new jsPDF('p', 'mm', 'a4');
-                                                                    const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                                                                    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
-                                                                    const pdfBlob = pdf.output('blob');
-                                                                    
-                                                                    setQuoteBuilder(p => ({...p, uploadStepText: '☁️ Gemmer sikkert i skyen...'}));
+                                                    <div style={{ position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#1e293b', padding: '16px 24px', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 10001 }}>
+                                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                                            <button 
+                                                                disabled={quoteBuilder.isGeneratingPdf}
+                                                                onClick={(e) => { e.stopPropagation(); setQuoteBuilder({...quoteBuilder, showPreview: false}); }} 
+                                                                style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #475569', backgroundColor: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
+                                                            >
+                                                                ← Tilbage og redigér
+                                                            </button>
+                                                            <button 
+                                                                disabled={quoteBuilder.isGeneratingPdf}
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    setQuoteBuilder(p => ({...p, isGeneratingPdf: true, uploadStepText: '⏳ Tegner PDF...'}));
+                                                                    try {
+                                                                        const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
+                                                                        const pdf = new jsPDF('p', 'mm', 'a4');
+                                                                        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                                                                        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                                                                        const pdfBlob = pdf.output('blob');
+                                                                        
+                                                                        setQuoteBuilder(p => ({...p, uploadStepText: '☁️ Gemmer sikkert i skyen...'}));
 
-                                                                    const cleanProjectTitle = (categoryNames[selectedLead.project_category] || selectedLead.project_category).replace(/\//g, '-').replace(/\s+/g, '_');
-                                                                    const cleanName = (selectedLead.customer_name || 'Kunde').split(' ')[0].replace(/[^a-zA-ZæøåÆØÅ]/g, '');
-                                                                    const cleanAddress = (selectedLead.customer_address || 'Adresse').split(',')[0].replace(/[^a-zA-Z0-9æøåÆØÅ\s]/g, '').replace(/\s+/g, '_');
-                                                                    
-                                                                    const file = new File([pdfBlob], `Tilbud_${cleanProjectTitle}_${cleanName}_${cleanAddress}.pdf`, { type: 'application/pdf' });
-                                                                    const slug = carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst';
-                                                                    
-                                                                    const finalPrice = ((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25;
-                                                                    
-                                                                    const extraRawData = { 
-                                                                        calc_data: {
-                                                                            laborHours: quoteBuilder.laborHours,
-                                                                            hourlyRate: quoteBuilder.hourlyRate,
-                                                                            materialCost: quoteBuilder.materialCost,
-                                                                            drivingCost: quoteBuilder.drivingCost,
-                                                                        },
-                                                                        quote_settings: quoteBuilder.settings,
-                                                                        custom_message: quoteBuilder.customMessage
-                                                                    };
-                                                                    
-                                                                    setQuoteBuilder(p => ({...p, uploadStepText: '📧 Sender e-mail...'}));
-                                                                    await handleUploadAndSendQuote(selectedLead.id, slug, file, finalPrice, extraRawData);
-                                                                    
-                                                                    setQuoteBuilder(p => ({...p, isGeneratingPdf: false, showPreview: false}));
-                                                                } catch (err) {
-                                                                    console.error("Fejl i PDF generering:", err);
-                                                                    toast.error("Hov! Der skete en uventet fejl ifm PDF oprettelsen.");
-                                                                    setQuoteBuilder(p => ({...p, isGeneratingPdf: false}));
-                                                                }
-                                                            }} 
-                                                            style={{ padding: '16px 32px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', flex: 1, transition: 'background-color 0.2s', fontSize: '1rem', opacity: quoteBuilder.isGeneratingPdf ? 0.7 : 1, boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)' }}
-                                                        >
-                                                            {quoteBuilder.isGeneratingPdf ? quoteBuilder.uploadStepText : (selectedLead.status === 'Sendt tilbud' ? 'SENDT. TILBUD TIL KUNDE (Send igen)' : 'SEND TILBUD TIL KUNDE (PDF + Web)')}
-                                                        </button>
+                                                                        const cleanProjectTitle = (categoryNames[selectedLead.project_category] || selectedLead.project_category).replace(/\//g, '-').replace(/\s+/g, '_');
+                                                                        const cleanName = (selectedLead.customer_name || 'Kunde').split(' ')[0].replace(/[^a-zA-ZæøåÆØÅ]/g, '');
+                                                                        const cleanAddress = (selectedLead.customer_address || 'Adresse').split(',')[0].replace(/[^a-zA-Z0-9æøåÆØÅ\s]/g, '').replace(/\s+/g, '_');
+                                                                        
+                                                                        const file = new File([pdfBlob], `Tilbud_${cleanProjectTitle}_${cleanName}_${cleanAddress}.pdf`, { type: 'application/pdf' });
+                                                                        const slug = carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst';
+                                                                        
+                                                                        const finalPrice = ((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25;
+                                                                        
+                                                                        const extraRawData = { 
+                                                                            calc_data: {
+                                                                                laborHours: quoteBuilder.laborHours,
+                                                                                hourlyRate: quoteBuilder.hourlyRate,
+                                                                                materialCost: quoteBuilder.materialCost,
+                                                                                drivingCost: quoteBuilder.drivingCost,
+                                                                            },
+                                                                            quote_settings: quoteBuilder.settings,
+                                                                            custom_message: quoteBuilder.customMessage
+                                                                        };
+                                                                        
+                                                                        setQuoteBuilder(p => ({...p, uploadStepText: '📧 Sender e-mail...'}));
+                                                                        await handleUploadAndSendQuote(selectedLead.id, slug, file, finalPrice, extraRawData, true);
+                                                                        
+                                                                        setQuoteBuilder(p => ({...p, isGeneratingPdf: false, showPreview: false}));
+                                                                    } catch (err) {
+                                                                        console.error("Fejl i PDF generering:", err);
+                                                                        toast.error("Hov! Der skete en uventet fejl ifm PDF oprettelsen.");
+                                                                        setQuoteBuilder(p => ({...p, isGeneratingPdf: false}));
+                                                                    }
+                                                                }} 
+                                                                style={{ padding: '16px 32px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', flex: 1, transition: 'background-color 0.2s', fontSize: '1rem', opacity: quoteBuilder.isGeneratingPdf ? 0.7 : 1, boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)' }}
+                                                            >
+                                                                {quoteBuilder.isGeneratingPdf ? quoteBuilder.uploadStepText : (selectedLead.status === 'Sendt tilbud' ? 'SENDT. TILBUD TIL KUNDE (Send igen)' : 'SEND TILBUD TIL KUNDE (PDF + Web)')}
+                                                            </button>
+                                                        </div>
+
+                                                        {selectedLead.status === 'Sendt tilbud' && (
+                                                            <button 
+                                                                disabled={quoteBuilder.isGeneratingPdf}
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    setQuoteBuilder(p => ({...p, isGeneratingPdf: true, uploadStepText: '⏳ Tegner PDF...'}));
+                                                                    try {
+                                                                        const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
+                                                                        const pdf = new jsPDF('p', 'mm', 'a4');
+                                                                        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                                                                        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                                                                        const pdfBlob = pdf.output('blob');
+                                                                        
+                                                                        setQuoteBuilder(p => ({...p, uploadStepText: '☁️ Opdaterer dokumentet...'}));
+
+                                                                        const cleanProjectTitle = (categoryNames[selectedLead.project_category] || selectedLead.project_category).replace(/\//g, '-').replace(/\s+/g, '_');
+                                                                        const cleanName = (selectedLead.customer_name || 'Kunde').split(' ')[0].replace(/[^a-zA-ZæøåÆØÅ]/g, '');
+                                                                        const cleanAddress = (selectedLead.customer_address || 'Adresse').split(',')[0].replace(/[^a-zA-Z0-9æøåÆØÅ\s]/g, '').replace(/\s+/g, '_');
+                                                                        
+                                                                        const file = new File([pdfBlob], `Tilbud_${cleanProjectTitle}_${cleanName}_${cleanAddress}.pdf`, { type: 'application/pdf' });
+                                                                        const slug = carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst';
+                                                                        
+                                                                        const finalPrice = ((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25;
+                                                                        
+                                                                        const extraRawData = { 
+                                                                            calc_data: {
+                                                                                laborHours: quoteBuilder.laborHours,
+                                                                                hourlyRate: quoteBuilder.hourlyRate,
+                                                                                materialCost: quoteBuilder.materialCost,
+                                                                                drivingCost: quoteBuilder.drivingCost,
+                                                                            },
+                                                                            quote_settings: quoteBuilder.settings,
+                                                                            custom_message: quoteBuilder.customMessage
+                                                                        };
+                                                                        
+                                                                        await handleUploadAndSendQuote(selectedLead.id, slug, file, finalPrice, extraRawData, false);
+                                                                        toast.success("Tilbuddet er opdateret (kunden får altid vist det nyeste, når de åbner deres link).");
+                                                                        setQuoteBuilder(p => ({...p, isGeneratingPdf: false, showPreview: false}));
+                                                                    } catch (err) {
+                                                                        console.error("Fejl i PDF generering:", err);
+                                                                        toast.error("Hov! Der skete en uventet fejl.");
+                                                                        setQuoteBuilder(p => ({...p, isGeneratingPdf: false}));
+                                                                    }
+                                                                }} 
+                                                                style={{ padding: '12px 24px', backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', transition: 'all 0.2s', fontSize: '0.9rem', width: '100%' }}
+                                                            >
+                                                                OPDATER TILBUD LIGE STILLE (Uden at sende e-mail)
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     
                                                     <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
