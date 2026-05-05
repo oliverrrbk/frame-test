@@ -133,6 +133,9 @@ const Dashboard = () => {
         if (tabParam === 'Bekræftet opgave') {
             setActiveTab('leads');
             setLeadFilter('Bekræftet opgave');
+        } else if (tabParam === 'leads') {
+            setActiveTab('leads');
+            setLeadFilter('Ny forespørgsel');
         } else if (tabParam === 'integrations') {
             setActiveTab('integrations');
             // Fjern parameteren så man kan skifte væk igen uden at blive låst
@@ -851,7 +854,7 @@ const Dashboard = () => {
         }
     };
 
-    const handleUploadAndSendQuote = async (leadId, carpenterSlug, providedFile = null, finalPrice = null) => {
+    const handleUploadAndSendQuote = async (leadId, carpenterSlug, providedFile = null, finalPrice = null, extraRawData = {}) => {
         const fileToUpload = providedFile || selectedPdfFile;
         if (!fileToUpload) {
             toast.error('Du skal vedhæfte en PDF, før du kan udsende tilbuddet!');
@@ -875,7 +878,7 @@ const Dashboard = () => {
 
             const targetLead = leadsData.find(l => l.id === leadId);
             const currentRawData = targetLead.raw_data || {};
-            const newRawData = { ...currentRawData, quote_pdf_url: publicUrl };
+            const newRawData = { ...currentRawData, ...extraRawData, quote_pdf_url: publicUrl };
             if (finalPrice !== null) {
                 newRawData.actual_quote_price = finalPrice;
             }
@@ -896,7 +899,7 @@ const Dashboard = () => {
                     sendEmail({
                         to: targetLead.customer_email,
                         subject: `Dit tilbud fra ${carpenterName} er klar`,
-                        html: getCustomerOfferSentTemplate(targetLead.customer_name, quoteUrl, targetLead.project_category, carpenterProfile),
+                        html: getCustomerOfferSentTemplate(targetLead.customer_name, quoteUrl, targetLead.project_category, carpenterProfile, publicUrl),
                         fromName: carpenterName,
                         replyTo: carpenterProfile?.email
                     });
@@ -2525,7 +2528,7 @@ const Dashboard = () => {
                                                                 disabled={!selectedPdfFile || isUploadingPdf}
                                                                 onClick={() => handleUploadAndSendQuote(selectedLead.id, carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst')}
                                                             >
-                                                                {isUploadingPdf ? 'Sender...' : 'Upload dit eget tilbud'}
+                                                                {isUploadingPdf ? 'Sender...' : (selectedLead.status === 'Sendt tilbud' ? 'Sendt. Tilbud til kunde' : 'Upload dit eget tilbud')}
                                                             </button>
                                                         </div>
                                                     </div>
@@ -2729,28 +2732,8 @@ const Dashboard = () => {
                                                                     const slug = carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst';
                                                                     
                                                                     const finalPrice = ((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25;
-                                                                    await handleUploadAndSendQuote(selectedLead.id, slug, file, finalPrice);
                                                                     
-                                                                    setQuoteBuilder(p => ({...p, isGeneratingPdf: false, showPreview: false}));
-                                                                } catch (err) {
-                                                                    console.error("Fejl i PDF generering:", err);
-                                                                    toast.error("Hov! Der skete en uventet fejl ifm PDF oprettelsen.");
-                                                                    setQuoteBuilder(p => ({...p, isGeneratingPdf: false}));
-                                                                }
-                                                            }} 
-                                                            style={{ padding: '16px 32px', backgroundColor: '#334155', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', flex: 1, transition: 'background-color 0.2s', fontSize: '1rem', opacity: quoteBuilder.isGeneratingPdf ? 0.7 : 1 }}
-                                                        >
-                                                            {quoteBuilder.isGeneratingPdf ? '⏳ Uploader PDF...' : 'GEM SOM STANDALONE PDF'}
-                                                        </button>
-                                                        
-                                                        <button 
-                                                            onClick={async () => {
-                                                                try {
-                                                                    setQuoteBuilder(p => ({...p, isGeneratingPdf: true}));
-                                                                    
-                                                                    const currentRawData = selectedLead.raw_data || {};
-                                                                    const newRawData = { 
-                                                                        ...currentRawData, 
+                                                                    const extraRawData = { 
                                                                         calc_data: {
                                                                             laborHours: quoteBuilder.laborHours,
                                                                             hourlyRate: quoteBuilder.hourlyRate,
@@ -2761,29 +2744,18 @@ const Dashboard = () => {
                                                                         custom_message: quoteBuilder.customMessage
                                                                     };
                                                                     
-                                                                    const { data, error } = await supabase.from('leads').update({ status: 'Sendt tilbud', raw_data: newRawData }).eq('id', selectedLead.id).select().single();
-                                                                    if (error) throw error;
-                                                                    
-                                                                    const publicUrl = `${window.location.origin}/${carpenterProfile?.slug || 't'}/tilbud/${data.quote_token || data.id}`;
-                                                                    
-                                                                    setLeadsData(prev => prev.map(l => l.id === selectedLead.id ? data : l));
-                                                                    setSelectedLead(data);
+                                                                    await handleUploadAndSendQuote(selectedLead.id, slug, file, finalPrice, extraRawData);
                                                                     
                                                                     setQuoteBuilder(p => ({...p, isGeneratingPdf: false, showPreview: false}));
-                                                                    
-                                                                    navigator.clipboard.writeText(publicUrl);
-                                                                    toast.success("Tilbuddet er oprettet! Det interaktive kundelink er kopieret til din udklipsholder. \n\nDu kan også se linket under leadet.");
-                                                                    
                                                                 } catch (err) {
-                                                                    console.error("Fejl ved oprettelse af web-tilbud:", err);
-                                                                    toast.error("Der skete en fejl. Prøv igen.");
+                                                                    console.error("Fejl i PDF generering:", err);
+                                                                    toast.error("Hov! Der skete en uventet fejl ifm PDF oprettelsen.");
                                                                     setQuoteBuilder(p => ({...p, isGeneratingPdf: false}));
                                                                 }
-                                                            }}
-                                                            disabled={quoteBuilder.isGeneratingPdf}
-                                                            style={{ padding: '16px 32px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', flex: 2, transition: 'background-color 0.2s', fontSize: '1.1rem', opacity: quoteBuilder.isGeneratingPdf ? 0.7 : 1, boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)' }}
+                                                            }} 
+                                                            style={{ padding: '16px 32px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', flex: 1, transition: 'background-color 0.2s', fontSize: '1rem', opacity: quoteBuilder.isGeneratingPdf ? 0.7 : 1, boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)' }}
                                                         >
-                                                            {quoteBuilder.isGeneratingPdf ? '⏳ GEMMER...' : 'OPRET INTERAKTIVT WEB-TILBUD (Anbefales)'}
+                                                            {quoteBuilder.isGeneratingPdf ? '⏳ Sender Tilbud...' : (selectedLead.status === 'Sendt tilbud' ? 'SENDT. TILBUD TIL KUNDE (Send igen)' : 'SEND TILBUD TIL KUNDE (PDF + Web)')}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -3561,7 +3533,12 @@ const Dashboard = () => {
                                     toast.success('Ny kunde oprettet!');
                                     // Genindlæs leads
                                     const { data } = await supabase.from('leads').select('*').eq('carpenter_id', carpenterProfile.id).order('created_at', { ascending: false });
-                                    if (data) setLeadsData(data);
+                                    if (data && data.length > 0) {
+                                        setLeadsData(data);
+                                        setActiveTab('leads');
+                                        setLeadFilter('Ny forespørgsel');
+                                        setSelectedLead(data[0]); // Vælg og åbn det nyeste lead automatisk!
+                                    }
                                 }} 
                             />
                         </div>

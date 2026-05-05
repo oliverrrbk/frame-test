@@ -182,7 +182,7 @@ const QuoteAcceptPage = () => {
                                 sendEmail({
                                     to: carpenter.email,
                                     subject: `✅ Tilbud accepteret: ${categoryName} - ${lead.customer_name}`,
-                                    html: getCarpenterOfferAcceptedTemplate(carpenter.company_name, lead.customer_name, categoryName, appUrl),
+                                    html: getCarpenterOfferAcceptedTemplate(carpenter.company_name, lead.customer_name, categoryName, appUrl, carpenter),
                                     fromName: carpenterName,
                                     replyTo: lead.customer_email
                                 });

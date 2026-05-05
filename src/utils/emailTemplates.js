@@ -183,7 +183,7 @@ export const getAdminNewSignupTemplate = (companyName, cvr, ownerName, email, ph
     return getBaseTemplate("Ny Tømrer Oprettet", content, `Ny bruger: ${companyName}`);
 };
 
-export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter) => {
+export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null) => {
     const carpenterName = carpenter?.company_name || 'Tømreren';
     const content = `
         <div style="text-align: center; margin-bottom: 32px;">
@@ -194,7 +194,8 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
         <p style="color: #334155;">Jeg har nu gennemgået dine ønsker vedrørende dit projekt (<strong>${categoryName}</strong>) og har udarbejdet et officielt tilbud til dig.</p>
         
         <div style="text-align: center; margin: 32px 0;">
-            <a href="${quoteUrl}" style="${buttonStyle}">Se dit personlige tilbud her</a>
+            <a href="${quoteUrl}" style="${buttonStyle}">Se aftale (Interaktivt)</a>
+            ${pdfUrl ? `<a href="${pdfUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #f1f5f9; color: #334155; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #cbd5e1; margin-left: 10px;">Se som PDF</a>` : ''}
         </div>
         
         <p style="color: #334155; font-size: 14px;"><em>Linket fører dig til en sikker portal, hvor du kan læse hele tilbuddet og bekræfte opgaven direkte til mig, når du er klar.</em></p>
@@ -247,7 +248,10 @@ export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, car
     return getBaseTemplate("Dit tilbud er bekræftet", content, "Tillykke! Din opgave er bekræftet og sat i gang.", carpenter);
 };
 
-export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, categoryName, appUrl = 'https://app.bisonframe.dk') => {
+export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, categoryName, appUrl = 'https://app.bisonframe.dk', carpenter = null) => {
+    const economicLink = carpenter?.economic_api_key ? `<a href="https://secure.e-conomic.com/sales/invoices/drafts" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-left: 10px;">Åbn E-conomic Regnskab</a>` : '';
+    const dineroLink = carpenter?.dinero_api_key ? `<a href="https://dinero.dk/app/sales/drafts" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-left: 10px;">Åbn Dinero Regnskab</a>` : '';
+    
     const content = `
         <div style="text-align: center; margin-bottom: 32px;">
             <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
@@ -260,6 +264,8 @@ export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, c
         
         <div style="text-align: center; margin: 32px 0;">
             <a href="${appUrl}/dashboard" style="${buttonStyle}">Gå til dit Dashboard</a>
+            ${economicLink}
+            ${dineroLink}
         </div>
     `;
     return getBaseTemplate("Et tilbud er blevet accepteret", content, `${customerName} har accepteret dit tilbud!`);
