@@ -256,7 +256,7 @@ export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, c
         
         <p style="color: #334155;">Hej ${carpenterName},</p>
         <p style="color: #334155;">Gode nyheder! <strong>${customerName}</strong> har netop accepteret dit tilbud på opgaven: <strong>${categoryName}</strong>.</p>
-        <p style="color: #334155;">Opgaven er nu bekræftet og klar til at blive sat i gang. Du kan nu logge ind og få overblik, eller kontakte kunden for at aftale opstartsdato.</p>
+        <p style="color: #334155;">Opgaven er nu bekræftet og klar til at blive sat i gang. Har du tilknyttet dit regnskabsprogram eller sagsstyringssystem, ligger sagen allerede klar til dig som en kladde!</p>
         
         <div style="text-align: center; margin: 32px 0;">
             <a href="${appUrl}/dashboard" style="${buttonStyle}">Gå til dit Dashboard</a>

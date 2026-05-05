@@ -621,6 +621,10 @@ const Dashboard = () => {
                     toast.error("Der opstod en fejl ved overførsel til Dinero: " + (error?.message || data?.error));
                 } else {
                     toast.success(`Fakturakladde oprettet i Dinero! (ID: ${data.invoiceId})`);
+                    const updatedLead = { ...lead, raw_data: { ...(lead.raw_data || {}), synced_to_accounting: true } };
+                    await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
+                    setSelectedLead(updatedLead);
+                    setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
                 }
 
             } else if (carpenterProfile.economic_api_key && carpenterProfile.economic_api_key !== 'pending_authorization') {
@@ -635,6 +639,10 @@ const Dashboard = () => {
                     toast.error("Der opstod en fejl ved overførsel til e-conomic: " + (error?.message || data?.error));
                 } else {
                     toast.success(`Fakturakladde oprettet i e-conomic! (ID: ${data.invoiceId})`);
+                    const updatedLead = { ...lead, raw_data: { ...(lead.raw_data || {}), synced_to_accounting: true } };
+                    await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
+                    setSelectedLead(updatedLead);
+                    setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
                 }
             } else {
                 toast('Forbind dit regnskabsprogram for at overføre. Du sendes til indstillinger.', { icon: 'ℹ️' });
@@ -2129,14 +2137,24 @@ const Dashboard = () => {
                                             {selectedLead.status === 'Bekræftet opgave' && ['admin', 'accountant'].includes(carpenterProfile?.role) && (
                                                 <>
                                                     {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && (
-                                                        <button onClick={() => syncToAccounting(selectedLead)} style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s' }}>
-                                                            <FileText size={18}/> Regnskab
-                                                        </button>
+                                                        selectedLead.raw_data?.synced_to_accounting ? (
+                                                            <a href={carpenterProfile?.economic_api_key ? 'https://secure.e-conomic.com/sales/invoices/drafts' : 'https://app.dinero.dk/'} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#dcfce7', color: '#166534', border: '1px solid #22c55e', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', transition: 'all 0.2s' }}>
+                                                                <ExternalLink size={18}/> Åbn Regnskab
+                                                            </a>
+                                                        ) : (
+                                                            <button onClick={() => syncToAccounting(selectedLead)} style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s' }}>
+                                                                <FileText size={18}/> Regnskab
+                                                            </button>
+                                                        )
                                                     )}
 
                                                     {carpenterProfile?.ordrestyring_token && (
                                                         selectedLead.ordrestyring_case_id ? (
                                                             <a href={ (String(selectedLead.ordrestyring_case_id).length >= 4 || Number(selectedLead.ordrestyring_case_id) > 1000) ? `https://system.ordrestyring.dk/cases?id=${selectedLead.ordrestyring_case_id}` : `https://system.ordrestyring.dk/cases` } target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
+                                                                <ExternalLink size={18} /> Åbn Ordrestyring
+                                                            </a>
+                                                        ) : selectedLead.raw_data?.synced_to_management ? (
+                                                            <a href={`https://system.ordrestyring.dk/cases`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
                                                                 <ExternalLink size={18} /> Åbn Ordrestyring
                                                             </a>
                                                         ) : (
@@ -2151,6 +2169,10 @@ const Dashboard = () => {
                                                             <a href={`https://control-panel.apacta.com/projects/${selectedLead.apacta_case_id}`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
                                                                 <ExternalLink size={18} /> Åbn Apacta
                                                             </a>
+                                                        ) : selectedLead.raw_data?.synced_to_management ? (
+                                                            <a href={`https://control-panel.apacta.com/projects`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
+                                                                <ExternalLink size={18} /> Åbn Apacta
+                                                            </a>
                                                         ) : (
                                                             <button onClick={() => syncToApacta(selectedLead)} style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
                                                                 <UploadCloud size={18} /> Apacta
@@ -2160,6 +2182,10 @@ const Dashboard = () => {
 
                                                     {carpenterProfile?.minuba_api_key && (
                                                         selectedLead.minuba_case_id ? (
+                                                            <a href={`https://app.minuba.dk/`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
+                                                                <ExternalLink size={18} /> Åbn Minuba
+                                                            </a>
+                                                        ) : selectedLead.raw_data?.synced_to_management ? (
                                                             <a href={`https://app.minuba.dk/`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
                                                                 <ExternalLink size={18} /> Åbn Minuba
                                                             </a>

@@ -110,7 +110,13 @@ const QuoteAcceptPage = () => {
                 user_agent: navigator.userAgent
             };
 
-            const newRawData = { ...(lead?.raw_data || {}), audit_trail: auditTrail };
+            // Vi antager auto-sync bliver skudt afsted
+            const newRawData = { 
+                ...(lead?.raw_data || {}), 
+                audit_trail: auditTrail,
+                synced_to_accounting: true,
+                synced_to_management: true
+            };
 
             if (isUUID) {
                 const { error } = await supabase.rpc('update_lead_by_token', {
@@ -132,6 +138,16 @@ const QuoteAcceptPage = () => {
             
             // Succes
             setAccepted(true);
+            
+            // Auto-Sync til alle mulige integrationer i baggrunden
+            // Vi forsøger at kalde dem alle. De funktioner tømreren ikke har aktiveret, vil fejle lydløst (hvilket er tilsigtet).
+            const leadForSync = { ...lead, status: 'Bekræftet opgave', raw_data: newRawData };
+            supabase.functions.invoke('economic-invoice', { body: { lead: leadForSync } }).catch(() => {});
+            supabase.functions.invoke('dinero-invoice', { body: { lead: leadForSync } }).catch(() => {});
+            supabase.functions.invoke('ordrestyring-case', { body: { lead: leadForSync } }).catch(() => {});
+            supabase.functions.invoke('apacta-case', { body: { lead: leadForSync } }).catch(() => {});
+            supabase.functions.invoke('minuba-case', { body: { lead: leadForSync } }).catch(() => {});
+            
             
             // Send bekræftelses-emails
             if (lead && lead.carpenter_id) {
