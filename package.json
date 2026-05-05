@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:vercel": "DISABLE_VERCEL_TOOLBAR=1 npx vercel dev",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
