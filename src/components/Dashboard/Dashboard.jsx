@@ -864,21 +864,23 @@ const Dashboard = () => {
         setIsUploadingPdf(true);
         try {
             const fileExt = fileToUpload.name.split('.').pop() || 'pdf';
-            const fileName = `quote_${leadId}_${Date.now()}.${fileExt}`;
+            const fileName = `quote_${leadId}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('uploads')
-                .upload(fileName, fileToUpload);
+                .upload(fileName, fileToUpload, { upsert: true, cacheControl: '0' });
 
             if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage
                 .from('uploads')
                 .getPublicUrl(fileName);
+                
+            const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
 
             const targetLead = leadsData.find(l => l.id === leadId);
             const currentRawData = targetLead.raw_data || {};
-            const newRawData = { ...currentRawData, ...extraRawData, quote_pdf_url: publicUrl };
+            const newRawData = { ...currentRawData, ...extraRawData, quote_pdf_url: cacheBustedUrl };
             if (finalPrice !== null) {
                 newRawData.actual_quote_price = finalPrice;
             }
