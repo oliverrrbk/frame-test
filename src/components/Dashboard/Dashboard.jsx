@@ -2087,7 +2087,7 @@ const Dashboard = () => {
                                         {/* Manuel Overslag Email Afsendelse / Vis Tilbud */}
                                         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
 
-                                            {['Sendt tilbud', 'Bekræftet opgave'].includes(selectedLead.status) && (
+                                            {selectedLead.status === 'Bekræftet opgave' && (
                                                 <a 
                                                     href={`${window.location.origin}/${carpenterProfile?.slug || 't'}/tilbud/${selectedLead.quote_token || selectedLead.id}`}
                                                     target="_blank"
