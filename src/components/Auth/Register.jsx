@@ -85,7 +85,8 @@ const Register = ({ setSession }) => {
                     phone: phone,
                     email: email,
                     tier: selectedTier
-                }
+                },
+                emailRedirectTo: window.location.origin + '/bekraeftet'
             }
         });
 
