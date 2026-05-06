@@ -244,7 +244,7 @@ export default function Footer() {
                             <p className="mt-4 leading-relaxed">Præcise overslag til den moderne håndværker. Spar mere tid i hverdagen, og vind flere opgaver hos kunden.</p>
                         </div>
                         <div className="flex flex-row flex-wrap gap-x-12 gap-y-6 justify-start md:justify-end md:items-start text-xs font-semibold sm:text-sm text-slate-500 dark:text-slate-400 pt-1">
-                            <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/calculator">Udregn Profit</Link>
+                            <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/calculate">Udregn Profit</Link>
                             <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/features">Funktioner</Link>
                             <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/pricing">Priser</Link>
                             <button onClick={() => setIsTermsOpen(true)} className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 appearance-none bg-transparent border-none p-0 outline-none text-inherit font-inherit">Aftalevilkår</button>
