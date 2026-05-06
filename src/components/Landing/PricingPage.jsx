@@ -275,6 +275,28 @@ export default function PricingPage({ setSession }) {
                     </motion.div>
                 </section>
 
+                {/* Integration Value Proposition */}
+                <section className="w-full max-w-4xl mx-auto mb-[clamp(6rem,10vw,8rem)] relative z-10">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-8 md:p-12 border border-slate-200/60 dark:border-slate-700/50 flex flex-col items-center text-center">
+                        <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-6">
+                            Altid Inkluderet
+                        </div>
+                        <h2 className="text-[clamp(1.5rem,2.5vw,2rem)] font-bold text-slate-900 dark:text-slate-100 mb-4 tracking-tight">
+                            Meget mere end bare en tilbudsberegner
+                        </h2>
+                        <p className="text-slate-600 dark:text-slate-400 max-w-2xl text-[clamp(1rem,1.2vw,1.125rem)] leading-relaxed mb-8">
+                            Når du får en ny kunde ind via systemet, stopper festen ikke der. Bison Frame fungerer som dit mini-CRM, hvor du nemt styrer dine leads. Og når tilbuddet er vundet, overføres sagen automatisk direkte til dit foretrukne regnskabs- eller ordrestyringsprogram med ét klik.
+                        </p>
+                        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+                            <span className="font-bold text-xl text-slate-700 dark:text-slate-300">e-conomic</span>
+                            <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Ordrestyring</span>
+                            <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Dinero</span>
+                            <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Apacta</span>
+                            <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Minuba</span>
+                        </div>
+                    </div>
+                </section>
+
                 {/* FAQ Section (Technical Manual Style) */}
                 <section className="w-full max-w-5xl flex flex-col gap-12 pt-16 border-t border-slate-200/50 dark:border-slate-800/50 relative z-10 mb-[clamp(6rem,10vw,8rem)]">
                     <div className="flex items-center gap-4">
