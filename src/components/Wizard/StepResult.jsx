@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import { QUESTIONS } from './questionsConfig';
 
 const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard, nextStep, carpenter, isManualCreation = false, onComplete = null, editProject }) => {
     const [wantsQuote, setWantsQuote] = useState(false);
@@ -138,15 +139,33 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     marginBottom: '32px'
                 }}>
                     <h3 style={{ fontSize: '1.3rem', color: 'var(--text-primary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        Faktorer der påvirker rammen:
+                        Recap af dine indtastninger:
                     </h3>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '12px' }}>
-                        {breakdownArr.map((txt, idx) => (
-                            <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.05rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '16px' }}>
+                        {projectData.category === 'special' ? (
+                            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.05rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
                                 <span style={{ color: 'var(--accent)', marginTop: '2px' }}>✓</span>
-                                <span>{txt}</span>
+                                <span>{projectData.details?.aiSummary || projectData.details?.aiProjectTitle || 'Specialopgave'}</span>
                             </li>
-                        ))}
+                        ) : (
+                            Object.entries(projectData.details || {}).map(([key, value]) => {
+                                const categoryQuestions = QUESTIONS[projectData.category] || [];
+                                const question = categoryQuestions.find(q => q.id === key);
+                                
+                                if (!question || value === undefined || value === null || value === '') return null;
+                                if (question.type === 'textarea' || question.type === 'file') return null;
+
+                                return (
+                                    <li key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.0rem', color: 'var(--text-secondary)', lineHeight: '1.5', background: 'rgba(0,0,0,0.02)', padding: '12px 16px', borderRadius: '8px' }}>
+                                        <span style={{ color: '#10b981', marginTop: '2px' }}>✓</span>
+                                        <div>
+                                            <strong style={{ display: 'block', color: 'var(--text-primary)', marginBottom: '4px' }}>{question.label}</strong>
+                                            <span>{value}</span>
+                                        </div>
+                                    </li>
+                                );
+                            })
+                        )}
                     </ul>
                 </div>
 
