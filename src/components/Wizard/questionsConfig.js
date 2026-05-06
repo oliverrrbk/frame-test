@@ -130,6 +130,7 @@ export const QUESTIONS = {
         },
 
         { id: 'openableCount', type: 'number', label: 'Hvor mange af det samlede antal vinduer skal kunne åbnes?' },
+        { id: 'floors', type: 'select', label: 'Hvilken etage skal vinduerne primært monteres på?', tooltip: 'Vinduer på 1. sal eller højere kræver ofte leje af stillads eller lift.', options: ['Stueplan (Jordniveau)', '1. sal eller højere (Kræver stillads/lift)'] },
         { id: 'windowMeasurementType', type: 'select', label: 'Er der tale om store panoramavinduer/gulv-til-loft (specialmål)?', options: ['Nej, standard mål', 'Ja, store specialmål / panorama'] },
         { id: 'photos', type: 'file', label: 'Upload meget gerne et billede af vinduerne (indefra/udefra), så vi kan vurdere opgaven:' },
         { id: 'finish', type: 'select', label: 'Skal indvendig finish (fuge og lister) inkluderes propotionalt?', tooltip: 'Indvendig finish betyder, at tømreren sørger for at montere de indvendige trælister (gerigter) rundt om vinduet, og evt. fuge tæt til muren, så det er helt færdigt og pænt.', options: ['Ja', 'Nej'] },
@@ -151,7 +152,7 @@ export const QUESTIONS = {
             ]
         },
         { id: 'subfloor', type: 'select', label: 'Undergulv: Ligger det nuværende undergulv helt lige og i vater?', tooltip: 'Et undergulv er det bærende lag under selve trægulvet (fx beton eller spånplader). Hvis det slår buler eller hælder, skal tømreren bruge ekstra tid og materialer (strøer/flydespartel) på at rette det op først.', options: ['Ja, det er lige og klar til at lægge nyt på', 'Nej, tømreren skal rette det op først (strøer/flydespartel)'] },
-        { id: 'underfloorHeating', type: 'select', label: 'Er der (eller skal der etableres) varme i gulvet?', options: ['Ja', 'Nej'] },
+        { id: 'underfloorHeating', type: 'select', label: 'Er der (eller skal der etableres) varme i gulvet?', options: ['Nej', 'Ja, der er allerede støbt gulvvarme (kun specialunderlag kræves)', 'Ja, tømreren skal opbygge nyt gulvvarme (sporplader/varmefordeling)'] },
         { id: 'underlay', type: 'select', label: 'Underlag: Skal tømreren lægge trinlydsdæmpende underlag (foam/pap) under det nye gulv?', tooltip: 'Trinlydsdæmpende underlag er en tynd skummåtte eller tykt pap, der lægges mellem undergulvet og det nye gulv. Det reducerer "klik-klak" lyde når man går på det, og fjerner små ujævnheder.', options: ['Ja', 'Nej, ikke relevant'] },
         { 
             id: 'material', 
@@ -390,6 +391,7 @@ export const QUESTIONS = {
             ] 
         },
         { id: 'access', type: 'select', label: 'Er der fri adgang for maskiner (gravemaskine/lastbil) helt op til fundamentet?', options: ['Ja, nem adgang', 'Nej, al jord skal graves/køres ud med trillebør'] },
+        { id: 'underfloorHeating', type: 'select', label: 'Skal der etableres vandbåren gulvvarme i tilbygningen?', options: ['Ja', 'Nej'] },
         { id: 'floors', type: 'select', label: 'Hvor mange etager skal tilbygningen have?', options: ['1-plan', '1½-plan', '2-plan'] },
         { 
             id: 'material', 

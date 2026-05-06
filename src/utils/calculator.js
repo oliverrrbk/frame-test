@@ -208,10 +208,14 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Beregnes ud fra forøget tidsforbrug ved specialmønster (fx Sildeben) på gulv (+50% tid)`);
             }
 
-            if (d.underfloorHeating === 'Ja') {
+            if (d.underfloorHeating && d.underfloorHeating.includes('sporplader')) {
+                laborHours += initialInstallHours * 0.8;
+                if (!userSuppliesMaterials) materialCost += (numericAmount * 450) * dbSettings.material_markup; 
+                bArr.push(`Tillæg: Opbygning af nyt gulvvarme (sporplader/varmefordelingsplader)`);
+            } else if (d.underfloorHeating && d.underfloorHeating.includes('allerede støbt')) {
                 laborHours += initialInstallHours * 0.3;
                 if (!userSuppliesMaterials) materialCost += (numericAmount * 80) * dbSettings.material_markup; 
-                bArr.push(`Tillæg: Montering over/med gulvvarme kræver forøget arbejdstid og specialunderlag`);
+                bArr.push(`Tillæg: Montering over eksisterende gulvvarme kræver forøget arbejdstid og specialunderlag`);
             }
         }
 
@@ -231,6 +235,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 materialCost += (numericAmount * baseMat * 1.5) * matMarkup; 
             }
             bArr.push(`Tillæg: Store panoramavinduer / specialmål kræver specialhåndtering (maskine/glaskran og ekstra mandsopdækning)`);
+        }
+
+        if (cat === 'windows' && d.floors && d.floors.includes('1. sal')) {
+            laborHours += initialInstallHours * 0.2;
+            if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Stillads/Lift leje'] || 8000) * dbSettings.material_markup;
+            bArr.push(`Tillæg: Leje af lift/stillads og forøget tidsforbrug til montering på højere etager`);
         }
 
         if (cat === 'terrace') {
@@ -354,7 +364,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
             if (d.extensions === 'Ja') {
                 laborHours += 15;
-                bArr.push(`Tillæg: Overordnet basis-pulje af timer afsat til tilbygning/kviste (bliver præciseret i endeligt tilbud)`);
+                if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Kvist (Inddækning)'] || 10000) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Overordnet basis-pulje af timer/materialer afsat til tilbygning/kviste på taget`);
             }
         }
 
@@ -508,6 +519,18 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 let krybekaelderPris = indexCat['Tillæg: Krybekælder (pr m2)'] || 500;
                 if (!userSuppliesMaterials) materialCost += (numericAmount * krybekaelderPris) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Fundament som krybekælder er medregnet (+ tid og materiel)`);
+            } else if (d.foundationType && d.foundationType.includes('Støbt terrændæk')) {
+                laborHours += numericAmount * 1.5;
+                let betonPris = indexCat['Tillæg: Støbt terrændæk (pr m2)'] || 1500;
+                if (!userSuppliesMaterials) materialCost += (numericAmount * betonPris) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Støbt terrændæk (Beton) fundament er medregnet`);
+            }
+
+            if (d.underfloorHeating === 'Ja') {
+                laborHours += numericAmount * 0.5;
+                let varmePris = indexCat['Tillæg: Gulvvarme etablering (pr m2)'] || 450;
+                if (!userSuppliesMaterials) materialCost += (numericAmount * varmePris) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Etablering af gulvvarme i tilbygning`);
             }
             if (d.floors === '1½-plan') {
                 laborHours += initialInstallHours * 0.5;

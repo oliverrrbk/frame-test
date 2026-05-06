@@ -467,6 +467,7 @@ const Dashboard = () => {
                 { category: 'roof', name: 'Tagrender - Zink (pr. meter)', price: 450, carpenter_id: targetId },
                 { category: 'roof', name: 'Tagrender - Plast (pr. meter)', price: 200, carpenter_id: targetId },
                 { category: 'roof', name: 'Stillads (pr. m2 facadearbejde/tag)', price: 150, carpenter_id: targetId },
+                { category: 'roof', name: 'Tillæg: Kvist (Inddækning)', price: 10000, carpenter_id: targetId },
                 { category: 'roof', name: 'Sikkerhed (Buffer-pris)', price: 500, carpenter_id: targetId },
 
                 // Vinduer
@@ -478,6 +479,7 @@ const Dashboard = () => {
                 { category: 'windows', name: 'Stål', price: 10000, carpenter_id: targetId },
                 { category: 'windows', name: 'Glas', price: 9500, carpenter_id: targetId },
                 { category: 'windows', name: 'Gerigtsæt', price: 400, carpenter_id: targetId },
+                { category: 'windows', name: 'Tillæg: Stillads/Lift leje', price: 8000, carpenter_id: targetId },
                 { category: 'windows', name: 'Sikkerhed (Buffer-pris)', price: 6000, carpenter_id: targetId },
 
                 // Gulve
@@ -557,6 +559,8 @@ const Dashboard = () => {
                 { category: 'extensions', name: 'Tillæg: Stor gennembrydning', price: 12000, carpenter_id: targetId },
                 { category: 'extensions', name: 'Tillæg: Lille gennembrydning', price: 2500, carpenter_id: targetId },
                 { category: 'extensions', name: 'Tillæg: Element (Vindue/Dør)', price: 4000, carpenter_id: targetId },
+                { category: 'extensions', name: 'Tillæg: Støbt terrændæk (pr m2)', price: 1500, carpenter_id: targetId },
+                { category: 'extensions', name: 'Tillæg: Gulvvarme etablering (pr m2)', price: 450, carpenter_id: targetId },
                 { category: 'extensions', name: 'Leje af container (fast pris)', price: 3500, carpenter_id: targetId },
                 { category: 'extensions', name: 'Sikkerhed (Buffer-pris)', price: 18000, carpenter_id: targetId },
 
