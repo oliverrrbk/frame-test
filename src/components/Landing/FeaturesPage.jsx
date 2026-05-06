@@ -385,7 +385,7 @@ export default function FeaturesPage({ setSession }) {
                         >
 
                             <div style={{ padding: '60px 40px', height: '100%' }}>
-                                <Login />
+                                <Login setSession={setSession} />
                             </div>
                         </motion.div>
                     </>

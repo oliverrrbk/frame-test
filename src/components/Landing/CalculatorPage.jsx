@@ -158,7 +158,7 @@ export default function CalculatorPage({ setSession }) {
                             className="shadow-[-10px_0_40px_rgba(0,0,0,0.2)]"
                         >
                             <div style={{ padding: '60px 40px', height: '100%' }}>
-                                <Login />
+                                <Login setSession={setSession} />
                             </div>
                         </motion.div>
                     </>

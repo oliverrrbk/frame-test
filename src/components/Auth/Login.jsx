@@ -15,22 +15,32 @@ const Login = ({ setSession }) => {
         setLoading(true);
         setErrorMsg('');
 
-        let authResponse = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password,
-        });
+        try {
+            let authResponse = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
 
-        const { data, error } = authResponse;
+            const { data, error } = authResponse;
 
-        if (error) {
-            setErrorMsg(error.message);
-        } else if (data.session) {
-            localStorage.setItem('dashboard_active_tab', 'overview');
-            setSession(data.session);
-            navigate('/dashboard');
+            if (error) {
+                setErrorMsg(error.message);
+            } else if (data.session) {
+                if (typeof setSession === 'function') {
+                    localStorage.setItem('dashboard_active_tab', 'overview');
+                    setSession(data.session);
+                    navigate('/dashboard');
+                } else {
+                    console.error("setSession is not a function. It was not passed as a prop.");
+                    setErrorMsg("Der opstod en intern systemfejl. Prøv at genindlæse siden.");
+                }
+            }
+        } catch (err) {
+            console.error("Login error:", err);
+            setErrorMsg("Der opstod en uventet fejl. Prøv venligst igen.");
+        } finally {
+            setLoading(false);
         }
-        
-        setLoading(false);
     };
 
     return (
