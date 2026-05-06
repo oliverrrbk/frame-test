@@ -2621,7 +2621,7 @@ const Dashboard = () => {
                                                     onMouseEnter={(e) => e.target.style.background = '#e2e8f0'}
                                                     onMouseLeave={(e) => e.target.style.background = '#f1f5f9'}
                                                 >
-                                                    🏁 Afslut opgave (Flyt til Historik)
+                                                    Afslut opgave (Flyt til Historik)
                                                 </button>
                                             </div>
                                         )}
@@ -2637,7 +2637,7 @@ const Dashboard = () => {
                                                     onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; e.target.style.color = '#334155'; }}
                                                     onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#64748b'; }}
                                                 >
-                                                    👎 Marker som tabt / afvist opgave
+                                                    Marker som tabt / afvist opgave
                                                 </button>
                                             </div>
                                         )}
