@@ -463,10 +463,14 @@ const Dashboard = () => {
                 { category: 'roof', name: 'Decra', price: 600, carpenter_id: targetId },
                 { category: 'roof', name: 'Betontagsten', price: 800, carpenter_id: targetId },
                 { category: 'roof', name: 'Skiffer', price: 1200, carpenter_id: targetId },
+                { category: 'roof', name: 'Tillæg: Stillads 1½-plan / 2-plan', price: 15000, carpenter_id: targetId },
+                { category: 'roof', name: 'Tillæg: Stillads (Høj rejsning)', price: 10000, carpenter_id: targetId },
+                { category: 'roof', name: 'Opretning af spær (Påforing)', price: 80, carpenter_id: targetId },
+                { category: 'roof', name: 'Undertag (dug)', price: 120, carpenter_id: targetId },
+                { category: 'roof', name: 'Udhæng/Stern træværk (pr m2 overslag)', price: 150, carpenter_id: targetId },
+                { category: 'roof', name: 'Tagrender og nedløb (pr m2 overslag)', price: 180, carpenter_id: targetId },
+                { category: 'roof', name: 'Skorstensinddækning (Zink/Bly)', price: 3500, carpenter_id: targetId },
                 { category: 'roof', name: 'Ovenlysvindue / Velux (pr. stk)', price: 8500, carpenter_id: targetId },
-                { category: 'roof', name: 'Tagrender - Zink (pr. meter)', price: 450, carpenter_id: targetId },
-                { category: 'roof', name: 'Tagrender - Plast (pr. meter)', price: 200, carpenter_id: targetId },
-                { category: 'roof', name: 'Stillads (pr. m2 facadearbejde/tag)', price: 150, carpenter_id: targetId },
                 { category: 'roof', name: 'Tillæg: Kvist (Inddækning)', price: 10000, carpenter_id: targetId },
                 { category: 'roof', name: 'Sikkerhed (Buffer-pris)', price: 500, carpenter_id: targetId },
 
@@ -478,7 +482,7 @@ const Dashboard = () => {
                 { category: 'windows', name: 'Dannebrogsvinduer / Sprossevinduer', price: 9000, carpenter_id: targetId },
                 { category: 'windows', name: 'Stål', price: 10000, carpenter_id: targetId },
                 { category: 'windows', name: 'Glas', price: 9500, carpenter_id: targetId },
-                { category: 'windows', name: 'Gerigtsæt', price: 400, carpenter_id: targetId },
+                { category: 'windows', name: 'Gerigter (sæt)', price: 400, carpenter_id: targetId },
                 { category: 'windows', name: 'Tillæg: Stillads/Lift leje', price: 8000, carpenter_id: targetId },
                 { category: 'windows', name: 'Sikkerhed (Buffer-pris)', price: 6000, carpenter_id: targetId },
 
@@ -495,8 +499,9 @@ const Dashboard = () => {
                 { category: 'floor', name: 'Beton', price: 800, carpenter_id: targetId },
                 { category: 'floor', name: 'Tæppe', price: 250, carpenter_id: targetId },
                 { category: 'floor', name: 'Kork', price: 550, carpenter_id: targetId },
-                { category: 'floor', name: 'Fodpaneler (pr. løbende meter)', price: 120, carpenter_id: targetId },
-                { category: 'floor', name: 'Undergulv / Strøer (pr. m2)', price: 350, carpenter_id: targetId },
+                { category: 'floor', name: 'Trinlydsunderlag (Foam)', price: 45, carpenter_id: targetId },
+                { category: 'floor', name: 'Opretning af undergulv', price: 120, carpenter_id: targetId },
+                { category: 'floor', name: 'Fodlister (pr. m2 gulvareal proxy)', price: 50, carpenter_id: targetId },
                 { category: 'floor', name: 'Sikkerhed (Buffer-pris)', price: 400, carpenter_id: targetId },
 
                 // Døre
@@ -522,6 +527,10 @@ const Dashboard = () => {
                 { category: 'terrace', name: 'Punktfundament og støbemix (pr m2 overslag)', price: 150, carpenter_id: targetId },
                 { category: 'terrace', name: 'Rækværk/Gelænder træ (pr løbende meter)', price: 400, carpenter_id: targetId },
                 { category: 'terrace', name: 'Beslag til skjult montering (pr m2 overslag)', price: 120, carpenter_id: targetId },
+                { category: 'terrace', name: 'Hævet terrasse materialer (pr m2)', price: 250, carpenter_id: targetId },
+                { category: 'terrace', name: 'Udskiftning/Opbygning fundament (pr m2)', price: 150, carpenter_id: targetId },
+                { category: 'terrace', name: 'Fast tag (med tagpap)', price: 800, carpenter_id: targetId },
+                { category: 'terrace', name: 'Termotag / Plast', price: 400, carpenter_id: targetId },
                 { category: 'terrace', name: 'Sikkerhed (Buffer-pris)', price: 400, carpenter_id: targetId },
 
                 // Lofter
@@ -531,7 +540,11 @@ const Dashboard = () => {
                 { category: 'ceilings', name: 'Troldtekt (akustikloft)', price: 380, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Nedhængt loft (systemloft)', price: 450, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Akustikpaneler (lameller)', price: 750, carpenter_id: targetId },
-                { category: 'ceilings', name: 'Dampspærre (pr m2)', price: 75, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Forskalling', price: 50, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Dampspærre inkl tape', price: 35, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Isolering (50-100mm)', price: 85, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Spartelmasse og tape', price: 30, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Skyggelister / Fuge', price: 45, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Sikkerhed (Buffer-pris)', price: 350, carpenter_id: targetId },
 
                 // Facader
@@ -540,7 +553,10 @@ const Dashboard = () => {
                 { category: 'facades', name: 'Cedertræ / Hardwood', price: 950, carpenter_id: targetId },
                 { category: 'facades', name: 'Thermowood', price: 650, carpenter_id: targetId },
                 { category: 'facades', name: 'HardiePlank / Ivarsson (Fibergips)', price: 750, carpenter_id: targetId },
-                { category: 'facades', name: 'Efterisolering af facade (pr m2)', price: 350, carpenter_id: targetId },
+                { category: 'facades', name: 'Efterisolering (50-100mm)', price: 120, carpenter_id: targetId },
+                { category: 'facades', name: 'Vindspærre og Klemlister', price: 150, carpenter_id: targetId },
+                { category: 'facades', name: 'Inddækning/Lister (pr åbning)', price: 400, carpenter_id: targetId },
+                { category: 'facades', name: 'Tillæg: Facadestilladsleje', price: 12000, carpenter_id: targetId },
                 { category: 'facades', name: 'Sikkerhed (Buffer-pris)', price: 450, carpenter_id: targetId },
                 
                 // Køkken
