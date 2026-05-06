@@ -1,5 +1,6 @@
 import React from 'react';
 import toast from 'react-hot-toast';
+import { ImagePlus } from 'lucide-react';
 import { QUESTIONS } from './questionsConfig';
 
 const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) => {
@@ -303,7 +304,9 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) 
                 {q.type === 'file' && (
                     <div style={{ marginTop: '10px' }}>
                         <label className="upload-area" style={{ display: 'block', padding: '32px 20px', border: '2px dashed var(--border)', textAlign: 'center', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer', transition: 'var(--transition-fast)' }} onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--accent)'} onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border)'}>
-                            <span className="upload-icon" style={{ fontSize: '32px' }}>📸</span>
+                            <div style={{ color: 'var(--text-secondary)' }}>
+                                <ImagePlus size={36} />
+                            </div>
                             <p style={{ margin: '12px 0 0 0', fontSize: '1rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Klik her for at uploade billede(r)</p>
                             <input 
                                 type="file" 

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import { Camera, ImagePlus } from 'lucide-react';
 
 const Step3Photos = ({ category, photos, setPhotos, notes, setNotes, nextStep, prevStep }) => {
     const [isUploading, setIsUploading] = useState(false);
@@ -160,7 +161,7 @@ const Step3Photos = ({ category, photos, setPhotos, notes, setNotes, nextStep, p
             </div>
 
             <div style={{ background: '#eff6ff', border: '1px dashed #3b82f6', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <span style={{ fontSize: '20px' }}>📸</span>
+                <div style={{ marginTop: '2px', color: '#3b82f6' }}><Camera size={20} /></div>
                 <p style={{ margin: 0, color: '#1e3a8a', fontSize: '0.95rem', lineHeight: '1.5', fontWeight: '500' }}>
                     {getPhotoHint(category)}
                 </p>
@@ -197,7 +198,9 @@ const Step3Photos = ({ category, photos, setPhotos, notes, setNotes, nextStep, p
                     onChange={handleFileChange}
                     disabled={isUploading}
                 />
-                <div style={{ fontSize: '32px', marginBottom: '12px', transform: isDragging ? 'translateY(-5px)' : 'translateY(0)', transition: 'transform 0.3s' }}>📸</div>
+                <div style={{ color: isDragging ? '#10b981' : 'var(--text-secondary)', marginBottom: '12px', transform: isDragging ? 'translateY(-5px)' : 'translateY(0)', transition: 'all 0.3s' }}>
+                    <ImagePlus size={36} />
+                </div>
                 <h3 style={{ margin: '0 0 8px 0', color: isDragging ? '#059669' : 'var(--text-primary)', fontSize: '1.2rem', fontWeight: '700', transition: 'color 0.3s' }}>
                     {isUploading ? 'Uploader billeder...' : (isDragging ? 'Slip filerne her for at uploade' : 'Klik eller træk billeder hertil')}
                 </h3>
