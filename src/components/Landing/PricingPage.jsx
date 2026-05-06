@@ -285,7 +285,7 @@ export default function PricingPage({ setSession }) {
                             Meget mere end bare en tilbudsberegner
                         </h2>
                         <p className="text-slate-600 dark:text-slate-400 max-w-2xl text-[clamp(1rem,1.2vw,1.125rem)] leading-relaxed mb-8">
-                            Når du får en ny kunde ind via systemet, stopper festen ikke der. Bison Frame fungerer som dit mini-CRM, hvor du nemt styrer dine leads. Og når tilbuddet er vundet, overføres sagen automatisk direkte til dit foretrukne regnskabs- eller ordrestyringsprogram med ét klik.
+                            Det kan være svært at holde styr på alle de tilbud, man har ude. Bison Frame samler det hele ét sted, så du aldrig misser en besked eller glemmer at følge op. Du får et dejligt overblik over dine kunder – og når opgaven er i hus, overføres sagen automatisk direkte til dit foretrukne regnskabs- eller ordrestyringsprogram med ét klik.
                         </p>
                         <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
                             <span className="font-bold text-xl text-slate-700 dark:text-slate-300">e-conomic</span>
