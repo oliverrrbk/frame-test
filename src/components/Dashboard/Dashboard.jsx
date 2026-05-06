@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Home, Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -1275,6 +1276,7 @@ const Dashboard = () => {
             }
         }
     }
+    
     // ---------------------
 
     const getTabHeaderInfo = () => {
@@ -1570,23 +1572,7 @@ const Dashboard = () => {
                     document.body
                 )}
 
-                {trialDaysLeft > 0 && !isPaywallActive && activeTab === 'overview' && (
-                    <div style={{ margin: '20px 40px 0 40px', padding: '16px 24px', background: '#f7f6f3', border: '1px solid #e8e6e1', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f8fafc', fontWeight: 'bold', fontSize: '15px' }}>
-                                <span style={{ background: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '14px', fontSize: '12px' }}>GRATIS PRØVE</span>
-                                {30 - trialDaysLeft} ud af 30 dage brugt ({trialDaysLeft} dage tilbage)
-                            </div>
-                            <p style={{ color: '#9ca3af', margin: '4px 0 0 0', fontSize: '14px' }}>Når prøveperioden udløber, vil du blive bedt om at tilknytte et kort for at fortsætte uden afbrydelser.</p>
-                        </div>
-                        <button 
-                            onClick={() => setActiveTab('account_settings')}
-                            style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.2s', whiteSpace: 'nowrap' }}
-                        >
-                            Vælg Pakke
-                        </button>
-                    </div>
-                )}
+                {/* The old inline trial banner has been removed */}
                 
                 <div className="dashboard-content">
                     {isPaywallActive && activeTab !== 'account_settings' ? (
@@ -3741,6 +3727,73 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>,
+                document.body
+            )}
+            {/* Floating Trial Toast */}
+            {trialDaysLeft > 0 && !isPaywallActive && createPortal(
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={`trial-toast-${activeTab}`} // Re-triggers animation on tab change
+                        initial={{ opacity: 0, y: 50, x: 50, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 50, x: 50, scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.2 }}
+                        style={{
+                            position: 'fixed',
+                            bottom: '32px',
+                            right: '32px',
+                            background: '#ffffff',
+                            borderRadius: '16px',
+                            padding: '24px',
+                            boxShadow: '0 20px 40px -10px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.05)',
+                            zIndex: 10000,
+                            width: '340px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '14px'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.2)' }}></span>
+                                <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#0f172a' }}>
+                                    Gratis Prøve
+                                </span>
+                            </div>
+                            <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#2563eb', background: '#eff6ff', padding: '4px 10px', borderRadius: '12px' }}>
+                                {trialDaysLeft} dage tilbage
+                            </span>
+                        </div>
+                        <p style={{ fontSize: '13.5px', color: '#64748b', margin: 0, lineHeight: '1.6' }}>
+                            Du har brugt {30 - trialDaysLeft} ud af 30 dage. Tilknyt et kort i god tid for at undgå afbrydelser.
+                        </p>
+                        <button
+                            onClick={() => setActiveTab('account_settings')}
+                            style={{
+                                marginTop: '4px',
+                                width: '100%',
+                                background: '#0f172a',
+                                color: 'white',
+                                border: 'none',
+                                padding: '12px 16px',
+                                borderRadius: '10px',
+                                fontWeight: '600',
+                                fontSize: '14px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#1e293b'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#0f172a'}
+                        >
+                            <CreditCard size={16} />
+                            Tilføj kortoplysninger
+                        </button>
+                    </motion.div>
+                </AnimatePresence>,
                 document.body
             )}
         </div>
