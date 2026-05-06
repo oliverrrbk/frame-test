@@ -1252,7 +1252,7 @@ const Dashboard = () => {
                 if (!trialEndStr) {
                     if (carpenterProfile.created_at) {
                         const created = new Date(carpenterProfile.created_at);
-                        created.setDate(created.getDate() + 14);
+                        created.setDate(created.getDate() + 30);
                         trialEndStr = created.toISOString();
                     } else {
                         trialEndStr = fallbackDate.toISOString();
@@ -1575,7 +1575,7 @@ const Dashboard = () => {
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f8fafc', fontWeight: 'bold', fontSize: '15px' }}>
                                 <span style={{ background: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '14px', fontSize: '12px' }}>GRATIS PRØVE</span>
-                                {14 - trialDaysLeft} ud af 14 dage brugt ({trialDaysLeft} dage tilbage)
+                                {30 - trialDaysLeft} ud af 30 dage brugt ({trialDaysLeft} dage tilbage)
                             </div>
                             <p style={{ color: '#9ca3af', margin: '4px 0 0 0', fontSize: '14px' }}>Når prøveperioden udløber, vil du blive bedt om at tilknytte et kort for at fortsætte uden afbrydelser.</p>
                         </div>

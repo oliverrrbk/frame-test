@@ -161,7 +161,7 @@ export default function PricingPage({ setSession }) {
                         <p className="text-slate-500 dark:text-slate-500 text-sm mb-8 leading-relaxed line-clamp-3">Drop Excel-arkene. Få et komplet salgsværktøj, der sikrer, at du vinder flere opgaver professionelt.</p>
                         <div className="mt-auto flex flex-col items-center gap-2 z-10 w-full">
                             <button onClick={() => navigate('/register')} className="w-full py-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold text-[clamp(0.875rem,1vw,1rem)] hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                                Start 14 dages gratis prøve
+                                Start 30 dages gratis prøve
                             </button>
                             <span className="text-[0.75rem] text-slate-400 dark:text-slate-500 font-medium">Ingen kortoplysninger påkrævet</span>
                         </div>
@@ -217,7 +217,7 @@ export default function PricingPage({ setSession }) {
                         <p className="text-slate-600 dark:text-slate-400 text-sm mb-8 relative z-10 leading-relaxed line-clamp-3">Gør salgsprocessen flydende. Automatisér overførsel til drifts-systemer og få AI til at udregne specialopgaver.</p>
                         <div className="mt-auto flex flex-col items-center gap-2 z-10 w-full">
                             <button onClick={() => navigate('/register')} className="w-full py-4 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold text-[clamp(0.875rem,1vw,1rem)] hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors shadow-lg">
-                                Start 14 dages gratis prøve
+                                Start 30 dages gratis prøve
                             </button>
                             <span className="text-[0.75rem] text-slate-400 dark:text-slate-500 font-medium">Ingen kortoplysninger påkrævet</span>
                         </div>
@@ -268,7 +268,7 @@ export default function PricingPage({ setSession }) {
                         <p className="text-slate-500 dark:text-slate-500 text-sm mb-8 leading-relaxed line-clamp-3">Styr dit salgsteam, hold styr på leads på tværs af afdelinger og få systemet til at matche dit brand 100%.</p>
                         <div className="mt-auto flex flex-col items-center gap-2 z-10 w-full">
                             <button onClick={() => navigate('/register')} className="w-full py-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold text-[clamp(0.875rem,1vw,1rem)] hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                                Start 14 dages gratis prøve
+                                Start 30 dages gratis prøve
                             </button>
                             <span className="text-[0.75rem] text-slate-400 dark:text-slate-500 font-medium">Ingen kortoplysninger påkrævet</span>
                         </div>
@@ -367,7 +367,7 @@ export default function PricingPage({ setSession }) {
                                 Prøv uden risiko
                             </h2>
                             <p className="text-[clamp(1rem,1.25vw,1.125rem)] text-slate-500 dark:text-slate-400">
-                                Start din 14 dages prøveperiode i dag. Opret dig lynhurtigt og prøv hele systemet – helt uden at indtaste betalingsoplysninger.
+                                Start din gratis måned i dag. Opret dig lynhurtigt og prøv hele systemet i 30 dage – helt uden at indtaste betalingsoplysninger.
                             </p>
                         </div>
                         

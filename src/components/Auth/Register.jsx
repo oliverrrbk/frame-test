@@ -326,7 +326,7 @@ const Register = ({ setSession }) => {
                     </div>
 
                     <div className="input-group" style={{ marginTop: '16px' }}>
-                        <label>Vælg din pakke (14 dages gratis prøveperiode) *</label>
+                        <label>Vælg din pakke (30 dages gratis prøveperiode) *</label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '8px' }}>
                             {[
                                 { id: 'basis', name: 'Basis', price: '390 kr.', period: 'ekskl. moms / md.' },

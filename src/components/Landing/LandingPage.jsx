@@ -71,7 +71,7 @@ const LandingPage = ({ setSession }) => {
                             onClick={() => navigate('/register')}
                             className="bg-inverse-surface text-inverse-primary rounded-full px-6 py-2.5 font-medium hover:bg-primary shadow-sm hover:shadow-md transition-all duration-300"
                         >
-                            Prøv 14 dage gratis
+                            Prøv gratis i en måned
                         </motion.button>
                     </div>
                 </div>
@@ -258,7 +258,7 @@ const LandingPage = ({ setSession }) => {
                                 style={{ WebkitTransform: "translateZ(0)" }}
                                 className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-8 py-5 rounded-full font-bold text-[clamp(1rem,1.5vw,1.125rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl flex items-center gap-3 group"
                             >
-                                Prøv 14 dage gratis
+                                Prøv gratis i en måned
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                             </motion.button>
                             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">

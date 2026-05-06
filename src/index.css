@@ -929,7 +929,7 @@ button:focus-visible {
     justify-content: center;
     min-height: 100vh;
     background-color: var(--bg-body);
-    padding: 24px;
+    padding: 24px 24px 8vh 24px;
 }
 
 .login-card {

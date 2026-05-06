@@ -93,7 +93,7 @@ const SideDrawer = ({ isOpen, onClose, title, content }) => {
 
 const TermsContent = ({ onOpenDpa }) => (
     <div className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans text-sm md:text-base">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 border-b-2 border-slate-200 dark:border-slate-800 pb-4 mb-8">Forretningsvilkår for Bison Frame</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 border-b-2 border-slate-200 dark:border-slate-800 pb-4 mb-8">Aftalevilkår & Handelsbetingelser</h1>
 
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">1. Generelle vilkår</h2>
         <p className="mb-4 text-justify">1.1. Bison Company ApS udvikler og leverer softwareløsningen Bison Frame (herefter ”Applikationen”) målrettet til håndværksvirksomheder med henblik på at samle og optimere tilbudsgivning, sagsstyring og kundekommunikation.</p>
@@ -116,15 +116,17 @@ const TermsContent = ({ onOpenDpa }) => (
         <p className="mb-4 text-justify">4.3. Det påhviler Kunden at sikre, at indsamling af data fra deres slutkunder via Applikationens tilbuds-wizard sker på et lovligt grundlag, jf. GDPR artikel 13 og 14.</p>
 
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">5. Applikationen, Support og driftsstabilitet</h2>
-        <p className="mb-4 text-justify">5.1. Applikationen leveres til Kunden som en Software-as-a-Service (SaaS) løsning via internettet i den til enhver tid gældende version.</p>
-        <p className="mb-4 text-justify">5.2. Bison Company tilstræber høj driftsstabilitet, men garanterer ikke en fejlfri oplevelse, da applikationen kan påvirkes af internetforbindelser, hostingpartnere eller afbrydelser. Bison Company kan ikke gøres ansvarlig for tab som følge af nedbrud.</p>
+        <p className="mb-4 text-justify">5.1. Applikationen leveres til Kunden som en Software-as-a-Service (SaaS) løsning via internettet i den til enhver tid gældende version. Applikationen leveres "som den er" og "som tilgængelig" (as-is og as-available).</p>
+        <p className="mb-4 text-justify">5.2. Bison Company tilstræber høj driftsstabilitet, men garanterer ikke en fejlfri oplevelse eller 100% oppetid, da applikationen kan påvirkes af internetforbindelser, hostingpartnere eller afbrydelser. Bison Company kan ikke gøres ansvarlig for tab som følge af nedbrud.</p>
         <p className="mb-4 text-justify">5.3. Bison Company yder teknisk support til betjening af platformen via e-mail og telefon inden for normal åbningstid.</p>
         <p className="mb-4 text-justify">5.4. Bison Company forbeholder sig retten til, uden at det betragtes som en mangel eller et brud på oppetid, at foretage systemopdateringer og vedligeholdelse, som midlertidigt kan begrænse adgangen til Applikationen. Dette vil så vidt muligt blive placeret uden for normal arbejdstid.</p>
 
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">6. Priser og betalingsbetingelser</h2>
         <p className="mb-4 text-justify">6.1. Alle priser for brugen af Applikationen er angivet eksklusive moms. Fakturering sker forud for den valgte abonnementsperiode.</p>
-        <p className="mb-4 text-justify">6.2. Betaling sker primært via automatisk korttræk. Kunden er ansvarlig for, at der altid er tilknyttet et gyldigt betalingskort til kontoen. Ved manglende eller forsinket betaling fremsendes rykker med tillæg af rykkergebyr i henhold til rentelovens regler. Bison Company forbeholder sig retten til at spærre Kundens adgang til Applikationen indtil det skyldige beløb er betalt.</p>
-        <p className="mb-4 text-justify">6.3. Bison Company er berettiget til at foretage en årlig indeksregulering af abonnementspriserne (typisk 3-5%) uden at dette udgør en væsentlig ændring af aftalen, som kræver særskilt accept.</p>
+        <p className="mb-4 text-justify">6.2. <strong>Prøveperiode:</strong> Alle nye kunder tilbydes en 30 dages gratis prøveperiode. Der opkræves ingen betalingsoplysninger ved oprettelsen. Før udløbet af prøveperioden vil Kunden blive anmodet om at tilknytte et gyldigt betalingskort for at fortsætte brugen af Applikationen.</p>
+        <p className="mb-4 text-justify">6.3. <strong>Betaling:</strong> Betaling sker primært via automatisk korttræk. Betalingskortoplysninger opbevares <strong>ikke</strong> af Bison Company, men behandles sikkert af vores certificerede tredjeparts betalingsindløser (f.eks. Stripe) i fuld overensstemmelse med gældende PCI-standarder. Bison Company fraskriver sig ethvert ansvar for datalæk hos tredjeparts betalingsindløsere.</p>
+        <p className="mb-4 text-justify">6.4. Kunden er ansvarlig for, at der altid er tilknyttet et gyldigt betalingskort til kontoen efter prøveperioden. Ved manglende eller forsinket betaling fremsendes rykker med tillæg af rykkergebyr i henhold til rentelovens regler. Bison Company forbeholder sig retten til at spærre Kundens adgang til Applikationen indtil det skyldige beløb er betalt.</p>
+        <p className="mb-4 text-justify">6.5. Bison Company er berettiget til at foretage en årlig indeksregulering af abonnementspriserne (typisk 3-5%) uden at dette udgør en væsentlig ændring af aftalen, som kræver særskilt accept.</p>
 
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">7. Integrationer til tredjepart (Regnskabsprogrammer m.v.)</h2>
         <p className="mb-4 text-justify">7.1. Applikationen tilbyder integrationer til tredjepartssystemer (fx E-conomic, Dinero, Ordrestyring og Apacta). Bison Company påtager sig intet ansvar for fejl, datatab eller nedbrud, der skyldes ændringer i disse tredjepartssystemers API'er eller generelle funktionalitet.</p>
@@ -136,14 +138,16 @@ const TermsContent = ({ onOpenDpa }) => (
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">9. Immaterielle rettigheder</h2>
         <p className="mb-4 text-justify">9.1. Bison Company ejer alle rettigheder, herunder immaterielle rettigheder, til Applikationen (kildekode, design, AI-modeller, tekster, koncepter og brugergrænseflader). Kunden tildeles alene en brugsret.</p>
 
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">10. Ansvar</h2>
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">10. Ansvar og Force Majeure</h2>
         <p className="mb-4 text-justify">10.1. Applikationen stilles til rådighed som et professionelt salgs- og tilbudsværktøj. Bison Company fraskriver sig ethvert ansvar for Kundens forretningsmæssige tab, manglende indtjening eller tvister med slutkunder opstået som følge af tilbud genereret gennem systemet.</p>
         <p className="mb-4 text-justify">10.2. Selvom systemet automatisk kan indsætte juridiske standardforbehold (fx AB Forbruger) i tilbud, er Kunden selv ansvarlig for at sikre, at de afgivne tilbud og vilkår er fyldestgørende og lovlige for den specifikke opgave.</p>
-        <p className="mb-4 text-justify">10.3. Bison Companys samlede ansvar over for Kunden er i ethvert tilfælde begrænset til Kundens betalte abonnement de seneste 12 måneder.</p>
+        <p className="mb-4 text-justify">10.3. <strong>Ansvarsbegrænsning:</strong> Bison Company kan under ingen omstændigheder gøres ansvarlig for indirekte tab, driftstab, tabt arbejdsfortjeneste, tab af data, tab af goodwill eller andre følgeskader. Bison Companys samlede ansvar over for Kunden er i ethvert tilfælde begrænset til Kundens betalte abonnement de seneste 12 måneder forud for den skadevoldende begivenhed.</p>
+        <p className="mb-4 text-justify">10.4. <strong>Force Majeure:</strong> Bison Company er ikke ansvarlig for manglende eller forsinket opfyldelse af sine forpligtelser, hvis dette skyldes omstændigheder uden for Bison Companys rimelige kontrol (force majeure). Dette inkluderer, men er ikke begrænset til, krig, terror, naturkatastrofer, strejker, hackerangreb, virus, samt strøm- eller netværksnedbrud og nedbrud hos underleverandører (herunder cloud-udbydere).</p>
 
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">11. Misligholdelse og Opsigelse</h2>
-        <p className="mb-4 text-justify">11.1. I tilfælde af Kundens væsentlige misligholdelse, herunder manglende betaling eller misbrug, er Bison Company berettiget til straks at suspendere adgangen til systemet og eventuelt ophæve aftalen.</p>
+        <p className="mb-4 text-justify">11.1. I tilfælde af Kundens væsentlige misligholdelse, herunder manglende betaling eller misbrug, er Bison Company berettiget til straks at suspendere adgangen til systemet og eventuelt ophæve aftalen uden ansvar.</p>
         <p className="mb-4 text-justify">11.2. Kunden kan til enhver tid opsige sit abonnement skriftligt til udløbet af en igangværende faktureringsperiode. Forudbetalt abonnement refunderes ikke.</p>
+        <p className="mb-4 text-justify">11.3. <strong>Ingen fortrydelsesret:</strong> Da Applikationen udelukkende leveres som en business-to-business (B2B) tjeneste til erhvervsdrivende, gælder forbrugeraftalelovens regler om fortrydelsesret <strong>ikke</strong>.</p>
 
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">12. Lovvalg og tvister</h2>
         <p className="mb-4 text-justify">12.1. Disse Vilkår er underlagt dansk ret.</p>
@@ -160,20 +164,60 @@ const DpaContent = () => (
     <div className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans text-sm md:text-base">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 border-b-2 border-slate-200 dark:border-slate-800 pb-4 mb-8">Databehandleraftale (DPA)</h1>
         
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">1. Formål</h2>
-        <p className="mb-4 text-justify">1.1. Denne Databehandleraftale regulerer Bison Company ApS's (Databehandleren) behandling af personoplysninger på vegne af Kunden (Den Dataansvarlige) i forbindelse med brug af Bison Frame.</p>
-        
-        <p className="mb-4 text-justify"><em>Bemærk: Den fulde, juridiske tekst for Databehandleraftalen vil blive tilgængelig her. Kontakt os gerne på support@bisonframe.dk for at få tilsendt den nyeste version af vores DPA.</em></p>
+        <p className="mb-4 text-justify">Denne databehandleraftale ("Aftalen") er indgået i overensstemmelse med Europa-Parlamentets og Rådets forordning (EU) 2016/679 (Databeskyttelsesforordningen / GDPR).</p>
 
-        <div className="mt-12 p-6 bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg">
-            <h3 className="text-xl font-bold text-red-600 dark:text-red-400 text-center">
-                Mads skal implementere den tekst, han har lavet!
-            </h3>
+        <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg mb-8">
+            <strong>Mellem:</strong><br /><br />
+            <strong>Den dataansvarlige:</strong><br />
+            Kunden (den tømrervirksomhed der opretter sig i Bison Frame systemet).<br /><br />
+            <strong>Og Databehandleren:</strong><br />
+            Bison Company ApS<br />
+            CVR: 45899713<br />
+            Jens Baggesens Vej 71, st<br />
+            8200 Aarhus N, Danmark
         </div>
 
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">1. Baggrund og Formål</h2>
+        <p className="mb-4 text-justify">1.1. Denne aftale fastsætter de rettigheder og forpligtelser, som finder anvendelse, når databehandleren (Bison Company ApS) behandler personoplysninger på vegne af den dataansvarlige (Kunden).</p>
+        <p className="mb-4 text-justify">1.2. Databehandlerens behandling sker udelukkende med det formål at levere SaaS-platformen "Bison Frame", så Kunden kan håndtere leads, udarbejde tilbud og styre sager vedrørende håndværksmæssige opgaver.</p>
+
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">2. Den Dataansvarliges Rettigheder og Pligter</h2>
+        <p className="mb-4 text-justify">2.1. Den dataansvarlige har ansvaret for, at der foreligger lovlig hjemmel til behandlingen, f.eks. ved indsamling af oplysninger fra slutkunder via tilbudsformularen.</p>
+
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">3. Databehandlerens Forpligtelser (Instruks og Fortrolighed)</h2>
+        <p className="mb-4 text-justify">3.1. Databehandleren behandler udelukkende personoplysninger efter dokumenteret instruks fra den dataansvarlige, som fastsat gennem Kundens brug af systemet.</p>
+        <p className="mb-4 text-justify">3.2. Databehandleren sikrer, at autoriserede medarbejdere, der behandler personoplysninger, er underlagt fuld fortrolighed og lovbestemt tavshedspligt.</p>
+
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">4. Behandlingssikkerhed og Inspektionsret</h2>
+        <p className="mb-4 text-justify">4.1. Databehandleren iværksætter passende tekniske og organisatoriske sikkerhedsforanstaltninger for at sikre et beskyttelsesniveau, der passer til de risici, der er forbundet med behandlingen (jf. GDPR artikel 32).</p>
+        <p className="mb-4 text-justify">4.2. Adgangskoder krypteres altid. Databehandleren sikrer vedvarende fortrolighed og tager løbende backup af Kundens data for at beskytte mod tab.</p>
+        <p className="mb-4 text-justify">4.3. <strong>Inspektionsret (Audit):</strong> Den Dataansvarlige har til enhver tid ret til for egen regning at foretage eller få foretaget revisioner og inspektioner (af en uafhængig tredjepart) for at bekræfte Databehandlerens overholdelse af denne Aftale og GDPR (jf. GDPR Art. 28, stk. 3, litra h).</p>
+
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">5. Brug af Underdatabehandlere</h2>
+        <p className="mb-4 text-justify">5.1. Ved accept af denne aftale giver den dataansvarlige en generel godkendelse til, at databehandleren gør brug af underdatabehandlere til hosting og drift (bl.a. Supabase og Vercel). Databehandleren sikrer, at underdatabehandlere er underlagt minimum samme databeskyttelsesforpligtelser som fastsat i denne Aftale.</p>
+        <p className="mb-4 text-justify">5.2. <strong>Varsling:</strong> Databehandleren skal underrette den Dataansvarlige via e-mail om eventuelle planlagte ændringer vedrørende tilføjelse eller erstatning af underdatabehandlere med mindst 30 dages varsel. Den Dataansvarlige har hermed mulighed for at gøre indsigelse mod sådanne ændringer. Hvis indsigelsen er berettiget, og en løsning ikke kan findes, har kunden ret til at opsige aftalen gebyrfrit.</p>
+        <p className="mb-4 text-justify">5.3. Data transmitteres og opbevares som udgangspunkt inden for EU/EØS eller underlagt fuldt gyldige overførselsgrundlag (fx EU's Standard Contractual Clauses eller Data Privacy Framework).</p>
+
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">6. Underretning om brud på persondatasikkerheden</h2>
+        <p className="mb-4 text-justify">6.1. Databehandleren underretter den dataansvarlige uden unødig forsinkelse og senest 48 timer efter at være blevet opmærksom på et brud på persondatasikkerheden.</p>
+        <p className="mb-4 text-justify">6.2. Databehandleren bistår den dataansvarlige med at foretage lovpligtige anmeldelser til Datatilsynet.</p>
+
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">7. Sletning og Anonymisering af Data</h2>
+        <p className="mb-4 text-justify">7.1. <strong>Slettepligt:</strong> Ved ophør af "Bison Frame" abonnementet forpligter Databehandleren sig til, efter den Dataansvarliges anvisning, at slette eller tilbagelevere alle personoplysninger, som Databehandleren behandler på vegne af den Dataansvarlige (medmindre EU-ret eller national ret foreskriver opbevaring).</p>
+        <p className="mb-4 text-justify">7.2. <strong>AI-Træning & Anonymisering:</strong> Forud for en eventuel sletning af data, eller løbende som led i drift og udvikling, er Databehandleren berettiget til at udtrække data og underkaste dem en irreversibel og fuldstændig anonymisering. Formålet hermed er udelukkende systemforbedring og træning af platformens AI-modeller (beregningslogik). Når data er lovligt og fuldt anonymiseret (hvorved de ikke længere kan henføres til en fysisk person, virksomhed eller slutkunde), udgør de ikke længere personoplysninger under GDPR. Databehandleren erhverver det fulde ejerskab til disse anonymiserede data og forbeholder sig retten til at bevare disse på ubestemt tid, også efter kundens opsigelse.</p>
+
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">8. Behandlingens Omfang</h2>
+        <h3 className="font-bold text-slate-700 dark:text-slate-300 mt-4 mb-2">Kategorier af Registrerede og Oplysninger</h3>
+        <ul className="list-disc pl-5 mb-4 text-justify">
+            <li><strong>Kunder/Leads:</strong> Navn, adresse, e-mail, telefonnummer, billeder og sagsbeskrivelser (almindelige personoplysninger).</li>
+            <li><strong>Medarbejdere:</strong> Navn, e-mail, telefon, systemroller.</li>
+        </ul>
+        <p className="mb-4 text-justify">Behandlingen varer indtil Kundens abonnement opsiges og sletteprocedurer iværksættes.</p>
+
         <div className="mt-12 pt-6 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500 text-center">
-            Dokument opdateret: April 2026<br />
-            Bison Company ApS · CVR: 43899713
+            Bison Company ApS · CVR: 45899713<br />
+            Senest opdateret: April 2026<br />
+            Aftalen accepteres elektronisk ved oprettelse i Bison Frame.
         </div>
     </div>
 );
@@ -203,7 +247,7 @@ export default function Footer() {
                             <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/calculator">Udregn Profit</Link>
                             <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/features">Funktioner</Link>
                             <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/pricing">Priser</Link>
-                            <button onClick={() => setIsTermsOpen(true)} className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 appearance-none bg-transparent border-none p-0 outline-none text-inherit font-inherit">Handelsbetingelser</button>
+                            <button onClick={() => setIsTermsOpen(true)} className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 appearance-none bg-transparent border-none p-0 outline-none text-inherit font-inherit">Aftalevilkår</button>
                             <button onClick={() => setIsDpaOpen(true)} className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 appearance-none bg-transparent border-none p-0 outline-none text-inherit font-inherit">Databehandleraftale</button>
                             <button onClick={() => window.location.href='mailto:support@bisonframe.dk'} className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 appearance-none bg-transparent border-none p-0 outline-none text-inherit font-inherit">Kontakt Support</button>
                         </div>
@@ -219,13 +263,13 @@ export default function Footer() {
             <SideDrawer 
                 isOpen={isTermsOpen} 
                 onClose={() => setIsTermsOpen(false)} 
-                title="Handelsbetingelser" 
+                title="Aftalevilkår & Handelsbetingelser" 
                 content={<TermsContent onOpenDpa={handleOpenDpaFromTerms} />} 
             />
             <SideDrawer 
                 isOpen={isDpaOpen} 
                 onClose={() => setIsDpaOpen(false)} 
-                title="Databehandleraftale" 
+                title="Databehandleraftale (DPA)" 
                 content={<DpaContent />} 
             />
         </>

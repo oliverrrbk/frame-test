@@ -34,7 +34,7 @@ const Login = ({ setSession }) => {
     };
 
     return (
-        <div className="login-container" style={{ minHeight: '100%', height: '100%' }}>
+        <div className="login-container">
             <div className="login-card">
                 <div className="login-header">
                     <div className="login-brand">
@@ -110,10 +110,6 @@ const Login = ({ setSession }) => {
                     </div>
 
                 </form>
-            </div>
-            
-            <div className="login-footer">
-                <p>Denne adgang er lukket og reserveret til virksomhedens ejer.</p>
             </div>
         </div>
     );

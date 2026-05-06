@@ -44,10 +44,10 @@ const SubscriptionSettings = () => {
             if (!finalCompany.subscription_status) finalCompany.subscription_status = 'trialing';
             if (!finalCompany.tier) finalCompany.tier = 'standard';
             
-            // Set trial end date to 14 days from created_at if not set
+            // Set trial end date to 30 days from created_at if not set
             if (!finalCompany.trial_ends_at && !finalCompany.subscription_end_date) {
                 const created = new Date(finalCompany.created_at);
-                created.setDate(created.getDate() + 14);
+                created.setDate(created.getDate() + 30);
                 finalCompany.trial_ends_at = created.toISOString();
             }
 

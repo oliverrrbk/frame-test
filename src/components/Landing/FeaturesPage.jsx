@@ -329,7 +329,7 @@ export default function FeaturesPage({ setSession }) {
                                 Få dit nye system
                             </h2>
                             <p className="text-[clamp(1.125rem,1.5vw,1.25rem)] text-slate-600 dark:text-slate-400">
-                                Stop overslagstvivlen. Start med at sikre profitten. Prøv Bison Frame systemet i 14 dage.
+                                Stop overslagstvivlen. Start med at sikre profitten. Prøv Bison Frame systemet gratis i en hel måned.
                             </p>
                         </div>
                         
