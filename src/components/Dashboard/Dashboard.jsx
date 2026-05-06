@@ -1446,11 +1446,7 @@ const Dashboard = () => {
                             
                             <div style={{ display: 'flex', gap: '12px' }}>
 
-                                {activeTab === 'materials' && !isMaterialsLoading && materialsData.length > 0 && (
-                                    <button className="btn-primary" onClick={handleSaveMaterials}>
-                                        {isSaving ? 'Gemmer...' : 'Gem Materialer'}
-                                    </button>
-                                )}
+
                             </div>
                         </div>
                     )}
@@ -3280,7 +3276,12 @@ const Dashboard = () => {
                                     </div>
                                 ))}
                                 </div> 
-                                </div> 
+                                </div>
+                                <div className="card-footer" style={{ display: 'flex', justifyContent: 'center', padding: '24px', background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)', borderTop: '1px solid #e2e8f0', borderRadius: '0 0 16px 16px', position: 'sticky', bottom: '-1px', zIndex: 10 }}>
+                                    <button className="btn-primary" onClick={handleSaveMaterials} disabled={isSaving} style={{ padding: '12px 40px', fontSize: '1.1rem', borderRadius: '30px', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)', fontWeight: 'bold' }}>
+                                        {isSaving ? 'Gemmer...' : 'Gem Alle Materialer'}
+                                    </button>
+                                </div>
                             </div> 
                         </div> 
                     )}
