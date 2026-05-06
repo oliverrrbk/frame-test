@@ -70,6 +70,17 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         numericAmount = (parseInt(d.roofAmount) || 0) + (parseInt(d.facadeAmount) || 0);
     }
 
+    // Omregn grundplan til faktisk tag-overfladeareal pga. hældning og udhæng
+    if (cat === 'roof') {
+        if (d.roofPitch === 'Høj rejsning / Normal hældning') {
+            numericAmount = numericAmount * 1.45; // ~45 graders hældning + udhæng = ca. +45% mere areal end grundplan
+            bArr.push(`Areal: Omregnet grundplan til anslået faktisk tagareal: ca. ${numericAmount.toFixed(1)} m2`);
+        } else {
+            numericAmount = numericAmount * 1.10; // Fladt tag / let hældning + udhæng = ca. +10% mere areal end grundplan
+            bArr.push(`Areal: Omregnet grundplan til anslået faktisk tagareal (inkl. udhæng): ca. ${numericAmount.toFixed(1)} m2`);
+        }
+    }
+
     if (cat === 'special') {
         laborHours = parseFloat(d.aiLaborHours) || 10;
         const rawMat = parseFloat(d.aiMaterialCost) || 5000;
@@ -366,6 +377,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 laborHours += 15;
                 if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Kvist (Inddækning)'] || 10000) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Overordnet basis-pulje af timer/materialer afsat til tilbygning/kviste på taget`);
+            }
+
+            if (d.skylights === 'Ja') {
+                const skyAmount = parseInt(d.skylightAmount) || 1;
+                laborHours += skyAmount * (formula.roofWindowHours || 8.0);
+                if (!userSuppliesMaterials) materialCost += skyAmount * (indexCat['Ovenlysvindue / Velux (pr. stk)'] || 8500) * dbSettings.material_markup;
+                bArr.push(`Tillæg: ${skyAmount} ovenlysvindue(r) inkl. inddækning og montering`);
             }
         }
 

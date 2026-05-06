@@ -54,6 +54,9 @@ export const QUESTIONS = {
         { id: 'extensions', type: 'select', label: 'Er der nogen kviste (fremspring på taget) eller specielle tilbygninger?', options: ['Ja', 'Nej'] },
         { id: 'extensionsDetails', type: 'text', label: 'Uddyb gerne hvor mange kviste/tilbygninger:', condition: { field: 'extensions', value: 'Ja' } },
         
+        { id: 'skylights', type: 'select', label: 'Skal der monteres nye ovenlysvinduer (fx Velux)?', options: ['Ja', 'Nej'] },
+        { id: 'skylightAmount', type: 'number', label: 'Hvor mange ovenlysvinduer skal der monteres?', condition: { field: 'skylights', value: 'Ja' } },
+        
         { id: 'trailerAccess', type: 'select', label: 'Afskaffelse af affald: Er der mulighed for at stille stor affaldscontainer helt op til huset?', options: ['Ja', 'Nej, den skal stå langt væk'] },
         { 
             id: 'material', 
