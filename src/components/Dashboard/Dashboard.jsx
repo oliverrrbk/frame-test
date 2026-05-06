@@ -1445,12 +1445,7 @@ const Dashboard = () => {
                             </div>
                             
                             <div style={{ display: 'flex', gap: '12px' }}>
-                                {activeTab === 'leads' && (
-                                    <button className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                        Opret Ny Kunde
-                                    </button>
-                                )}
+
                                 {activeTab === 'materials' && !isMaterialsLoading && materialsData.length > 0 && (
                                     <button className="btn-primary" onClick={handleSaveMaterials}>
                                         {isSaving ? 'Gemmer...' : 'Gem Materialer'}
@@ -1861,40 +1856,46 @@ const Dashboard = () => {
                                 
                                 
                                 <div className="card-body">
-                                    {/* Pipeline Menu */}
-                                <div style={{ display: 'flex', gap: '10px', marginTop: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
-                                    {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Udgået opgave', 'Historik']
-                                        .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
-                                        .map(status => (
-                                        <button 
-                                            key={status} 
-                                            onClick={() => setLeadFilter(status)}
-                                            style={{
-                                                padding: '8px 16px',
-                                                borderRadius: '20px',
-                                                border: '1px solid',
-                                                borderColor: leadFilter === status 
-                                                    ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Historik' ? '#6b7280' : '#ef4444') 
-                                                    : 'rgba(255,255,255,0.2)',
-                                                backgroundColor: leadFilter === status 
-                                                    ? (status === 'Ny forespørgsel' ? 'rgba(59, 130, 246, 0.1)' : status === 'Sendt tilbud' ? 'rgba(234, 179, 8, 0.1)' : status === 'Bekræftet opgave' ? 'rgba(16, 185, 129, 0.1)' : status === 'Historik' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)') 
-                                                    : 'rgba(255,255,255,0.05)',
-                                                color: leadFilter === status 
-                                                    ? (status === 'Ny forespørgsel' ? '#60a5fa' : status === 'Sendt tilbud' ? '#facc15' : status === 'Bekræftet opgave' ? '#34d399' : status === 'Historik' ? '#9ca3af' : '#f87171') 
-                                                    : 'var(--text-primary)',
-                                                fontWeight: leadFilter === status ? 'bold' : 'normal',
-                                                cursor: 'pointer',
-                                                whiteSpace: 'nowrap',
-                                                transition: 'all 0.2s',
-                                                backdropFilter: 'blur(10px)'
-                                            }}
-                                        >
-                                            {status}
-                                            <span style={{ marginLeft: '8px', background: leadFilter === status ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Historik' ? '#6b7280' : '#ef4444') : 'rgba(255,255,255,0.2)', color: leadFilter === status ? '#fff' : 'var(--text-secondary)', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem' }}>
-                                                {leadsData.filter(l => (l.status || 'Ny forespørgsel') === status).length}
-                                            </span>
-                                        </button>
-                                    ))}
+                                    {/* Pipeline Menu with Action Button */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingBottom: '10px', flexWrap: 'wrap', gap: '16px' }}>
+                                    <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                        {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Udgået opgave', 'Historik']
+                                            .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
+                                            .map(status => (
+                                            <button 
+                                                key={status} 
+                                                onClick={() => setLeadFilter(status)}
+                                                style={{
+                                                    padding: '8px 16px',
+                                                    borderRadius: '20px',
+                                                    border: '1px solid',
+                                                    borderColor: leadFilter === status 
+                                                        ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Historik' ? '#6b7280' : '#ef4444') 
+                                                        : 'rgba(255,255,255,0.2)',
+                                                    backgroundColor: leadFilter === status 
+                                                        ? (status === 'Ny forespørgsel' ? 'rgba(59, 130, 246, 0.1)' : status === 'Sendt tilbud' ? 'rgba(234, 179, 8, 0.1)' : status === 'Bekræftet opgave' ? 'rgba(16, 185, 129, 0.1)' : status === 'Historik' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)') 
+                                                        : 'rgba(255,255,255,0.05)',
+                                                    color: leadFilter === status 
+                                                        ? (status === 'Ny forespørgsel' ? '#60a5fa' : status === 'Sendt tilbud' ? '#facc15' : status === 'Bekræftet opgave' ? '#34d399' : status === 'Historik' ? '#9ca3af' : '#f87171') 
+                                                        : 'var(--text-primary)',
+                                                    fontWeight: leadFilter === status ? 'bold' : 'normal',
+                                                    cursor: 'pointer',
+                                                    whiteSpace: 'nowrap',
+                                                    transition: 'all 0.2s',
+                                                    backdropFilter: 'blur(10px)'
+                                                }}
+                                            >
+                                                {status}
+                                                <span style={{ marginLeft: '8px', background: leadFilter === status ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Historik' ? '#6b7280' : '#ef4444') : 'rgba(255,255,255,0.2)', color: leadFilter === status ? '#fff' : 'var(--text-secondary)', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem' }}>
+                                                    {leadsData.filter(l => (l.status || 'Ny forespørgsel') === status).length}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, padding: '10px 20px', borderRadius: '30px' }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                        Opret Ny Kunde
+                                    </button>
                                 </div>
                                 
                                 <div style={{ marginBottom: '20px', position: 'relative' }}>
