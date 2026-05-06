@@ -133,7 +133,7 @@ export const MATERIAL_INDEX = {
         'Skalmur / Mursten': 22000,
         'Tillæg: Stor gennembrydning': 12000, // Ståldrager, støvafskærmning, deponi
         'Tillæg: Lille gennembrydning': 2500, // Alm. døråbning
-        'Tillæg: Vådrumspakke': 45000, // Groft overslag til VVS, kloak, murer og membran
+        'Tillæg: Vådrumspakke': 120000, // Groft overslag til VVS, kloak, murer og membran
         'Tillæg: Element (Vindue/Dør)': 4000, // Gennemsnitspris for et udvendigt element
         'Default': 18000
     },
@@ -144,7 +144,8 @@ export const MATERIAL_INDEX = {
         'Default': 4000
     },
     carport: {
-        'Trækonstruktion': 20000,
+        'Standard træ (Trykimprægneret)': 20000,
+        'Eksklusivt træ (Cedertræ/Hardwood)': 35000,
         'Vedligeholdelsesfrit (Stål/Alu)': 35000,
         'Default': 25000
     },

@@ -278,8 +278,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
 
             if (d.material === 'Hardwood / Hårdttræ') {
-                laborHours += initialInstallHours * 1.0; 
-                bArr.push(`Tillæg: Forøget tidsforbrug til Hardwood/Hårdttræ (krav om forboring og undersænkning af hver skrue)`);
+                laborHours += initialInstallHours * 0.5; // +50% ekstra tid pga. forboring og undersænkning af hver skrue
+                bArr.push(`Tillæg: Forøget tidsforbrug til Hardwood/Hårdttræ (krav om forboring og undersænkning af hver skrue) (+50%)`);
             }
             if (d.fastening && d.fastening.startsWith('Skjult montering')) {
                 laborHours += numericAmount * (formula.hiddenFasteningHours || 0.3);

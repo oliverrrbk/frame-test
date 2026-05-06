@@ -462,7 +462,8 @@ const Dashboard = () => {
                 { category: 'roof', name: 'Tagplader (eternit asbest fri)', price: 450, carpenter_id: targetId },
                 { category: 'roof', name: 'Decra', price: 600, carpenter_id: targetId },
                 { category: 'roof', name: 'Betontagsten', price: 800, carpenter_id: targetId },
-                { category: 'roof', name: 'Skiffer', price: 1200, carpenter_id: targetId },
+                { category: 'roof', name: 'Skiffer (hårdt materiale)', price: 1400, carpenter_id: targetId },
+                { category: 'roof', name: 'Skiffer (blødt materiale)', price: 1400, carpenter_id: targetId },
                 { category: 'roof', name: 'Tillæg: Stillads 1½-plan / 2-plan', price: 15000, carpenter_id: targetId },
                 { category: 'roof', name: 'Tillæg: Stillads (Høj rejsning)', price: 10000, carpenter_id: targetId },
                 { category: 'roof', name: 'Opretning af spær (Påforing)', price: 80, carpenter_id: targetId },
@@ -516,7 +517,7 @@ const Dashboard = () => {
                 { category: 'doors', name: 'Dørgreb inkl roset', price: 350, carpenter_id: targetId },
                 { category: 'doors', name: 'Sikkerhedslås (Yderdør)', price: 1200, carpenter_id: targetId },
                 { category: 'doors', name: 'Dørtrin / Bundstykke', price: 250, carpenter_id: targetId },
-                { category: 'doors', name: 'Gerigtsæt', price: 350, carpenter_id: targetId },
+                { category: 'doors', name: 'Gerigter (sæt)', price: 300, carpenter_id: targetId },
                 { category: 'doors', name: 'Sikkerhed (Buffer-pris)', price: 5500, carpenter_id: targetId },
 
                 // Terrasse
@@ -535,7 +536,7 @@ const Dashboard = () => {
 
                 // Lofter
                 { category: 'ceilings', name: 'Træloft (listeloft/paneler/rustikloft)', price: 300, carpenter_id: targetId },
-                { category: 'ceilings', name: 'Gipsloft (inkl. spartling)', price: 450, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Gipsloft', price: 250, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Fibergipsloft (Fermacel)', price: 350, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Troldtekt (akustikloft)', price: 380, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Nedhængt loft (systemloft)', price: 450, carpenter_id: targetId },
