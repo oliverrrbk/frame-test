@@ -620,15 +620,6 @@ const Dashboard = () => {
                 } else {
                     setDisabledCategories([]);
                 }
-            } else {
-                setMaterialsData(data || []);
-                const dbSysMat = (data || []).find(m => m.category === 'SYSTEM' && m.name && m.name.startsWith('DISABLED_CATEGORIES||'));
-                if (dbSysMat) {
-                    const str = dbSysMat.name.replace('DISABLED_CATEGORIES||', '');
-                    setDisabledCategories(str ? str.split(',') : []);
-                } else {
-                    setDisabledCategories([]);
-                }
             }
             setIsMaterialsLoading(false);
         }
