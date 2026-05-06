@@ -451,7 +451,9 @@ const Dashboard = () => {
         }
 
         if (activeTab === 'materials') {
-            setIsMaterialsLoading(true);
+            if (materialsData.length === 0) {
+                setIsMaterialsLoading(true);
+            }
             const { data, error: firstSelectError } = await supabase.from('materials').select('*').eq('carpenter_id', targetId).order('category').order('id');
             
             const defaultMaterials = [
@@ -651,8 +653,11 @@ const Dashboard = () => {
             setIsMaterialsLoading(false);
         }
 
-        // Hent altid leads for at vise notifikations-badges i sidebar, uanset aktiv fane
-        if (activeTab === 'leads') setIsLeadsLoading(true);
+        if (activeTab === 'leads') {
+            if (leadsData.length === 0) {
+                setIsLeadsLoading(true);
+            }
+        }
         const { data: leadsDataFetch } = await supabase.from('leads').select('*').eq('carpenter_id', targetId).order('created_at', { ascending: false });
         // Orphane leads fix:
         let workingLeads = leadsDataFetch || [];
