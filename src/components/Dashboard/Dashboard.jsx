@@ -463,6 +463,10 @@ const Dashboard = () => {
                 { category: 'roof', name: 'Decra', price: 600, carpenter_id: targetId },
                 { category: 'roof', name: 'Betontagsten', price: 800, carpenter_id: targetId },
                 { category: 'roof', name: 'Skiffer', price: 1200, carpenter_id: targetId },
+                { category: 'roof', name: 'Ovenlysvindue / Velux (pr. stk)', price: 8500, carpenter_id: targetId },
+                { category: 'roof', name: 'Tagrender - Zink (pr. meter)', price: 450, carpenter_id: targetId },
+                { category: 'roof', name: 'Tagrender - Plast (pr. meter)', price: 200, carpenter_id: targetId },
+                { category: 'roof', name: 'Stillads (pr. m2 facadearbejde/tag)', price: 150, carpenter_id: targetId },
                 { category: 'roof', name: 'Sikkerhed (Buffer-pris)', price: 500, carpenter_id: targetId },
 
                 // Vinduer
@@ -470,6 +474,7 @@ const Dashboard = () => {
                 { category: 'windows', name: 'PVC / plast', price: 4500, carpenter_id: targetId },
                 { category: 'windows', name: 'Aluminium', price: 8000, carpenter_id: targetId },
                 { category: 'windows', name: 'Træ/alu (kombination)', price: 7500, carpenter_id: targetId },
+                { category: 'windows', name: 'Dannebrogsvinduer / Sprossevinduer', price: 9000, carpenter_id: targetId },
                 { category: 'windows', name: 'Stål', price: 10000, carpenter_id: targetId },
                 { category: 'windows', name: 'Glas', price: 9500, carpenter_id: targetId },
                 { category: 'windows', name: 'Gerigtsæt', price: 400, carpenter_id: targetId },
@@ -479,6 +484,7 @@ const Dashboard = () => {
                 { category: 'floor', name: 'Træ', price: 600, carpenter_id: targetId },
                 { category: 'floor', name: 'Massivt træ', price: 1200, carpenter_id: targetId },
                 { category: 'floor', name: 'Parket', price: 750, carpenter_id: targetId },
+                { category: 'floor', name: 'Sildebensparket', price: 1500, carpenter_id: targetId },
                 { category: 'floor', name: 'Laminat', price: 300, carpenter_id: targetId },
                 { category: 'floor', name: 'Vinyl', price: 350, carpenter_id: targetId },
                 { category: 'floor', name: 'Linoleum', price: 400, carpenter_id: targetId },
@@ -487,17 +493,19 @@ const Dashboard = () => {
                 { category: 'floor', name: 'Beton', price: 800, carpenter_id: targetId },
                 { category: 'floor', name: 'Tæppe', price: 250, carpenter_id: targetId },
                 { category: 'floor', name: 'Kork', price: 550, carpenter_id: targetId },
+                { category: 'floor', name: 'Fodpaneler (pr. løbende meter)', price: 120, carpenter_id: targetId },
+                { category: 'floor', name: 'Undergulv / Strøer (pr. m2)', price: 350, carpenter_id: targetId },
                 { category: 'floor', name: 'Sikkerhed (Buffer-pris)', price: 400, carpenter_id: targetId },
 
                 // Døre
-                { category: 'doors', name: 'Træ', price: 4500, carpenter_id: targetId },
-                { category: 'doors', name: 'Massivt træ', price: 7500, carpenter_id: targetId },
-                { category: 'doors', name: 'Finér', price: 2500, carpenter_id: targetId },
-                { category: 'doors', name: 'PVC / plast', price: 4000, carpenter_id: targetId },
-                { category: 'doors', name: 'Aluminium', price: 8500, carpenter_id: targetId },
-                { category: 'doors', name: 'Stål', price: 9500, carpenter_id: targetId },
-                { category: 'doors', name: 'Glas', price: 9000, carpenter_id: targetId },
-                { category: 'doors', name: 'Kompositmaterialer', price: 6500, carpenter_id: targetId },
+                { category: 'doors', name: 'Indvendig dør (Celledør)', price: 2500, carpenter_id: targetId },
+                { category: 'doors', name: 'Indvendig dør (Massiv)', price: 4500, carpenter_id: targetId },
+                { category: 'doors', name: 'Skydedør (Indbygget i væg)', price: 12000, carpenter_id: targetId },
+                { category: 'doors', name: 'Dobbeltdør / Fransk dør', price: 14000, carpenter_id: targetId },
+                { category: 'doors', name: 'Yderdør (Træ)', price: 8500, carpenter_id: targetId },
+                { category: 'doors', name: 'Yderdør (Massivt træ)', price: 12000, carpenter_id: targetId },
+                { category: 'doors', name: 'Yderdør (PVC / plast)', price: 6500, carpenter_id: targetId },
+                { category: 'doors', name: 'Yderdør (Træ/Alu)', price: 10500, carpenter_id: targetId },
                 { category: 'doors', name: 'Dørgreb inkl roset', price: 350, carpenter_id: targetId },
                 { category: 'doors', name: 'Sikkerhedslås (Yderdør)', price: 1200, carpenter_id: targetId },
                 { category: 'doors', name: 'Dørtrin / Bundstykke', price: 250, carpenter_id: targetId },
@@ -516,11 +524,12 @@ const Dashboard = () => {
 
                 // Lofter
                 { category: 'ceilings', name: 'Træloft (listeloft/paneler/rustikloft)', price: 300, carpenter_id: targetId },
-                { category: 'ceilings', name: 'Gipsloft', price: 250, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Gipsloft (inkl. spartling)', price: 450, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Fibergipsloft (Fermacel)', price: 350, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Troldtekt (akustikloft)', price: 380, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Nedhængt loft (systemloft)', price: 450, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Akustikpaneler (lameller)', price: 750, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Dampspærre (pr m2)', price: 75, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Sikkerhed (Buffer-pris)', price: 350, carpenter_id: targetId },
 
                 // Facader
@@ -528,11 +537,14 @@ const Dashboard = () => {
                 { category: 'facades', name: 'Superwood', price: 550, carpenter_id: targetId },
                 { category: 'facades', name: 'Cedertræ / Hardwood', price: 950, carpenter_id: targetId },
                 { category: 'facades', name: 'Thermowood', price: 650, carpenter_id: targetId },
+                { category: 'facades', name: 'HardiePlank / Ivarsson (Fibergips)', price: 750, carpenter_id: targetId },
+                { category: 'facades', name: 'Efterisolering af facade (pr m2)', price: 350, carpenter_id: targetId },
                 { category: 'facades', name: 'Sikkerhed (Buffer-pris)', price: 450, carpenter_id: targetId },
                 
                 // Køkken
                 { category: 'kitchen', name: 'Køkken-element montering', price: 800, carpenter_id: targetId },
                 { category: 'kitchen', name: 'Bordplade udskæring', price: 1200, carpenter_id: targetId },
+                { category: 'kitchen', name: 'Nedtagning af gammelt køkken (fast)', price: 3500, carpenter_id: targetId },
                 { category: 'kitchen', name: 'Sikkerhed (Buffer-pris)', price: 800, carpenter_id: targetId },
 
                 // Tilbygning
@@ -541,6 +553,7 @@ const Dashboard = () => {
                 { category: 'extensions', name: 'Skalmur / Mursten', price: 22000, carpenter_id: targetId },
                 { category: 'extensions', name: 'Tillæg: Krybekælder (pr m2)', price: 500, carpenter_id: targetId },
                 { category: 'extensions', name: 'Tillæg: Tag med hældning (pr m2)', price: 1000, carpenter_id: targetId },
+                { category: 'extensions', name: 'Leje af container (fast pris)', price: 3500, carpenter_id: targetId },
                 { category: 'extensions', name: 'Sikkerhed (Buffer-pris)', price: 18000, carpenter_id: targetId },
 
                 // Anneks
@@ -581,7 +594,7 @@ const Dashboard = () => {
                 
                 const { data: newData } = await supabase.from('materials').select('*').eq('carpenter_id', targetId);
                 setMaterialsData(newData || []);
-            } else if (data.length < defaultMaterials.length) {
+            } else {
                 // AUTO-SYNC: Find og tilføj manglende ny-tilføjede SaaS materialer til eksisterende tømrere
                 const missingMaterials = defaultMaterials.filter(dm => 
                     !data.some(dbm => dbm.category === dm.category && dbm.name === dm.name)
