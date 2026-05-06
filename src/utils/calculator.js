@@ -669,7 +669,6 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                  bArr.push(`Tid og evt. materiale inkluderet til indvendig finish (fuger og gerigter)`);
              }
         }
-         }
          
          // Læg sikkerhedsbuffer til som fast sum for at dække uforudsete udgifter (Gælder ikke special, da AI selv prissætter)
          if (indexCat['Sikkerhed (Buffer-pris)']) {
