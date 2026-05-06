@@ -553,6 +553,10 @@ const Dashboard = () => {
                 { category: 'extensions', name: 'Skalmur / Mursten', price: 22000, carpenter_id: targetId },
                 { category: 'extensions', name: 'Tillæg: Krybekælder (pr m2)', price: 500, carpenter_id: targetId },
                 { category: 'extensions', name: 'Tillæg: Tag med hældning (pr m2)', price: 1000, carpenter_id: targetId },
+                { category: 'extensions', name: 'Tillæg: Vådrumspakke', price: 120000, carpenter_id: targetId },
+                { category: 'extensions', name: 'Tillæg: Stor gennembrydning', price: 12000, carpenter_id: targetId },
+                { category: 'extensions', name: 'Tillæg: Lille gennembrydning', price: 2500, carpenter_id: targetId },
+                { category: 'extensions', name: 'Tillæg: Element (Vindue/Dør)', price: 4000, carpenter_id: targetId },
                 { category: 'extensions', name: 'Leje af container (fast pris)', price: 3500, carpenter_id: targetId },
                 { category: 'extensions', name: 'Sikkerhed (Buffer-pris)', price: 18000, carpenter_id: targetId },
 
@@ -563,6 +567,7 @@ const Dashboard = () => {
                 { category: 'annex', name: 'Tillæg: Isolering/værksted (pr m2)', price: 1200, carpenter_id: targetId },
                 { category: 'annex', name: 'Tillæg: Fuldt beboeligt/BR18 (pr m2)', price: 4000, carpenter_id: targetId },
                 { category: 'annex', name: 'Tillæg: Sadel tag (pr m2)', price: 500, carpenter_id: targetId },
+                { category: 'annex', name: 'Tillæg: Støbt terrændæk (pr m2)', price: 1500, carpenter_id: targetId },
                 { category: 'annex', name: 'Sikkerhed (Buffer-pris)', price: 4000, carpenter_id: targetId },
 
                 // Carport

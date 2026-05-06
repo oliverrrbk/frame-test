@@ -119,23 +119,23 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             bArr.push(`Materialer er ikke medregnet i prisen (Kunden leverer selv)`);
         } else {
             if (cat === 'doors' && d.doorType === 'Blanding') {
-                let extCost = indexCat[d.exteriorMaterial] || indexCat['Sikkerhed (Buffer-pris)'] || 500;
-                let intCost = indexCat[d.interiorMaterial] || indexCat['Sikkerhed (Buffer-pris)'] || 500;
+                let extCost = indexCat[d.exteriorMaterial] || 500;
+                let intCost = indexCat[d.interiorMaterial] || 500;
                 const extA = parseInt(d.exteriorAmount) || 0;
                 const intA = parseInt(d.interiorAmount) || 0;
                 
                 materialCost += ((extA * extCost) + (intA * intCost)) * dbSettings.material_markup;
                 bArr.push(`Materialer udregnet (Blanding af yder/indre): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
             } else if (cat === 'windows' && d.windowType === 'Blanding') {
-                let roofCost = indexCat[d.roofMaterial] || indexCat['Sikkerhed (Buffer-pris)'] || 500;
-                let facadeCost = indexCat[d.facadeMaterial] || indexCat['Sikkerhed (Buffer-pris)'] || 500;
+                let roofCost = indexCat[d.roofMaterial] || 500;
+                let facadeCost = indexCat[d.facadeMaterial] || 500;
                 const roofA = parseInt(d.roofAmount) || 0;
                 const facadeA = parseInt(d.facadeAmount) || 0;
                 
                 materialCost += ((roofA * roofCost) + (facadeA * facadeCost)) * dbSettings.material_markup;
                 bArr.push(`Materialer udregnet (Blanding af tag/facade): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
             } else {
-                let matPriceDb = indexCat[d.material] || indexCat['Sikkerhed (Buffer-pris)'] || 500;
+                let matPriceDb = indexCat[d.material] || 500;
                 materialCost += (numericAmount * matPriceDb) * dbSettings.material_markup;
                 bArr.push(`Materialer afregnet inkl. tillæg: ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
             }
@@ -478,7 +478,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             // Wet room
             if (d.wetRoom && d.wetRoom.startsWith('Ja')) {
                 laborHours += formula.wetRoomHours || 45;
-                if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Vådrumspakke'] || 45000) * dbSettings.material_markup;
+                if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Vådrumspakke'] || 120000) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Vådrumspakke udregnet (VVS, kloak, membran, forstærkninger og evt. murer)`);
             }
 
@@ -669,6 +669,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                  bArr.push(`Tid og evt. materiale inkluderet til indvendig finish (fuger og gerigter)`);
              }
         }
+         }
+         
+         // Læg sikkerhedsbuffer til som fast sum for at dække uforudsete udgifter (Gælder ikke special, da AI selv prissætter)
+         if (indexCat['Sikkerhed (Buffer-pris)']) {
+             materialCost += indexCat['Sikkerhed (Buffer-pris)'] * dbSettings.material_markup;
+             bArr.push(`Sikkerhedsbuffer tillagt prisen for at dække uforudsete forhindringer/udgifter`);
+         }
     } 
 
     if(d.notes && d.notes.trim() !== "") {
