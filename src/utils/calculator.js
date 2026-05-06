@@ -123,7 +123,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     }
     
     let initialInstallHours = laborHours;
-    const userSuppliesMaterials = d.ownMaterials === 'Ja, jeg har dem allerede (kun pris på montering)';
+    const userSuppliesMaterials = d.ownMaterials === 'Ja, jeg har allerede købt det (kun pris på montering)';
     
     if (cat !== 'special') {
         if (userSuppliesMaterials) {
