@@ -172,14 +172,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
         }
 
-        let riskApplied = false;
-        if (d.rafterDimKnown === 'Nej, vides ikke') {
-            laborHours += laborHours * (dbSettings.risk_margin - 1);
-            riskApplied = true;
-        }
-
-        if (riskApplied) {
-            bArr.push(`Risikoramme (+${(dbSettings.risk_margin * 100 - 100).toFixed(0)}% tid) lagt til pga. ubekendte faktorer`);
+        // Risikomargin for ældre huse (tag) – ældre huse har ofte skjulte problemer
+        if (cat === 'roof' && d.houseAge) {
+            const age = parseInt(d.houseAge);
+            if (age && age < 1960) {
+                laborHours += laborHours * (dbSettings.risk_margin - 1);
+                bArr.push(`Risikoramme (+${(dbSettings.risk_margin * 100 - 100).toFixed(0)}% tid) lagt til pga. husets alder (${age}) – ældre huse har ofte skjulte konstruktionsproblemer`);
+            }
         }
 
         if (cat === 'floor') {
@@ -271,10 +270,6 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 laborHours += numericAmount * (formula.groundFoundationHours || 0.8);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Punktfundament og støbemix (pr m2 overslag)'] || 150) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Udgravning, udlægning af dug og etablering af punktfundamenter/støbning`);
-            } else if (d.keepFoundation === 'Udskiftes / Bygges forfra') {
-                laborHours += (numericAmount * (formula.foundationHoursPerUnit || 0.5));
-                if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Udskiftning/Opbygning fundament (pr m2)'] || 150)) * dbSettings.material_markup;
-                bArr.push(`Opbygning af ny underkonstruktion (fundament/strøer) beregnet`);
             }
 
             if (d.material === 'Hardwood / Hårdttræ') {
@@ -377,6 +372,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 laborHours += 15;
                 if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Kvist (Inddækning)'] || 10000) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Overordnet basis-pulje af timer/materialer afsat til tilbygning/kviste på taget`);
+            }
+
+            // Tillæg for utilgængelig container-placering (Bæretillæg)
+            if (d.trailerAccess && d.trailerAccess.includes('langt væk')) {
+                laborHours += numericAmount * 0.15; // ~0.15 timer pr m2 ekstra bæretid
+                bArr.push(`Tillæg: Containeren kan ikke stå ved huset – ekstra bæretid for affaldssortering og trillebør`);
             }
 
             if (d.skylights === 'Ja') {
