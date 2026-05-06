@@ -237,19 +237,48 @@ export default function Footer() {
             <footer className="bg-slate-100 dark:bg-slate-900 font-inter text-sm tracking-wide text-slate-500 dark:text-slate-400 w-full py-16 px-8 mt-auto z-10 relative">
                 <div className="flex flex-col gap-12 max-w-[1440px] mx-auto min-h-[160px]">
                     <div className="flex flex-col md:flex-row justify-between items-start gap-12 w-full">
+                        {/* Brand & Kontakt */}
                         <div className="flex flex-col max-w-[320px]">
                             <div className="text-md font-bold text-slate-700 dark:text-slate-200 mb-6">
                                 Bison Frame
                             </div>
-                            <p className="mt-4 leading-relaxed">Præcise overslag til den moderne håndværker. Spar mere tid i hverdagen, og vind flere opgaver hos kunden.</p>
+                            <p className="mb-6 leading-relaxed">Præcise overslag til den moderne håndværker. Spar mere tid i hverdagen, og vind flere opgaver hos kunden.</p>
+                            
+                            <div className="flex flex-col gap-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800 pt-6">
+                                <div className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Udviklet af Bison Company ApS</div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium w-16">CVR:</span> 
+                                    <span>45899713</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium w-16">Adresse:</span> 
+                                    <span>Jens Baggesens Vej 71</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <span className="font-medium w-16">Mail:</span> 
+                                    <a href="mailto:team@bisoncompany.dk" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">team@bisoncompany.dk</a>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium w-16">Telefon:</span> 
+                                    <a href="tel:+45402650202" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">+45 40 26 50 20</a>
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex flex-row flex-wrap gap-x-12 gap-y-6 justify-start md:justify-end md:items-start text-xs font-semibold sm:text-sm text-slate-500 dark:text-slate-400 pt-1">
-                            <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/calculate">Udregn Profit</Link>
-                            <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/features">Funktioner</Link>
-                            <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/pricing">Priser</Link>
-                            <button onClick={() => setIsTermsOpen(true)} className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 appearance-none bg-transparent border-none p-0 outline-none text-inherit font-inherit">Aftalevilkår</button>
-                            <button onClick={() => setIsDpaOpen(true)} className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 appearance-none bg-transparent border-none p-0 outline-none text-inherit font-inherit">Databehandleraftale</button>
-                            <button onClick={() => window.location.href='mailto:support@bisonframe.dk'} className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 appearance-none bg-transparent border-none p-0 outline-none text-inherit font-inherit">Kontakt Support</button>
+
+                        {/* Navigation Links */}
+                        <div className="flex flex-row flex-wrap gap-x-16 gap-y-10 justify-start md:justify-end md:items-start text-xs font-semibold sm:text-sm text-slate-500 dark:text-slate-400 pt-1">
+                            <div className="flex flex-col gap-4">
+                                <span className="text-slate-700 dark:text-slate-200 font-bold mb-2">Platform</span>
+                                <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/calculate">Udregn Profit</Link>
+                                <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/features">Funktioner</Link>
+                                <Link className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 text-inherit" to="/pricing">Priser</Link>
+                            </div>
+                            
+                            <div className="flex flex-col gap-4">
+                                <span className="text-slate-700 dark:text-slate-200 font-bold mb-2">Juridisk</span>
+                                <button onClick={() => setIsTermsOpen(true)} className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 appearance-none bg-transparent border-none p-0 outline-none text-inherit font-inherit text-left">Aftalevilkår</button>
+                                <button onClick={() => setIsDpaOpen(true)} className="underline decoration-blue-300/70 underline-offset-[6px] hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200 appearance-none bg-transparent border-none p-0 outline-none text-inherit font-inherit text-left">Databehandleraftale</button>
+                            </div>
                         </div>
                     </div>
                 
