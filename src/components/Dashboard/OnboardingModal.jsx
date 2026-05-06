@@ -94,9 +94,9 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                 </div>
 
                                 <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl text-sm text-slate-600 dark:text-slate-300 space-y-3 border border-slate-100 dark:border-slate-700">
-                                    <p>🛡️ Alt data hostes sikkert inden for EU.</p>
-                                    <p>🛡️ Du er Dataansvarlig - vi er blot din Databehandler.</p>
-                                    <p>🛡️ Anonymiseret data bruges kun til at forbedre din AI-assistent.</p>
+                                    <p className="flex items-start gap-2"><Check size={16} className="text-blue-500 shrink-0 mt-0.5" /> Alt data hostes sikkert inden for EU.</p>
+                                    <p className="flex items-start gap-2"><Check size={16} className="text-blue-500 shrink-0 mt-0.5" /> Du er Dataansvarlig - vi er blot din Databehandler.</p>
+                                    <p className="flex items-start gap-2"><Check size={16} className="text-blue-500 shrink-0 mt-0.5" /> Anonymiseret data bruges kun til at forbedre din AI-assistent.</p>
                                 </div>
 
                                 <div className="flex flex-col gap-4 mt-2">

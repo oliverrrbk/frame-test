@@ -355,6 +355,9 @@ const Register = ({ setSession }) => {
                                 </div>
                             ))}
                         </div>
+                        <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '13px', color: '#10b981', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                            <CheckSquare size={14} /> Kræver ikke kreditkort ved oprettelse
+                        </div>
                     </div>
 
                     <div className="terms-checkbox" style={{ marginTop: '16px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }} onClick={() => setAcceptedTerms(!acceptedTerms)}>
