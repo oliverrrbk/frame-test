@@ -49,12 +49,39 @@ serve(async (req) => {
       throw new Error("Mangler Minuba API-nøgle")
     }
 
+    let minubaToken;
+    let isOauth = false;
+
+    // Check if the key is stored as OAuth JSON (from our new minuba-auth flow)
+    try {
+        const parsedKey = JSON.parse(finalApiKey);
+        if (parsedKey.access_token) {
+            minubaToken = parsedKey.access_token;
+            isOauth = true;
+
+            // Optional: Implement Token Refresh logic here if token is expired
+            // const now = new Date().getTime();
+            // if (now > parsedKey.timestamp + (parsedKey.expires_in * 1000)) {
+            //     console.log("Minuba token udløbet. Forsøger refresh...");
+            //     ... refresh logic ...
+            // }
+        } else {
+            minubaToken = finalApiKey;
+        }
+    } catch(e) {
+        // Not JSON, fallback to manual API key (Basic Auth)
+        minubaToken = finalApiKey;
+    }
+
     console.log("Starter Minuba overførsel for:", lead.customer_name);
 
-    // Bemærk: Minubas rigtige API URL og payload formater er typisk lukket bag login.
-    // Nedenstående er en generisk best-practice opbygning af JSON API kald til kunde & sagsoprettelse.
-    // Dette skal tilpasses 100% når vi tester første gang med en ægte Minuba nøgle.
     const baseUrl = "https://app.minuba.dk/api/v1"; // Placeholder for rigtig endpoint
+
+    // Opsæt auth header alt efter om vi bruger OAuth (Bearer) eller manuel API-nøgle (Basic)
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': isOauth ? `Bearer ${minubaToken}` : `Basic ${btoa(minubaToken + ':')}`
+    };
 
     // 1. Opret Kontakt/Kunde i Minuba
     const contactPayload = {
@@ -68,17 +95,14 @@ serve(async (req) => {
     console.log("Opretter kontakt i Minuba...");
     const contactRes = await fetch(`${baseUrl}/customers`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${btoa(finalApiKey + ':')}` // Typisk Basic Auth for API nøgler
-      },
+      headers: authHeaders,
       body: JSON.stringify(contactPayload)
     });
 
     if (!contactRes.ok) {
         const errText = await contactRes.text();
         console.error("Fejl fra Minuba /customers:", errText);
-        throw new Error("Kunne ikke oprette kontakt i Minuba. Tjek API-nøglen. Detaljer: " + errText);
+        throw new Error("Kunne ikke oprette kontakt i Minuba. Tjek adgangsrettighederne. Detaljer: " + errText);
     }
 
     const contactData = await contactRes.json();
@@ -100,10 +124,7 @@ serve(async (req) => {
     console.log("Opretter ordre i Minuba...");
     const projectRes = await fetch(`${baseUrl}/orders`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${btoa(finalApiKey + ':')}`
-      },
+      headers: authHeaders,
       body: JSON.stringify(projectPayload)
     });
 
