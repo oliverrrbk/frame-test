@@ -458,7 +458,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Efterisolering af facade (50-100mm)`);
             }
             if (d.mountingStyle && d.mountingStyle.startsWith('Lodret')) {
-                laborHours += initialInstallHours * 0.4;
+                laborHours += initialInstallHours * 0.4; // 40% ekstra af basis-montage tid
                 bArr.push(`Tillæg: Lodret montering (fx listebeklædning) kræver øget præcision og mere tidsforbrug`);
             }
             if (d.openings && parseInt(d.openings) > 0) {
@@ -469,7 +469,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
             
             if (d.floors === '1½-plan / 2-plan / Mere') {
-                materialCost += (indexCat['Tillæg: Facadestilladsleje'] || 12000) * dbSettings.material_markup; 
+                if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Facadestilladsleje'] || 12000) * dbSettings.material_markup; 
                 laborHours += initialInstallHours * 0.25;
                 bArr.push(`Tillæg: Facadestilladsleje samt forsinket arbejdsgang pga. husets højde (flere etager)`);
             }
@@ -617,7 +617,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
             if (d.roofType && d.roofType.includes('Sadel tag')) {
                 laborHours += initialInstallHours * 0.4;
-                let carportSadelPris = d.carportType === 'Dobbelt carport' ? 15000 : 8000;
+                let carportSadelPris = d.carportType && d.carportType.includes('Dobbelt') ? 15000 : 8000;
                 if (!userSuppliesMaterials) materialCost += (numericAmount * carportSadelPris) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Sadel tag med rejsning i stedet for simpelt fladt tag`);
             }
@@ -637,7 +637,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 }
             }
 
-            if (d.carportType === 'Dobbelt carport') {
+            if (d.carportType && d.carportType.includes('Dobbelt')) {
                 laborHours += initialInstallHours * 0.5;
                 let dobbeltPris = indexCat['Tillæg: Dobbelt carport (fast pris)'] || 15000;
                 if (!userSuppliesMaterials) materialCost += (numericAmount * dobbeltPris) * dbSettings.material_markup;
