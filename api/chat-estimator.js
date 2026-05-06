@@ -74,7 +74,7 @@ ${questionsContext}
 ${dbContext}
 
 UDOVER DATABASEN GÆLDER DISSE REGLER:
-- Opstart, logistik, opmåling og kørsel tager ALTID min. 4-6 timer pr. opgave. Læg oveni.
+- Opstart, besigtigelse og opmåling tager ALTID min. 2-4 timer pr. opgave. Læg oveni. (VIGTIGT: KØRSEL UDHREGNES AUTOMATISK AF SYSTEMET BAGEFTER - DU SKAL IKKE MEDREGNE TRANSPORT ELLER KØRSEL I DINE TIMER!).
 - Oprydning og slutfinish tager ALTID min. 3-5 timer. Læg oveni.
 - Formlerne gælder KUN basis-montagen. Gang altid tillæg (fx skjulte skruer) med kvadratmeterne!
 - Nyt hul i en ydervæg: Min. 15-20 arbejdstimer.

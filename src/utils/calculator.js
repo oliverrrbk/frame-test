@@ -722,35 +722,36 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     let drivingLaborCost = 0;
     let drivingHoursBilled = 0;
 
+    // Estimer antallet af arbejdsdage på pladsen (en fuld svendedag antages at være 7.5 effektive timer)
+    const estimatedDays = Math.max(1, Math.ceil(laborHours / 7.5));
+
     if (dbSettings.driving_calc_method === 'timer') {
-        const exactHoursRoundTrip = hours * 2;
+        const exactHoursRoundTrip = (hours * 2) * estimatedDays;
         drivingHoursBilled = Math.max(1, Math.ceil(exactHoursRoundTrip)); 
         drivingLaborCost = drivingHoursBilled * dbSettings.hourly_rate;
         
         bArr.push(`Kørsel & Logistik (${companyFullAddress.split(',')[0]} ➜ Kundens adresse): ${km.toFixed(1)} km hver vej.`);
-        bArr.push(`Transport faktureres som ren timepris: ${drivingHoursBilled} time(r) á ${dbSettings.hourly_rate} kr. i alt: ${drivingLaborCost.toFixed(0)} kr`);
+        bArr.push(`Transport faktureres som ren timepris: Estimeret ${estimatedDays} arbejdsdag(e) x ca. ${Math.ceil(hours*2)} time(r) á ${dbSettings.hourly_rate} kr. i alt: ${drivingLaborCost.toFixed(0)} kr`);
         
         laborHours += drivingHoursBilled;
         totalLaborCost += drivingLaborCost;
         totalDriving = 0; 
     } else {
-        drivingMaterialCost = (km * 2) * (dbSettings.vehicle_cost_per_km || 3.8); 
-        drivingLaborCost = (hours * 2) * dbSettings.hourly_rate; 
+        drivingMaterialCost = (km * 2) * estimatedDays * (dbSettings.vehicle_cost_per_km || 3.8); 
+        drivingLaborCost = (hours * 2) * estimatedDays * dbSettings.hourly_rate; 
         totalDriving = drivingMaterialCost + drivingLaborCost;
         
         bArr.push(`Kørsel & Logistik (${companyFullAddress.split(',')[0]} ➜ Kundens adresse): ${km.toFixed(1)} km hver vej.`);
-        bArr.push(`Slitage-takst (bil) samt lukkede timer under transport udregnet til i alt: ${totalDriving.toFixed(0)} kr`);
+        bArr.push(`Slitage-takst (bil) samt lukkede timer under transport (Estimeret ${estimatedDays} dag(e)) udregnet til i alt: ${totalDriving.toFixed(0)} kr`);
     }
 
     const strictPrice = totalLaborCost + materialCost + totalDriving;
     const marginFactor = 1.25; 
     const priceTop = strictPrice * marginFactor;
 
-    let minPrice = Math.floor(strictPrice / 1000) * 1000;
-    let maxPrice = Math.ceil(priceTop / 1000) * 1000;
-    
-    minPrice = minPrice * 1.25;
-    maxPrice = maxPrice * 1.25;
+    // Læg moms (1.25) på først, derefter rund af ned til nærmeste tusinde
+    let minPrice = Math.floor((strictPrice * 1.25) / 1000) * 1000;
+    let maxPrice = Math.ceil((priceTop * 1.25) / 1000) * 1000;
     
     const fmtMin = new Intl.NumberFormat('da-DK').format(minPrice);
     const fmtMax = new Intl.NumberFormat('da-DK').format(maxPrice);
