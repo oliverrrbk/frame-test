@@ -104,7 +104,7 @@ export default function AboutUsPage({ setSession }) {
                             viewport={{ once: true }}
                             className="text-[clamp(3.5rem,6vw,4.5rem)] font-bold leading-tight tracking-[-0.03em] text-slate-900 dark:text-slate-50 mb-6"
                         >
-                            Vores DNA er <span className="text-orange-600 dark:text-orange-400 opacity-90">Håndværk.</span>
+                            Gør hverdagen <span className="text-orange-600 dark:text-orange-400 opacity-90">Simpel.</span>
                         </motion.h1>
                         <motion.p 
                             initial={{ opacity: 0 }}
@@ -113,7 +113,7 @@ export default function AboutUsPage({ setSession }) {
                             viewport={{ once: true }}
                             className="text-[clamp(1.125rem,2vw,1.25rem)] text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed"
                         >
-                            Skabt på byggepladsen med de udfordringer håndværkere står i hver dag. Vi byggede Bison Frame for at fjerne kontorbøvl og sikre absolut præcision. Det her er den nye standard.
+                            Vi er to gutter, der så en mulighed for at gøre hverdagen lettere for både håndværkere og deres kunder. Vi byggede Bison Frame for at fjerne tidsspildet ved tilbudsgivning – så kunden får et hurtigt svar, og tømreren kan bruge tiden på det rigtige håndværk.
                         </motion.p>
                     </div>
                 </header>
@@ -213,18 +213,18 @@ export default function AboutUsPage({ setSession }) {
 
                         <div className="flex-1">
                             <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight mb-6">
-                                Fra Byggeplads til Software
+                                Gør det nemmere for begge parter
                             </h2>
                             <div className="space-y-6 text-[clamp(1.125rem,1.5vw,1.25rem)] text-slate-600 dark:text-slate-400 leading-relaxed">
                                 <p>
-                                    Vi startede ikke i en eller anden tech-inkubator. Vi startede selv ude på byggepladsen og kiggede på uoverskuelige materialelister og manuelle regneark, hvor vi hele tiden mistede tid og penge på dumme småfejl.
+                                    At lave et godt og præcist tilbud tager tid. For håndværkeren betyder det ofte timer på landevejen og sene aftener med regnearket. For kunden betyder det uundgåelig ventetid på at få en pris, før drømmeprojektet kan gå i gang.
                                 </p>
                                 <p>
-                                    Springet fra at skrue brædder sammen til at skrive kode var ikke et skifte for sjov; det var en nødvendighed. Min partner og jeg forvandlede håndværkernes reelle frustrationer til systemets rene logik. 
+                                    Det ville vi gerne løse. Derfor allierede vi os med faglærte håndværkere for at bygge et system, der skaber værdi for alle. Kunden kan lynhurtigt få et realistisk overslag hjemme fra sofaen, og tømreren får en automatisk beregning, der snakker direkte sammen med regnskabsprogrammet. Ingen stress, og ingen forgæves kørsel.
                                 </p>
                                 <div className="mt-8 inline-flex flex-col gap-1 border-l-2 border-slate-300 dark:border-slate-700 pl-4 py-2">
-                                    <span className="text-[0.75rem] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Systemdirektiv</span>
-                                    <span className="text-slate-900 dark:text-slate-100 font-semibold text-lg">Vi bygger software, der arbejder lige så hårdt som dem, der bruger det.</span>
+                                    <span className="text-[0.75rem] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Vores Mission</span>
+                                    <span className="text-slate-900 dark:text-slate-100 font-semibold text-lg">Slut med forgæves kørte kilometer og spildtid på kontoret – få mere tid til det, der skaber værdi.</span>
                                 </div>
                             </div>
                         </div>
@@ -274,6 +274,7 @@ export default function AboutUsPage({ setSession }) {
                                 <motion.button 
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
+                                    onClick={() => navigate('/features')}
                                     style={{ WebkitTransform: "translateZ(0)" }}
                                     className="bg-transparent text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 px-8 py-4 rounded-full font-medium text-[clamp(1rem,1.5vw,1.125rem)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-300 flex items-center gap-3 w-full sm:w-auto justify-center group whitespace-nowrap"
                                 >
