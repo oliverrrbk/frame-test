@@ -8,7 +8,9 @@ import {
     DollarSign, 
     Inbox, 
     Briefcase,
-    Calendar
+    Calendar,
+    Link,
+    Copy
 } from 'lucide-react';
 import {
     AreaChart,
@@ -31,6 +33,7 @@ import {
     isSameMonth
 } from 'date-fns';
 import { da } from 'date-fns/locale';
+import { toast } from 'react-hot-toast';
 
 export default function DashboardOverview({ leadsData, carpenterProfile }) {
     const [timeframe, setTimeframe] = useState('30d'); // '7d', '30d', 'ytd', 'all'
@@ -176,6 +179,38 @@ export default function DashboardOverview({ leadsData, carpenterProfile }) {
                 <div>
                     <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.5rem' }}>Velkommen tilbage, {(carpenterProfile?.company_name || 'Tømrer').split(' ')[0]}!</h2>
                     <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.1rem' }}>Her er dit data-drevne overblik.</p>
+                </div>
+            </div>
+
+            {/* Quick Share Link Banner */}
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Link size={24} />
+                    </div>
+                    <div>
+                        <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', color: 'var(--text-primary)' }}>Dit Booking-link er klar!</h3>
+                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Del dette link med dine kunder, så de kan beregne deres egen pris direkte på din profil.</p>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', padding: '6px 6px 6px 16px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.95rem', userSelect: 'all' }}>bisonframe.dk/{carpenterProfile?.slug || 't'}</span>
+                    <button 
+                        onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/${carpenterProfile?.slug || 't'}`);
+                            toast.success('Kunde-link kopieret til udklipsholder!');
+                        }}
+                        style={{ 
+                            background: '#10b981', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', 
+                            fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
+                            display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = '#059669'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                    >
+                        <Copy size={16} />
+                        Kopiér Link
+                    </button>
                 </div>
             </div>
 

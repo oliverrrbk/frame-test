@@ -1464,6 +1464,30 @@ const Dashboard = () => {
                     )}
                     
                     <div style={{ marginTop: 'auto' }}></div>
+                    
+                    {/* Share Booking Link Card in Sidebar */}
+                    <div style={{ padding: '16px', background: 'var(--surface-bg)', borderRadius: '12px', border: '1px solid var(--border-light)', marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Link size={16} color="#10b981" />
+                            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>Dit Booking-link</span>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>Dette er linket du sender til kunderne.</p>
+                        <button 
+                            onClick={() => {
+                                navigator.clipboard.writeText(`${window.location.origin}/${carpenterProfile?.slug || 't'}`);
+                                toast.success('Booking-link kopieret!');
+                            }}
+                            style={{ 
+                                background: '#10b981', color: 'white', border: 'none', padding: '8px', borderRadius: '6px', 
+                                fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.2s',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
+                        >
+                            Kopiér Link
+                        </button>
+                    </div>
                 </nav>
             </aside>
 
@@ -1474,7 +1498,7 @@ const Dashboard = () => {
                     </div>
 
                     {headerInfo && activeTab !== 'overview' && (
-                        <div className="page-title-section" style={{ flex: 1, paddingLeft: '0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div className="page-title-section" style={{ flex: 1, paddingLeft: '0', paddingTop: '20px', paddingBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div>
                                 <h2 style={{ margin: '0 0 6px', fontSize: '1.75rem', color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '-0.5px' }}>{headerInfo.title}</h2>
                                 <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{headerInfo.desc}</p>
@@ -1773,9 +1797,18 @@ const Dashboard = () => {
                                                 <div className="input-group">
                                                     <label>Dit kunde-link</label>
                                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '0 12px', flex: 1 }}>
+                                                        <div 
+                                                            style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-primary)', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '0 12px', flex: 1, transition: 'border-color 0.2s', boxShadow: 'none' }}
+                                                            onFocus={(e) => e.currentTarget.style.borderColor = '#10b981'}
+                                                            onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-light)'}
+                                                        >
                                                             <span style={{ color: 'var(--text-muted)', userSelect: 'none' }}>bisonframe.dk/</span>
-                                                            <input type="text" value={carpenterProfile.slug || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, slug: e.target.value }))} style={{ border: 'none', background: 'transparent', padding: '12px 0', flex: 1, outline: 'none', fontWeight: 'bold', color: 'var(--text-primary)' }} />
+                                                            <input 
+                                                                type="text" 
+                                                                value={carpenterProfile.slug || ''} 
+                                                                onChange={(e) => setCarpenterProfile(prev => ({ ...prev, slug: e.target.value }))} 
+                                                                style={{ border: 'none', background: 'transparent', padding: '12px 0', flex: 1, outline: 'none', boxShadow: 'none', fontWeight: 'bold', color: 'var(--text-primary)' }} 
+                                                            />
                                                         </div>
                                                         <button 
                                                             onClick={() => {
@@ -1849,18 +1882,19 @@ const Dashboard = () => {
                                                             style={{
                                                                 padding: '16px',
                                                                 borderRadius: 'var(--radius-md)',
-                                                                border: `1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-light)'}`,
-                                                                backgroundColor: isActive ? 'var(--surface-bg)' : 'rgba(0,0,0,0.2)',
+                                                                border: `1px solid ${isActive ? '#10b981' : 'var(--border-light)'}`,
+                                                                backgroundColor: isActive ? 'rgba(16, 185, 129, 0.05)' : 'rgba(0,0,0,0.05)',
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 gap: '12px',
                                                                 cursor: 'pointer',
                                                                 transition: 'all 0.2s',
-                                                                opacity: isSaving ? 0.6 : 1
+                                                                opacity: isActive ? (isSaving ? 0.6 : 1) : 0.5,
+                                                                filter: isActive ? 'none' : 'grayscale(100%)'
                                                             }}
                                                         >
-                                                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: `2px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-light)'}`, display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: isActive ? 'var(--accent-primary)' : 'transparent', flexShrink: 0 }}>
-                                                                {isActive && <Check size={14} color="var(--bg-primary)" />}
+                                                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: `2px solid ${isActive ? '#10b981' : 'var(--border-light)'}`, display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: isActive ? '#10b981' : 'transparent', flexShrink: 0 }}>
+                                                                {isActive && <Check size={14} color="#ffffff" />}
                                                             </div>
                                                             <div>
                                                                 <strong style={{ display: 'block', color: 'var(--text-primary)', fontSize: '1rem' }}>{cat.label}</strong>
@@ -3322,12 +3356,6 @@ const Dashboard = () => {
                         </div> 
                     )}
 
-                    {activeTab !== 'profile' && activeTab !== 'leads' && activeTab !== 'map' && activeTab !== 'settings' && activeTab !== 'materials' && activeTab !== 'integrations' && activeTab !== 'ai-training' && (
-                        <div className="placeholder-state">
-                            <Package size={48} className="text-muted" />
-                            <h2>Ukendt modul</h2>
-                        </div>
-                    )}
                     
                     {/* AI TRÆNING */}
                     {activeTab === 'ai-training' && (
