@@ -193,7 +193,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                             }, 100);
                         }}
                     >
-                        Ja tak – Jeg vil gerne have et eksakt tilbud!
+                        Ja Tak - Jeg vil gerne gå videre.
                     </button>
                     <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
                         <button className="wizard-btn wizard-btn-secondary" style={{ width: '100%', justifyContent: 'center', border: '2px solid #e2e8f0', background: 'white', color: '#475569' }} onClick={editProject}>
