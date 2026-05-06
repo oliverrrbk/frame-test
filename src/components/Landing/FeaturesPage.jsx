@@ -286,26 +286,7 @@ export default function FeaturesPage({ setSession }) {
                     </div>
                 </section>
 
-                {/* Social Proof */}
-                <section className="mb-40 py-16 border-y border-slate-200/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/50 w-full relative z-10">
-                    <div className="max-w-[1440px] px-8 mx-auto">
-                        <div className="text-center mb-10">
-                            <span className="text-xs font-bold tracking-widest uppercase text-slate-400 dark:text-slate-500">Stoles på af Danmarks seje</span>
-                        </div>
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6 }}
-                            viewport={{ once: true, margin: "-50px" }}
-                            className="flex flex-wrap justify-center items-center gap-10 md:gap-24 opacity-60 grayscale hover:grayscale-0 transition-all duration-500"
-                        >
-                            <div className="font-black text-2xl tracking-tighter text-slate-900 dark:text-slate-100">STARK</div>
-                            <div className="font-bold text-xl tracking-widest text-slate-900 dark:text-slate-100">OPTIMERA</div>
-                            <div className="font-serif italic font-bold text-2xl text-slate-900 dark:text-slate-100">Bygma Danmark</div>
-                            <div className="font-mono font-bold text-xl text-slate-900 dark:text-slate-100">XL BYG</div>
-                        </motion.div>
-                    </div>
-                </section>
+
 
                 {/* Final CTA */}
                 <section ref={ctaRef} className="w-full max-w-[1440px] px-8 mx-auto mb-20 relative z-10 -mt-8">
