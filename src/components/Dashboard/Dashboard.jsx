@@ -566,7 +566,8 @@ const Dashboard = () => {
                 { category: 'annex', name: 'Sikkerhed (Buffer-pris)', price: 4000, carpenter_id: targetId },
 
                 // Carport
-                { category: 'carport', name: 'Trækonstruktion', price: 20000, carpenter_id: targetId },
+                { category: 'carport', name: 'Standard træ (Trykimprægneret)', price: 20000, carpenter_id: targetId },
+                { category: 'carport', name: 'Eksklusivt træ (Cedertræ/Hardwood)', price: 35000, carpenter_id: targetId },
                 { category: 'carport', name: 'Vedligeholdelsesfrit (Stål/Alu)', price: 35000, carpenter_id: targetId },
                 { category: 'carport', name: 'Tillæg: Dobbelt carport (fast pris)', price: 15000, carpenter_id: targetId },
                 { category: 'carport', name: 'Tillæg: Redskabsskur uisoleret (fast pris)', price: 8000, carpenter_id: targetId },

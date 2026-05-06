@@ -491,7 +491,8 @@ export const QUESTIONS = {
             type: 'visual_select', 
             label: 'Hvilket hovedmateriale skal carporten bygges i?', 
             options: [
-                { label: 'Trækonstruktion', img: '/images/facade_pine_1776270383566.png' },
+                { label: 'Standard træ (Trykimprægneret)', img: '/images/facade_pine_1776270383566.png' },
+                { label: 'Eksklusivt træ (Cedertræ/Hardwood)', img: '/images/facade_cedar_1776270440422.png' },
                 { label: 'Vedligeholdelsesfrit (Stål/Alu)', img: '/images/door_aluminum_1776258935245.png' }
             ] 
         },
