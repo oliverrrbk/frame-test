@@ -150,118 +150,71 @@ const Dashboard = () => {
 
         // Tjek for Minuba OAuth Callback
         const minubaIntegration = params.get('integration');
-        if (code && minubaIntegration === 'minuba') {
-            setActiveTab('integrations');
-            // Fjern kode fra URL for renlighed
-            window.history.replaceState({}, document.title, window.location.pathname);
-            
-            console.log("Minuba auth kode modtaget, veksler til tokens...");
-            
-            setCarpenterProfile(prev => prev ? {...prev, minuba_api_key: 'pending_authorization'} : null);
-            
-            supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session && session.user) {
+        
+        const isAuthCallback = (code && state === 'dinero') || (code && minubaIntegration === 'minuba') || token;
+
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
+            setSession(session);
+            if (session) {
+                let authHandled = false;
+
+                if (code && minubaIntegration === 'minuba') {
+                    authHandled = true;
+                    setActiveTab('integrations');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    setCarpenterProfile(prev => prev ? {...prev, minuba_api_key: 'pending_authorization'} : null);
+                    
                     const redirectUri = window.location.origin.includes('localhost') 
                         ? 'http://localhost:5173/dashboard?integration=minuba' 
                         : 'https://bisonframe.dk/dashboard?integration=minuba';
                         
-                    supabase.functions.invoke('minuba-auth', {
+                    const { data, error } = await supabase.functions.invoke('minuba-auth', {
                         body: { code: code, redirectUri: redirectUri }
-                    }).then(({ data, error }) => {
-                        if (error) {
-                            console.error("Fejl fra minuba-auth:", error);
-                            setCarpenterProfile(prev => prev ? {...prev, minuba_api_key: null} : null);
-                            toast.error("Der skete en fejl under godkendelse hos Minuba. Prøv venligst igen.");
-                        } else {
-                            console.log("Minuba forbundet med succes!", data);
-                            supabase.from('carpenters').select('*').eq('id', session.user.id).single()
-                                .then(({ data: freshProfile, error: fetchError }) => {
-                                    if (!fetchError && freshProfile) {
-                                        setCarpenterProfile(freshProfile);
-                                        toast.success("Minuba er nu forbundet!");
-                                    }
-                                });
-                        }
                     });
+                    
+                    if (error) {
+                        toast.error("Der skete en fejl under godkendelse hos Minuba. Prøv venligst igen.");
+                    } else {
+                        toast.success("Minuba er nu forbundet!");
+                    }
                 }
-            });
-        }
-        
-        // Tjek for Visma Connect / Dinero OAuth Callback
-        if (code && state === 'dinero') {
-            setActiveTab('integrations');
-            // Fjern kode fra URL for renlighed, og undgå at låse fanen
-            window.history.replaceState({}, document.title, window.location.pathname);
-            
-            console.log("Dinero auth kode modtaget, veksler til tokens...");
-            
-            // Giv brugeren en midlertidig indikator
-            setCarpenterProfile(prev => prev ? {...prev, dinero_api_key: 'pending_authorization'} : null);
-            
-            // Kald Edge Function for at veksle code til access token
-            supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session && session.user) {
+                
+                if (code && state === 'dinero') {
+                    authHandled = true;
+                    setActiveTab('integrations');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    setCarpenterProfile(prev => prev ? {...prev, dinero_api_key: 'pending_authorization'} : null);
+                    
                     const redirectUri = window.location.origin.includes('localhost') 
                         ? 'http://localhost:5173/dashboard?tab=integrations' 
                         : 'https://app.bisonframe.dk/dashboard?tab=integrations';
                         
-                    supabase.functions.invoke('dinero-auth', {
+                    const { data, error } = await supabase.functions.invoke('dinero-auth', {
                         body: { code: code, redirectUri: redirectUri }
-                    }).then(({ data, error }) => {
-                        if (error) {
-                            console.error("Fejl fra dinero-auth:", error);
-                            setCarpenterProfile(prev => prev ? {...prev, dinero_api_key: null} : null);
-                            toast.error("Der skete en fejl under godkendelse hos Dinero. Prøv venligst igen.");
-                        } else {
-                            console.log("Dinero forbundet med succes!", data);
-                            // Hent den friske profil fra databasen for at få den rigtige dinero_api_key ind i state
-                            supabase.from('carpenters').select('*').eq('id', session.user.id).single()
-                                .then(({ data: freshProfile, error: fetchError }) => {
-                                    if (!fetchError && freshProfile) {
-                                        setCarpenterProfile(freshProfile);
-                                        // Fjern loading indikator fra URL'en
-                                        window.history.replaceState({}, document.title, window.location.pathname);
-                                    }
-                                });
-                        }
                     });
+                    
+                    if (error) {
+                        toast.error("Der skete en fejl under godkendelse hos Dinero. Prøv venligst igen.");
+                    } else {
+                        toast.success("Dinero er nu forbundet!");
+                    }
                 }
-            });
-        }
-        
-        // Tjek for e-conomic Auth Callback (returnerer "token" i stedet for "code")
-        const token = params.get('token');
-        if (token) {
-            setActiveTab('integrations');
-            window.history.replaceState({}, document.title, window.location.pathname);
-            
-            console.log("e-conomic auth token modtaget, gemmer...");
-            
-            // Giv brugeren midlertidig indikator
-            setCarpenterProfile(prev => prev ? {...prev, economic_api_key: 'pending_authorization'} : null);
-            
-            // For e-conomic er tokenet selve AgreementGrantToken, som kan gemmes direkte!
-            supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session && session.user) {
-                    supabase.from('carpenter_secrets')
-                        .upsert({ carpenter_id: session.user.id, economic_api_key: token })
-                        .then(({ error }) => {
-                            if (!error) {
-                                setCarpenterProfile(prev => prev ? {...prev, economic_api_key: token} : null);
-                                console.log("e-conomic token gemt i database!");
-                            } else {
-                                console.error("Fejl ved gem af e-conomic token:", error);
-                                setCarpenterProfile(prev => prev ? {...prev, economic_api_key: null} : null);
-                            }
-                        });
+                
+                if (token) {
+                    authHandled = true;
+                    setActiveTab('integrations');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    setCarpenterProfile(prev => prev ? {...prev, economic_api_key: 'pending_authorization'} : null);
+                    
+                    const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: session.user.id, economic_api_key: token });
+                    if (error) {
+                        toast.error("Fejl ved gem af e-conomic token.");
+                    } else {
+                        toast.success("e-conomic er nu forbundet!");
+                    }
                 }
-            });
-        }
 
-        // Hent session først!
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            if (session) {
+                // Efter eventuel auth processering, hent data (sikrer at ny token er gemt først)
                 initProfileAndData(session.user);
             }
         });
