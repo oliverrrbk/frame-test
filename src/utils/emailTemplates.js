@@ -128,26 +128,34 @@ export const getCustomerRequestReceivedTemplate = (customerName, categoryName, c
     return getBaseTemplate("Tak for din forespørgsel", content, "Jeg glæder mig til at kigge på dit projekt.", carpenter);
 };
 
-export const getCarpenterNewRequestTemplate = (carpenterName, customerName, categoryName, customerEmail, customerPhone, appUrl = 'https://app.bisonframe.dk', leadId = null) => {
+export const getCarpenterNewRequestTemplate = (carpenterName, customerName, categoryName, customerEmail, customerPhone, appUrl = 'https://app.bisonframe.dk', leadId = null, projectDetailsHtml = '', priceEstimate = '', contactPreference = '') => {
     // Til tømreren selv bruger vi bare standard Bison Frame header
     const content = `
         <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Hej ${carpenterName},</h2>
         <p style="color: #334155;">Du har netop modtaget en ny forespørgsel fra en potentiel kunde via din overslagsberegner.</p>
         
         <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #e2e8f0;">
-            <h3 style="margin-top: 0; font-size: 16px; color: #0f172a;">Opgavedetaljer:</h3>
+            <h3 style="margin-top: 0; font-size: 16px; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px;">Kundens Kontaktinfo</h3>
             <ul style="list-style-type: none; padding: 0; margin: 0; color: #334155;">
                 <li style="margin-bottom: 8px;"><strong>Kunde:</strong> ${customerName}</li>
-                <li style="margin-bottom: 8px;"><strong>Opgave:</strong> ${categoryName}</li>
-                <li style="margin-bottom: 8px;"><strong>Telefon:</strong> ${customerPhone}</li>
-                <li style="margin-bottom: 0;"><strong>E-mail:</strong> ${customerEmail}</li>
+                <li style="margin-bottom: 8px;"><strong>Telefon:</strong> <a href="tel:${customerPhone}" style="color: #2563eb; text-decoration: none;">${customerPhone}</a></li>
+                <li style="margin-bottom: 8px;"><strong>E-mail:</strong> <a href="mailto:${customerEmail}" style="color: #2563eb; text-decoration: none;">${customerEmail}</a></li>
+                ${contactPreference ? `<li style="margin-bottom: 0;"><strong>Ønsket kontakt:</strong> ${contactPreference}</li>` : ''}
+            </ul>
+        </div>
+
+        <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #e2e8f0;">
+            <h3 style="margin-top: 0; font-size: 16px; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px;">Opgaven: ${categoryName}</h3>
+            ${priceEstimate ? `<div style="margin-bottom: 20px; padding: 12px; background: #ecfdf5; border-radius: 8px; border: 1px solid #a7f3d0;"><strong style="color: #065f46;">Overslag sendt til kunde:</strong> <span style="color: #047857; font-weight: bold;">${priceEstimate}</span></div>` : ''}
+            <ul style="list-style-type: none; padding: 0; margin: 0; color: #334155;">
+                ${projectDetailsHtml || '<li style="color: #64748b; font-style: italic;">Ingen specifikke detaljer valgt.</li>'}
             </ul>
         </div>
         
-        <p style="color: #334155;">Log ind på dit Bison Frame dashboard for at se alle detaljer og udarbejde et tilbud til kunden.</p>
+        <p style="color: #334155;">Log ind på dit Bison Frame dashboard for at udarbejde et tilbud til kunden.</p>
         
-        <div style="text-align: center;">
-            <a href="${appUrl}/dashboard?tab=leads${leadId ? `&leadId=${leadId}` : ''}" style="${buttonStyle}">Gå til dit Dashboard</a>
+        <div style="text-align: center; margin-top: 32px;">
+            <a href="${appUrl}/dashboard?tab=leads${leadId ? `&leadId=${leadId}` : ''}" style="${buttonStyle}">Åbn i Dashboard</a>
         </div>
     `;
     return getBaseTemplate("Ny forespørgsel på Bison Frame", content, `Ny opgave: ${categoryName} fra ${customerName}`);

@@ -65,6 +65,54 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
 
             // Send emails (async so we don't block the UI)
             if (customerEmail !== 'Ukendt' && !isManualCreation) {
+                // Generer detaljer til mailen
+                const contactPreferenceStr = isAsap ? 'Hurtigst muligt' : `${selectedDays.join(', ')} (${selectedTime})`;
+                let projectDetailsHtml = '';
+                if (projectData.category === 'special') {
+                    let aiHtml = '';
+                    if (projectData.details?.summaryBullets && projectData.details.summaryBullets.length > 0) {
+                        aiHtml += `
+                            <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
+                                <strong style="display: block; color: #0f172a; margin-bottom: 8px;">AI Opsummering af Kundens Ønsker:</strong>
+                                <ul style="margin: 0; padding-left: 20px; color: #334155;">
+                                    ${projectData.details.summaryBullets.map(b => `<li style="margin-bottom: 4px;">${b}</li>`).join('')}
+                                </ul>
+                            </li>
+                        `;
+                        if (projectData.details?.obsNotes && projectData.details.obsNotes.toLowerCase() !== 'ingen særlige forbehold') {
+                            aiHtml += `
+                                <li style="margin-bottom: 12px; padding: 12px; background: #fffbeb; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                                    <strong style="display: block; color: #b45309; margin-bottom: 4px;">⚠️ OBS / Særlige Forbehold:</strong>
+                                    <span style="color: #92400e;">${projectData.details.obsNotes}</span>
+                                </li>
+                            `;
+                        }
+                    } else {
+                        aiHtml = `
+                            <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
+                                <strong style="display: block; color: #0f172a; margin-bottom: 4px;">AI Opgave-beskrivelse:</strong>
+                                <span style="color: #334155;">${projectData.details?.aiSummary || projectData.details?.aiProjectTitle || 'Specialopgave'}</span>
+                            </li>
+                        `;
+                    }
+                    projectDetailsHtml = aiHtml;
+                } else {
+                    const categoryQuestions = QUESTIONS[projectData.category] || [];
+                    projectDetailsHtml = Object.entries(projectData.details || {})
+                        .map(([key, value]) => {
+                            const question = categoryQuestions.find(q => q.id === key);
+                            if (!question || value === undefined || value === null || value === '') return '';
+                            if (question.type === 'textarea' || question.type === 'file') return '';
+                            return `
+                                <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
+                                    <strong style="display: block; color: #0f172a; margin-bottom: 4px;">${question.label}</strong>
+                                    <span style="color: #334155;">${value}</span>
+                                </li>
+                            `;
+                        })
+                        .join('');
+                }
+
                 import('../../utils/sendEmail').then(({ sendEmail }) => {
                     import('../../utils/emailTemplates').then(({ getCustomerRequestReceivedTemplate, getCarpenterNewRequestTemplate, getCarpenterSenderName }) => {
                         const senderName = getCarpenterSenderName(carpenter);
@@ -83,7 +131,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                             sendEmail({
                                 to: carpenterEmail,
                                 subject: `Ny forespørgsel fra ${customerName} - ${categoryName}`,
-                                html: getCarpenterNewRequestTemplate(carpenterName, customerName, categoryName, customerEmail, customerPhone, appUrl, newLeadId),
+                                html: getCarpenterNewRequestTemplate(carpenterName, customerName, categoryName, customerEmail, customerPhone, appUrl, newLeadId, projectDetailsHtml, priceRange, contactPreferenceStr),
                                 fromName: carpenterName,
                                 replyTo: customerEmail
                             });
