@@ -2009,7 +2009,9 @@ const Dashboard = () => {
                                                         Tilbud givet og accepteret: {lead.raw_data?.actual_quote_price ? Math.round(lead.raw_data.actual_quote_price).toLocaleString('da-DK') : '?'} kr. inkl. moms
                                                     </p>
                                                 ) : (
-                                                    <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: '0.9rem' }}><strong>Estimat givet:</strong> {lead.price_estimate}</p>
+                                                    <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: '0.9rem' }}>
+                                                        <strong>Overslag givet:</strong> {lead.raw_data?.calc_data?.finalEstimateIncVat ? `${lead.raw_data.calc_data.finalEstimateIncVat.toLocaleString('da-DK')} kr. inkl. moms / ${lead.raw_data.calc_data.finalEstimateExVat.toLocaleString('da-DK')} kr. eks. moms` : lead.price_estimate}
+                                                    </p>
                                                 )}
                                                 <p style={{ margin: '0 0 0', color: '#6b7280', fontSize: '0.85rem' }}><em>Modtaget: {new Date(lead.created_at).toLocaleDateString('da-DK')} kl. {new Date(lead.created_at).toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'})}</em></p>
                                             </div>
@@ -2294,8 +2296,15 @@ const Dashboard = () => {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <span style={{ fontSize: '0.85rem', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Auto-Estimat</span>
-                                                        <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#1d4ed8', fontSize: '1.1rem' }}>{selectedLead.price_estimate}</p>
+                                                        <span style={{ fontSize: '0.85rem', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overslag sendt til kunde</span>
+                                                        <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#1d4ed8', fontSize: '1.1rem' }}>
+                                                            {selectedLead.raw_data?.calc_data?.finalEstimateIncVat ? (
+                                                                <>
+                                                                    {selectedLead.raw_data.calc_data.finalEstimateIncVat.toLocaleString('da-DK')} kr. inkl. moms<br/>
+                                                                    <span style={{ fontSize: '0.85rem', fontWeight: 'normal', opacity: 0.8 }}>({selectedLead.raw_data.calc_data.finalEstimateExVat.toLocaleString('da-DK')} kr. eks. moms)</span>
+                                                                </>
+                                                            ) : selectedLead.price_estimate}
+                                                        </p>
                                                     </>
                                                 )}
                                             </div>

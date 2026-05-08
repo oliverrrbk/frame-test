@@ -769,14 +769,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     const priceTop = strictPrice * marginFactor;
 
     // Læg moms (1.25) på først, derefter rund af ned til nærmeste tusinde
-    let minPrice = Math.floor((strictPrice * 1.25) / 1000) * 1000;
     let maxPrice = Math.ceil((priceTop * 1.25) / 1000) * 1000;
+    let maxPriceExVat = Math.round(maxPrice / 1.25);
     
-    const fmtMin = new Intl.NumberFormat('da-DK').format(minPrice);
     const fmtMax = new Intl.NumberFormat('da-DK').format(maxPrice);
 
     return {
-        priceRange: `${fmtMin} - ${fmtMax} kr. inkl. moms`,
+        priceRange: `${fmtMax} kr. inkl. moms`,
         breakdownArr: bArr,
         calcData: {
             laborHours: Math.ceil(laborHours),
@@ -784,7 +783,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             totalLaborCost: Math.ceil(totalLaborCost),
             materialCost: Math.ceil(materialCost),
             drivingCost: Math.ceil(totalDriving),
-            strictPrice: Math.ceil(strictPrice)
+            strictPrice: Math.ceil(strictPrice),
+            finalEstimateIncVat: maxPrice,
+            finalEstimateExVat: maxPriceExVat
         }
     };
 };
