@@ -450,6 +450,17 @@ p {
     opacity: 1;
 }
 
+.sidebar-booking-card {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.dashboard-sidebar:hover .sidebar-booking-card {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 .brand-icon {
     color: var(--text-primary);
     flex-shrink: 0;

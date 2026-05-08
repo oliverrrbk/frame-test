@@ -1419,7 +1419,7 @@ const Dashboard = () => {
                     <div style={{ marginTop: 'auto' }}></div>
                     
                     {/* Share Booking Link Card in Sidebar */}
-                    <div style={{ padding: '16px', background: 'var(--surface-bg)', borderRadius: '12px', border: '1px solid var(--border-light)', marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="sidebar-booking-card" style={{ padding: '16px', background: 'var(--surface-bg)', borderRadius: '12px', border: '1px solid var(--border-light)', marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Link size={16} color="#10b981" />
                             <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>Dit Booking-link</span>
