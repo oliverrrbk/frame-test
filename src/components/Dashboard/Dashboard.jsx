@@ -262,6 +262,26 @@ const Dashboard = () => {
 
     useEffect(() => {
         if (selectedLead && selectedLead.raw_data?.calc_data) {
+            let defaultMessage = '';
+            if (selectedLead.raw_data?.category === 'special') {
+                if (selectedLead.raw_data.details?.summaryBullets && selectedLead.raw_data.details.summaryBullets.length > 0) {
+                    defaultMessage += selectedLead.raw_data.details.summaryBullets.map(b => `- ${b}`).join('\n');
+                } else {
+                    defaultMessage += selectedLead.raw_data.details?.aiSummary || '';
+                }
+            } else if (selectedLead.raw_data?.details) {
+                const categoryQuestions = QUESTIONS[selectedLead.raw_data.category] || [];
+                const lines = [];
+                Object.entries(selectedLead.raw_data.details).forEach(([key, value]) => {
+                    const q = categoryQuestions.find(q => q.id === key);
+                    // Undlad "ja/nej" hvis det giver bedre mening med fuld tekst, men for simpelhed tager vi rå værdi.
+                    if (q && q.type !== 'textarea' && q.type !== 'file' && value) {
+                        lines.push(`- ${q.label}: ${value}`);
+                    }
+                });
+                defaultMessage += lines.join('\n');
+            }
+
             setQuoteBuilder({
                 laborHours: selectedLead.raw_data.calc_data.laborHours || 0,
                 hourlyRate: selectedLead.raw_data.calc_data.hourlyRate || 0,
@@ -270,8 +290,8 @@ const Dashboard = () => {
                 customLines: [], 
                 showPreview: false,
                 isGeneratingPdf: false,
-                showDetailedBreakdown: true,
-                customMessage: ''
+                showDetailedBreakdown: false, // Nu skjult som standard
+                customMessage: defaultMessage
             });
         } else {
             setQuoteBuilder(null);
