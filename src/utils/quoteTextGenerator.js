@@ -83,6 +83,51 @@ export const generateHumanQuoteText = (category, details, categoryName) => {
                 '• Oprydning af byggeplads'
             ];
             break;
+        case 'ceilings':
+            bulletPoints = [
+                '• Klargøring af arbejdsområde og evt. nedtagning af eksisterende loft',
+                '• Etablering af forskalling og underkonstruktion',
+                `• Montering af ny loftbeklædning${specificInfo}`,
+                '• Afslutning med skyggelister/fugning',
+                '• Slutfinish og oprydning'
+            ];
+            break;
+        case 'extensions':
+            bulletPoints = [
+                '• Etablering af byggeplads, afsætning og udgravning',
+                '• Støbning af fundament og etablering af terrændæk',
+                `• Opbygning af råhus, tagkonstruktion og klimaskærm${specificInfo}`,
+                '• Indvendig aptering, isolering og overfladebehandling',
+                '• Afleveringsforretning, kvalitetssikring og oprydning'
+            ];
+            break;
+        case 'annex':
+            bulletPoints = [
+                '• Etablering af punktfundamenter/skruefundamenter',
+                `• Opbygning af gulvkonstruktion og klimaskærm${specificInfo}`,
+                '• Montering af tagkonstruktion, vinduer og døre',
+                '• Indvendig beklædning og finish',
+                '• Slutrengøring og aflevering'
+            ];
+            break;
+        case 'carport':
+            bulletPoints = [
+                '• Opmåling, afsætning og støbning af stolpefødder',
+                `• Rejsning af stolper og bærende konstruktion${specificInfo}`,
+                '• Montering af tagkonstruktion og tagbelægning',
+                '• Evt. beklædning af sider/skur',
+                '• Færdiggørelse og oprydning af pladsen'
+            ];
+            break;
+        case 'fence':
+            bulletPoints = [
+                '• Opmåling, afsætning og klargøring af linjeføring',
+                '• Nedgravning/støbning af stolper med korrekt afstand',
+                `• Montering af hegnsbrædder/elementer jf. aftale${specificInfo}`,
+                '• Tilpasning af højder og evt. låge',
+                '• Kvalitetssikring og oprydning'
+            ];
+            break;
         default:
             // Generisk byggeri
             bulletPoints = [
