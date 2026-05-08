@@ -35,7 +35,7 @@ import {
 import { da } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 
-export default function DashboardOverview({ leadsData, carpenterProfile }) {
+export default function DashboardOverview({ leadsData, carpenterProfile, myProfile }) {
     const [timeframe, setTimeframe] = useState('30d'); // '7d', '30d', 'ytd', 'all'
     const [selectedMetric, setSelectedMetric] = useState('won_revenue'); 
 
@@ -177,7 +177,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile }) {
             {/* Header */}
             <div style={{ padding: '0 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                    <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.5rem' }}>Velkommen tilbage, {(carpenterProfile?.company_name || 'Tømrer').split(' ')[0]}!</h2>
+                    <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.5rem' }}>Velkommen tilbage, {(myProfile?.owner_name || carpenterProfile?.company_name || 'Mester').split(' ')[0]}!</h2>
                     <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.1rem' }}>Her er dit data-drevne overblik.</p>
                 </div>
             </div>
@@ -189,16 +189,17 @@ export default function DashboardOverview({ leadsData, carpenterProfile }) {
                         <Link size={24} />
                     </div>
                     <div>
-                        <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', color: 'var(--text-primary)' }}>Dit Booking-link er klar!</h3>
-                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Del dette link med dine kunder, så de kan beregne deres egen pris direkte på din profil.</p>
+                        <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', color: 'var(--text-primary)' }}>Dit overslagslink er klar!</h3>
+                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Del dette link med dine kunder, så de kan beregne et vejledende overslag direkte på din profil.</p>
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', padding: '6px 6px 6px 16px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
                     <span style={{ color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.95rem', userSelect: 'all' }}>bisonframe.dk/{carpenterProfile?.slug || 't'}</span>
                     <button 
                         onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/${carpenterProfile?.slug || 't'}`);
-                            toast.success('Kunde-link kopieret til udklipsholder!');
+                            const baseUrl = window.location.origin.includes('localhost') ? window.location.origin : 'https://bisonframe.dk';
+                            navigator.clipboard.writeText(`${baseUrl}/${carpenterProfile?.slug || 't'}`);
+                            toast.success('Overslagslink kopieret til udklipsholder!');
                         }}
                         style={{ 
                             background: '#10b981', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', 
@@ -214,56 +215,64 @@ export default function DashboardOverview({ leadsData, carpenterProfile }) {
                 </div>
             </div>
 
-            {/* Main Layout: Sidebar & Graph */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' }}>
+            {/* Main Layout: Sidebar & Graph Combined */}
+            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', minHeight: '600px', overflow: 'hidden' }}>
                 
-                {/* Left Sidebar - Metric Selection */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', gridColumn: '1 / 2' }}>
-                    {Object.entries(metrics).map(([key, m]) => {
-                        const isSelected = selectedMetric === key;
-                        const Icon = m.icon;
-                        return (
-                            <div 
-                                key={key}
-                                onClick={() => setSelectedMetric(key)}
-                                className="glass-panel"
-                                style={{
-                                    padding: '16px 20px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    border: isSelected ? `2px solid ${m.color}` : '2px solid transparent',
-                                    transform: isSelected ? 'translateX(8px)' : 'none',
-                                    boxShadow: isSelected ? `0 8px 24px ${m.color}20` : 'none',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: '16px'
-                                }}
-                            >
-                                {/* Active indicator background glow */}
-                                {isSelected && (
-                                    <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, background: `linear-gradient(90deg, transparent 0%, ${m.color}05 100%)`, pointerEvents: 'none' }} />
-                                )}
+                {/* Left Area - Metric Selection (Acts like tabs) */}
+                <div style={{ width: '100%', maxWidth: '320px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-light)', background: 'var(--bg-card)' }}>
+                    <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--border-light)' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>Nøgletal</h3>
+                    </div>
+                    <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {Object.entries(metrics).map(([key, m]) => {
+                            const isSelected = selectedMetric === key;
+                            const Icon = m.icon;
+                            return (
+                                <div 
+                                    key={key}
+                                    onClick={() => setSelectedMetric(key)}
+                                    style={{
+                                        padding: '14px 16px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        background: isSelected ? 'var(--bg-active)' : 'transparent',
+                                        borderRadius: '12px',
+                                        position: 'relative',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: '16px'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        if (!isSelected) e.currentTarget.style.background = 'var(--bg-hover)';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                    }}
+                                >
+                                    {/* Subtle left indicator for selected state */}
+                                    {isSelected && (
+                                        <div style={{ position: 'absolute', left: 0, top: '10%', bottom: '10%', width: '4px', borderRadius: '0 4px 4px 0', background: m.color }} />
+                                    )}
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 2 }}>
-                                    <div style={{ padding: '10px', borderRadius: '10px', background: `${m.color}15`, color: m.color }}>
-                                        <Icon size={20} />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ padding: '8px', borderRadius: '8px', background: isSelected ? `${m.color}20` : 'rgba(0,0,0,0.03)', color: isSelected ? m.color : 'var(--text-tertiary)', transition: 'all 0.2s' }}>
+                                            <Icon size={18} />
+                                        </div>
+                                        <h3 style={{ margin: 0, fontSize: '0.95rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isSelected ? 600 : 500, transition: 'all 0.2s' }}>{m.label}</h3>
                                     </div>
-                                    <h3 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{m.label}</h3>
+                                    <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: isSelected ? '700' : '600', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', letterSpacing: '-0.02em', textAlign: 'right' }}>
+                                        {m.format === 'currency' ? m.value.toLocaleString('da-DK') : m.value}
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '4px', fontWeight: 500 }}>{m.suffix}</span>
+                                    </p>
                                 </div>
-                                <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em', textAlign: 'right', position: 'relative', zIndex: 2 }}>
-                                    {m.format === 'currency' ? m.value.toLocaleString('da-DK') : m.value}
-                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: '4px', fontWeight: 500 }}>{m.suffix}</span>
-                                </p>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
 
                 {/* Right Area - Chart */}
-                <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: '600px', gridColumn: '2 / -1' }}>
+                <div style={{ flex: 1, padding: '32px', display: 'flex', flexDirection: 'column', minWidth: '400px' }}>
                     <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                         <div>
                             <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '12px' }}>

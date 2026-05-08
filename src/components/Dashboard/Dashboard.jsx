@@ -1425,13 +1425,14 @@ const Dashboard = () => {
                     <div className="sidebar-booking-card" style={{ padding: '16px', background: 'var(--surface-bg)', borderRadius: '12px', border: '1px solid var(--border-light)', marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Link size={16} color="#10b981" />
-                            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>Dit Booking-link</span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>Dit Overslagslink</span>
                         </div>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>Dette er linket du sender til kunderne.</p>
                         <button 
                             onClick={() => {
-                                navigator.clipboard.writeText(`${window.location.origin}/${carpenterProfile?.slug || 't'}`);
-                                toast.success('Booking-link kopieret!');
+                                const baseUrl = window.location.origin.includes('localhost') ? window.location.origin : 'https://bisonframe.dk';
+                                navigator.clipboard.writeText(`${baseUrl}/${carpenterProfile?.slug || 't'}`);
+                                toast.success('Overslagslink kopieret!');
                             }}
                             style={{ 
                                 background: '#10b981', color: 'white', border: 'none', padding: '8px', borderRadius: '6px', 
@@ -1651,7 +1652,7 @@ const Dashboard = () => {
                         <SuperAdminView />
                     )}
                     {activeTab === 'overview' && (
-                        <DashboardOverview leadsData={leadsData} carpenterProfile={carpenterProfile} />
+                        <DashboardOverview leadsData={leadsData} carpenterProfile={carpenterProfile} myProfile={myProfile} />
                     )}
 
                     {activeTab === 'team' && carpenterProfile?.role === 'admin' && (
