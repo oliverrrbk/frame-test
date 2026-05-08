@@ -151,6 +151,9 @@ const Dashboard = () => {
         // Tjek for Minuba OAuth Callback
         const minubaIntegration = params.get('integration');
         
+        // Tjek for e-conomic Auth Callback
+        const token = params.get('token');
+        
         const isAuthCallback = (code && state === 'dinero') || (code && minubaIntegration === 'minuba') || token;
 
         supabase.auth.getSession().then(async ({ data: { session } }) => {
