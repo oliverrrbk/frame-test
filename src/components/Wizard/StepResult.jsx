@@ -160,9 +160,12 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
         <section className="wizard-step active" style={{ maxWidth: '800px', margin: '0 auto' }}>
             <div className="result-card" style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '8px' }}>
-                        Vejledende prisramme for {carpenter?.company_name || 'Mads Byg'}
+                    <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                        Dit vejledende overslag er klar!
                     </h2>
+                    <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
+                        Du kan trygt bruge dette overslag til at sammenligne markedet. Vi tror på fuld gennemsigtighed fra start.
+                    </p>
                 </div>
                 
                 <div style={{ 
@@ -218,9 +221,9 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                 </div>
 
                 <div style={{ 
-                    background: '#fffbeb', 
-                    border: '1px solid #fde68a', 
-                    color: '#92400e', 
+                    background: '#eff6ff', 
+                    border: '1px solid #bfdbfe', 
+                    color: '#1e3a8a', 
                     padding: '24px', 
                     borderRadius: 'var(--radius-lg)', 
                     display: 'flex', 
@@ -228,8 +231,8 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     alignItems: 'flex-start'
                 }}>
                     <div>
-                        <strong style={{ display: 'block', marginBottom: '4px', fontSize: '1.1rem' }}>Vigtig information om overslaget</strong>
-                        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Dette er udelukkende et vejledende pris-overslag for at give dig en idé om lejet. Tømreren tager altid ud og besigtiger opgaven fysisk, før der udarbejdes et endeligt og bindende tilbud.</p>
+                        <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Er du tilfreds med prisniveauet?</strong>
+                        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Så behøver du ikke lede længere. Når du går videre herfra, fortæller du os, at du ønsker at bruge <strong>{carpenter?.company_name || 'os'}</strong> til din opgave. Vi kommer ud og kigger på detaljerne, så vi sammen kan låse den endelige pris og lave en fast aftale.</p>
                     </div>
                 </div>
             </div>
@@ -381,13 +384,13 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                             boxShadow: ((!isAsap && selectedDays.length === 0) || isSaving) ? 'none' : '0 10px 25px rgba(59,130,246,0.3)'
                         }}
                     >
-                        {isSaving ? 'Arbejder...' : (isManualCreation ? 'Opret Kunde og Gem Overslag' : `Send forespørgsel til ${carpenter?.owner_name ? carpenter.owner_name.split(' ')[0] : 'Tømreren'}`)}
+                        {isSaving ? 'Arbejder...' : (isManualCreation ? 'Opret Kunde og Gem Overslag' : `Ja tak, jeg vælger ${carpenter?.company_name || 'jer'} til opgaven`)}
                     </button>
                     {selectedDays.length === 0 && !isAsap && <p style={{ textAlign: 'center', marginTop: '12px', color: '#ef4444', fontSize: '0.9rem', fontWeight: '500' }}>* Vælg mindst én dag for at fortsætte</p>}
                     
                     {!isManualCreation && (
                         <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.9rem', color: '#64748b', lineHeight: '1.5' }}>
-                            Når du trykker send, lander dit overslag direkte hos {carpenter?.owner_name ? carpenter.owner_name.split(' ')[0] : 'tømreren'}. Han vil tage fat i dig hurtigst muligt – eller på de tidspunkter du har valgt – for en uforpligtende snak om opgaven.
+                            Når du trykker send, lander opgaven direkte hos {carpenter?.owner_name ? carpenter.owner_name.split(' ')[0] : 'tømreren'}. Han tager fat i dig for at planlægge en besigtigelse.
                         </p>
                     )}
                 </div>
