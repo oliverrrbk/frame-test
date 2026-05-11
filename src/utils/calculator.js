@@ -113,6 +113,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 else if (w.type === 'Skydedør') h += 4.0;
                 else if (w.type === 'Tagvindue') h += 5.0; // Tagvinduer tager længere tid
                 
+                // Opjuster arbejdstiden baseret på vinduets dimensioner (Areal)
+                if (w.width && w.height) {
+                    const areaM2 = (parseFloat(w.width) / 100) * (parseFloat(w.height) / 100);
+                    if (areaM2 > 2.5 && w.type === 'Standard') h += 1.0; // Store vinduer kræver flere mænd/tungt løft
+                    if (areaM2 > 4.5) h += 2.0; // Ekstremt store partier
+                }
+
                 if (w.hasSlidingDoor) h += 4.0;
                 winHours += h;
             });
@@ -165,10 +172,32 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 
                 d.windowsConfig.forEach((w) => {
                     let base = matDb; // start with selected material base
-                    if (w.type === 'Panorama') base = indexCat['Panorama/Specialmål'] || 12000;
-                    else if (w.type === 'Skydedør') base = indexCat['Skydedør'] || 15000;
-                    else if (w.type === 'Tagvindue') base = indexCat['Ovenlysvindue / Velux (pr. stk)'] || 8500;
+                    let expectedArea = 1.44; // ca 1.2m x 1.2m
+
+                    if (w.type === 'Panorama') {
+                        base = indexCat['Panorama/Specialmål'] || 12000;
+                        expectedArea = 4.0; // ca 2x2m
+                    }
+                    else if (w.type === 'Skydedør') {
+                        base = indexCat['Skydedør'] || 15000;
+                        expectedArea = 4.2; // ca 2.1x2m
+                    }
+                    else if (w.type === 'Tagvindue') {
+                        base = indexCat['Ovenlysvindue / Velux (pr. stk)'] || 8500;
+                        expectedArea = 0.9; // ca 0.78x1.18m
+                    }
                     
+                    // Skaler prisen efter arealet
+                    if (w.width && w.height) {
+                        const areaM2 = (parseFloat(w.width) / 100) * (parseFloat(w.height) / 100);
+                        // Beregn arealfaktor, men sæt grænser, så ekstreme inputs ikke ødelægger prisen (mellem 0.5 og 3.5 gange prisen)
+                        const areaFactor = Math.min(Math.max(areaM2 / expectedArea, 0.5), 3.5);
+                        
+                        // Prisen ganges med arealfaktoren. Men vi beholder 30% som en "fast" grundpris for ramme, beslag osv. 
+                        // og skalerer kun de resterende 70% med arealet.
+                        base = (base * 0.30) + (base * 0.70 * areaFactor);
+                    }
+
                     // Fixed windows (fastkarm) are usually cheaper than openable
                     if (w.isOpenable === false && w.type === 'Standard') {
                         base = base * 0.75; 
