@@ -2,6 +2,7 @@ import React from 'react';
 import toast from 'react-hot-toast';
 import { ImagePlus } from 'lucide-react';
 import { QUESTIONS } from './questionsConfig';
+import CustomSelect from './CustomSelect';
 
 const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, quickRecalculate }) => {
     const questions = QUESTIONS[category] || [];
@@ -203,35 +204,15 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         </div>
                     )}
                 </div>
-                
-                {q.type === 'select' && (
+                        {q.type === 'select' && (
                     <div style={{ position: 'relative' }}>
-                        <select 
+                        <CustomSelect 
                             value={details[q.id] || ''} 
-                            onChange={(e) => handleInputChange(q.id, e.target.value)}
-                            style={{ 
-                                width: '100%', 
-                                padding: '14px 20px', 
-                                borderRadius: '12px', 
-                                border: '2px solid var(--border)', 
-                                fontSize: '1rem',
-                                color: 'var(--text-primary)',
-                                background: 'rgba(255, 255, 255, 0.8)',
-                                cursor: 'pointer',
-                                appearance: 'none',
-                                transition: 'var(--transition-fast)'
-                            }}
-                            onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
-                            onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
-                        >
-                            <option value="" disabled>-- Vælg en mulighed --</option>
-                            {q.options.map(opt => (
-                                <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                        </select>
-                        <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-secondary)' }}>
-                            ▼
-                        </div>
+                            onChange={(val) => handleInputChange(q.id, val)}
+                            options={q.options}
+                            placeholder="-- Vælg en mulighed --"
+                            style={{ width: '100%' }}
+                        />
                     </div>
                 )}
 
@@ -378,20 +359,21 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
                                         <div>
                                             <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>Type</label>
-                                            <select 
+                                            <CustomSelect 
                                                 value={wConf.type || 'Standard'}
-                                                onChange={(e) => {
+                                                onChange={(val) => {
                                                     const newArr = [...(details[q.id] || [])];
-                                                    newArr[idx] = { ...wConf, type: e.target.value };
+                                                    newArr[idx] = { ...wConf, type: val };
                                                     handleInputChange(q.id, newArr);
                                                 }}
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
-                                            >
-                                                <option value="Standard">Standard facadevindue</option>
-                                                <option value="Tagvindue">Tagvindue (Ovenlys/Velux)</option>
-                                                <option value="Panorama">Panorama / Gulv-til-loft</option>
-                                                <option value="Skydedør">Terrassedør / Skydedør</option>
-                                            </select>
+                                                options={[
+                                                    { value: 'Standard', label: 'Standard facadevindue' },
+                                                    { value: 'Tagvindue', label: 'Tagvindue (Ovenlys/Velux)' },
+                                                    { value: 'Panorama', label: 'Panorama / Gulv-til-loft' },
+                                                    { value: 'Skydedør', label: 'Terrassedør / Skydedør' }
+                                                ]}
+                                                style={{ width: '100%', borderRadius: '8px' }}
+                                            />
                                         </div>
 
                                         <div style={{ display: 'flex', alignItems: 'center', marginTop: '28px', flexWrap: 'wrap', gap: '16px' }}>
