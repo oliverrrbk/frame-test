@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Autocomplete } from '@react-google-maps/api';
 
-const Step4Contact = ({ calculateEstimate, prevStep }) => {
-    const [email, setEmail] = useState('');
-    const [fullName, setFullName] = useState('');
-    const [street, setStreet] = useState('');
-    const [zip, setZip] = useState('');
-    const [city, setCity] = useState('');
-    const [phone, setPhone] = useState('');
-    const [acceptedTerms, setAcceptedTerms] = useState(false); // NY: GDPR State
+const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
+    const [email, setEmail] = useState(prefillData?.email || '');
+    const [fullName, setFullName] = useState(prefillData?.fullName || '');
+    const [street, setStreet] = useState(prefillData?.street || '');
+    const [zip, setZip] = useState(prefillData?.zip || '');
+    const [city, setCity] = useState(prefillData?.city || '');
+    const [phone, setPhone] = useState(prefillData?.phone || '');
+    const [acceptedTerms, setAcceptedTerms] = useState(!!prefillData); // Accept default if prefilled
     
     const nameInputRef = useRef(null);
 

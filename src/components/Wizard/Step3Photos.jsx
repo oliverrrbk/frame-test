@@ -3,7 +3,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { Camera, ImagePlus } from 'lucide-react';
 
-const Step3Photos = ({ category, photos, setPhotos, notes, setNotes, nextStep, prevStep }) => {
+const Step3Photos = ({ category, photos, setPhotos, notes, setNotes, nextStep, prevStep, quickRecalculate }) => {
     const [isUploading, setIsUploading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
@@ -225,7 +225,16 @@ const Step3Photos = ({ category, photos, setPhotos, notes, setNotes, nextStep, p
 
             <div className="actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
                 <button className="wizard-btn wizard-btn-secondary" onClick={prevStep} disabled={isUploading}>← Tilbage</button>
-                <button className="wizard-btn wizard-btn-primary" onClick={nextStep} disabled={isUploading}>Fortsæt →</button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    {quickRecalculate && (
+                        <button className="wizard-btn wizard-btn-primary" onClick={quickRecalculate} disabled={isUploading} style={{ boxShadow: '0 10px 25px rgba(59,130,246,0.3)' }}>
+                            Gem & Vis Overslag →
+                        </button>
+                    )}
+                    <button className={`wizard-btn ${quickRecalculate ? 'wizard-btn-secondary' : 'wizard-btn-primary'}`} onClick={nextStep} disabled={isUploading}>
+                        {quickRecalculate ? 'Bekræft Kontaktinfo →' : 'Fortsæt →'}
+                    </button>
+                </div>
             </div>
         </section>
     );

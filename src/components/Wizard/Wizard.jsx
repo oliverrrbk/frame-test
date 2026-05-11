@@ -136,7 +136,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
         setCurrentStep(prev => prev - 1);
     };
 
-    const calculateEstimate = async (customerDetails) => {
+    const calculateEstimate = async (customerDetails, isUpdateContext = false) => {
         setIsCalculating(true);
         
         // Sørg for at latest data er i projectData objektet inden det sendes afsted
@@ -171,35 +171,66 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             };
             const categoryName = categoryMap[updatedProjectData.category] || updatedProjectData.category;
 
-            // OPRET LEAD TIDLIGT SOM "Overslag (Afventer)"
-            const { data: insertedData, error: insertError } = await supabase
-                .from('leads')
-                .insert([{
-                    customer_name: customerDetails?.fullName || 'Ukendt',
-                    customer_email: customerDetails?.email || 'Ukendt',
-                    customer_phone: customerDetails?.phone || '',
-                    customer_address: `${customerDetails?.street || ''}, ${customerDetails?.zip || ''} ${customerDetails?.city || ''}`,
-                    project_category: categoryName,
-                    price_estimate: res.priceRange,
-                    contact_preference: 'Afventer accept',
-                    raw_data: updatedProjectData,
-                    carpenter_id: carpenter?.id || null,
-                    status: 'Overslag (Afventer)'
-                }])
-                .select()
-                .single();
+            let leadId = updatedProjectData.leadId;
+            let isUpdate = !!leadId;
+            let insertedData = null;
 
-            if (insertedData && customerDetails?.email) {
-                updatedProjectData.leadId = insertedData.id; // Gem lead ID'et i state
+            if (isUpdate) {
+                // OPDATER EKSISTERENDE LEAD
+                const { data, error } = await supabase
+                    .from('leads')
+                    .update({
+                        price_estimate: res.priceRange,
+                        raw_data: updatedProjectData,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', leadId)
+                    .select()
+                    .single();
                 
-                // SEND EMAIL MED OVERSLAGET TIL KUNDEN
+                if (error) {
+                    console.error("Fejl ved opdatering af lead:", error);
+                    // Hvis opdatering fejler, falder vi tilbage til at oprette et nyt
+                    isUpdate = false; 
+                } else {
+                    insertedData = data;
+                }
+            }
+
+            if (!isUpdate) {
+                // OPRET LEAD TIDLIGT SOM "Overslag (Afventer)"
+                const { data, error } = await supabase
+                    .from('leads')
+                    .insert([{
+                        customer_name: customerDetails?.fullName || 'Ukendt',
+                        customer_email: customerDetails?.email || 'Ukendt',
+                        customer_phone: customerDetails?.phone || '',
+                        customer_address: `${customerDetails?.street || ''}, ${customerDetails?.zip || ''} ${customerDetails?.city || ''}`,
+                        project_category: categoryName,
+                        price_estimate: res.priceRange,
+                        contact_preference: 'Afventer accept',
+                        raw_data: updatedProjectData,
+                        carpenter_id: carpenter?.id || null,
+                        status: 'Overslag (Afventer)'
+                    }])
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                insertedData = data;
+                leadId = insertedData.id;
+                updatedProjectData.leadId = leadId;
+            }
+
+            if (insertedData && customerDetails?.email && !isUpdate) {
+                // SEND EMAIL MED OVERSLAGET TIL KUNDEN KUN VED FØRSTE OPRETTELSE
                 import('../../utils/sendEmail').then(({ sendEmail }) => {
                     import('../../utils/emailTemplates').then(({ getCustomerEstimateTemplate, getCarpenterSenderName }) => {
                         const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
                         const senderName = getCarpenterSenderName(carpenter);
                         
                         // Generer URL til at åbne overslaget igen
-                        const overslagUrl = `${window.location.origin}/${carpenter?.slug || 'demo'}/overslag/${insertedData.id}`;
+                        const overslagUrl = `${window.location.origin}/${carpenter?.slug || 'demo'}/overslag/${leadId}`;
                         
                         sendEmail({
                             to: customerDetails.email,
@@ -215,7 +246,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             setProjectData(prev => ({
                 ...prev,
                 calc_data: res.calcData,
-                leadId: insertedData?.id
+                leadId: leadId
             }));
 
             setIsCalculating(false);
@@ -233,6 +264,12 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
         setCurrentStep(1);
         setProjectData({ category: null, details: {} });
         setNotes("");
+    };
+
+    const handleQuickRecalculate = () => {
+        if (projectData.customerDetails) {
+            calculateEstimate(projectData.customerDetails, true);
+        }
     };
 
     if (isDbLoading) {
@@ -314,9 +351,9 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                     }} 
                 />
             )}
-            {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} />}
-            {currentStep === 3 && <Step3Photos category={projectData.category} photos={projectData.details.photos || []} setPhotos={(photos) => updateDetails('photos', photos)} notes={projectData.details.notes || ''} setNotes={(notes) => updateDetails('notes', notes)} nextStep={nextStep} prevStep={() => projectData.category === 'special' ? setCurrentStep('special_chat') : prevStep()} />}
-            {currentStep === 4 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} />}
+            {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} />}
+            {currentStep === 3 && <Step3Photos category={projectData.category} photos={projectData.details.photos || []} setPhotos={(photos) => updateDetails('photos', photos)} notes={projectData.details.notes || ''} setNotes={(notes) => updateDetails('notes', notes)} nextStep={nextStep} prevStep={() => projectData.category === 'special' ? setCurrentStep('special_chat') : prevStep()} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} />}
+            {currentStep === 4 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} />}
             {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details.notes} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => setCurrentStep(projectData.category === 'special' ? 'special_chat' : 2)} />}
             {currentStep === 6 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
 

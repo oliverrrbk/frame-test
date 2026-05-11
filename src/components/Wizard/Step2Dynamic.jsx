@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { ImagePlus } from 'lucide-react';
 import { QUESTIONS } from './questionsConfig';
 
-const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) => {
+const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, quickRecalculate }) => {
     const questions = QUESTIONS[category] || [];
     const [openTooltips, setOpenTooltips] = React.useState({});
 
@@ -360,7 +360,16 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep }) 
 
             <div className="actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
                 <button className="wizard-btn wizard-btn-secondary" onClick={prevStep}>← Tilbage</button>
-                <button className="wizard-btn wizard-btn-primary" onClick={handleNextStep}>Bekræft & Fortsæt →</button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    {quickRecalculate && (
+                        <button className="wizard-btn wizard-btn-primary" onClick={quickRecalculate} style={{ boxShadow: '0 10px 25px rgba(59,130,246,0.3)' }}>
+                            Gem & Vis Overslag →
+                        </button>
+                    )}
+                    <button className={`wizard-btn ${quickRecalculate ? 'wizard-btn-secondary' : 'wizard-btn-primary'}`} onClick={handleNextStep}>
+                        {quickRecalculate ? 'Tilføj Billeder →' : 'Bekræft & Fortsæt →'}
+                    </button>
+                </div>
             </div>
         </section>
     );
