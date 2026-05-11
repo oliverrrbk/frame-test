@@ -107,24 +107,31 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     } else if (cat === 'windows') {
         if (d.windowsConfig && d.windowsConfig.length > 0) {
             let winHours = 0;
+            let hasHeavyWindow = false;
             d.windowsConfig.forEach((w) => {
                 let h = formula.hoursPerUnit || 3.0; // standard vindue tid
                 if (w.type === 'Panorama') h += 3.0;
                 else if (w.type === 'Skydedør') h += 4.0;
                 else if (w.type === 'Tagvindue') h += 5.0; // Tagvinduer tager længere tid
-                
-                // Opjuster arbejdstiden baseret på vinduets dimensioner (Areal)
+                // Tjek om der er brug for to mand / sugekop pga tunge partier
                 if (w.width && w.height) {
                     const areaM2 = (parseFloat(w.width) / 100) * (parseFloat(w.height) / 100);
-                    if (areaM2 > 2.5 && w.type === 'Standard') h += 1.0; // Store vinduer kræver flere mænd/tungt løft
-                    if (areaM2 > 4.5) h += 2.0; // Ekstremt store partier
+                    if (areaM2 >= 2.5) {
+                        hasHeavyWindow = true;
+                    }
                 }
 
                 if (w.hasSlidingDoor) h += 4.0;
                 winHours += h;
             });
             laborHours += winHours;
-            bArr.push(`Basis montering: ${d.windowsConfig.length} elementer udregnet (inkl. individuelle element-tillæg) til ca. ${laborHours.toFixed(1)} arbejdstimer`);
+            bArr.push(`Basis montering: ${d.windowsConfig.length} elementer udregnet til ca. ${laborHours.toFixed(1)} arbejdstimer`);
+
+            if (hasHeavyWindow) {
+                const heavyFeeHours = 6.0; // Fast tillæg på 6 timer for at have to mand på opgaven den halve/hele dag
+                laborHours += heavyFeeHours;
+                bArr.push(`Tillæg: Ekstra bemanding / sugekop til tunge partier (> 2.5 kvm) vurderet til ca. ${heavyFeeHours} arbejdstimer`);
+            }
         } else if (d.windowType === 'Blanding') {
             let rAmount = parseInt(d.roofAmount) || 0;
             let fAmount = parseInt(d.facadeAmount) || 0;
