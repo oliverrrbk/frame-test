@@ -93,7 +93,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
         
         // Find if any mandatory field is missing
         const missingField = visibleQuestions.find(q => {
-            if (q.type === 'textarea' || q.type === 'file') return false; // optional
+            if (q.type === 'textarea' || q.type === 'file' || q.type === 'checkbox') return false; // optional/boolean
             
             const value = details[q.id];
 
