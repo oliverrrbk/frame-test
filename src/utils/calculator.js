@@ -105,7 +105,18 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             bArr.push(`Basis montering: ${numericAmount} indvendige døre vurderet til ca. ${laborHours.toFixed(1)} arbejdstimer`);
         }
     } else if (cat === 'windows') {
-        if (d.windowType === 'Blanding') {
+        if (d.windowsConfig && d.windowsConfig.length > 0) {
+            let winHours = 0;
+            d.windowsConfig.forEach((w) => {
+                let h = formula.hoursPerUnit || 3.0; // standard vindue tid
+                if (w.type === 'Panorama') h += 3.0;
+                else if (w.type === 'Skydedør') h += 4.0;
+                if (w.hasSlidingDoor) h += 4.0;
+                winHours += h;
+            });
+            laborHours += winHours;
+            bArr.push(`Basis montering: ${d.windowsConfig.length} elementer udregnet (inkl. individuelle element-tillæg) til ca. ${laborHours.toFixed(1)} arbejdstimer`);
+        } else if (d.windowType === 'Blanding') {
             let rAmount = parseInt(d.roofAmount) || 0;
             let fAmount = parseInt(d.facadeAmount) || 0;
             laborHours += (rAmount * (formula.roofWindowHours || 8.0)) + (fAmount * formula.hoursPerUnit);
@@ -145,6 +156,18 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 
                 materialCost += ((roofA * roofCost) + (facadeA * facadeCost)) * dbSettings.material_markup;
                 bArr.push(`Materialer udregnet (Blanding af tag/facade): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
+            } else if (cat === 'windows' && d.windowsConfig && d.windowsConfig.length > 0) {
+                // Udregn materiale-omkostninger baseret på de individuelle vinduer
+                let winMatCost = 0;
+                d.windowsConfig.forEach((w) => {
+                    let base = indexCat['Træ'] || 5000; // default base price
+                    if (w.type === 'Panorama') base = indexCat['Panorama/Specialmål'] || 12000;
+                    else if (w.type === 'Skydedør') base = indexCat['Skydedør'] || 15000;
+                    if (w.hasSlidingDoor) base += 8000;
+                    winMatCost += base;
+                });
+                materialCost += winMatCost * dbSettings.material_markup;
+                bArr.push(`Materialer udregnet (Individuel specifikation af ${d.windowsConfig.length} vinduer/døre): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
             } else {
                 let matPriceDb = indexCat[d.material] || 500;
                 materialCost += (numericAmount * matPriceDb) * dbSettings.material_markup;
@@ -237,20 +260,16 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             bArr.push(`Tillæg: Beregnes ud fra forøget tids- og materialeforbrug ved dobbeltdøre/specialmål (+50%)`);
         }
 
-        if (cat === 'windows' && d.windowMeasurementType === 'Ja, store specialmål / panorama') {
-            laborHours += initialInstallHours * 1.0; 
-            if (!userSuppliesMaterials) {
-                let baseMat = indexCat[d.material] || 6000;
-                let matMarkup = dbSettings.material_markup || 1.1;
-                materialCost += (numericAmount * baseMat * 1.5) * matMarkup; 
+        if (cat === 'windows') {
+            if (d.floors && d.floors.includes('1. sal')) {
+                laborHours += initialInstallHours * 0.2;
+                if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Stillads/Lift leje'] || 8000) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Rullestillads/Ekstra bæring og forøget tidsforbrug til montering på 1. sal (+20% tid)`);
+            } else if (d.floors && d.floors.includes('2. sal')) {
+                laborHours += initialInstallHours * 0.4;
+                if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Stillads/Lift leje'] || 8000) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Lift/Stillads-leje og forøget tidsforbrug til montering på 2. sal eller højere (+40% tid)`);
             }
-            bArr.push(`Tillæg: Store panoramavinduer / specialmål kræver specialhåndtering (maskine/glaskran og ekstra mandsopdækning)`);
-        }
-
-        if (cat === 'windows' && d.floors && d.floors.includes('1. sal')) {
-            laborHours += initialInstallHours * 0.2;
-            if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Stillads/Lift leje'] || 8000) * dbSettings.material_markup;
-            bArr.push(`Tillæg: Leje af lift/stillads og forøget tidsforbrug til montering på højere etager`);
         }
 
         if (cat === 'terrace') {
@@ -767,6 +786,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
     const strictPrice = totalLaborCost + materialCost + totalDriving;
     
+    // Rabat for selv-opmåling af vinduer
+    let opmaalingRabat = 0;
+    if (cat === 'windows' && d.waiveMeasurement) {
+        opmaalingRabat = 1500;
+        bArr.push(`Rabat: Kunden har påtaget sig opmålingsansvaret. Fradrag på opmålingsbesøg: -1.500 kr.`);
+    }
+    
     // --- OPTIMIZATION: SKJULT BUFFER I STEDET FOR FLAD MULTIPLIER ---
     // Vi fjerner "marginFactor = 1.25", da det giver dobbelt-avance på materialer og absurde tillæg på store opgaver.
     // I stedet lægger vi et fast, dynamisk beløb til den rå pris. Kunden ser ikke dette tillæg direkte, 
@@ -778,7 +804,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         hiddenBuffer = 10000;
     }
     
-    const priceTop = strictPrice + hiddenBuffer;
+    let priceTop = strictPrice + hiddenBuffer - opmaalingRabat;
+    if (priceTop < 0) priceTop = 0;
 
     // Læg moms (1.25) på først, derefter rund af ned til nærmeste tusinde
     let maxPrice = Math.ceil((priceTop * 1.25) / 1000) * 1000;

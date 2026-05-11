@@ -78,66 +78,14 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Er der eventuelt andre bemærkninger til taget (fx nye tagvinduer)?' }
     ],
     windows: [
-        { id: 'housingType', type: 'select', label: 'Hvilken slags bolig skal du have skiftet vinduer i?', options: ['Sommerhus', 'Helårsbolig'] },
+        { id: 'housingType', type: 'select', label: 'Hvilken type bygning gælder det?', tooltip: 'Bygningsreglementet (BR18) kræver typisk 3-lags energiruder i helårsboliger.', options: ['Helårsbolig', 'Sommerhus', 'Andet (Udestue/Fredet)'] },
+        { id: 'floors', type: 'select', label: 'På hvilken etage skal vinduerne primært monteres?', tooltip: 'Høje etager tager længere tid pga. bæring af tunge vinduer og mulig udvendig fugearbejde.', options: ['Stueplan (Jordniveau)', '1. sal (Kræver evt. rullestillads/ekstra bæring)', '2. sal eller højere (Kræver lift/stillads)'] },
         { id: 'disposal', type: 'select', label: 'Skal de nuværende vinduer afmonteres og afskaffes?', options: ['Ja', 'Nej'] },
-        
-        { id: 'windowType', type: 'select', label: 'Hvilken slags vinduer drejer opgaven sig om?', options: ['Tagvinduer', 'Facadevinduer', 'Blanding'] },
-
-        // --- Blanding (Quick-Split) ---
-        { id: 'roofAmount', type: 'number', label: 'Hvor mange af dem er TAGVINDUER?', condition: { field: 'windowType', value: 'Blanding' } },
-        { 
-            id: 'roofMaterial', 
-            type: 'visual_select', 
-            label: 'Hvilket materiale skal TAGVINDUERNE være i?', 
-            condition: (d) => d.windowType === 'Blanding',
-            options: [
-                { label: 'Træ', img: '/images/window_wood_1776261054616.png' },
-                { label: 'PVC / plast', img: '/images/window_pvc_1776261086057.png' },
-                { label: 'Aluminium', img: '/images/window_aluminum_1776261099669.png' },
-                { label: 'Træ/alu (kombination)', img: '/images/window_wood_alu_1776261163640.png' },
-                { label: 'Stål', img: '/images/window_steel_1776261189808.png' },
-                { label: 'Glas', img: '/images/window_glass_1776261205223.png' }
-            ] 
-        },
-        { id: 'facadeAmount', type: 'number', label: 'Hvor mange af dem er FACADEVINDUER?', condition: { field: 'windowType', value: 'Blanding' } },
-        { 
-            id: 'facadeMaterial', 
-            type: 'visual_select', 
-            label: 'Hvilket materiale skal FACADEVINDUERNE være i?', 
-            condition: (d) => d.windowType === 'Blanding',
-            options: [
-                { label: 'Træ', img: '/images/window_wood_1776261054616.png' },
-                { label: 'PVC / plast', img: '/images/window_pvc_1776261086057.png' },
-                { label: 'Aluminium', img: '/images/window_aluminum_1776261099669.png' },
-                { label: 'Træ/alu (kombination)', img: '/images/window_wood_alu_1776261163640.png' },
-                { label: 'Stål', img: '/images/window_steel_1776261189808.png' },
-                { label: 'Glas', img: '/images/window_glass_1776261205223.png' }
-            ] 
-        },
-
-        // --- Standard (Ikke-blanding) ---
-        { id: 'amount', type: 'number', label: 'Hvor mange vinduer drejer opgaven sig om i alt?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise antal og mål fastsættes ved tømrerens opmåling.', condition: (d) => d.windowType && d.windowType !== 'Blanding' },
-        { 
-            id: 'material', 
-            type: 'visual_select', 
-            label: 'Hvilket materiale skal de nye vinduer være i?', 
-            condition: (d) => d.windowType && d.windowType !== 'Blanding',
-            options: [
-                { label: 'Træ', img: '/images/window_wood_1776261054616.png' },
-                { label: 'PVC / plast', img: '/images/window_pvc_1776261086057.png' },
-                { label: 'Aluminium', img: '/images/window_aluminum_1776261099669.png' },
-                { label: 'Træ/alu (kombination)', img: '/images/window_wood_alu_1776261163640.png' },
-                { label: 'Stål', img: '/images/window_steel_1776261189808.png' },
-                { label: 'Glas', img: '/images/window_glass_1776261205223.png' }
-            ] 
-        },
-
-        { id: 'openableCount', type: 'number', label: 'Hvor mange af det samlede antal vinduer skal kunne åbnes?' },
-        { id: 'floors', type: 'select', label: 'Hvilken etage skal vinduerne primært monteres på?', tooltip: 'Vinduer på 1. sal eller højere kræver ofte leje af stillads eller lift.', options: ['Stueplan (Jordniveau)', '1. sal eller højere (Kræver stillads/lift)'] },
-        { id: 'windowMeasurementType', type: 'select', label: 'Er der tale om store panoramavinduer/gulv-til-loft (specialmål)?', options: ['Nej, standard mål', 'Ja, store specialmål / panorama'] },
-        { id: 'photos', type: 'file', label: 'Upload meget gerne et billede af vinduerne (indefra/udefra), så vi kan vurdere opgaven:' },
-        { id: 'finish', type: 'select', label: 'Skal indvendig finish (fuge og lister) inkluderes propotionalt?', tooltip: 'Indvendig finish betyder, at tømreren sørger for at montere de indvendige trælister (gerigter) rundt om vinduet, og evt. fuge tæt til muren, så det er helt færdigt og pænt.', options: ['Ja', 'Nej'] },
-        { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet, eller hvis der er noget særligt ved fx panorama/skylines?' }
+        { id: 'amount', type: 'number', label: 'Hvor mange vinduer drejer opgaven sig om i alt?', placeholder: 'F.eks. 4' },
+        { id: 'windowsConfig', type: 'window_configurator', label: 'Specifikation af hvert vindue:', condition: (d) => d.amount > 0 },
+        { id: 'waiveMeasurement', type: 'checkbox', label: 'Jeg vil gerne spare opmålingsbesøget. Jeg indtaster de præcise karm-mål og hæfter selv for, at de passer.', tooltip: 'OBS: Bliver vinduerne bestilt efter dine mål, dækker du selv omkostningen, hvis de ikke passer i hullet. Tømreren sparer dog turen, og du sparer ca. 1.500 kr.' },
+        { id: 'finish', type: 'select', label: 'Skal indvendig finish (fuge og lister) inkluderes?', tooltip: 'Indvendig finish betyder, at tømreren monterer gerigter og fuger.', options: ['Ja', 'Nej, vi gør det selv'] },
+        { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet?' }
     ],
     floor: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven cirka?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise areal måles op senere af tømreren.' },

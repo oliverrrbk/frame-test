@@ -96,11 +96,29 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
             if (q.type === 'textarea' || q.type === 'file') return false; // optional
             
             const value = details[q.id];
+
+            if (q.type === 'window_configurator') {
+                if (!value || value.length < details.amount) return true;
+                // Check that each window has photos
+                for (let i = 0; i < details.amount; i++) {
+                    const w = value[i];
+                    if (!w || !w.photoInside || !w.photoOutside || !w.width || !w.height) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
             return value === undefined || value === null || value === '';
         });
 
         if (missingField) {
-            toast.error(`Du mangler at udfylde dette felt for at du kan fortsætte, og du kan få dit overslag på den pris: "${missingField.label}"`, {
+            let errorMsg = `Du mangler at udfylde dette felt for at du kan fortsætte: "${missingField.label}"`;
+            if (missingField.type === 'window_configurator') {
+                errorMsg = "Du mangler at udfylde mål og uploade både indvendigt og udvendigt billede for alle vinduer.";
+            }
+
+            toast.error(errorMsg, {
                 position: 'bottom-center',
                 style: { borderRadius: '10px', background: '#333', color: '#fff', maxWidth: '500px', lineHeight: '1.5' },
                 duration: 4000
@@ -332,6 +350,152 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {q.type === 'checkbox' && (
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', padding: '16px', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid var(--accent)', borderRadius: '12px' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={!!details[q.id]}
+                            onChange={(e) => handleInputChange(q.id, e.target.checked)}
+                            style={{ width: '20px', height: '20px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--accent)' }}
+                        />
+                        <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: '1.5' }}>
+                            {q.label}
+                        </span>
+                    </label>
+                )}
+
+                {q.type === 'window_configurator' && (
+                    <div style={{ marginTop: '16px' }}>
+                        {Array.from({ length: details.amount || 0 }).map((_, idx) => {
+                            const wConf = (details[q.id] || [])[idx] || {};
+                            return (
+                                <div key={idx} style={{ padding: '20px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', marginBottom: '20px' }}>
+                                    <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#0f172a' }}>Vindue {idx + 1}</h4>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>Type</label>
+                                            <select 
+                                                value={wConf.type || 'Standard'}
+                                                onChange={(e) => {
+                                                    const newArr = [...(details[q.id] || [])];
+                                                    newArr[idx] = { ...wConf, type: e.target.value };
+                                                    handleInputChange(q.id, newArr);
+                                                }}
+                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                            >
+                                                <option value="Standard">Standard vindue</option>
+                                                <option value="Panorama">Panorama / Gulv-til-loft</option>
+                                                <option value="Skydedør">Terrassedør / Skydedør</option>
+                                            </select>
+                                        </div>
+
+                                        {wConf.type === 'Panorama' && (
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>Kombination</label>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={!!wConf.hasSlidingDoor}
+                                                        onChange={(e) => {
+                                                            const newArr = [...(details[q.id] || [])];
+                                                            newArr[idx] = { ...wConf, hasSlidingDoor: e.target.checked };
+                                                            handleInputChange(q.id, newArr);
+                                                        }}
+                                                    />
+                                                    Integrer en skydedør/terrassedør i dette parti
+                                                </label>
+                                            </div>
+                                        )}
+
+                                        <div style={{ display: 'flex', gap: '16px' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>Bredde (cm)</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={wConf.width || ''}
+                                                    placeholder="f.eks. 120"
+                                                    onChange={(e) => {
+                                                        const newArr = [...(details[q.id] || [])];
+                                                        newArr[idx] = { ...wConf, width: parseFloat(e.target.value) };
+                                                        handleInputChange(q.id, newArr);
+                                                    }}
+                                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                                />
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>Højde (cm)</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={wConf.height || ''}
+                                                    placeholder="f.eks. 140"
+                                                    onChange={(e) => {
+                                                        const newArr = [...(details[q.id] || [])];
+                                                        newArr[idx] = { ...wConf, height: parseFloat(e.target.value) };
+                                                        handleInputChange(q.id, newArr);
+                                                    }}
+                                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: '16px' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <label className="upload-area" style={{ display: 'block', padding: '16px', border: '2px dashed var(--border)', textAlign: 'center', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer' }}>
+                                                    <div style={{ color: 'var(--text-secondary)' }}><ImagePlus size={24} style={{ margin: '0 auto' }} /></div>
+                                                    <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Billede indefra</p>
+                                                    <input 
+                                                        type="file" 
+                                                        accept="image/*"
+                                                        style={{ display: 'none' }} 
+                                                        onChange={async (e) => {
+                                                            if (e.target.files && e.target.files[0]) {
+                                                                const fileObj = await compressImageToBase64(e.target.files[0]);
+                                                                const newArr = [...(details[q.id] || [])];
+                                                                newArr[idx] = { ...wConf, photoInside: fileObj };
+                                                                handleInputChange(q.id, newArr);
+                                                            }
+                                                        }}
+                                                    />
+                                                </label>
+                                                {wConf.photoInside && (
+                                                    <div style={{ position: 'relative', width: '60px', height: '60px', marginTop: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                                                        <img src={wConf.photoInside.preview} alt="Indefra" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <label className="upload-area" style={{ display: 'block', padding: '16px', border: '2px dashed var(--border)', textAlign: 'center', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer' }}>
+                                                    <div style={{ color: 'var(--text-secondary)' }}><ImagePlus size={24} style={{ margin: '0 auto' }} /></div>
+                                                    <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Billede udefra</p>
+                                                    <input 
+                                                        type="file" 
+                                                        accept="image/*"
+                                                        style={{ display: 'none' }} 
+                                                        onChange={async (e) => {
+                                                            if (e.target.files && e.target.files[0]) {
+                                                                const fileObj = await compressImageToBase64(e.target.files[0]);
+                                                                const newArr = [...(details[q.id] || [])];
+                                                                newArr[idx] = { ...wConf, photoOutside: fileObj };
+                                                                handleInputChange(q.id, newArr);
+                                                            }
+                                                        }}
+                                                    />
+                                                </label>
+                                                {wConf.photoOutside && (
+                                                    <div style={{ position: 'relative', width: '60px', height: '60px', marginTop: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                                                        <img src={wConf.photoOutside.preview} alt="Udefra" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>
