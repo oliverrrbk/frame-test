@@ -7,6 +7,7 @@ import StepResult from './StepResult';
 import Step5Success from './Step5Success';
 import ChatEstimator from './ChatEstimator';
 import { performCalculation } from '../../utils/calculator';
+import { fetchCalibrationFactor } from '../../utils/calibration';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
@@ -156,7 +157,11 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
         }
 
         try {
-            const res = await performCalculation(updatedProjectData, customerDetails, dbSettings, dbMaterials, carpenter);
+            // Hent auto-læring kalibrering for denne (tømrer, kategori) før beregning.
+            // Falder lydløst tilbage til factor=1.0 hvis tabeller mangler eller intet match.
+            const calibration = await fetchCalibrationFactor(carpenter?.id, updatedProjectData.category);
+
+            const res = await performCalculation(updatedProjectData, customerDetails, dbSettings, dbMaterials, carpenter, calibration);
             
             setPriceRange(res.priceRange);
             setBreakdownArr(res.breakdownArr);

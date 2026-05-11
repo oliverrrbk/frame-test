@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { ArrowLeft, Shield, Users, Power, Lock, CheckCircle, ExternalLink, Copy, FileText, X, Trash2, ChevronDown, ChevronUp, LogOut } from 'lucide-react';
+import { ArrowLeft, Shield, Users, Power, Lock, CheckCircle, ExternalLink, Copy, FileText, X, Trash2, ChevronDown, ChevronUp, LogOut, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AiTrainingView from '../Dashboard/AiTrainingView';
@@ -154,11 +154,17 @@ const AdminDashboard = () => {
                     >
                         <CheckCircle size={18} /> ML Auto-Kalibrering
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('ai-training')}
                         style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', background: activeTab === 'ai-training' ? '#38bdf8' : '#1e293b', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' }}
                     >
                         <span style={{ fontSize: '18px' }}>🤖</span> AI Feedback Træning
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('csv-import')}
+                        style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', background: activeTab === 'csv-import' ? '#f59e0b' : '#1e293b', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' }}
+                    >
+                        <Upload size={18} /> CSV Import (Historiske tilbud)
                     </button>
                 </div>
 
@@ -445,6 +451,10 @@ const AdminDashboard = () => {
                         <AiTrainingView carpenterId={null} />
                     </div>
                 )}
+
+                {activeTab === 'csv-import' && (
+                    <CsvImportPanel onImported={fetchLeads} />
+                )}
             </div>
 
             {/* Slide-over Skuffe til Fakturerings- og Kundedata */}
@@ -594,6 +604,148 @@ const AdminDashboard = () => {
                 }
                 `}
             </style>
+        </div>
+    );
+};
+
+/**
+ * CSV Import af historiske tilbud — bulk-fodrer kalibreringssystemet med
+ * tidligere tilbud så nye tømrere får et meningsfuldt udgangspunkt fra dag 1.
+ *
+ * Forventet CSV-format (komma- eller semikolon-separeret, første række = header):
+ *   carpenter_id,category,m2,material,initial_price,final_quoted_price,date
+ *
+ * Hver række oprettes som et "syntetisk" lead med calc_data og actual_quote_price
+ * udfyldt — derefter genberegnes kalibreringen via recompute_calibration().
+ */
+const CsvImportPanel = ({ onImported }) => {
+    const [file, setFile] = React.useState(null);
+    const [isProcessing, setIsProcessing] = React.useState(false);
+    const [result, setResult] = React.useState(null);
+
+    const parseCsv = (text) => {
+        const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length < 2) return { rows: [], errors: ['CSV er tom eller mangler header'] };
+
+        const sep = lines[0].includes(';') ? ';' : ',';
+        const headers = lines[0].split(sep).map(h => h.trim().toLowerCase());
+        const required = ['carpenter_id', 'category', 'initial_price', 'final_quoted_price'];
+        const missing = required.filter(r => !headers.includes(r));
+        if (missing.length > 0) return { rows: [], errors: [`Mangler kolonner: ${missing.join(', ')}`] };
+
+        const rows = [];
+        const errors = [];
+        for (let i = 1; i < lines.length; i++) {
+            const cells = lines[i].split(sep).map(c => c.trim());
+            const row = Object.fromEntries(headers.map((h, idx) => [h, cells[idx] || '']));
+            const initial = parseFloat(row.initial_price);
+            const finalP = parseFloat(row.final_quoted_price);
+            if (!row.carpenter_id || !row.category || !Number.isFinite(initial) || !Number.isFinite(finalP)) {
+                errors.push(`Række ${i + 1}: ugyldige værdier — skipped`);
+                continue;
+            }
+            rows.push({
+                carpenter_id: row.carpenter_id,
+                project_category: row.category,
+                price_estimate: `${initial.toLocaleString('da-DK')} kr.`,
+                status: 'Historik',
+                created_at: row.date || new Date().toISOString(),
+                customer_name: 'CSV Import',
+                raw_data: {
+                    category: row.category,
+                    details: { amount: parseFloat(row.m2) || 0, material: row.material || '' },
+                    calc_data: {
+                        finalEstimateIncVat: initial,
+                        finalEstimateExVat: Math.round(initial / 1.25),
+                        materialCost: 0, // ukendt for historiske data — kalibrering går så på hele prisen
+                        totalLaborCost: 0,
+                        drivingCost: 0,
+                    },
+                    actual_quote_price: finalP,
+                    csv_imported: true,
+                }
+            });
+        }
+        return { rows, errors };
+    };
+
+    const handleUpload = async () => {
+        if (!file) return toast.error('Vælg en CSV-fil først');
+        setIsProcessing(true);
+        setResult(null);
+        try {
+            const text = await file.text();
+            const { rows, errors } = parseCsv(text);
+            if (rows.length === 0) {
+                setResult({ inserted: 0, skipped: errors.length, errors });
+                return;
+            }
+
+            // Indsæt batchet i leads-tabellen
+            const { error: insertErr } = await supabase.from('leads').insert(rows);
+            if (insertErr) throw insertErr;
+
+            // Trigger genberegning af kalibrering
+            const { error: rpcErr } = await supabase.rpc('recompute_calibration');
+            const rpcWarning = rpcErr ? `Bemærk: kunne ikke automatisk genberegne kalibrering (${rpcErr.message}). Kør 'SELECT recompute_calibration()' manuelt i Supabase.` : null;
+
+            setResult({ inserted: rows.length, skipped: errors.length, errors, rpcWarning });
+            toast.success(`Importerede ${rows.length} historiske tilbud.`);
+            if (onImported) onImported();
+        } catch (err) {
+            toast.error('Import fejlede: ' + err.message);
+            setResult({ inserted: 0, skipped: 0, errors: [err.message] });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    return (
+        <div style={{ background: '#1e293b', borderRadius: '12px', overflow: 'hidden', border: '1px solid #334155', color: '#f8fafc' }}>
+            <div style={{ padding: '20px', background: '#0f172a', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Upload size={20} color="#f59e0b" />
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>Import historiske tilbud til kalibreringen</h2>
+            </div>
+            <div style={{ padding: '24px', fontSize: '14px', color: '#cbd5e1', lineHeight: 1.6 }}>
+                <p>Bulk-importér gamle tilbud så algoritmen kan lære fra dag ét. CSV-format (komma- eller semikolon-separeret):</p>
+                <pre style={{ background: '#0f172a', padding: '12px', borderRadius: '6px', fontSize: '12px', overflowX: 'auto', color: '#10b981' }}>
+{`carpenter_id,category,m2,material,initial_price,final_quoted_price,date
+abc-123-uuid,roof,140,Tegl,1100000,510000,2024-08-12
+abc-123-uuid,windows,6,Træ/alu (kombination),135000,142000,2024-09-03
+...`}
+                </pre>
+                <p style={{ marginTop: '12px' }}>Kategorier skal matche systemets: <code>roof, windows, doors, floor, terrace, kitchen, ceilings, facades, extensions, annex, carport, fence</code>.</p>
+                <p>Importerede rækker indgår i næste kalibrering. Ugyldige rækker rapporteres efter import.</p>
+
+                <div style={{ marginTop: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <input type="file" accept=".csv" onChange={(e) => { setFile(e.target.files?.[0] || null); setResult(null); }} style={{ color: '#cbd5e1' }} />
+                    <button
+                        onClick={handleUpload}
+                        disabled={!file || isProcessing}
+                        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: !file || isProcessing ? '#475569' : '#f59e0b', color: '#fff', fontWeight: 'bold', cursor: !file || isProcessing ? 'not-allowed' : 'pointer' }}
+                    >
+                        {isProcessing ? 'Importerer...' : 'Importér CSV'}
+                    </button>
+                </div>
+
+                {result && (
+                    <div style={{ marginTop: '20px', padding: '16px', background: '#0f172a', borderRadius: '8px', borderLeft: `4px solid ${result.inserted > 0 ? '#10b981' : '#ef4444'}` }}>
+                        <div style={{ fontWeight: 'bold', color: '#f8fafc', marginBottom: '8px' }}>
+                            ✓ Importeret: {result.inserted} rækker &nbsp;·&nbsp; ⚠ Skipped: {result.skipped}
+                        </div>
+                        {result.rpcWarning && <div style={{ color: '#fbbf24', fontSize: '13px', marginTop: '8px' }}>{result.rpcWarning}</div>}
+                        {result.errors && result.errors.length > 0 && (
+                            <details style={{ marginTop: '8px' }}>
+                                <summary style={{ cursor: 'pointer', color: '#94a3b8' }}>Vis fejl-detaljer ({result.errors.length})</summary>
+                                <ul style={{ margin: '8px 0 0 16px', color: '#fca5a5', fontSize: '12px' }}>
+                                    {result.errors.slice(0, 20).map((e, i) => <li key={i}>{e}</li>)}
+                                    {result.errors.length > 20 && <li>... og {result.errors.length - 20} flere</li>}
+                                </ul>
+                            </details>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

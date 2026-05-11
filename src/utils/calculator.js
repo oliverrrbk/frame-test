@@ -48,21 +48,46 @@ export const fetchGoogleDistance = async (origin, destination) => {
     });
 };
 
-export const performCalculation = async (projectData, customerDetails, dbSettings, dbMaterials, carpenter) => {
+export const performCalculation = async (projectData, customerDetails, dbSettings, dbMaterials, carpenter, calibration = null) => {
     const cat = projectData.category;
     const d = projectData.details;
-    
+
+    // Sanity defaults så manglende DB-værdier ikke producerer NaN gennem hele pris-beregningen
+    dbSettings = {
+        hourly_rate: 550,
+        material_markup: 1.15,
+        container_disposal_fee: 2500,
+        trailer_disposal_fee: 800,
+        risk_margin: 1.25,
+        driving_calc_method: 'fast',
+        vehicle_cost_per_km: 3.8,
+        crew_size: 2,
+        ...(dbSettings || {})
+    };
+
     let laborHours = 0;
     let materialCost = 0;
     let bArr = [];
 
-    const indexCat = dbMaterials[cat] || {};
+    const indexCat = (dbMaterials && dbMaterials[cat]) || {};
     const formula = WORK_FORMULAS[cat] || { hoursPerUnit: 1.0, disposalHours: 0 };
-    
-    let numericAmount = d.amount || 1;
+
+    // Robust parsing af d.amount: tager midten af et range (fx "5-10" => 7) i stedet for upper bound,
+    // og lader være med at falde tilbage til magisk tal 5 ved ugyldig input
+    let numericAmount = d.amount;
     if (typeof numericAmount === 'string') {
-        numericAmount = parseInt(numericAmount.split('-')[1] || numericAmount.replace(/[^0-9]/g, '')) || 5;
+        const nums = numericAmount.split('-')
+            .map(s => parseInt(s.replace(/[^0-9]/g, ''), 10))
+            .filter(n => Number.isFinite(n));
+        if (nums.length >= 2) {
+            numericAmount = Math.round((nums[0] + nums[1]) / 2);
+        } else if (nums.length === 1) {
+            numericAmount = nums[0];
+        } else {
+            numericAmount = 1;
+        }
     }
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) numericAmount = 1;
 
     if (cat === 'doors' && d.doorType === 'Blanding') {
         numericAmount = (parseInt(d.exteriorAmount) || 0) + (parseInt(d.interiorAmount) || 0);
@@ -70,7 +95,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         numericAmount = (parseInt(d.roofAmount) || 0) + (parseInt(d.facadeAmount) || 0);
     }
 
-    // Omregn grundplan til faktisk tag-overfladeareal pga. hældning og udhæng
+    // Omregn grundplan til faktisk tag-overfladeareal pga. hældning og udhæng.
+    // Vi husker den oprindelige grundplan til at estimere LØBENDE METER (tagrender, stern).
+    let roofGrundplanM2 = numericAmount;
     if (cat === 'roof') {
         if (d.roofPitch === 'Høj rejsning / Normal hældning') {
             numericAmount = numericAmount * 1.45; // ~45 graders hældning + udhæng = ca. +45% mere areal end grundplan
@@ -80,14 +107,23 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             bArr.push(`Areal: Omregnet grundplan til anslået faktisk tagareal (inkl. udhæng): ca. ${numericAmount.toFixed(1)} m2`);
         }
     }
+    // Heuristik: omkreds af typisk parcelhus-grundplan (1.5:1 aspekt) ≈ 4.08 * √areal.
+    // Halvdelen er gavle, halvdelen er langside (= tagrender). Til stern bruges hele omkredsen.
+    const sqrtGp = Math.sqrt(Math.max(1, roofGrundplanM2));
+    const estimatedGutterMeters = Math.round(2.04 * sqrtGp);
+    const estimatedSternMeters = Math.round(4.08 * sqrtGp);
 
     if (cat === 'special') {
-        laborHours = parseFloat(d.aiLaborHours) || 10;
-        const rawMat = parseFloat(d.aiMaterialCost) || 5000;
-        materialCost = rawMat * dbSettings.material_markup;
+        const parsedHours = parseFloat(d.aiLaborHours);
+        laborHours = (Number.isFinite(parsedHours) && parsedHours > 0) ? parsedHours : 10;
+        const parsedMat = parseFloat(d.aiMaterialCost);
+        const rawMat = (Number.isFinite(parsedMat) && parsedMat >= 0) ? parsedMat : 5000;
+        // AI-estimat antages at indeholde tømrerens avance allerede (prompten beder om kundepris).
+        // Vi undgår derfor dobbelt-markup her.
+        materialCost = rawMat;
         bArr.push(`Opgaven er estimeret automatisk via AI Assistent.`);
         bArr.push(`AI vurdering: ${laborHours} arbejdstimer`);
-        bArr.push(`AI vurdering af materialer: ${rawMat} kr. (før din avance)`);
+        bArr.push(`AI vurdering af materialer: ${rawMat} kr.`);
     } else if (cat === 'doors' && d.frameOrLeaf === 'Kun dørpladen (genbrug af eksisterende karm)') {
         laborHours += numericAmount * (formula.leafOnlyHours || 0.3);
         bArr.push(`Hurtig udskiftning (kun dørplader): ca. ${laborHours.toFixed(1)} arbejdstimer`);
@@ -145,13 +181,21 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             bArr.push(`Basis montering: ${numericAmount} facadevinduer vurderet til ca. ${laborHours.toFixed(1)} arbejdstimer`);
         }
     } else {
-        laborHours += numericAmount * formula.hoursPerUnit;
+        // For tag: brug materiale-specifik timer-sats (paptag er ~halvt så langsomt som tegl)
+        let hpu = formula.hoursPerUnit;
+        if (cat === 'roof' && formula.hoursPerUnitByMaterial && formula.hoursPerUnitByMaterial[d.material]) {
+            hpu = formula.hoursPerUnitByMaterial[d.material];
+        }
+        laborHours += numericAmount * hpu;
         bArr.push(`Basis montering vurderet til ca. ${laborHours.toFixed(1)} arbejdstimer`);
     }
     
     let initialInstallHours = laborHours;
     const userSuppliesMaterials = d.ownMaterials === 'Ja, jeg har allerede købt det (kun pris på montering)';
-    
+    // Snapshot bruges til at undgå compound bugs (fx dobbeltdør-tillæg) når
+    // dørmaterialer skal regnes oveni base, men IKKE oveni hardware/dørtrin/finish.
+    let doorBodyMatCost = 0;
+
     if (cat !== 'special') {
         if (userSuppliesMaterials) {
             bArr.push(`Materialer er ikke medregnet i prisen (Kunden leverer selv)`);
@@ -161,17 +205,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 let intCost = indexCat[d.interiorMaterial] || 500;
                 const extA = parseInt(d.exteriorAmount) || 0;
                 const intA = parseInt(d.interiorAmount) || 0;
-                
-                materialCost += ((extA * extCost) + (intA * intCost)) * dbSettings.material_markup;
+
+                doorBodyMatCost = ((extA * extCost) + (intA * intCost)) * dbSettings.material_markup;
+                materialCost += doorBodyMatCost;
                 bArr.push(`Materialer udregnet (Blanding af yder/indre): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
-            } else if (cat === 'windows' && d.windowType === 'Blanding') {
-                let roofCost = indexCat[d.roofMaterial] || 500;
-                let facadeCost = indexCat[d.facadeMaterial] || 500;
-                const roofA = parseInt(d.roofAmount) || 0;
-                const facadeA = parseInt(d.facadeAmount) || 0;
-                
-                materialCost += ((roofA * roofCost) + (facadeA * facadeCost)) * dbSettings.material_markup;
-                bArr.push(`Materialer udregnet (Blanding af tag/facade): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
             } else if (cat === 'windows' && d.windowsConfig && d.windowsConfig.length > 0) {
                 // Udregn materiale-omkostninger baseret på de individuelle vinduer
                 let winMatCost = 0;
@@ -226,6 +263,19 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
                 materialCost += winMatCost * dbSettings.material_markup;
                 bArr.push(`Materialer udregnet (Individuel specifikation af ${d.windowsConfig.length} vinduer/døre): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
+            } else if (cat === 'windows' && d.windowType === 'Blanding') {
+                let roofCost = indexCat[d.roofMaterial] || 500;
+                let facadeCost = indexCat[d.facadeMaterial] || 500;
+                const roofA = parseInt(d.roofAmount) || 0;
+                const facadeA = parseInt(d.facadeAmount) || 0;
+
+                materialCost += ((roofA * roofCost) + (facadeA * facadeCost)) * dbSettings.material_markup;
+                bArr.push(`Materialer udregnet (Blanding af tag/facade): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
+            } else if (cat === 'doors') {
+                let matPriceDb = indexCat[d.material] || 500;
+                doorBodyMatCost = (numericAmount * matPriceDb) * dbSettings.material_markup;
+                materialCost += doorBodyMatCost;
+                bArr.push(`Materialer afregnet inkl. tillæg: ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
             } else {
                 let matPriceDb = indexCat[d.material] || 500;
                 materialCost += (numericAmount * matPriceDb) * dbSettings.material_markup;
@@ -247,9 +297,15 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (d.disposal && d.disposal.startsWith('Ja')) {
-            let dispTime = (cat === 'kitchen') ? formula.disposalHours : (formula.disposalHours * numericAmount);
+            // For tag: brug gammelt-tag-materiale specifik disposal-sats (asbest-/strå-tillæg
+            // håndteres separat længere nede, så her er det den generiske nedrivningstid)
+            let disposalRate = formula.disposalHours;
+            if (cat === 'roof' && formula.disposalHoursByOldType && formula.disposalHoursByOldType[d.oldRoofType]) {
+                disposalRate = formula.disposalHoursByOldType[d.oldRoofType];
+            }
+            let dispTime = (cat === 'kitchen') ? disposalRate : (disposalRate * numericAmount);
             laborHours += dispTime;
-            
+
             if (numericAmount > formula.containerThreshold) {
                 materialCost += dbSettings.container_disposal_fee;
                 bArr.push(`Bortskaffelse af stort volumen (Containerleje/afhentning + ${dispTime.toFixed(1)} arbejdstimer)`);
@@ -259,12 +315,14 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
         }
 
-        // Risikomargin for ældre huse (tag) – ældre huse har ofte skjulte problemer
+        // Risikomargin for ældre huse (tag) – ældre huse har ofte skjulte problemer.
+        // Brug initialInstallHours i stedet for laborHours for ikke at compound oven på
+        // alle øvrige tag-tillæg (asbest, stillads, undertag, tagrender, kviste osv.)
         if (cat === 'roof' && d.houseAge) {
             const age = parseInt(d.houseAge);
             if (age && age < 1960) {
-                laborHours += laborHours * (dbSettings.risk_margin - 1);
-                bArr.push(`Risikoramme (+${(dbSettings.risk_margin * 100 - 100).toFixed(0)}% tid) lagt til pga. husets alder (${age}) – ældre huse har ofte skjulte konstruktionsproblemer`);
+                laborHours += initialInstallHours * (dbSettings.risk_margin - 1);
+                bArr.push(`Risikoramme (+${(dbSettings.risk_margin * 100 - 100).toFixed(0)}% tid på basis-monteringen) lagt til pga. husets alder (${age}) – ældre huse har ofte skjulte konstruktionsproblemer`);
             }
         }
 
@@ -301,8 +359,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
             
             if (d.floorPattern === 'Ja, i mønster (fx Sildeben / Chevron)') {
-                laborHours += initialInstallHours * 0.5; // Changed from *1.5 total replacement to addition to avoid compounding errors
-                bArr.push(`Tillæg: Beregnes ud fra forøget tidsforbrug ved specialmønster (fx Sildeben) på gulv (+50% tid)`);
+                // Sildeben/Chevron-lægning er reelt +25-35% ekstra tid (præcision og afkortninger).
+                // Tidligere +50% blev compoundet på opretning/foam/lister og pumpede 80 m²-opgaver kraftigt op.
+                laborHours += initialInstallHours * 0.35;
+                bArr.push(`Tillæg: Forøget tidsforbrug ved specialmønster (fx Sildeben) på gulv (+35% tid)`);
             }
 
             if (d.underfloorHeating && d.underfloorHeating.includes('sporplader')) {
@@ -318,8 +378,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
         if (cat === 'doors' && d.doorMeasurementType === 'Ja, der er dobbeltdøre/specialmål iblandt') {
             laborHours += initialInstallHours * 0.5;
+            // Tillæg lægges KUN på dørens egen materialepris (snapshot),
+            // ikke på hardware/dørtrin/finish/disposal-fees der måtte være tilføjet før eller efter.
             if (!userSuppliesMaterials) {
-                materialCost += materialCost * 0.5; 
+                materialCost += doorBodyMatCost * 0.5;
             }
             bArr.push(`Tillæg: Beregnes ud fra forøget tids- og materialeforbrug ved dobbeltdøre/specialmål (+50%)`);
         }
@@ -430,15 +492,17 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Levering og montering af nyt undertag`);
             }
             if (d.eaves && d.eaves.startsWith('Ja')) {
-                laborHours += numericAmount * (formula.eavesHours || 0.5);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Udhæng/Stern træværk (pr m2 overslag)'] || 150) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Udskiftning af træværk ved gavl og udhæng (stern/underbeklædning)`);
+                // Stern måles i løbende meter (hele tagomkredsen), ikke m² roof
+                laborHours += estimatedSternMeters * (formula.eavesHoursPerMeter || 0.4);
+                if (!userSuppliesMaterials) materialCost += estimatedSternMeters * (indexCat['Stern træværk (pr løbende meter)'] || 150) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Udskiftning af stern/udhæng (estimeret ${estimatedSternMeters} løbende meter omkreds)`);
             }
-            
+
             if (d.gutters && d.gutters.startsWith('Ja')) {
-                laborHours += numericAmount * (formula.guttersHours || 0.4);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Tagrender og nedløb (pr m2 overslag)'] || 180) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Montering af nye tagrender og nedløbsrør`);
+                // Tagrender sidder på de to langside-eaves, halvdelen af omkredsen
+                laborHours += estimatedGutterMeters * (formula.guttersHoursPerMeter || 0.35);
+                if (!userSuppliesMaterials) materialCost += estimatedGutterMeters * (indexCat['Tagrender og nedløb (pr løbende meter)'] || 250) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Nye tagrender og nedløbsrør (estimeret ${estimatedGutterMeters} løbende meter)`);
             }
             if (d.chimney && d.chimney.startsWith('Ja')) {
                 laborHours += (formula.chimneyHours || 6.0);
@@ -676,8 +740,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
 
             if (d.annexType === 'Isoleret skur/værksted') {
-                laborHours += initialInstallHours * 0.5;
-                let isoPris = indexCat['Tillæg: Isolering/værksted (pr m2)'] || 1200;
+                // +35% i stedet for +50% — isolering og indvendig beklædning er reelt en mindre operation
+                // når basis-skuret allerede er bygget. Reducerer overprising på små annekser.
+                laborHours += initialInstallHours * 0.35;
+                let isoPris = indexCat['Tillæg: Isolering/værksted (pr m2)'] || 800;
                 if (!userSuppliesMaterials) materialCost += (numericAmount * isoPris) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Fuld isolering og beklædning indvendigt medregnet`);
             } else if (d.annexType === 'Fuldt beboeligt anneks') {
@@ -707,9 +773,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
 
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldMaterial) {
+                // numericAmount er antal carporte (ikke m²), så satserne er sat pr. carport
+                // ud fra en standard-størrelse på ca. 25 m². Asbest var tidligere kraftigt undervurderet.
                 if (d.oldMaterial.includes('Eternit')) {
-                    laborHours += numericAmount * 4.0;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * 1000) * dbSettings.material_markup;
+                    laborHours += numericAmount * 8.0;
+                    if (!userSuppliesMaterials) materialCost += (numericAmount * 8000) * dbSettings.material_markup;
                     bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdig carport/tag`);
                 } else if (d.oldMaterial.includes('Mursten') || d.oldMaterial.includes('Beton')) {
                     laborHours += numericAmount * 8.0;
@@ -812,54 +880,62 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         laborHours = 4;
     }
 
-    let totalLaborCost = laborHours * dbSettings.hourly_rate;
-    
+    // workHours = rene arbejdstimer på pladsen (uden kørsel). Vi holder dem adskilt fra
+    // driving for at undgå at "kørselstimer" forvirrer brugeren under "arbejdstimer".
+    const workHours = laborHours;
+    let totalLaborCost = workHours * dbSettings.hourly_rate;
+
     const companyFullAddress = carpenter?.address || '';
     const customerFullAddress = `${customerDetails.street || ''}, ${customerDetails.zip || ''} ${customerDetails.city || ''}`;
-    
+
     const { km, hours } = await fetchGoogleDistance(companyFullAddress, customerFullAddress);
-    
+
     let totalDriving = 0;
     let drivingMaterialCost = 0;
     let drivingLaborCost = 0;
     let drivingHoursBilled = 0;
 
-    // Estimer antallet af arbejdsdage på pladsen (en fuld svendedag antages at være 7.5 effektive timer)
-    // For at undgå urimelige "hop" i pris pga. kørsel, tillader vi 1,5 times overarbejde inden en ny fuld kørselsdag tillægges
-    const estimatedDays = Math.max(1, Math.ceil((laborHours - 1.5) / 7.5));
+    // Estimer antallet af arbejdsdage på pladsen.
+    // En fuld svendedag = 7,5 effektive timer. Tømreren har som regel et hold med sig
+    // (default 2 mand) på alt der varer mere end ca. 2 dages soloarbejde — så de timer
+    // udføres parallelt, og det antal dage kunden ses (og kørsel pålægges) falder tilsvarende.
+    // Små opgaver (< 20 t) udføres typisk solo og bruger derfor ikke crew-multiplier.
+    const baseCrew = Math.max(1, dbSettings.crew_size || 2);
+    const effectiveCrew = workHours < 20 ? 1 : baseCrew;
+    const effectiveCapacityPerDay = 7.5 * effectiveCrew;
+    const estimatedDays = Math.max(1, Math.ceil((workHours - 1.5) / effectiveCapacityPerDay));
 
     if (dbSettings.driving_calc_method === 'timer') {
         const exactHoursRoundTrip = (hours * 2) * estimatedDays;
-        drivingHoursBilled = Math.max(1, Math.ceil(exactHoursRoundTrip)); 
+        drivingHoursBilled = Math.max(1, Math.ceil(exactHoursRoundTrip));
         drivingLaborCost = drivingHoursBilled * dbSettings.hourly_rate;
-        
+
         bArr.push(`Kørsel & Logistik (${companyFullAddress.split(',')[0]} ➜ Kundens adresse): ${km.toFixed(1)} km hver vej.`);
         bArr.push(`Transport faktureres som ren timepris: Estimeret ${estimatedDays} arbejdsdag(e) x ca. ${Math.ceil(hours*2)} time(r) á ${dbSettings.hourly_rate} kr. i alt: ${drivingLaborCost.toFixed(0)} kr`);
-        
-        laborHours += drivingHoursBilled;
+
         totalLaborCost += drivingLaborCost;
-        totalDriving = 0; 
+        totalDriving = 0;
     } else {
-        drivingMaterialCost = (km * 2) * estimatedDays * (dbSettings.vehicle_cost_per_km || 3.8); 
-        drivingLaborCost = (hours * 2) * estimatedDays * dbSettings.hourly_rate; 
+        drivingMaterialCost = (km * 2) * estimatedDays * (dbSettings.vehicle_cost_per_km || 3.8);
+        drivingLaborCost = (hours * 2) * estimatedDays * dbSettings.hourly_rate;
         totalDriving = drivingMaterialCost + drivingLaborCost;
-        
+
         bArr.push(`Kørsel & Logistik (${companyFullAddress.split(',')[0]} ➜ Kundens adresse): ${km.toFixed(1)} km hver vej.`);
         bArr.push(`Slitage-takst (bil) samt lukkede timer under transport (Estimeret ${estimatedDays} dag(e)) udregnet til i alt: ${totalDriving.toFixed(0)} kr`);
     }
 
     const strictPrice = totalLaborCost + materialCost + totalDriving;
-    
+
     // Rabat for selv-opmåling af vinduer
     let opmaalingRabat = 0;
     if (cat === 'windows' && d.waiveMeasurement) {
         opmaalingRabat = 1500;
         bArr.push(`Rabat: Kunden har påtaget sig opmålingsansvaret. Fradrag på opmålingsbesøg: -1.500 kr.`);
     }
-    
+
     // --- OPTIMIZATION: SKJULT BUFFER I STEDET FOR FLAD MULTIPLIER ---
     // Vi fjerner "marginFactor = 1.25", da det giver dobbelt-avance på materialer og absurde tillæg på store opgaver.
-    // I stedet lægger vi et fast, dynamisk beløb til den rå pris. Kunden ser ikke dette tillæg direkte, 
+    // I stedet lægger vi et fast, dynamisk beløb til den rå pris. Kunden ser ikke dette tillæg direkte,
     // men det sikrer at tømrerens rigtige tilbud næsten altid kan lande lidt under systemets pris.
     let hiddenBuffer = 5000;
     if (strictPrice > 150000) {
@@ -867,26 +943,43 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     } else if (strictPrice > 50000) {
         hiddenBuffer = 10000;
     }
-    
-    let priceTop = strictPrice + hiddenBuffer - opmaalingRabat;
+
+    // --- AUTO-LÆRING: KALIBRERING ---
+    // Anvend tømrer-specifik (eller branche-aggregat) kalibreringsfaktor KUN på ikke-materiale-delen.
+    // Materialeprisen er hellig — tømreren har sat den efter sine egne leverandøraftaler,
+    // og den må aldrig "lære" sig op eller ned bag tømrerens ryg.
+    // Kalibreringen er bevidst stille — tømreren skal opleve at systemet "bare virker",
+    // ikke tænke over hvordan. Faktoren registreres dog i calcData så admin kan auditere.
+    const calibFactor = (calibration && Number.isFinite(calibration.factor)) ? calibration.factor : 1.0;
+    const nonMaterialRaw = totalLaborCost + totalDriving + hiddenBuffer;
+    const nonMaterialCalibrated = nonMaterialRaw * calibFactor;
+
+    let priceTop = materialCost + nonMaterialCalibrated - opmaalingRabat;
     if (priceTop < 0) priceTop = 0;
 
-    // Læg moms (1.25) på først, derefter rund af ned til nærmeste tusinde
-    let maxPrice = Math.ceil((priceTop * 1.25) / 1000) * 1000;
-    let maxPriceExVat = Math.round(maxPrice / 1.25);
-    
+    // Rund ex-moms op til nærmeste 1.000 kr og udregn moms derfra. På den måde får
+    // BÅDE ex-moms og inkl-moms pæne, runde tal (modsat før hvor ex-moms blev afledt
+    // af et rundet inkl-momstal og endte med skæve kroner).
+    let maxPriceExVat = Math.ceil(priceTop / 1000) * 1000;
+    let maxPrice = Math.round(maxPriceExVat * 1.25);
+
     const fmtMax = new Intl.NumberFormat('da-DK').format(maxPrice);
 
     return {
         priceRange: `${fmtMax} kr. inkl. moms`,
         breakdownArr: bArr,
         calcData: {
-            laborHours: Math.ceil(laborHours),
+            laborHours: Math.ceil(workHours),
+            drivingHours: Math.ceil(drivingHoursBilled),
             hourlyRate: dbSettings.hourly_rate,
             totalLaborCost: Math.ceil(totalLaborCost),
             materialCost: Math.ceil(materialCost),
             drivingCost: Math.ceil(totalDriving),
+            hiddenBuffer: hiddenBuffer,
             strictPrice: Math.ceil(strictPrice),
+            calibrationFactor: calibFactor,
+            calibrationSource: calibration?.source || 'none',
+            calibrationSampleSize: calibration?.sampleSize || 0,
             finalEstimateIncVat: maxPrice,
             finalEstimateExVat: maxPriceExVat
         }
