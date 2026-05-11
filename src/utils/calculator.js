@@ -111,6 +111,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 let h = formula.hoursPerUnit || 3.0; // standard vindue tid
                 if (w.type === 'Panorama') h += 3.0;
                 else if (w.type === 'Skydedør') h += 4.0;
+                else if (w.type === 'Tagvindue') h += 5.0; // Tagvinduer tager længere tid
+                
                 if (w.hasSlidingDoor) h += 4.0;
                 winHours += h;
             });
@@ -159,10 +161,19 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             } else if (cat === 'windows' && d.windowsConfig && d.windowsConfig.length > 0) {
                 // Udregn materiale-omkostninger baseret på de individuelle vinduer
                 let winMatCost = 0;
+                let matDb = indexCat[d.material] || 5000;
+                
                 d.windowsConfig.forEach((w) => {
-                    let base = indexCat['Træ'] || 5000; // default base price
+                    let base = matDb; // start with selected material base
                     if (w.type === 'Panorama') base = indexCat['Panorama/Specialmål'] || 12000;
                     else if (w.type === 'Skydedør') base = indexCat['Skydedør'] || 15000;
+                    else if (w.type === 'Tagvindue') base = indexCat['Ovenlysvindue / Velux (pr. stk)'] || 8500;
+                    
+                    // Fixed windows (fastkarm) are usually cheaper than openable
+                    if (w.isOpenable === false && w.type === 'Standard') {
+                        base = base * 0.75; 
+                    }
+                    
                     if (w.hasSlidingDoor) base += 8000;
                     winMatCost += base;
                 });

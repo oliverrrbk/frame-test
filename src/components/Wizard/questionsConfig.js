@@ -79,6 +79,18 @@ export const QUESTIONS = {
     ],
     windows: [
         { id: 'housingType', type: 'select', label: 'Hvilken type bygning gælder det?', tooltip: 'Bygningsreglementet (BR18) kræver typisk 3-lags energiruder i helårsboliger.', options: ['Helårsbolig', 'Sommerhus', 'Andet (Udestue/Fredet)'] },
+        { 
+            id: 'material', 
+            type: 'visual_select', 
+            label: 'Hvilket materiale skal de nye vinduer primært være i?', 
+            options: [
+                { label: 'Træ/alu (kombination)', img: '/images/window_wood_alu_1776261163640.png' },
+                { label: 'Træ', img: '/images/window_wood_1776261054616.png' },
+                { label: 'PVC / plast', img: '/images/window_pvc_1776261086057.png' },
+                { label: 'Aluminium', img: '/images/window_aluminum_1776261099669.png' },
+                { label: 'Stål', img: '/images/window_steel_1776261189808.png' }
+            ] 
+        },
         { id: 'floors', type: 'select', label: 'På hvilken etage skal vinduerne primært monteres?', tooltip: 'Høje etager tager længere tid pga. bæring af tunge vinduer og mulig udvendig fugearbejde.', options: ['Stueplan (Jordniveau)', '1. sal (Kræver evt. rullestillads/ekstra bæring)', '2. sal eller højere (Kræver lift/stillads)'] },
         { id: 'disposal', type: 'select', label: 'Skal de nuværende vinduer afmonteres og afskaffes?', options: ['Ja', 'Nej'] },
         { id: 'amount', type: 'number', label: 'Hvor mange vinduer drejer opgaven sig om i alt?', placeholder: 'F.eks. 4' },

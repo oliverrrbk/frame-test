@@ -387,10 +387,27 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                                 }}
                                                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
                                             >
-                                                <option value="Standard">Standard vindue</option>
+                                                <option value="Standard">Standard facadevindue</option>
+                                                <option value="Tagvindue">Tagvindue (Ovenlys/Velux)</option>
                                                 <option value="Panorama">Panorama / Gulv-til-loft</option>
                                                 <option value="Skydedør">Terrassedør / Skydedør</option>
                                             </select>
+                                        </div>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', marginTop: '28px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={wConf.isOpenable !== false} // default to true
+                                                    onChange={(e) => {
+                                                        const newArr = [...(details[q.id] || [])];
+                                                        newArr[idx] = { ...wConf, isOpenable: e.target.checked };
+                                                        handleInputChange(q.id, newArr);
+                                                    }}
+                                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                />
+                                                Dette element skal kunne åbnes
+                                            </label>
                                         </div>
 
                                         {wConf.type === 'Panorama' && (
