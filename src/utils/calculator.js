@@ -173,10 +173,21 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     if (w.isOpenable === false && w.type === 'Standard') {
                         base = base * 0.75; 
                     }
+
+                    // Sikkerhedsglas (hærdet/lamineret)
+                    if (w.type === 'Panorama' || w.type === 'Skydedør' || w.safetyGlass) {
+                        base += 1500; // Ekstra tillæg for lamineret/hærdet personsikkerhedsglas iht. BR18
+                    }
                     
                     if (w.hasSlidingDoor) base += 8000;
                     winMatCost += base;
                 });
+                
+                if (d.twoTone && d.twoTone.startsWith('Ja')) {
+                    winMatCost *= 1.15; // 15% tillæg for 2-farvede vinduer
+                    bArr.push(`Tillæg: 2-farvede vinduer (fx sort ude / hvid inde) (+15% på materialer)`);
+                }
+
                 materialCost += winMatCost * dbSettings.material_markup;
                 bArr.push(`Materialer udregnet (Individuel specifikation af ${d.windowsConfig.length} vinduer/døre): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
             } else {
@@ -191,6 +202,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         if (cat === 'windows' && d.housingType === 'Helårsbolig' && !userSuppliesMaterials) {
             materialCost = materialCost * 1.20; 
             bArr.push(`Tillæg: 3-lags energiruder (Krav: Helårsbolig / BR18) lagt til materialeprisen (+20%)`);
+        }
+
+        if (cat === 'windows' && d.pcbCheck && d.pcbCheck.startsWith('Ja')) {
+            laborHours += numericAmount * 1.5; // Ekstra nedrivningstid pga. asbestdragter/afskærmning
+            materialCost += (numericAmount * 350) * dbSettings.material_markup; // Special deponi
+            bArr.push(`Miljøtillæg: Miljøsanering forventet (Fuger/vinduer før 1977 kræver specialhåndtering af PCB/Bly)`);
         }
 
         if (d.disposal && d.disposal.startsWith('Ja')) {

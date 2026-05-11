@@ -394,7 +394,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                             </select>
                                         </div>
 
-                                        <div style={{ display: 'flex', alignItems: 'center', marginTop: '28px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', marginTop: '28px', flexWrap: 'wrap', gap: '16px' }}>
                                             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer' }}>
                                                 <input 
                                                     type="checkbox" 
@@ -408,6 +408,22 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                                 />
                                                 Dette element skal kunne åbnes
                                             </label>
+
+                                            {wConf.type === 'Standard' && (
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={!!wConf.safetyGlass}
+                                                        onChange={(e) => {
+                                                            const newArr = [...(details[q.id] || [])];
+                                                            newArr[idx] = { ...wConf, safetyGlass: e.target.checked };
+                                                            handleInputChange(q.id, newArr);
+                                                        }}
+                                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                    />
+                                                    Går glasset ned til gulvet? (Sikkerhedsglas)
+                                                </label>
+                                            )}
                                         </div>
 
                                         {wConf.type === 'Panorama' && (

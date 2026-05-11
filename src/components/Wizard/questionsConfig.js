@@ -93,6 +93,8 @@ export const QUESTIONS = {
         },
         { id: 'floors', type: 'select', label: 'På hvilken etage skal vinduerne primært monteres?', tooltip: 'Høje etager tager længere tid pga. bæring af tunge vinduer og mulig udvendig fugearbejde.', options: ['Stueplan (Jordniveau)', '1. sal (Kræver evt. rullestillads/ekstra bæring)', '2. sal eller højere (Kræver lift/stillads)'] },
         { id: 'disposal', type: 'select', label: 'Skal de nuværende vinduer afmonteres og afskaffes?', options: ['Ja', 'Nej'] },
+        { id: 'pcbCheck', type: 'select', label: 'Er huset (eller de eksisterende vinduer) fra før 1977?', tooltip: 'Fuger og materialer fra før 1977 kan indeholde PCB eller bly, hvilket kræver særlig miljøsanering og lovpligtig special-bortskaffelse.', condition: (d) => d.disposal === 'Ja', options: ['Ja, det er fra før 1977 (Risiko for miljøsanering)', 'Nej, bygget/skiftet efter 1977'] },
+        { id: 'twoTone', type: 'select', label: 'Skal vinduerne have to farver (fx sort udvendig / hvid indvendig)?', tooltip: '2-farvede vinduer koster typisk 10-15% ekstra fra producentens side.', options: ['Nej, samme farve ude og inde', 'Ja, 2-farvede vinduer'] },
         { id: 'amount', type: 'number', label: 'Hvor mange vinduer drejer opgaven sig om i alt?', placeholder: 'F.eks. 4' },
         { id: 'windowsConfig', type: 'window_configurator', label: 'Specifikation af hvert vindue:', condition: (d) => d.amount > 0 },
         { id: 'waiveMeasurement', type: 'checkbox', label: 'Jeg vil gerne spare opmålingsbesøget. Jeg indtaster de præcise karm-mål og hæfter selv for, at de passer.', tooltip: 'OBS: Bliver vinduerne bestilt efter dine mål, dækker du selv omkostningen, hvis de ikke passer i hullet. Tømreren sparer dog turen, og du sparer ca. 1.500 kr.' },
