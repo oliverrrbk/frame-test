@@ -541,13 +541,14 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>Specifikation af projekt</h2>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>For at jeg bedst muligt kan give dig det rigtige estimat og forstå opgaven, bedes du svare på følgende spørgsmål om projektet.</p>
                 
-                <div style={{ padding: '20px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '12px', borderLeft: '4px solid #3b82f6', marginBottom: '32px' }}>
-                    <h3 style={{ margin: '0 0 8px 0', fontSize: '1.05rem', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>💡</span> Giv blot dit kvalificerede bud
-                    </h3>
-                    <p style={{ margin: '0', fontSize: '0.95rem', color: '#1e40af', lineHeight: '1.6' }}>
-                        Du vil aldrig blive holdt ansvarlig for nøjagtigheden af dine mål eller valg. Tømreren kommer <strong>altid</strong> ud og kigger på projektet inden en endelig aftale indgås. Overslaget her er udelukkende til for at give dig et hurtigt og realistisk prisleje.
-                    </p>
+                <div style={{ background: '#f8fafc', borderLeft: '4px solid #10b981', padding: '16px', borderRadius: '8px', marginBottom: '32px', fontSize: '0.9rem', color: '#475569', lineHeight: '1.5' }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: '1.2rem' }}>💡</span>
+                        <div>
+                            <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Vejledende oplysninger</strong>
+                            Du vil som udgangspunkt aldrig blive holdt ansvarlig for nøjagtigheden af dine mål eller valg. Tømreren kommer <strong>altid</strong> ud og kigger på projektet inden en endelig aftale indgås, medmindre du aktivt fravælger opmålingsbesøget mod en prisreduktion (hvor dette er en mulighed). Overslaget er til for at give dig et realistisk prisleje.
+                        </div>
+                    </div>
                 </div>
             </div>
             
