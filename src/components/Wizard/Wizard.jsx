@@ -161,9 +161,61 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             setPriceRange(res.priceRange);
             setBreakdownArr(res.breakdownArr);
 
+            const categoryMap = {
+                roof: 'Nyt Tag',
+                floor: 'Nyt Gulv',
+                windows: 'Nye Vinduer',
+                doors: 'Nye Døre',
+                terrace: 'Ny Terrasse',
+                special: 'Specialopgave'
+            };
+            const categoryName = categoryMap[updatedProjectData.category] || updatedProjectData.category;
+
+            // OPRET LEAD TIDLIGT SOM "Overslag (Afventer)"
+            const { data: insertedData, error: insertError } = await supabase
+                .from('leads')
+                .insert([{
+                    customer_name: customerDetails?.fullName || 'Ukendt',
+                    customer_email: customerDetails?.email || 'Ukendt',
+                    customer_phone: customerDetails?.phone || '',
+                    customer_address: `${customerDetails?.street || ''}, ${customerDetails?.zip || ''} ${customerDetails?.city || ''}`,
+                    project_category: categoryName,
+                    price_estimate: res.priceRange,
+                    contact_preference: 'Afventer accept',
+                    raw_data: updatedProjectData,
+                    carpenter_id: carpenter?.id || null,
+                    status: 'Overslag (Afventer)'
+                }])
+                .select()
+                .single();
+
+            if (insertedData && customerDetails?.email) {
+                updatedProjectData.leadId = insertedData.id; // Gem lead ID'et i state
+                
+                // SEND EMAIL MED OVERSLAGET TIL KUNDEN
+                import('../../utils/sendEmail').then(({ sendEmail }) => {
+                    import('../../utils/emailTemplates').then(({ getCustomerEstimateTemplate, getCarpenterSenderName }) => {
+                        const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
+                        const senderName = getCarpenterSenderName(carpenter);
+                        
+                        // Generer URL til at åbne overslaget igen
+                        const overslagUrl = `${window.location.origin}/${carpenter?.slug || 'demo'}/overslag/${insertedData.id}`;
+                        
+                        sendEmail({
+                            to: customerDetails.email,
+                            subject: `Dit vejledende overslag fra ${carpenterCompanyName}`,
+                            html: getCustomerEstimateTemplate(customerDetails.fullName, categoryName, res.priceRange, carpenter, overslagUrl),
+                            fromName: senderName,
+                            replyTo: carpenter?.email
+                        });
+                    });
+                }).catch(err => console.error("Kunne ikke sende email:", err));
+            }
+
             setProjectData(prev => ({
                 ...prev,
-                calc_data: res.calcData
+                calc_data: res.calcData,
+                leadId: insertedData?.id
             }));
 
             setIsCalculating(false);

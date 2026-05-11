@@ -742,7 +742,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     let drivingHoursBilled = 0;
 
     // Estimer antallet af arbejdsdage på pladsen (en fuld svendedag antages at være 7.5 effektive timer)
-    const estimatedDays = Math.max(1, Math.ceil(laborHours / 7.5));
+    // For at undgå urimelige "hop" i pris pga. kørsel, tillader vi 1,5 times overarbejde inden en ny fuld kørselsdag tillægges
+    const estimatedDays = Math.max(1, Math.ceil((laborHours - 1.5) / 7.5));
 
     if (dbSettings.driving_calc_method === 'timer') {
         const exactHoursRoundTrip = (hours * 2) * estimatedDays;
@@ -765,8 +766,19 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     }
 
     const strictPrice = totalLaborCost + materialCost + totalDriving;
-    const marginFactor = 1.25; 
-    const priceTop = strictPrice * marginFactor;
+    
+    // --- OPTIMIZATION: SKJULT BUFFER I STEDET FOR FLAD MULTIPLIER ---
+    // Vi fjerner "marginFactor = 1.25", da det giver dobbelt-avance på materialer og absurde tillæg på store opgaver.
+    // I stedet lægger vi et fast, dynamisk beløb til den rå pris. Kunden ser ikke dette tillæg direkte, 
+    // men det sikrer at tømrerens rigtige tilbud næsten altid kan lande lidt under systemets pris.
+    let hiddenBuffer = 5000;
+    if (strictPrice > 150000) {
+        hiddenBuffer = 15000;
+    } else if (strictPrice > 50000) {
+        hiddenBuffer = 10000;
+    }
+    
+    const priceTop = strictPrice + hiddenBuffer;
 
     // Læg moms (1.25) på først, derefter rund af ned til nærmeste tusinde
     let maxPrice = Math.ceil((priceTop * 1.25) / 1000) * 1000;

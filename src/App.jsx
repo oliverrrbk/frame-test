@@ -14,6 +14,7 @@ import Login from './components/Auth/Login';
 import ConfirmedPage from './components/Auth/ConfirmedPage';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import QuoteAcceptPage from './components/Wizard/QuoteAcceptPage';
+import EstimateAcceptPage from './components/Wizard/EstimateAcceptPage';
 import { supabase } from './supabaseClient';
 import React, { useState, useEffect } from 'react';
 // Protected Route Komponent
@@ -192,6 +193,7 @@ function App() {
               )
             } />
             <Route path="/:slug" element={<PublicWizardPage />} />
+            <Route path="/:slug/overslag/:lead_id" element={<EstimateAcceptPage />} />
             <Route path="/:slug/tilbud/:lead_id" element={<QuoteAcceptPage />} />
             <Route path="/bekraeftet" element={<ConfirmedPage />} />
             <Route path="/register" element={

@@ -43,30 +43,42 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
             const carpenterName = carpenter?.owner_name || carpenter?.company_name || 'Bison Frame Tømrer';
             const carpenterEmail = carpenter?.email;
 
-            // Gem i leads tabellen
-            const { data: insertedData, error } = await supabase
-                .from('leads')
-                .insert([{
+            const contactPreferenceStr = isAsap ? 'Hurtigst muligt' : `${selectedDays.join(', ')} (${selectedTime})`;
+
+            // Vi opdaterer den eksisterende lead, der blev oprettet som kladde
+            let newLeadId = projectData.leadId;
+            if (newLeadId) {
+                const { error } = await supabase
+                    .from('leads')
+                    .update({
+                        contact_preference: contactPreferenceStr,
+                        status: 'Ny forespørgsel', // Nu gøres den aktiv, så tømreren kan se den
+                        raw_data: projectData
+                    })
+                    .eq('id', newLeadId);
+                    
+                if (error) throw error;
+            } else {
+                // Faldback, hvis der mod forventning ikke var et leadId
+                const { data, error } = await supabase.from('leads').insert([{
                     customer_name: customerName,
                     customer_email: customerEmail,
                     customer_phone: customerPhone,
                     customer_address: `${projectData.customerDetails?.street || ''}, ${projectData.customerDetails?.zip || ''} ${projectData.customerDetails?.city || ''}`,
                     project_category: categoryName,
                     price_estimate: priceRange,
-                    contact_preference: isAsap ? 'Hurtigst muligt' : `${selectedDays.join(', ')} (${selectedTime})`,
-                    raw_data: projectData, // Gemmer alle valg, valgte materialer osv i jsonb!
-                    carpenter_id: carpenter?.id || null
-                }])
-                .select()
-                .single();
-                
-            if (error) throw error;
-            const newLeadId = insertedData.id;
+                    contact_preference: contactPreferenceStr,
+                    raw_data: projectData,
+                    carpenter_id: carpenter?.id || null,
+                    status: 'Ny forespørgsel'
+                }]).select().single();
+                if (error) throw error;
+                newLeadId = data.id;
+            }
 
             // Send emails (async so we don't block the UI)
             if (customerEmail !== 'Ukendt' && !isManualCreation) {
                 // Generer detaljer til mailen
-                const contactPreferenceStr = isAsap ? 'Hurtigst muligt' : `${selectedDays.join(', ')} (${selectedTime})`;
                 let projectDetailsHtml = '';
                 if (projectData.category === 'special') {
                     let aiHtml = '';
@@ -179,7 +191,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                 }}>
                     <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Forventet prisramme</span>
                     <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: 'var(--text-primary)' }}>{priceRange}</h1>
-                    <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Prisen er inkl. moms, arbejdstid, maskiner/materialer samt standard kørsel.</p>
+                    <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Dette er et stærkt vejledende overslag inkl. moms. Vores erfaring er, at det endelige, bindende tilbud fra tømreren oftest lander lidt lavere – men med denne pris har du et realistisk udgangspunkt.</p>
                 </div>
 
                 <div style={{ 
@@ -190,7 +202,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     marginBottom: '32px'
                 }}>
                     <h3 style={{ fontSize: '1.3rem', color: 'var(--text-primary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        Recap af dine indtastninger:
+                        Opsummering af din opgave:
                     </h3>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '16px' }}>
                         {projectData.category === 'special' ? (
@@ -219,6 +231,13 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                         )}
                     </ul>
                 </div>
+                
+                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <p style={{ margin: '0 0 12px 0', fontSize: '1rem', color: '#64748b' }}>Stemmer opsummeringen overens, eller er der nogle ting, du vil ændre eller mangler?</p>
+                    <button className="wizard-btn wizard-btn-secondary" style={{ display: 'inline-block', padding: '10px 20px', border: '2px solid #e2e8f0', background: 'white', color: '#475569', borderRadius: '8px', cursor: 'pointer', fontSize: '0.95rem' }} onClick={editProject}>
+                        Ret opgaven
+                    </button>
+                </div>
 
                 <div style={{ 
                     background: '#eff6ff', 
@@ -231,8 +250,8 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     alignItems: 'flex-start'
                 }}>
                     <div>
-                        <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Er du tilfreds med prisniveauet?</strong>
-                        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Så behøver du ikke lede længere. Når du går videre herfra, fortæller du os, at du ønsker at bruge <strong>{carpenter?.company_name || 'os'}</strong> til din opgave. Vi kommer ud og kigger på detaljerne, så vi sammen kan låse den endelige pris og lave en fast aftale.</p>
+                        <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Er du klar til at vælge {carpenter?.company_name || 'os'}?</strong>
+                        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Overslaget er allerede sendt til din mail, så du kan tænke over det. Hvis du går videre herfra, bekræfter du, at vi skal udføre opgaven for dig. Vi kommer ud og kigger på detaljerne, så vi sammen kan låse den endelige pris og lave en fast aftale.</p>
                     </div>
                 </div>
             </div>
@@ -263,12 +282,10 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                             }, 100);
                         }}
                     >
-                        Ja Tak - Jeg vil gerne gå videre.
+                        Vælg {carpenter?.company_name || 'os'} til at udføre opgaven
                     </button>
                     <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
-                        <button className="wizard-btn wizard-btn-secondary" style={{ width: '100%', justifyContent: 'center', border: '2px solid #e2e8f0', background: 'white', color: '#475569' }} onClick={editProject}>
-                            ← Rediger opgave (Gå tilbage)
-                        </button>
+                        {/* Ret opgaven knappen er flyttet op under opsummeringen */}
                         <button className="wizard-btn wizard-btn-secondary" style={{ width: '100%', justifyContent: 'center', border: 'none', background: 'transparent', color: '#94a3b8', fontSize: '0.9rem' }} onClick={resetWizard}>
                             Annuller og start helt forfra
                         </button>
@@ -384,7 +401,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                             boxShadow: ((!isAsap && selectedDays.length === 0) || isSaving) ? 'none' : '0 10px 25px rgba(59,130,246,0.3)'
                         }}
                     >
-                        {isSaving ? 'Arbejder...' : (isManualCreation ? 'Opret Kunde og Gem Overslag' : `Ja tak, jeg vælger ${carpenter?.company_name || 'jer'} til opgaven`)}
+                        {isSaving ? 'Arbejder...' : (isManualCreation ? 'Opret Kunde og Gem Overslag' : `Bekræft valget af ${carpenter?.company_name || 'os'}`)}
                     </button>
                     {selectedDays.length === 0 && !isAsap && <p style={{ textAlign: 'center', marginTop: '12px', color: '#ef4444', fontSize: '0.9rem', fontWeight: '500' }}>* Vælg mindst én dag for at fortsætte</p>}
                     
