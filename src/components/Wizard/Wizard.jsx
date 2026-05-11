@@ -222,23 +222,33 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                 updatedProjectData.leadId = leadId;
             }
 
-            if (insertedData && customerDetails?.email && !isUpdate) {
-                // SEND EMAIL MED OVERSLAGET TIL KUNDEN KUN VED FØRSTE OPRETTELSE
+            if (insertedData && customerDetails?.email) {
+                // SEND EMAIL MED OVERSLAGET TIL KUNDEN
                 import('../../utils/sendEmail').then(({ sendEmail }) => {
-                    import('../../utils/emailTemplates').then(({ getCustomerEstimateTemplate, getCarpenterSenderName }) => {
+                    import('../../utils/emailTemplates').then(({ getCustomerEstimateTemplate, getCustomerUpdatedEstimateTemplate, getCarpenterSenderName }) => {
                         const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
                         const senderName = getCarpenterSenderName(carpenter);
                         
                         // Generer URL til at åbne overslaget igen
                         const overslagUrl = `${window.location.origin}/${carpenter?.slug || 'demo'}/overslag/${leadId}`;
                         
-                        sendEmail({
-                            to: customerDetails.email,
-                            subject: `Dit vejledende overslag fra ${carpenterCompanyName}`,
-                            html: getCustomerEstimateTemplate(customerDetails.fullName, categoryName, res.priceRange, carpenter, overslagUrl),
-                            fromName: senderName,
-                            replyTo: carpenter?.email
-                        });
+                        if (!isUpdate) {
+                            sendEmail({
+                                to: customerDetails.email,
+                                subject: `Dit vejledende overslag fra ${carpenterCompanyName}`,
+                                html: getCustomerEstimateTemplate(customerDetails.fullName, categoryName, res.priceRange, carpenter, overslagUrl),
+                                fromName: senderName,
+                                replyTo: carpenter?.email
+                            });
+                        } else {
+                            sendEmail({
+                                to: customerDetails.email,
+                                subject: `Dit opdaterede overslag fra ${carpenterCompanyName}`,
+                                html: getCustomerUpdatedEstimateTemplate(customerDetails.fullName, categoryName, res.priceRange, carpenter, overslagUrl),
+                                fromName: senderName,
+                                replyTo: carpenter?.email
+                            });
+                        }
                     });
                 }).catch(err => console.error("Kunne ikke sende email:", err));
             }
