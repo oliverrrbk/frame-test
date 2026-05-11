@@ -115,10 +115,18 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                             const question = categoryQuestions.find(q => q.id === key);
                             if (!question || value === undefined || value === null || value === '') return '';
                             if (question.type === 'textarea' || question.type === 'file') return '';
+                            
+                            let displayValue = value;
+                            if (question.type === 'window_configurator' && Array.isArray(value)) {
+                                displayValue = value.map(v => `${v.type || 'Standard'} (${v.width}x${v.height} cm)`).join(', ');
+                            } else if (typeof value === 'boolean') {
+                                displayValue = value ? 'Ja' : 'Nej';
+                            }
+
                             return `
                                 <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
                                     <strong style="display: block; color: #0f172a; margin-bottom: 4px;">${question.label}</strong>
-                                    <span style="color: #334155;">${value}</span>
+                                    <span style="color: #334155;">${displayValue}</span>
                                 </li>
                             `;
                         })
@@ -218,12 +226,19 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                                 if (!question || value === undefined || value === null || value === '') return null;
                                 if (question.type === 'textarea' || question.type === 'file') return null;
 
+                                let displayValue = value;
+                                if (question.type === 'window_configurator' && Array.isArray(value)) {
+                                    displayValue = value.map(v => `${v.type || 'Standard'} (${v.width}x${v.height} cm)`).join(', ');
+                                } else if (typeof value === 'boolean') {
+                                    displayValue = value ? 'Ja' : 'Nej';
+                                }
+
                                 return (
                                     <li key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.0rem', color: 'var(--text-secondary)', lineHeight: '1.5', background: 'rgba(0,0,0,0.02)', padding: '12px 16px', borderRadius: '8px' }}>
                                         <span style={{ color: '#10b981', marginTop: '2px' }}>✓</span>
                                         <div>
                                             <strong style={{ display: 'block', color: 'var(--text-primary)', marginBottom: '4px' }}>{question.label}</strong>
-                                            <span>{value}</span>
+                                            <span>{displayValue}</span>
                                         </div>
                                     </li>
                                 );
