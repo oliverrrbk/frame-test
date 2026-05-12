@@ -3616,53 +3616,46 @@ const Dashboard = () => {
                                             Forbind Minuba for automatisk at oprette kunder og opgaver (sager), når et tilbud bekræftes. Tryk på knappen for at godkende adgangen.
                                         </p>
                                         
-                                        {carpenterProfile?.minuba_api_key === 'pending_authorization' ? (
-                                            <div style={{ padding: '16px', background: '#fef08a', color: '#854d0e', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                                <div className="spinner" style={{width: '20px', height: '20px', border: '2px solid #854d0e', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite'}}></div> Godkender hos Minuba...
-                                            </div>
-                                        ) : carpenterProfile?.minuba_api_key ? (
-                                            <div style={{ padding: '16px', background: '#ecfdf5', color: '#047857', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                                <CheckCircle size={20} /> Minuba er forbundet!
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="input-group" style={{ marginBottom: '16px' }}>
-                                                    <input 
-                                                        type="password" 
-                                                        value={carpenterProfile?.minuba_api_key || ''} 
-                                                        onChange={(e) => setCarpenterProfile(prev => ({ ...prev, minuba_api_key: e.target.value }))} 
-                                                        placeholder="Indsæt personlig API-nøgle fra Minuba" 
-                                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1' }}
-                                                    />
-                                                </div>
-                                                <button 
-                                                    className="primary-btn" 
-                                                    style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
-                                                    onClick={async () => {
-                                                        if (!carpenterProfile?.minuba_api_key) return;
-                                                        const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, minuba_api_key: carpenterProfile.minuba_api_key });
-                                                        if (!error) {
-                                                            alert("Minuba API-nøgle gemt!");
-                                                        } else {
-                                                            alert("Fejl ved gemning: " + error.message);
-                                                        }
-                                                    }}
-                                                >
-                                                    Gem API-nøgle
-                                                </button>
-                                            </>
-                                        )}
+                                        <div className="input-group" style={{ marginBottom: '16px' }}>
+                                            <input 
+                                                type="password" 
+                                                value={carpenterProfile?.minuba_api_key || ''} 
+                                                onChange={(e) => setCarpenterProfile(prev => ({ ...prev, minuba_api_key: e.target.value }))} 
+                                                placeholder="Indsæt personlig API-nøgle fra Minuba" 
+                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1' }}
+                                            />
+                                        </div>
+                                        <button 
+                                            className="primary-btn" 
+                                            style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
+                                            onClick={async () => {
+                                                if (!carpenterProfile?.minuba_api_key) return;
+                                                const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, minuba_api_key: carpenterProfile.minuba_api_key });
+                                                if (!error) {
+                                                    alert("Minuba API-nøgle gemt!");
+                                                } else {
+                                                    alert("Fejl ved gemning: " + error.message);
+                                                }
+                                            }}
+                                        >
+                                            Gem API-nøgle
+                                        </button>
                                         
                                         {carpenterProfile?.minuba_api_key && carpenterProfile.minuba_api_key !== 'pending_authorization' && (
-                                            <button 
-                                                style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
-                                                onClick={async () => {
-                                                    const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, minuba_api_key: null });
-                                                    if (!error) setCarpenterProfile(prev => ({...prev, minuba_api_key: null}));
-                                                }}
-                                            >
-                                                Afbryd forbindelse
-                                            </button>
+                                            <>
+                                                <div style={{ marginTop: '16px', padding: '12px', background: '#ecfdf5', color: '#047857', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', fontSize: '14px', marginBottom: '16px' }}>
+                                                    Nøgle er gemt! ✅
+                                                </div>
+                                                <button 
+                                                    style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
+                                                    onClick={async () => {
+                                                        const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, minuba_api_key: null });
+                                                        if (!error) setCarpenterProfile(prev => ({...prev, minuba_api_key: null}));
+                                                    }}
+                                                >
+                                                    Afbryd forbindelse
+                                                </button>
+                                            </>
                                         )}
                                     </div>
                                     )}
