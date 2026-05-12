@@ -39,6 +39,7 @@ export const MATERIAL_INDEX = {
         'Stern træværk (pr løbende meter)': 150,
         'Tagrender og nedløb (pr løbende meter)': 250,
         'Skorstensinddækning (Zink/Bly)': 3500,
+        'Kant-sikring / Rullestillads 1-plan (pr m2 grundplan)': 45,
         'Stilladsleje 1½-plan/2-plan (pr m2 grundplan)': 150,
         'Stilladsleje høj rejsning (pr m2 grundplan)': 100,
         'Miljødeponi asbest (pr m2)': 150,
@@ -218,6 +219,7 @@ export const WORK_FORMULAS = {
             'Skiffer (blødt materiale)': 0.30,
             'Tagplader (eternit asbest fri)': 0.25,
             'Tagplader (asbest)': 0.50, // Kræver asbestdragter, maske og specialhåndtering
+            'Tagplader vides ikke': 0.50, // Hvis asbest-status er ukendt, skal der kalkuleres med forholdsregler!
             'Stråtag (tækket tag)': 0.50,  // Strå er tungt + halmsupport
             'Metal-tag (zink, stål, kobber)': 0.20
         },

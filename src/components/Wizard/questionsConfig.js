@@ -28,7 +28,7 @@ export const QUESTIONS = {
             label: 'Hvilket slags tag har du nu?', 
             condition: { field: 'disposal', value: 'Ja' },
             options: [
-                { label: 'Tagpap', img: '/images/roof_felt_1776270223442.png' },
+                { label: 'Paptag', img: '/images/roof_felt_1776270223442.png' },
                 { label: 'Tagplader (eternit asbest fri)', img: '/images/roof_eternit_1777277162521.png' },
                 { label: 'Tagplader (asbest)', img: '/images/roof_eternit_asbestos_1777277175837.png' },
                 { label: 'Tagplader vides ikke', img: '/images/roof_eternit_1777277162521.png' },

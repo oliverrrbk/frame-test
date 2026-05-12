@@ -551,7 +551,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             let scaffoldCost = 0;
             // SOP #3: Stillads skal skaleres med arealet (perimeter/grundplan), ellers straffes små huse og store huse under-faktureres.
-            if (d.floors === '1½-plan / 2-plan / Mere') {
+            if (d.floors === '1-plan (Stueplan)') {
+                scaffoldCost += roofGrundplanM2 * (indexCat['Kant-sikring / Rullestillads 1-plan (pr m2 grundplan)'] || 45);
+            } else if (d.floors === '1½-plan / 2-plan / Mere') {
                 scaffoldCost += roofGrundplanM2 * (indexCat['Stilladsleje 1½-plan/2-plan (pr m2 grundplan)'] || 150); 
                 laborHours += initialInstallHours * 0.3; // Changed to additive
             }
@@ -568,9 +570,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldRoofType) {
                 // Bemærk: Arbejdstiden (disposalHoursByOldType) er allerede lagt til ovenfor i linje 300-307!
                 // Så vi skal KUN håndtere de materielle miljø-udgifter (deponi/container) her, UDEN markup.
-                if (d.oldRoofType.includes('asbest') && !d.oldRoofType.includes('fri')) {
+                if ((d.oldRoofType.includes('asbest') || d.oldRoofType.includes('vides ikke')) && !d.oldRoofType.includes('fri')) {
                     if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Miljødeponi asbest (pr m2)'] || 150); 
-                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdigt tag (Uden avance)`);
+                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af potentielt asbestholdigt tag (Uden avance)`);
                 } else if (d.oldRoofType === 'Stråtag (tækket tag)') {
                     if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Bortskaffelse af stråtag (ekstra volumen pr m2)'] || 200); 
                     bArr.push(`Miljøtillæg: Stor container-volumen og ekstra deponi til bortskaffelse af stråtag (Uden avance)`);
