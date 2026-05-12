@@ -225,7 +225,7 @@ export const WORK_FORMULAS = {
         eavesHoursPerMeter: 0.4,   // Tidligere "eavesHours: 0.5" pr m² → nu pr løbende meter
         guttersHoursPerMeter: 0.35, // Tidligere "guttersHours: 0.4" pr m² → nu pr løbende meter
         chimneyHours: 6.0, // Fast tid til skorstensinddækning
-        containerThreshold: 0
+        containerThreshold: 150 // M2 pr container (var 0, hvilket udløste Infinity og altid gav max 5 containere!)
     },
     windows: {
         hoursPerUnit: 3.5, // Timer pr. facadevindue (inkl. standard isolering og montering)
