@@ -324,6 +324,19 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'floor') {
+            // Tilføj materialespild (afskær), da tømreren altid skal købe mere ind end det reelle m²-areal
+            if (!userSuppliesMaterials) {
+                let matPriceDb = indexCat[d.material] || 400;
+                let baseFloorCost = (numericAmount * matPriceDb) * dbSettings.material_markup;
+                if (d.floorPattern === 'Ja, i mønster (fx Sildeben / Chevron)') {
+                    materialCost += baseFloorCost * 0.15; // 15% spild til sildeben
+                    bArr.push(`Tillæg: 15% materialespild (afskær) medregnet til specialmønster (Sildeben)`);
+                } else {
+                    materialCost += baseFloorCost * 0.07; // 7% spild til standard
+                    bArr.push(`Tillæg: 7% materialespild (afskær) medregnet til gulvbrædderne`);
+                }
+            }
+
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldFloorType) {
                 if (d.oldFloorType.includes('Klinker')) {
                     laborHours += numericAmount * 0.6;
@@ -356,7 +369,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     bArr.push(`Tillæg: Tilpasning af strøer (bærende materialepris dækkes af sporpladerne)`);
                 } else {
                     laborHours += numericAmount * 0.4; // Øget tid til lægning af bærende undergulv på strøer
-                    if (!userSuppliesMaterials) materialCost += numericAmount * 120 * dbSettings.material_markup; // Pris for bærende gulvspånplader
+                    if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Bærende undergulv (Spånplader)'] || 120) * dbSettings.material_markup; // Pris for bærende gulvspånplader
                     bArr.push(`Tillæg: Opbygning af bærende undergulv (fx spånplader) på strøer/trækonstruktion`);
                 }
             }
@@ -378,11 +391,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             if (d.underfloorHeating && d.underfloorHeating.includes('sporplader')) {
                 laborHours += initialInstallHours * 0.8;
-                if (!userSuppliesMaterials) materialCost += (numericAmount * 450) * dbSettings.material_markup; 
+                if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Gulvvarme (Sporplader)'] || 450)) * dbSettings.material_markup; 
                 bArr.push(`Tillæg: Opbygning af nyt gulvvarme (sporplader/varmefordelingsplader)`);
             } else if (d.underfloorHeating && d.underfloorHeating.includes('allerede støbt')) {
                 laborHours += initialInstallHours * 0.3;
-                if (!userSuppliesMaterials) materialCost += (numericAmount * 80) * dbSettings.material_markup; 
+                if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Gulvvarme (Specialunderlag)'] || 80)) * dbSettings.material_markup; 
                 bArr.push(`Tillæg: Montering over eksisterende gulvvarme kræver forøget arbejdstid og specialunderlag`);
             }
         }

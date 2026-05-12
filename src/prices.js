@@ -67,6 +67,9 @@ export const MATERIAL_INDEX = {
         // Tillæg gulve
         'Trinlydsunderlag (Foam)': 45,
         'Opretning af undergulv': 120, // Kiler/strøer eller flydespartel proxy
+        'Bærende undergulv (Spånplader)': 120,
+        'Gulvvarme (Sporplader)': 450,
+        'Gulvvarme (Specialunderlag)': 80,
         'Fodlister (pr. m2 gulvareal proxy)': 50
     },
     doors: {
