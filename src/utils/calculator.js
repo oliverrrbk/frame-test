@@ -463,12 +463,24 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'terrace') {
+            if (!userSuppliesMaterials) {
+                // SOP #2: Spild (afskær). Træterrasser kræver altid ca. 10% ekstra materiale til afskær, uanset kompleksitet.
+                let baseMatPrice = indexCat[d.material] || 400;
+                let spildM2 = numericAmount * 0.10; 
+                materialCost += (spildM2 * baseMatPrice) * dbSettings.material_markup;
+                bArr.push(`Standard tillæg: Forventet materialespild og afskær (+10% brædder)`);
+            }
+
             if (d.elevation === 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)') {
                 laborHours += numericAmount * (formula.roofTerraceHours || 0.4);
                 if (d.roofTerraceFeet && d.roofTerraceFeet.startsWith('Ja')) {
                     if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Tagterrasse plastfødder (pr m2 overslag)'] || 90) * dbSettings.material_markup;
                 }
-                bArr.push(`Tillæg: Tagterrasse-montering (opklodsning på tagpap kræver præcision og specialfødder)`);
+                if (!userSuppliesMaterials) {
+                    // SOP #2 + #4: Maskinleje (Materialehejs) til at få brædder op på taget. Uden material_markup!
+                    materialCost += (indexCat['Leje af materialehejs (Tagterrasse)'] || 1500);
+                }
+                bArr.push(`Tillæg: Tagterrasse-montering (inkl. materialehejs og skånsom opklodsning)`);
             } else if (d.elevation && d.elevation.startsWith('Hævet terrasse')) {
                 laborHours += numericAmount * (formula.elevatedHours || 0.6);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Hævet terrasse materialer (pr m2)'] || 250) * dbSettings.material_markup;

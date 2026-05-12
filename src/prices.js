@@ -102,6 +102,7 @@ export const MATERIAL_INDEX = {
         'Default': 400,
         // Tillæg terrasse
         'Tagterrasse plastfødder (pr m2 overslag)': 90,
+        'Leje af materialehejs (Tagterrasse)': 1500,
         'Punktfundament og støbemix (pr m2 overslag)': 180,  // cement+strøer 150-250
         'Rækværk/Gelænder træ (pr løbende meter)': 600,      // komplet rækværk inkl. stolper 500-900
         'Beslag til skjult montering (pr m2 overslag)': 120,
