@@ -3612,9 +3612,11 @@ const Dashboard = () => {
                                             Forbind Minuba for automatisk at oprette kunder og opgaver (sager), når et tilbud bekræftes. Tryk på knappen for at godkende adgangen.
                                         </p>
                                         
-                                        <div className="input-group" style={{ marginBottom: '16px' }}>
-                                            <input 
-                                                type="password" 
+                                        <div className="input-group" style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>Minuba API-nøgle (Token)</label>
+                                                <input 
+                                                    type="password" 
                                                 value={(() => {
                                                     try {
                                                         const parsed = JSON.parse(carpenterProfile?.minuba_api_key);
@@ -3635,10 +3637,13 @@ const Dashboard = () => {
                                                     });
                                                 }}
                                                 placeholder="Indsæt personlig API-nøgle fra Minuba" 
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1', marginBottom: '8px' }}
+                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1' }}
                                             />
-                                            <input 
-                                                type="text" 
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#4b5563', marginBottom: '4px' }}>Minuba Client ID (eller E-mail)</label>
+                                                <input 
+                                                    type="text" 
                                                 value={(() => {
                                                     try {
                                                         const parsed = JSON.parse(carpenterProfile?.minuba_api_key);
@@ -3661,6 +3666,7 @@ const Dashboard = () => {
                                                 placeholder="Indsæt Client ID (f.eks. clientId_...)" 
                                                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1' }}
                                             />
+                                            </div>
                                         </div>
                                         <button 
                                             className="primary-btn" 
