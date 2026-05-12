@@ -249,14 +249,14 @@ export const WORK_FORMULAS = {
     },
     terrace: {
         hoursPerUnit: 1.0, // Timer pr. m2 standard lægning på strøer
-        disposalHours: 0.3, // Nedtagning af bygget terrasse pr m2
+        disposalHours: 0.15, // Nedtagning af bygget terrasse pr m2 (var 0.3, hvilket gav for mange timer)
         foundationHoursPerUnit: 0.5, // Ekstra opbygning af simpelt fundament/strøer pr m2
         groundFoundationHours: 0.8, // Gravning og støbning af punktfundamenter pr m2
         roofTerraceHours: 0.4, // Ekstra tid til opklodsning/justering af tagterrassefødder pr m2
         elevatedHours: 0.6, // Ekstra tid pr m2 til opbygning af stor underkonstruktion pga. højde
         hiddenFasteningHours: 0.3, // Ekstra tid pr m2 til skjulte beslag/propper
         railingHoursPerMeter: 1.2, // Timer pr løbende meter rækværk
-        containerThreshold: 15
+        containerThreshold: 30 // M2 pr container (var 15, hvilket gav astronomiske gebyrer på mellemstore terrasser)
     },
     kitchen: {
         hoursPerUnit: 1.2, // Timer pr. skab/skuffe element (OPSÆTNING/NIVELLERING) - justeret ned da samling nu skilles ud
