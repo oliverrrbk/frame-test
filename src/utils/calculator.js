@@ -357,9 +357,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             // Tilføj kun almindelig foam, hvis der slet ikke er gulvvarme. Både sporplader og støbt gulvvarme kræver eget/special underlag!
             if (!(d.underfloorHeating && d.underfloorHeating.startsWith('Ja'))) {
-                laborHours += numericAmount * (formula.underlayHours || 0.1);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Trinlydsunderlag (Foam)'] || 45) * dbSettings.material_markup;
-                bArr.push(`Standard: Montering af trinlydsdæmpende underlag (foam/pap)`);
+                // Massivt træ lagt direkte på strøer svømmer ikke, og bruger derfor ikke et fuldt lag foam/pap, kun evt. strimler.
+                if (!(d.material === 'Massivt træ' && d.floorFoundation === 'Strøer / Trækonstruktion')) {
+                    laborHours += numericAmount * (formula.underlayHours || 0.1);
+                    if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Trinlydsunderlag (Foam)'] || 45) * dbSettings.material_markup;
+                    bArr.push(`Standard: Montering af trinlydsdæmpende underlag (foam/pap)`);
+                }
             }
 
             if (d.floorFoundation === 'Strøer / Trækonstruktion') {
@@ -367,10 +370,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 if (d.underfloorHeating && d.underfloorHeating.includes('sporplader')) {
                     laborHours += numericAmount * 0.2; // Kun lidt ekstra tid til tilpasning af selve strøerne
                     bArr.push(`Tillæg: Tilpasning af strøer (bærende materialepris dækkes af sporpladerne)`);
+                } else if (d.material === 'Massivt træ') {
+                    laborHours += numericAmount * 0.2; // Lidt tid til strø-tilpasning før plankerne lægges
+                    bArr.push(`Tillæg: Montering af massivt træ direkte på strøer (kræver ikke bærende spånplade-undergulv)`);
                 } else {
-                    laborHours += numericAmount * 0.4; // Øget tid til lægning af bærende undergulv på strøer
+                    laborHours += numericAmount * 0.4; // Øget tid til lægning af bærende undergulv på strøer for flydende gulve
                     if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Bærende undergulv (Spånplader)'] || 120) * dbSettings.material_markup; // Pris for bærende gulvspånplader
-                    bArr.push(`Tillæg: Opbygning af bærende undergulv (fx spånplader) på strøer/trækonstruktion`);
+                    bArr.push(`Tillæg: Opbygning af bærende undergulv (fx spånplader) på strøer forud for svømmende gulv`);
                 }
             }
 
