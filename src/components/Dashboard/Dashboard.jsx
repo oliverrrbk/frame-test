@@ -3632,28 +3632,25 @@ const Dashboard = () => {
                                                 if (!carpenterProfile?.minuba_api_key) return;
                                                 const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.company_id || carpenterProfile.id, minuba_api_key: carpenterProfile.minuba_api_key });
                                                 if (!error) {
-                                                    alert("Minuba API-nøgle gemt!");
+                                                    toast.success("Minuba API-nøgle gemt succesfuldt i databasen! ✅");
                                                 } else {
-                                                    alert("Fejl ved gemning: " + error.message);
+                                                    toast.error("Fejl ved gemning: " + error.message);
                                                 }
                                             }}
                                         >
-                                            Gem API-nøgle
+                                            Tryk her for at Gemme API-nøglen
                                         </button>
                                         
                                         {carpenterProfile?.minuba_api_key && carpenterProfile.minuba_api_key !== 'pending_authorization' && (
                                             <>
-                                                <div style={{ marginTop: '16px', padding: '12px', background: '#ecfdf5', color: '#047857', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', fontSize: '14px', marginBottom: '16px' }}>
-                                                    Nøgle er gemt! ✅
-                                                </div>
                                                 <button 
-                                                    style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
+                                                    style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer', marginTop: '16px' }}
                                                     onClick={async () => {
                                                         const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.company_id || carpenterProfile.id, minuba_api_key: null });
                                                         if (!error) setCarpenterProfile(prev => ({...prev, minuba_api_key: null}));
                                                     }}
                                                 >
-                                                    Afbryd forbindelse
+                                                    Slet nøgle / Afbryd forbindelse
                                                 </button>
                                             </>
                                         )}
