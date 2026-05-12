@@ -217,7 +217,8 @@ export const WORK_FORMULAS = {
             'Skiffer (hårdt materiale)': 0.30,
             'Skiffer (blødt materiale)': 0.30,
             'Tagplader (eternit asbest fri)': 0.25,
-            'Stråtag (tækket tag)': 0.80,  // strå er tungt + halmsupport
+            'Tagplader (asbest)': 0.50, // Kræver asbestdragter, maske og specialhåndtering
+            'Stråtag (tækket tag)': 0.50,  // Strå er tungt + halmsupport
             'Metal-tag (zink, stål, kobber)': 0.20
         },
         levelingHours: 0.6, // Spæropretning pr m2
@@ -225,6 +226,9 @@ export const WORK_FORMULAS = {
         eavesHoursPerMeter: 0.4,   // Tidligere "eavesHours: 0.5" pr m² → nu pr løbende meter
         guttersHoursPerMeter: 0.35, // Tidligere "guttersHours: 0.4" pr m² → nu pr løbende meter
         chimneyHours: 6.0, // Fast tid til skorstensinddækning
+        extensionHours: 15.0, // Timer pr kvist/tilbygning
+        insulationHours: 0.4, // Timer pr m2 efterisolering
+        trailerAccessHours: 0.15, // Ekstra bæretid pr m2 ved utilgængelig container
         containerThreshold: 150 // M2 pr container (var 0, hvilket udløste Infinity og altid gav max 5 containere!)
     },
     windows: {

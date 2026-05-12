@@ -552,11 +552,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             let scaffoldCost = 0;
             // SOP #3: Stillads skal skaleres med arealet (perimeter/grundplan), ellers straffes små huse og store huse under-faktureres.
             if (d.floors === '1½-plan / 2-plan / Mere') {
-                scaffoldCost += numericAmount * (indexCat['Stilladsleje 1½-plan/2-plan (pr m2 grundplan)'] || 150); 
+                scaffoldCost += roofGrundplanM2 * (indexCat['Stilladsleje 1½-plan/2-plan (pr m2 grundplan)'] || 150); 
                 laborHours += initialInstallHours * 0.3; // Changed to additive
             }
             if (d.roofPitch === 'Høj rejsning / Normal hældning') {
-                scaffoldCost += numericAmount * (indexCat['Stilladsleje høj rejsning (pr m2 grundplan)'] || 100);
+                scaffoldCost += roofGrundplanM2 * (indexCat['Stilladsleje høj rejsning (pr m2 grundplan)'] || 100);
                 laborHours += initialInstallHours * 0.2; // Changed to additive
             }
             if (scaffoldCost > 0) {
@@ -566,14 +566,14 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
 
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldRoofType) {
+                // Bemærk: Arbejdstiden (disposalHoursByOldType) er allerede lagt til ovenfor i linje 300-307!
+                // Så vi skal KUN håndtere de materielle miljø-udgifter (deponi/container) her, UDEN markup.
                 if (d.oldRoofType.includes('asbest') && !d.oldRoofType.includes('fri')) {
-                    laborHours += numericAmount * 0.5; 
-                    if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Miljødeponi asbest (pr m2)'] || 150) * dbSettings.material_markup; 
-                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdigt tag`);
+                    if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Miljødeponi asbest (pr m2)'] || 150); 
+                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdigt tag (Uden avance)`);
                 } else if (d.oldRoofType === 'Stråtag (tækket tag)') {
-                    laborHours += numericAmount * 1.0; 
-                    if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Bortskaffelse af stråtag (ekstra volumen pr m2)'] || 200) * dbSettings.material_markup; 
-                    bArr.push(`Miljøtillæg: Nedtagning og bortskaffelse af stråtag (kræver mange arbejdstimer og meget stor container-volumen)`);
+                    if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Bortskaffelse af stråtag (ekstra volumen pr m2)'] || 200); 
+                    bArr.push(`Miljøtillæg: Stor container-volumen og ekstra deponi til bortskaffelse af stråtag (Uden avance)`);
                 }
             }
             
@@ -607,21 +607,21 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
 
             if (d.insulation && d.insulation.startsWith('Ja')) {
-                laborHours += numericAmount * 0.4;
+                laborHours += numericAmount * (formula.insulationHours || 0.4);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Efterisolering af tag (pr m2)'] || 120) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Arbejdstid og eventuelle materialer til efterisolering af taget (50-100mm)`);
             }
             if (d.extensions === 'Ja') {
                 const extAmount = parseInt(d.extensionsAmount) || 1;
                 // SOP #7: Skalér timer og udgifter baseret på antal kviste, i stedet for en flad sats!
-                laborHours += extAmount * 15;
+                laborHours += extAmount * (formula.extensionHours || 15);
                 if (!userSuppliesMaterials) materialCost += extAmount * (indexCat['Kvist (Inddækning og montering pr stk)'] || 12000) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Arbejdstid og inddæknings-materialer afsat til ${extAmount} kvist(e)/tilbygning(er) på taget`);
             }
 
             // Tillæg for utilgængelig container-placering (Bæretillæg)
             if (d.trailerAccess && d.trailerAccess.includes('langt væk')) {
-                laborHours += numericAmount * 0.15; // ~0.15 timer pr m2 ekstra bæretid
+                laborHours += numericAmount * (formula.trailerAccessHours || 0.15); // Ekstra bæretid pr m2
                 bArr.push(`Tillæg: Containeren kan ikke stå ved huset – ekstra bæretid for affaldssortering og trillebør`);
             }
 
