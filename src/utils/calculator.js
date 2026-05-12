@@ -603,9 +603,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Nye tagrender og nedløbsrør (estimeret ${estimatedGutterMeters} løbende meter)`);
             }
             if (d.chimney && d.chimney.startsWith('Ja')) {
-                laborHours += (formula.chimneyHours || 6.0);
-                if (!userSuppliesMaterials) materialCost += (indexCat['Skorstensinddækning (Zink/Bly)'] || 3500) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Special-inddækning af skorsten/hætter (kræver bly/zink-arbejde)`);
+                const chimneyCount = parseInt(d.chimneyAmount) || 1;
+                laborHours += chimneyCount * (formula.chimneyHours || 6.0);
+                if (!userSuppliesMaterials) materialCost += chimneyCount * (indexCat['Skorstensinddækning (Zink/Bly)'] || 3500) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Special-inddækning af ${chimneyCount} skorsten(e)/hætte(r) (kræver bly/zink-arbejde)`);
             }
 
             if (d.insulation && d.insulation.startsWith('Ja')) {
@@ -630,7 +631,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (d.skylights === 'Ja') {
                 const skyAmount = parseInt(d.skylightAmount) || 1;
                 laborHours += skyAmount * (formula.roofWindowHours || 8.0);
-                if (!userSuppliesMaterials) materialCost += skyAmount * (indexCat['Ovenlysvindue / Velux (pr. stk)'] || 8500) * dbSettings.material_markup;
+                
+                let skylightPrice = indexCat['Ovenlysvindue / Velux (pr. stk)'] || 8500;
+                if (d.roofPitch && d.roofPitch.includes('Fladt tag')) {
+                    skylightPrice = indexCat['Ovenlysvindue fladt tag (pr. stk)'] || 14000;
+                }
+                
+                if (!userSuppliesMaterials) materialCost += skyAmount * skylightPrice * dbSettings.material_markup;
                 bArr.push(`Tillæg: ${skyAmount} ovenlysvindue(r) inkl. inddækning og montering`);
             }
         }

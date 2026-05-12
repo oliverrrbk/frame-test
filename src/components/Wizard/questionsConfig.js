@@ -50,6 +50,7 @@ export const QUESTIONS = {
         { id: 'eaves', type: 'select', label: 'Træværk: Skal stern og udhæng (underbeklædning) skiftes ud med nyt?', options: ['Ja, alt træværk langs kanten skiftes', 'Nej, vi beholder det gamle'] },
         { id: 'gutters', type: 'select', label: 'Tagrender: Skal der monteres nye tagrender og nedløb?', options: ['Ja (fx Zink/Plast)', 'Nej'] },
         { id: 'chimney', type: 'select', label: 'Inddækning: Er der skorsten eller udluftningshætter, der kræver ny inddækning (bly/zink)?', options: ['Ja', 'Nej'] },
+        { id: 'chimneyAmount', type: 'number', label: 'Hvor mange skorstene / hætter drejer det sig om?', condition: { field: 'chimney', value: 'Ja' } },
 
         { id: 'extensions', type: 'select', label: 'Er der nogen kviste (fremspring på taget) eller specielle tilbygninger?', options: ['Ja', 'Nej'] },
         { id: 'extensionsAmount', type: 'number', label: 'Hvor mange kviste/tilbygninger er der på taget?', condition: { field: 'extensions', value: 'Ja' } },

@@ -39,6 +39,7 @@ export const MATERIAL_INDEX = {
         'Stern træværk (pr løbende meter)': 150,
         'Tagrender og nedløb (pr løbende meter)': 250,
         'Skorstensinddækning (Zink/Bly)': 3500,
+        'Ovenlysvindue fladt tag (pr. stk)': 14000,
         'Kant-sikring / Rullestillads 1-plan (pr m2 grundplan)': 45,
         'Stilladsleje 1½-plan/2-plan (pr m2 grundplan)': 150,
         'Stilladsleje høj rejsning (pr m2 grundplan)': 100,
