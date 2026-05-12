@@ -75,7 +75,7 @@ export const QUESTIONS = {
                 { label: 'Metal-tag (zink, stål, kobber)', img: '/images/roof_zinc_1777277255328.png' }
             ] 
         },
-        { id: 'notes', type: 'textarea', label: 'Er der eventuelt andre bemærkninger til taget (fx nye tagvinduer)?' }
+        { id: 'notes', type: 'textarea', label: 'Er der eventuelt andre bemærkninger til taget (fx nye tagvinduer)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     windows: [
         { id: 'housingType', type: 'select', label: 'Hvilken type bygning gælder det?', tooltip: 'Bygningsreglementet (BR18) kræver typisk 3-lags energiruder i helårsboliger.', options: ['Helårsbolig', 'Sommerhus', 'Andet (Udestue/Fredet)'] },
@@ -99,7 +99,7 @@ export const QUESTIONS = {
         { id: 'windowsConfig', type: 'window_configurator', label: 'Specifikation af hvert vindue:', condition: (d) => d.amount > 0 },
         { id: 'waiveMeasurement', type: 'checkbox', label: 'Jeg vil gerne spare opmålingsbesøget. Jeg indtaster de præcise karm-mål og hæfter selv for, at de passer.', tooltip: 'OBS: Bliver vinduerne bestilt efter dine mål, dækker du selv omkostningen, hvis de ikke passer i hullet. Tømreren sparer dog turen, og du sparer ca. 1.500 kr.' },
         { id: 'finish', type: 'select', label: 'Skal indvendig finish (fuge og lister) inkluderes?', tooltip: 'Indvendig finish betyder, at tømreren monterer gerigter og fuger.', options: ['Ja', 'Nej, vi gør det selv'] },
-        { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet?' }
+        { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     floor: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven cirka?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise areal måles op senere af tømreren.' },
@@ -141,7 +141,7 @@ export const QUESTIONS = {
             options: ['Nej, helt standard montering', 'Ja, i mønster (fx Sildeben / Chevron)'] 
         },
         { id: 'skirting', type: 'select', label: 'Fodlister: Skal vi levere og montere nye fodlister langs væggene?', options: ['Ja', 'Nej, vi sætter selv lister op / genbruger de gamle'] },
-        { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet, som vi ikke har taget højde for?' }
+        { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet, som vi ikke har taget højde for? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     doors: [
         { id: 'disposal', type: 'select', label: 'Skal den/de nuværende døre afmonteres og afskaffes?', options: ['Ja', 'Nej'] },
@@ -209,13 +209,12 @@ export const QUESTIONS = {
         { id: 'doorPhotos', type: 'file', label: 'Upload evt. gerne et billede af døråbningerne, så kan jeg vurdere dem på forhånd:' },
         
         { id: 'finish', type: 'select', label: 'Gerigter/Finish: Skal vi levere og montere nye indvendige gerigter (lister) og fuge?', tooltip: 'Gerigter er de trælister, der sidder rundt om dørkarmen for at skjule overgangen mellem karmen og væggen. Typisk udskiftes de sammen med dørkarmen for det pæneste resultat.', options: ['Ja', 'Nej, kun dør og karm / Vi sætter selv lister op'] },
-        { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet?' }
+        { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     terrace: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 terrasse skal der bygges?', tooltip: 'Giv dit eget kvalificerede bud. Arealet dobbelttjekkes ved en fysisk besigtigelse.' },
         { id: 'elevation', type: 'select', label: 'Hvilken type terrasse er der tale om?', options: ['Jordniveau (Almindelig træterrasse på jorden)', 'Hævet terrasse (Hævet mere end 0,5m fra jorden, fx på stolper)', 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)'] },
         { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja', 'Nej'] },
-        { id: 'terrain', type: 'select', label: 'Underlag: Hvad skal den nye terrasse bygges på?', condition: (d) => d.elevation !== 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)', options: ['Græs/Jord (Kræver at tømreren graver ud, lægger dug og sætter punktfundament)', 'Eksisterende fliser/beton (Lige til at bygge ovenpå)'] },
         { id: 'roofTerraceFeet', type: 'select', label: 'Tagterrasse underlag: Skal terrassen opklodses på justerbare terrassefødder (skåner tagpappet)?', condition: { field: 'elevation', value: 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)' }, options: ['Ja, den skal klodses op på plastfødder', 'Nej'] },
         { 
             id: 'material', 
@@ -227,7 +226,7 @@ export const QUESTIONS = {
                 { label: 'Komposit (vedligeholdelsesfrit biomateriale)', img: '/images/terrace_composite_1776267690895.png' }
             ] 
         },
-        { id: 'fastening', type: 'select', label: 'Montering: Ønsker du standard eller skjult montering af brædderne?', options: ['Synlige skruer (Standard montering skruet fra toppen)', 'Skjult montering (Skrues fra siden/clips så der ikke er skruehuller i toppen)'] },
+        { id: 'fastening', type: 'select', label: 'Montering: Ønsker du standard eller skjult montering af skruer?', options: ['Synlige skruer (Standard montering skruet fra toppen)', 'Skjult montering af skruer (Skrues fra siden/med beslag så der ikke er skruehuller i overfladen)'] },
         { id: 'railing', type: 'select', label: 'Rækværk/Gelænder: Skal der bygges et rækværk (fx på hævet terrasse eller tagterrasse)?', options: ['Ja, tømreren skal bygge rækværk', 'Nej, ikke relevant / klarer det selv'] },
         { id: 'railingMeters', type: 'number', label: 'Hvor mange løbende meter rækværk/gelænder skal der laves?', condition: { field: 'railing', value: 'Ja, tømreren skal bygge rækværk' } },
         { 
@@ -239,7 +238,7 @@ export const QUESTIONS = {
         { id: 'roofing', type: 'select', label: 'Ønsker du overdækning (tag) over hele eller dele af terrassen?', options: ['Ja', 'Nej'] },
         { id: 'roofingAmount', type: 'number', label: 'Hvor mange m2 skal overdækkes?', condition: { field: 'roofing', value: 'Ja' } },
         { id: 'roofingType', type: 'select', label: 'Hvilken type tag på overdækningen?', options: ['Termoplader / Plastik', 'Fast tag (med tagpap)'], condition: { field: 'roofing', value: 'Ja' } },
-        { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til byggeriet (fx hvis der skal laves fald på tagterrassen)?' }
+        { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til byggeriet (fx hvis der skal laves fald på tagterrassen)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     kitchen: [
         { id: 'disposal', type: 'select', label: 'Skal det gamle køkken afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere og afskaffe det', 'Nej, vi gør det selv / der er allerede tomt'] },
@@ -263,7 +262,7 @@ export const QUESTIONS = {
         { id: 'amount', type: 'number', label: 'Anslået antal skabe og skuffer (elementer) i alt:', placeholder: 'Fx 15' },
         { id: 'worktop', type: 'select', label: 'Bordplade: Skal tømreren tilpasse og montere en bordplade i træ/laminat (inkl. udskæring til vask/kogeplade)?', tooltip: 'Nogle specialbordplader (fx sten, marmor eller Corian) bliver ofte opmålt og monteret direkte af leverandøren (stenhuggeren). Tømreren skærer typisk kun standard træ- og laminatbordplader til på stedet.', options: ['Ja, træ/laminat som skal tilpasses på stedet', 'Nej, vi får leveret sten/corian (typisk montør) / Gør det selv'] },
         { id: 'integratedAppliances', type: 'select', label: 'Hvidevarer: Er der fuldt integrerede hvidevarer (hvor tømreren skal finjustere træfronter på køleskab/opvaskemaskine)?', options: ['Ja, der er integrerede træfronter', 'Nej, fritstående hvidevarer / standard'] },
-        { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til projektet (fx særlige paneler, emhætte)?' }
+        { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til projektet (fx særlige paneler, emhætte)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     ceilings: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 loft skal der laves cirka?' },
@@ -302,7 +301,7 @@ export const QUESTIONS = {
         },
         { id: 'ceilingHeight', type: 'select', label: 'Lofthøjde: Er der tale om loft-til-kip eller lofthøjde over 2,5 meter?', options: ['Nej, standard lofthøjde', 'Ja, loft-til-kip eller højere end 2,5m'] },
         { id: 'spots', type: 'select', label: 'Spots: Skal tømreren bore ud til indbygningsspots i det nye loft?', options: ['Nej, ingen spots overhovedet', 'Ja, der skal bores ud til spots (fx 1 stk. pr 2. m2)'] },
-        { id: 'notes', type: 'textarea', label: 'Er der eventuelle bemærkninger i forhold til montering af loftet?' }
+        { id: 'notes', type: 'textarea', label: 'Er der eventuelle bemærkninger i forhold til montering af loftet? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     facades: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 træfacade drejer projektet sig om cirka?' },
@@ -335,7 +334,7 @@ export const QUESTIONS = {
         { id: 'mountingStyle', type: 'select', label: 'Hvordan skal beklædningen monteres?', options: ['Vandret (fx Klinkbeklædning)', 'Lodret (fx Listebeklædning - tager lidt længere tid)'] },
         { id: 'openings', type: 'number', label: 'Hvor mange vinduer/døre er der i facaden, som skal have skåret nye trælister/inddækning?', placeholder: 'Fx 2' },
         { id: 'floors', type: 'select', label: 'Hvor mange plan/etager er huset/facaden, der skal beklædes?', options: ['1-plan (Stueplan)', '1½-plan / 2-plan / Mere'] },
-        { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til facaden (fx malerarbejde)?' }
+        { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til facaden (fx malerarbejde)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     extensions: [
         { id: 'amount', type: 'number', label: 'Hvor mange kvadratmeter (grundplan) skal tilbygningen være?' },
@@ -374,7 +373,7 @@ export const QUESTIONS = {
                 { label: 'Råhus (Du står selv for at lukke det indvendigt)', img: '/images/interior_raw_1777280098290.png' }
             ] 
         },
-        { id: 'notes', type: 'textarea', label: 'Kort beskrivelse af drømmen om tilbygningen (f.eks. badeværelse, soveværelse, osv.):' }
+        { id: 'notes', type: 'textarea', label: 'Kort beskrivelse af drømmen om tilbygningen (f.eks. badeværelse, soveværelse, osv.): (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     annex: [
         { id: 'annexType', type: 'select', label: 'Hvad er det primære formål med byggeriet?', options: ['Uisoleret skur til opbevaring', 'Isoleret skur/værksted', 'Fuldt beboeligt anneks'] },
@@ -421,7 +420,7 @@ export const QUESTIONS = {
                 { label: 'Sadel tag (Høj rejsning)', img: '/images/annex_roof_pitched_1777280812965.png' }
             ] 
         },
-        { id: 'notes', type: 'textarea', label: 'Er der specielle ønsker (f.eks. ekstra store døre, indlagt strøm, osv.)?' }
+        { id: 'notes', type: 'textarea', label: 'Er der specielle ønsker (f.eks. ekstra store døre, indlagt strøm, osv.)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     carport: [
         { id: 'amount', type: 'number', label: 'Hvor mange carporte ønsker du tilbud på?', placeholder: 'Oftest 1' },
@@ -469,7 +468,7 @@ export const QUESTIONS = {
             ] 
         },
         { id: 'access', type: 'select', label: 'Er der fri maskinadgang til hvor fundamenterne (stolperne) skal graves?', options: ['Ja, nem maskinadgang', 'Nej, manuel udgravning kræves'] },
-        { id: 'notes', type: 'textarea', label: 'Skriv gerne hvis du har andre detaljer (f.eks. oplader til elbil, cykelskur, osv.):' }
+        { id: 'notes', type: 'textarea', label: 'Skriv gerne hvis du har andre detaljer (f.eks. oplader til elbil, cykelskur, osv.): (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     fence: [
         { id: 'amount', type: 'number', label: 'Hvor mange løbende meter hegn skal der cirka sættes op?' },
@@ -498,6 +497,6 @@ export const QUESTIONS = {
                 { label: 'Komposit (Vedligeholdelsesfrit)', img: '/images/terrace_composite_1776267690895.png' }
             ] 
         },
-        { id: 'notes', type: 'textarea', label: 'Er der specielle udfordringer (f.eks. meget skrå grund, træer i vejen)?' }
+        { id: 'notes', type: 'textarea', label: 'Er der specielle udfordringer (f.eks. meget skrå grund, træer i vejen)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ]
 };

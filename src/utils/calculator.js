@@ -493,10 +493,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Hævet terrasse (kræver forstærket underkonstruktion, kraftige stolper og evt. stillads)`);
             }
 
-            if (d.terrain && d.terrain.startsWith('Græs/Jord')) {
+            if (d.elevation !== 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)') {
                 laborHours += numericAmount * (formula.groundFoundationHours || 0.8);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Punktfundament og støbemix (pr m2 overslag)'] || 150) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Udgravning, udlægning af dug og etablering af punktfundamenter/støbning`);
+                bArr.push(`Standard tillæg: Etablering af bærende underlag (Udgravning, dug, stabilisering og opklodsning/punktfundament)`);
             }
 
             if (d.material === 'Hardwood / Hårdttræ') {
