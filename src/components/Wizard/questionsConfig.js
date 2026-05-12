@@ -116,9 +116,8 @@ export const QUESTIONS = {
                 { label: 'Beton', img: '/images/floor_concrete_1776266134608.png' }
             ]
         },
-        { id: 'subfloor', type: 'select', label: 'Undergulv: Ligger det nuværende undergulv helt lige og i vater?', tooltip: 'Et undergulv er det bærende lag under selve trægulvet (fx beton eller spånplader). Hvis det slår buler eller hælder, skal tømreren bruge ekstra tid og materialer (strøer/flydespartel) på at rette det op først.', options: ['Ja, det er lige og klar til at lægge nyt på', 'Nej, tømreren skal rette det op først (strøer/flydespartel)'] },
+        { id: 'floorFoundation', type: 'select', label: 'Ligger gulvet på beton eller strøer (trækonstruktion)?', options: ['Beton', 'Strøer / Trækonstruktion', 'Ved ikke / Andet'] },
         { id: 'underfloorHeating', type: 'select', label: 'Er der (eller skal der etableres) varme i gulvet?', options: ['Nej', 'Ja, der er allerede støbt gulvvarme (kun specialunderlag kræves)', 'Ja, tømreren skal opbygge nyt gulvvarme (sporplader/varmefordeling)'] },
-        { id: 'underlay', type: 'select', label: 'Underlag: Skal tømreren lægge trinlydsdæmpende underlag (foam/pap) under det nye gulv?', tooltip: 'Trinlydsdæmpende underlag er en tynd skummåtte eller tykt pap, der lægges mellem undergulvet og det nye gulv. Det reducerer "klik-klak" lyde når man går på det, og fjerner små ujævnheder.', options: ['Ja', 'Nej, ikke relevant'] },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -129,14 +128,11 @@ export const QUESTIONS = {
                 { label: 'Parket', img: '/images/floor_parquet_1776265864234.png' },
                 { label: 'Laminat', img: '/images/floor_laminate_1776265833274.png' },
                 { label: 'Vinyl', img: '/images/floor_vinyl_1776266044663.png' },
-                { label: 'Linoleum', img: '/images/floor_linoleum_1776266075430.png' },
-                { label: 'Fliser (keramik/porcelæn)', img: '/images/floor_tiles_1776266089581.png' },
-                { label: 'Natursten', img: '/images/floor_natural_stone_1776266104705.png' },
-                { label: 'Beton', img: '/images/floor_concrete_1776266134608.png' },
-                { label: 'Tæppe', img: '/images/floor_carpet_1776266148002.png' },
-                { label: 'Kork', img: '/images/floor_cork_1776266162083.png' }
+                { label: 'Linoleum', img: '/images/floor_linoleum_1776266075430.png' }
             ] 
         },
+        { id: 'specificFloorWishes', type: 'select', label: 'Har du specifikke ønsker til gulvets mærke eller type (fx klikgulv)?', options: ['Nej, tømreren skal komme med en faglig vurdering', 'Ja, jeg har specifikke ønsker'] },
+        { id: 'specificFloorDetails', type: 'textarea', label: 'Beskriv dine specifikke ønsker (f.eks. "Klikgulv", et bestemt mærke eller indsæt et link):', condition: { field: 'specificFloorWishes', value: 'Ja, jeg har specifikke ønsker' } },
         { 
             id: 'floorPattern', 
             type: 'select', 

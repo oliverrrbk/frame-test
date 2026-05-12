@@ -337,16 +337,22 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 }
             }
 
-            if (d.subfloor && d.subfloor.startsWith('Nej')) {
-                laborHours += numericAmount * (formula.levelingHours || 0.6);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Opretning af undergulv'] || 120) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Opretning af skævt undergulv (strøer/flydespartel)`);
+            // Altid inkluder opretning af undergulv og trinlydsdæmpende underlag som standard
+            laborHours += numericAmount * (formula.levelingHours || 0.6);
+            if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Opretning af undergulv'] || 120) * dbSettings.material_markup;
+            bArr.push(`Standard: Opretning af undergulv (inkl. tid og materialer)`);
+
+            laborHours += numericAmount * (formula.underlayHours || 0.1);
+            if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Trinlydsunderlag (Foam)'] || 45) * dbSettings.material_markup;
+            bArr.push(`Standard: Montering af trinlydsdæmpende underlag (foam/pap)`);
+
+            if (d.floorFoundation === 'Strøer / Trækonstruktion') {
+                laborHours += numericAmount * 0.2; // Lidt ekstra tid til tilpasning på strøer vs flad beton
+                bArr.push(`Tillæg: Underlag på strøer/trækonstruktion kræver ekstra tilpasningstid`);
             }
 
-            if (d.underlay === 'Ja') {
-                laborHours += numericAmount * (formula.underlayHours || 0.1);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Trinlydsunderlag (Foam)'] || 45) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Montering af trinlydsdæmpende underlag (foam/pap)`);
+            if (d.specificFloorWishes === 'Ja, jeg har specifikke ønsker' && d.specificFloorDetails) {
+                bArr.push(`Kundens note om gulvvalg: ${d.specificFloorDetails}`);
             }
 
             if (d.skirting === 'Ja') {

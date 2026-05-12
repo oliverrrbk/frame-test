@@ -63,11 +63,6 @@ export const MATERIAL_INDEX = {
         'Laminat': 250,                               // Klik-laminat 150-350 kr/m²
         'Vinyl': 300,                                 // Klikvinyl 200-400 kr/m²
         'Linoleum': 400,
-        'Fliser (keramik/porcelæn)': 400,             // Standard fliser 250-500
-        'Natursten': 1200,                            // Natursten reelt dyrt 800-1500
-        'Beton': 600,                                 // Mikrocementgulv
-        'Tæppe': 200,
-        'Kork': 550,
         'Default': 400,
         // Tillæg gulve
         'Trinlydsunderlag (Foam)': 45,
