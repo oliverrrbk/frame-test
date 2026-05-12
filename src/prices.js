@@ -55,6 +55,7 @@ export const MATERIAL_INDEX = {
         'Skydedør': 55000,                            // hæveskydedør 2,8x2,2 (træ/alu) 50-80k
         'Ovenlysvindue / Velux (pr. stk)': 8500,
         'Tillæg: Stillads/Lift leje': 8000,
+        'Leje af rullestillads (lille opgave)': 1500,
         'Montagematerialer (Udvendig fuge/skruer/kiler)': 150,
         'Sikkerhedsglas (Personsikkerhed BR18)': 1500,
         'Skydedørsbeslag/Mekanisme': 8000,

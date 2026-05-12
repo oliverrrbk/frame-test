@@ -418,14 +418,25 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'windows') {
+            let scaffoldPrice = 0;
+            let scaffoldText = '';
+            
+            if (numericAmount <= 3) {
+                scaffoldPrice = (indexCat['Leje af rullestillads (lille opgave)'] || 1500);
+                scaffoldText = `leje af rullestillads`;
+            } else {
+                scaffoldPrice = (indexCat['Tillæg: Stillads/Lift leje'] || 8000);
+                scaffoldText = `lift/facadestillads-leje`;
+            }
+
             if (d.floors && d.floors.includes('1. sal')) {
                 laborHours += initialInstallHours * 0.2;
-                if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Stillads/Lift leje'] || 8000) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Rullestillads/Ekstra bæring og forøget tidsforbrug til montering på 1. sal (+20% tid)`);
+                if (!userSuppliesMaterials) materialCost += scaffoldPrice; // INGEN markup på stillads/materiel!
+                bArr.push(`Tillæg: 1. sal – ekstra tidsforbrug (+20% tid) samt ${scaffoldText}`);
             } else if (d.floors && d.floors.includes('2. sal')) {
                 laborHours += initialInstallHours * 0.4;
-                if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Stillads/Lift leje'] || 8000) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Lift/Stillads-leje og forøget tidsforbrug til montering på 2. sal eller højere (+40% tid)`);
+                if (!userSuppliesMaterials) materialCost += scaffoldPrice * 1.5; // Lift/Stillads til 2. sal er ca. 50% dyrere
+                bArr.push(`Tillæg: 2. sal eller højere – ekstra tidsforbrug (+40% tid) samt højde-${scaffoldText}`);
             }
         }
 
