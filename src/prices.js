@@ -70,6 +70,7 @@ export const MATERIAL_INDEX = {
         'Bærende undergulv (Spånplader)': 120,
         'Gulvvarme (Sporplader)': 450,
         'Gulvvarme (Specialunderlag)': 80,
+        'Limning (Fuldlimning af mønstergulv)': 60,
         'Fodlister (pr. m2 gulvareal proxy)': 50
     },
     doors: {

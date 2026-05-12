@@ -392,7 +392,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             
             if (d.floorPattern === 'Ja, i mønster (fx Sildeben / Chevron)') {
                 laborHours += initialInstallHours * 1.0; // Sildeben tager oftest dobbelt så lang tid pga. præcision, limning og mange skæringer
-                bArr.push(`Tillæg: Forøget tidsforbrug ved specialmønster (fx Sildeben/Chevron) på gulv (+100% tid)`);
+                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Limning (Fuldlimning af mønstergulv)'] || 60) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Forøget tidsforbrug (+100%) samt dyr speciallim til fuldlimning af mønstergulv`);
             }
 
             if (d.underfloorHeating && d.underfloorHeating.includes('sporplader')) {
