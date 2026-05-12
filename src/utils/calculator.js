@@ -246,10 +246,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
                     // Sikkerhedsglas (hærdet/lamineret)
                     if (w.type === 'Panorama' || w.type === 'Skydedør' || w.safetyGlass) {
-                        base += 1500; // Ekstra tillæg for lamineret/hærdet personsikkerhedsglas iht. BR18
+                        base += indexCat['Sikkerhedsglas (Personsikkerhed BR18)'] || 1500; // Ekstra tillæg for lamineret/hærdet personsikkerhedsglas iht. BR18
                     }
                     
-                    if (w.hasSlidingDoor) base += 8000;
+                    if (w.hasSlidingDoor) base += indexCat['Skydedørsbeslag/Mekanisme'] || 8000;
                     winMatCost += base;
                 });
                 
@@ -886,13 +886,21 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
         }
 
+        if (cat === 'windows' && !userSuppliesMaterials) {
+            // Tilføj grundlæggende montagematerialer for vinduer (karmskruer, udvendig fuge, kiler), som tømreren altid skal bruge uanset indvendig finish
+            materialCost += numericAmount * (indexCat['Montagematerialer (Udvendig fuge/skruer/kiler)'] || 150) * dbSettings.material_markup;
+            bArr.push(`Standard tillæg: Montagematerialer (skruer, kiler og udvendig fuge)`);
+        }
+
         if ((cat === 'windows' || cat === 'doors') && (d.finish === 'Ja' || d.finish === 'yes')) {
              if(formula.finishHoursPerUnit) {
                  laborHours += numericAmount * formula.finishHoursPerUnit;
                  if (cat === 'doors' && !userSuppliesMaterials) {
                      materialCost += numericAmount * (indexCat['Gerigter (sæt)'] || 300) * dbSettings.material_markup;
+                 } else if (cat === 'windows' && !userSuppliesMaterials) {
+                     materialCost += numericAmount * (indexCat['Indvendig finish (Gerigter/Fuge) proxy'] || 200) * dbSettings.material_markup;
                  }
-                 bArr.push(`Tid og evt. materiale inkluderet til indvendig finish (fuger og gerigter)`);
+                 bArr.push(`Tid og materiale inkluderet til indvendig finish (fuger og lister/gerigter)`);
              }
         }
          

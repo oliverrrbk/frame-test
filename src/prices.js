@@ -54,7 +54,11 @@ export const MATERIAL_INDEX = {
         'Panorama/Specialmål': 22000,                 // ca 4 m² panorama før skalering
         'Skydedør': 55000,                            // hæveskydedør 2,8x2,2 (træ/alu) 50-80k
         'Ovenlysvindue / Velux (pr. stk)': 8500,
-        'Tillæg: Stillads/Lift leje': 8000
+        'Tillæg: Stillads/Lift leje': 8000,
+        'Montagematerialer (Udvendig fuge/skruer/kiler)': 150,
+        'Sikkerhedsglas (Personsikkerhed BR18)': 1500,
+        'Skydedørsbeslag/Mekanisme': 8000,
+        'Indvendig finish (Gerigter/Fuge) proxy': 200
     },
     floor: {
         'Træ': 600,
