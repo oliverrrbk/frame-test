@@ -307,8 +307,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             laborHours += dispTime;
 
             if (numericAmount > formula.containerThreshold) {
-                materialCost += dbSettings.container_disposal_fee;
-                bArr.push(`Bortskaffelse af stort volumen (Containerleje/afhentning + ${dispTime.toFixed(1)} arbejdstimer)`);
+                // Skalér containere: 1 container pr. fuld threshold. (fx 50 m2 tag kræver 1, 100 m2 kræver 2).
+                let containerCount = Math.ceil(numericAmount / formula.containerThreshold);
+                // Sikkerhedsgrænse, så fejlindtastninger på fx 1000m2 ikke sprænger tilbuddet fuldstændig ud af proportioner før et menneske kigger på det.
+                if (containerCount > 5) containerCount = 5; 
+                
+                materialCost += dbSettings.container_disposal_fee * containerCount;
+                bArr.push(`Bortskaffelse af stort volumen (${containerCount}x Containerleje/afhentning + ${dispTime.toFixed(1)} arbejdstimer)`);
             } else {
                 materialCost += dbSettings.trailer_disposal_fee;
                 bArr.push(`Miljøtillæg: Bortskaffelse af mindre volumen på trailer (+ ${dispTime.toFixed(1)} arbejdstimer incl. sortering)`);
