@@ -77,12 +77,12 @@ export const MATERIAL_INDEX = {
     doors: {
         'Træ': 3000,                                  // Standard HT-dør m. karm 2-4k (var voldsomt højt før)
         'Massivt træ': 7500,                          // Massive yderdøre/specialdøre 6-9k
+        'Massivt træ og glas': 8500,
         'Finér': 2200,
         'PVC / plast': 4000,
         'Aluminium': 9000,                            // Alu-yderdøre 8-12k
-        'Stål': 10000,                                // Sikkerheds-/branddør
-        'Glas': 9000,
-        'Kompositmaterialer': 6500,
+        'Standard indvendig dør': 1200,
+        'Special indvendig dør': 5000,
         'Default': 5500,
         // Tillæg døre
         'Dørgreb inkl roset': 350,

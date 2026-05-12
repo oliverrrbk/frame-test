@@ -124,9 +124,6 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         bArr.push(`Opgaven er estimeret automatisk via AI Assistent.`);
         bArr.push(`AI vurdering: ${laborHours} arbejdstimer`);
         bArr.push(`AI vurdering af materialer: ${rawMat} kr.`);
-    } else if (cat === 'doors' && d.frameOrLeaf === 'Kun dørpladen (genbrug af eksisterende karm)') {
-        laborHours += numericAmount * (formula.leafOnlyHours || 0.3);
-        bArr.push(`Hurtig udskiftning (kun dørplader): ca. ${laborHours.toFixed(1)} arbejdstimer`);
     } else if (cat === 'doors') {
         if (d.doorType === 'Blanding') {
             let eAmount = parseInt(d.exteriorAmount) || 0;
@@ -850,6 +847,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             } else if (d.hardware === 'Vi køber selv greb/låse (tømreren skal montere)') {
                 laborHours += numericAmount * (formula.hardwareHours || 0.3);
                 bArr.push(`Tillæg: Montering af jeres egne indkøbte dørgreb / låse`);
+            } else if (d.hardware && d.hardware.includes('Special/Elektrisk lås')) {
+                bArr.push(`Bemærk: Kunden ønsker elektrisk/special lås. Dette kræver elektriker og specialdele, pris for dette tillægges særskilt i endeligt tilbud.`);
             }
         }
 

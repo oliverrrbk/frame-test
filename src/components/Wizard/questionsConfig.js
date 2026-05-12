@@ -150,9 +150,8 @@ export const QUESTIONS = {
     doors: [
         { id: 'disposal', type: 'select', label: 'Skal den/de nuværende døre afmonteres og afskaffes?', options: ['Ja', 'Nej'] },
         { id: 'doorType', type: 'select', label: 'Er det indvendige døre eller en ude/fordør?', options: ['Indvendige døre', 'Ude/fordøre', 'Blanding'] },
-        { id: 'frameOrLeaf', type: 'select', label: 'Omfang: Skal hele dørkarmen skiftes, eller er det kun selve dørpladen?', options: ['Hele karmen inkl. dør skal skiftes', 'Kun dørpladen (genbrug af eksisterende karm)'] },
         { id: 'thresholds', type: 'select', label: 'Dørtrin: Skal der monteres nye dørtrin (bundstykker) mellem rummene?', condition: (d) => d.doorType === 'Indvendige døre' || d.doorType === 'Blanding', options: ['Ja', 'Nej'] },
-        { id: 'hardware', type: 'select', label: 'Beslag: Hvad med dørgreb og evt. låsecylindere?', options: ['Tømreren skal levere standard greb/låse', 'Vi køber selv greb/låse (tømreren skal montere)', 'Vi genbruger de gamle / ikke relevant'] },
+        { id: 'hardware', type: 'select', label: 'Beslag: Hvad med dørgreb og evt. låsecylindere?', options: ['Tømreren skal levere standard greb/låse', 'Special/Elektrisk lås (Elektrisk tillægges senere)'] },
         
         // --- Blanding (Quick-Split) ---
         { id: 'exteriorAmount', type: 'number', label: 'Hvor mange af dem er YDERDØRE?', condition: { field: 'doorType', value: 'Blanding' } },
@@ -164,12 +163,10 @@ export const QUESTIONS = {
             options: [
                 { label: 'Træ', img: '/images/door_wood_1776258921142.png' },
                 { label: 'Massivt træ', img: '/images/door_solid_wood_1776258727433.png' },
+                { label: 'Massivt træ og glas', img: '/images/door_solid_wood_glass.png' },
                 { label: 'Finér', img: '/images/door_veneer_1776258742752.png' },
                 { label: 'PVC / plast', img: '/images/door_pvc_1776258757167.png' },
-                { label: 'Aluminium', img: '/images/door_aluminum_1776258935245.png' },
-                { label: 'Stål', img: '/images/door_steel_1776258770815.png' },
-                { label: 'Glas', img: '/images/door_glass_1776258949698.png' },
-                { label: 'Kompositmaterialer', img: '/images/door_composite_1776258785767.png' }
+                { label: 'Aluminium', img: '/images/door_aluminum_1776258935245.png' }
             ] 
         },
         { id: 'interiorAmount', type: 'number', label: 'Hvor mange af dem er INDVENDIGE døre?', condition: { field: 'doorType', value: 'Blanding' } },
@@ -179,14 +176,8 @@ export const QUESTIONS = {
             label: 'Hvilket materiale skal de INDVENDIGE døre være i?', 
             condition: (d) => d.doorType === 'Blanding',
             options: [
-                { label: 'Træ', img: '/images/door_wood_1776258921142.png' },
-                { label: 'Massivt træ', img: '/images/door_solid_wood_1776258727433.png' },
-                { label: 'Finér', img: '/images/door_veneer_1776258742752.png' },
-                { label: 'PVC / plast', img: '/images/door_pvc_1776258757167.png' },
-                { label: 'Aluminium', img: '/images/door_aluminum_1776258935245.png' },
-                { label: 'Stål', img: '/images/door_steel_1776258770815.png' },
-                { label: 'Glas', img: '/images/door_glass_1776258949698.png' },
-                { label: 'Kompositmaterialer', img: '/images/door_composite_1776258785767.png' }
+                { label: 'Standard indvendig dør', img: '/images/door_wood_1776258921142.png' },
+                { label: 'Special indvendig dør', img: '/images/door_solid_wood_1776258727433.png' }
             ] 
         },
 
@@ -195,24 +186,33 @@ export const QUESTIONS = {
         { 
             id: 'material', 
             type: 'visual_select', 
-            label: 'Hvilken type dør I gerne vil have sat i?', 
-            condition: (d) => (d.doorType === 'Indvendige døre' || d.doorType === 'Ude/fordøre'),
+            label: 'Hvilken type yderdør I gerne vil have sat i?', 
+            condition: (d) => d.doorType === 'Ude/fordøre',
             options: [
                 { label: 'Træ', img: '/images/door_wood_1776258921142.png' },
                 { label: 'Massivt træ', img: '/images/door_solid_wood_1776258727433.png' },
+                { label: 'Massivt træ og glas', img: '/images/door_solid_wood_glass.png' },
                 { label: 'Finér', img: '/images/door_veneer_1776258742752.png' },
                 { label: 'PVC / plast', img: '/images/door_pvc_1776258757167.png' },
-                { label: 'Aluminium', img: '/images/door_aluminum_1776258935245.png' },
-                { label: 'Stål', img: '/images/door_steel_1776258770815.png' },
-                { label: 'Glas', img: '/images/door_glass_1776258949698.png' },
-                { label: 'Kompositmaterialer', img: '/images/door_composite_1776258785767.png' }
+                { label: 'Aluminium', img: '/images/door_aluminum_1776258935245.png' }
+            ] 
+        },
+        { 
+            id: 'material', 
+            type: 'visual_select', 
+            label: 'Hvilken type indvendig dør I gerne vil have sat i?', 
+            condition: (d) => d.doorType === 'Indvendige døre',
+            options: [
+                { label: 'Standard indvendig dør', img: '/images/door_wood_1776258921142.png' },
+                { label: 'Special indvendig dør', img: '/images/door_solid_wood_1776258727433.png' }
             ] 
         },
 
         { id: 'doorMeasurementType', type: 'select', label: 'Er der tale om store dobbeltdøre/fløjdøre eller specialmål?', options: ['Nej, det er standard døre', 'Ja, der er dobbeltdøre/specialmål iblandt'] },
+        { id: 'doorHinge', type: 'select', label: 'Er døren højrehængt eller venstrehængt?', options: ['Højrehængt', 'Venstrehængt', 'Ved ikke / Blanding'] },
         { id: 'doorPhotos', type: 'file', label: 'Upload evt. gerne et billede af døråbningerne, så kan jeg vurdere dem på forhånd:' },
         
-        { id: 'finish', type: 'select', label: 'Gerigter/Finish: Skal vi levere og montere nye indvendige gerigter (lister) og fuge?', tooltip: 'Gerigter er de trælister, der sidder rundt om dørkarmen for at skjule overgangen mellem karmen og væggen. Typisk udskiftes de sammen med dørkarmen for det pæneste resultat.', condition: (d) => d.frameOrLeaf === 'Hele karmen inkl. dør skal skiftes', options: ['Ja', 'Nej, kun dør og karm / Vi sætter selv lister op'] },
+        { id: 'finish', type: 'select', label: 'Gerigter/Finish: Skal vi levere og montere nye indvendige gerigter (lister) og fuge?', tooltip: 'Gerigter er de trælister, der sidder rundt om dørkarmen for at skjule overgangen mellem karmen og væggen. Typisk udskiftes de sammen med dørkarmen for det pæneste resultat.', options: ['Ja', 'Nej, kun dør og karm / Vi sætter selv lister op'] },
         { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet?' }
     ],
     terrace: [
