@@ -416,13 +416,21 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'doors' && d.doorMeasurementType === 'Ja, der er dobbeltdøre/specialmål iblandt') {
-            laborHours += initialInstallHours * 0.5;
-            // Tillæg lægges KUN på dørens egen materialepris (snapshot),
-            // ikke på hardware/dørtrin/finish/disposal-fees der måtte være tilføjet før eller efter.
+            // SOP #7: Løst Boolesk Fælde.
+            // Hvis kunden har "Ja" til dobbeltdøre/specialmål, må vi ikke gange ALLE deres 20 døre med 50%
+            // Vi estimerer matematisk, at ca. hver fjerde dør er en dobbeltdør (men mindst 1)
+            let specialDoorsCount = Math.ceil(numericAmount / 4); 
+            if (specialDoorsCount > numericAmount) specialDoorsCount = numericAmount;
+            
+            // +50% tid pr. specialdør
+            laborHours += specialDoorsCount * (formula.hoursPerUnit || 3.0) * 0.5;
+            
             if (!userSuppliesMaterials) {
-                materialCost += doorBodyMatCost * 0.5;
+                // +50% materialepris KUN for de estimerede specialdøre
+                let singleDoorPrice = (doorBodyMatCost / numericAmount);
+                materialCost += specialDoorsCount * singleDoorPrice * 0.5;
             }
-            bArr.push(`Tillæg: Beregnes ud fra forøget tids- og materialeforbrug ved dobbeltdøre/specialmål (+50%)`);
+            bArr.push(`Tillæg: Beregnet forøget tids- og materialeforbrug (+50%) for ca. ${specialDoorsCount} dobbeltdøre/specialmål`);
         }
 
         if (cat === 'windows') {
@@ -911,10 +919,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
         }
 
-        if (cat === 'windows' && !userSuppliesMaterials) {
-            // Tilføj grundlæggende montagematerialer for vinduer (karmskruer, udvendig fuge, kiler), som tømreren altid skal bruge uanset indvendig finish
+        if ((cat === 'windows' || cat === 'doors') && !userSuppliesMaterials) {
+            // SOP #2: Tilføj grundlæggende montagematerialer for vinduer/døre (karmskruer, fuge, kiler), som tømreren altid skal bruge uanset indvendig finish
             materialCost += numericAmount * (indexCat['Montagematerialer (Udvendig fuge/skruer/kiler)'] || 150) * dbSettings.material_markup;
-            bArr.push(`Standard tillæg: Montagematerialer (skruer, kiler og udvendig fuge)`);
+            bArr.push(`Standard tillæg: Montagematerialer (skruer, kiler og fuge)`);
         }
 
         if ((cat === 'windows' || cat === 'doors') && (d.finish === 'Ja' || d.finish === 'yes')) {
