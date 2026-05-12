@@ -468,7 +468,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 let baseMatPrice = indexCat[d.material] || 400;
                 let spildM2 = numericAmount * 0.10; 
                 materialCost += (spildM2 * baseMatPrice) * dbSettings.material_markup;
-                bArr.push(`Standard tillæg: Forventet materialespild og afskær (+10% brædder)`);
+                
+                // SOP #2: Usynlige udgifter. Skruer (rustfri A4), vinkelbeslag, murpap og plastikkiler koster ca. 60-80 kr. pr. m2 i sig selv.
+                // Uden dette æder skruerne tømrerens dækningsbidrag på selve træet.
+                let monteringsMat = indexCat['Montagematerialer (Skruer, beslag, kiler/murpap) pr m2'] || 70;
+                materialCost += (numericAmount * monteringsMat) * dbSettings.material_markup;
+                
+                bArr.push(`Standard tillæg: Forventet materialespild (+10%) samt montagematerialer (A4-skruer, beslag og kiler)`);
             }
 
             if (d.elevation === 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)') {
