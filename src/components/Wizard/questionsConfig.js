@@ -137,7 +137,7 @@ export const QUESTIONS = {
             id: 'floorPattern', 
             type: 'select', 
             label: 'Skal gulvet lægges i et specialmønster?', 
-            condition: (d) => ['Træ', 'Massivt træ', 'Parket', 'Laminat'].includes(d.material) || d.ownMaterials === 'Ja, jeg har dem allerede (kun pris på montering)',
+            condition: (d) => ['Træ', 'Massivt træ', 'Parket', 'Laminat'].includes(d.material),
             options: ['Nej, helt standard montering', 'Ja, i mønster (fx Sildeben / Chevron)'] 
         },
         { id: 'skirting', type: 'select', label: 'Fodlister: Skal vi levere og montere nye fodlister langs væggene?', options: ['Ja', 'Nej, vi sætter selv lister op / genbruger de gamle'] },
