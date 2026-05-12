@@ -350,9 +350,15 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
 
             if (d.floorFoundation === 'Strøer / Trækonstruktion') {
-                laborHours += numericAmount * 0.4; // Øget tid til lægning af bærende undergulv på strøer
-                if (!userSuppliesMaterials) materialCost += numericAmount * 120 * dbSettings.material_markup; // Pris for bærende gulvspånplader
-                bArr.push(`Tillæg: Opbygning af bærende undergulv (fx spånplader) på strøer/trækonstruktion`);
+                // Undgå dobbeltkonfekt: Hvis de også får sporplader (gulvvarme), fungerer sporpladen som det bærende undergulv!
+                if (d.underfloorHeating && d.underfloorHeating.includes('sporplader')) {
+                    laborHours += numericAmount * 0.2; // Kun lidt ekstra tid til tilpasning af selve strøerne
+                    bArr.push(`Tillæg: Tilpasning af strøer (bærende materialepris dækkes af sporpladerne)`);
+                } else {
+                    laborHours += numericAmount * 0.4; // Øget tid til lægning af bærende undergulv på strøer
+                    if (!userSuppliesMaterials) materialCost += numericAmount * 120 * dbSettings.material_markup; // Pris for bærende gulvspånplader
+                    bArr.push(`Tillæg: Opbygning af bærende undergulv (fx spånplader) på strøer/trækonstruktion`);
+                }
             }
 
             if (d.specificFloorWishes === 'Ja, jeg har specifikke ønsker' && d.specificFloorDetails) {
