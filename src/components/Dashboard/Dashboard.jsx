@@ -3615,9 +3615,50 @@ const Dashboard = () => {
                                         <div className="input-group" style={{ marginBottom: '16px' }}>
                                             <input 
                                                 type="password" 
-                                                value={carpenterProfile?.minuba_api_key || ''} 
-                                                onChange={(e) => setCarpenterProfile(prev => ({ ...prev, minuba_api_key: e.target.value }))} 
+                                                value={(() => {
+                                                    try {
+                                                        const parsed = JSON.parse(carpenterProfile?.minuba_api_key);
+                                                        return parsed.api_key || carpenterProfile?.minuba_api_key || '';
+                                                    } catch (e) {
+                                                        return carpenterProfile?.minuba_api_key || '';
+                                                    }
+                                                })()} 
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setCarpenterProfile(prev => {
+                                                        try {
+                                                            const parsed = JSON.parse(prev.minuba_api_key || '{}');
+                                                            return { ...prev, minuba_api_key: JSON.stringify({ ...parsed, api_key: val }) };
+                                                        } catch (e) {
+                                                            return { ...prev, minuba_api_key: JSON.stringify({ api_key: val }) };
+                                                        }
+                                                    });
+                                                }}
                                                 placeholder="Indsæt personlig API-nøgle fra Minuba" 
+                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1', marginBottom: '8px' }}
+                                            />
+                                            <input 
+                                                type="text" 
+                                                value={(() => {
+                                                    try {
+                                                        const parsed = JSON.parse(carpenterProfile?.minuba_api_key);
+                                                        return parsed.client_id || '';
+                                                    } catch (e) {
+                                                        return '';
+                                                    }
+                                                })()} 
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setCarpenterProfile(prev => {
+                                                        try {
+                                                            const parsed = JSON.parse(prev.minuba_api_key || '{}');
+                                                            return { ...prev, minuba_api_key: JSON.stringify({ ...parsed, client_id: val }) };
+                                                        } catch (e) {
+                                                            return { ...prev, minuba_api_key: JSON.stringify({ client_id: val, api_key: prev.minuba_api_key }) };
+                                                        }
+                                                    });
+                                                }}
+                                                placeholder="Indsæt Client ID (f.eks. clientId_...)" 
                                                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1' }}
                                             />
                                         </div>

@@ -33,9 +33,8 @@ serve(async (req) => {
 
     let finalApiKey = api_key;
 
-    // Hent altid API nøglen via backend for at undgå at frontend RLS blokerer medarbejdere
     const targetCarpenterId = lead.carpenter_id || user.id;
-    const { data: profile, error: dbError } = await supabaseClient
+    const { data: profile } = await supabaseClient
       .from('carpenter_secrets')
       .select('minuba_api_key')
       .eq('carpenter_id', targetCarpenterId)
@@ -49,51 +48,43 @@ serve(async (req) => {
       throw new Error("Mangler Minuba API-nøgle")
     }
 
-    let minubaToken;
-    let isOauth = false;
-
-    // Check if the key is stored as OAuth JSON (from our new minuba-auth flow)
+    let minubaToken = finalApiKey;
+    let minubaClientId = "";
+    
     try {
         const parsedKey = JSON.parse(finalApiKey);
-        if (parsedKey.access_token) {
-            minubaToken = parsedKey.access_token;
-            isOauth = true;
-
-            // Optional: Implement Token Refresh logic here if token is expired
-            // const now = new Date().getTime();
-            // if (now > parsedKey.timestamp + (parsedKey.expires_in * 1000)) {
-            //     console.log("Minuba token udløbet. Forsøger refresh...");
-            //     ... refresh logic ...
-            // }
-        } else {
-            minubaToken = finalApiKey;
+        if (parsedKey.api_key) {
+            minubaToken = parsedKey.api_key;
+            if (parsedKey.client_id) {
+                minubaClientId = parsedKey.client_id;
+            }
         }
     } catch(e) {
-        // Not JSON, fallback to manual API key (Basic Auth)
+        // Not JSON, fallback
         minubaToken = finalApiKey;
     }
 
     console.log("Starter Minuba overførsel for:", lead.customer_name);
 
-    const baseUrl = "https://app.minuba.dk/api/v1"; // Placeholder for rigtig endpoint
-
-    // Opsæt auth header alt efter om vi bruger OAuth (Bearer) eller manuel API-nøgle (Basic)
+    const baseUrl = "https://app.minuba.dk/api";
+    
+    // Auth header fallback: Basic clientId:Token
+    const authString = minubaClientId ? `${minubaClientId}:${minubaToken}` : `${minubaToken}:`;
     const authHeaders = {
       'Content-Type': 'application/json',
-      'Authorization': isOauth ? `Bearer ${minubaToken}` : `Basic ${btoa(minubaToken + ':')}`
+      'Authorization': `Basic ${btoa(authString)}`
     };
 
     // 1. Opret Kontakt/Kunde i Minuba
     const contactPayload = {
       name: lead.customer_name || "Ukendt Kunde",
-      address: lead.customer_address || "Ukendt Adresse",
+      description: "Oprettet via Bison Frame",
       email: lead.customer_email || "",
-      phone: lead.customer_phone || "",
-      notes: "Oprettet via Bison Frame"
+      phone: lead.customer_phone || ""
     };
 
     console.log("Opretter kontakt i Minuba...");
-    const contactRes = await fetch(`${baseUrl}/customers`, {
+    const contactRes = await fetch(`${baseUrl}/Client`, {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify(contactPayload)
@@ -101,8 +92,8 @@ serve(async (req) => {
 
     if (!contactRes.ok) {
         const errText = await contactRes.text();
-        console.error("Fejl fra Minuba /customers:", errText);
-        throw new Error("Kunne ikke oprette kontakt i Minuba. Tjek adgangsrettighederne. Detaljer: " + errText);
+        console.error("Fejl fra Minuba /Client:", errText);
+        throw new Error(`Minuba afviste API nøglen/Client ID'et (Kode ${contactRes.status}). Fejlbesked: ${errText}`);
     }
 
     const contactData = await contactRes.json();
@@ -116,13 +107,14 @@ serve(async (req) => {
 
     // 2. Opret Projekt/Ordre i Minuba
     const projectPayload = {
-      title: `${lead.project_category || 'Bison Frame Opgave'} - ${lead.customer_name || 'Kunde'}`,
-      customer_id: contactId,
-      description: `Tilbudspris (Ekskl. moms): ${lead.raw_data?.actual_quote_price || lead.price_estimate || '0'} kr.\nAdresse: ${lead.customer_address}`
+      name: `${lead.project_category || 'Bison Frame Opgave'} - ${lead.customer_name || 'Kunde'}`,
+      description: `Tilbudspris (Ekskl. moms): ${lead.raw_data?.actual_quote_price || lead.price_estimate || '0'} kr.\nAdresse: ${lead.customer_address}`,
+      clientId: contactId,
+      orderTypeId: "00000000-0000-0000-0000-000000000000" // Minuba kræver muligvis orderTypeId
     };
 
     console.log("Opretter ordre i Minuba...");
-    const projectRes = await fetch(`${baseUrl}/orders`, {
+    const projectRes = await fetch(`${baseUrl}/Order`, {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify(projectPayload)
@@ -130,8 +122,8 @@ serve(async (req) => {
 
     if (!projectRes.ok) {
         const errText = await projectRes.text();
-        console.error("Fejl fra Minuba /orders:", errText);
-        throw new Error("Kontakt oprettet, men kunne ikke oprette opgaven. Fejl: " + errText);
+        console.error("Fejl fra Minuba /Order:", errText);
+        throw new Error("Kontakt oprettet, men kunne ikke oprette opgaven i Minuba. Fejl: " + errText);
     }
 
     const projectData = await projectRes.json();
@@ -149,7 +141,7 @@ serve(async (req) => {
     console.error("Fejl i minuba-case function:", error.message)
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }, // Status 200 for at frontend håndterer fejlen pænt
     )
   }
 })
