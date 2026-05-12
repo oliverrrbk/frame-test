@@ -3563,7 +3563,7 @@ const Dashboard = () => {
                                             style={{ width: '100%', background: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
                                             onClick={async () => {
                                                 if (!carpenterProfile?.apacta_api_key) return;
-                                                const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, apacta_api_key: carpenterProfile.apacta_api_key });
+                                                const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.company_id || carpenterProfile.id, apacta_api_key: carpenterProfile.apacta_api_key });
                                                 if (!error) {
                                                     alert("Apacta API-nøgle gemt!");
                                                 } else {
@@ -3582,7 +3582,7 @@ const Dashboard = () => {
                                                 <button 
                                                     style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
                                                     onClick={async () => {
-                                                        const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, apacta_api_key: null });
+                                                        const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.company_id || carpenterProfile.id, apacta_api_key: null });
                                                         if (!error) setCarpenterProfile(prev => ({...prev, apacta_api_key: null}));
                                                     }}
                                                 >
@@ -3630,7 +3630,7 @@ const Dashboard = () => {
                                             style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
                                             onClick={async () => {
                                                 if (!carpenterProfile?.minuba_api_key) return;
-                                                const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, minuba_api_key: carpenterProfile.minuba_api_key });
+                                                const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.company_id || carpenterProfile.id, minuba_api_key: carpenterProfile.minuba_api_key });
                                                 if (!error) {
                                                     alert("Minuba API-nøgle gemt!");
                                                 } else {
@@ -3649,7 +3649,7 @@ const Dashboard = () => {
                                                 <button 
                                                     style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
                                                     onClick={async () => {
-                                                        const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, minuba_api_key: null });
+                                                        const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.company_id || carpenterProfile.id, minuba_api_key: null });
                                                         if (!error) setCarpenterProfile(prev => ({...prev, minuba_api_key: null}));
                                                     }}
                                                 >
