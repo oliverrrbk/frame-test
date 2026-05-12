@@ -56,6 +56,7 @@ export const MATERIAL_INDEX = {
         'Ovenlysvindue / Velux (pr. stk)': 8500,
         'Tillæg: Stillads/Lift leje': 8000,
         'Leje af rullestillads (lille opgave)': 1500,
+        'Leje af glasløfter/sugekop (pr. tungt vindue)': 750,
         'Montagematerialer (Udvendig fuge/skruer/kiler)': 150,
         'Sikkerhedsglas (Personsikkerhed BR18)': 1500,
         'Skydedørsbeslag/Mekanisme': 8000,

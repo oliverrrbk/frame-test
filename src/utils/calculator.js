@@ -140,7 +140,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     } else if (cat === 'windows') {
         if (d.windowsConfig && d.windowsConfig.length > 0) {
             let winHours = 0;
-            let hasHeavyWindow = false;
+            let heavyWindowCount = 0;
             d.windowsConfig.forEach((w) => {
                 let h = formula.hoursPerUnit || 3.0; // standard vindue tid
                 if (w.type === 'Panorama') h += 3.0;
@@ -150,7 +150,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 if (w.width && w.height) {
                     const areaM2 = (parseFloat(w.width) / 100) * (parseFloat(w.height) / 100);
                     if (areaM2 >= 2.5) {
-                        hasHeavyWindow = true;
+                        heavyWindowCount += 1;
                     }
                 }
 
@@ -160,10 +160,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             laborHours += winHours;
             bArr.push(`Basis montering: ${d.windowsConfig.length} elementer udregnet til ca. ${laborHours.toFixed(1)} arbejdstimer`);
 
-            if (hasHeavyWindow) {
-                const heavyFeeHours = 6.0; // Fast tillæg på 6 timer for at have to mand på opgaven den halve/hele dag
+            if (heavyWindowCount > 0) {
+                const heavyFeeHours = heavyWindowCount * 3.0; // 3 timer ekstra pr. tungt vindue for 2 mand
                 laborHours += heavyFeeHours;
-                bArr.push(`Tillæg: Ekstra bemanding / sugekop til tunge partier (> 2.5 kvm) vurderet til ca. ${heavyFeeHours} arbejdstimer`);
+                bArr.push(`Tillæg: Ekstra bemanding til ${heavyWindowCount} tunge partier (> 2.5 kvm) vurderet til ca. ${heavyFeeHours} arbejdstimer`);
+                
+                // Vi gemmer countet til at udregne maskinleje (glasløfter) senere i logikken for at undgå BR18 markup
+                d._heavyWindowCount = heavyWindowCount;
             }
         } else if (d.windowType === 'Blanding') {
             let rAmount = parseInt(d.roofAmount) || 0;
@@ -437,6 +440,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 laborHours += initialInstallHours * 0.4;
                 if (!userSuppliesMaterials) materialCost += scaffoldPrice * 1.5; // Lift/Stillads til 2. sal er ca. 50% dyrere
                 bArr.push(`Tillæg: 2. sal eller højere – ekstra tidsforbrug (+40% tid) samt højde-${scaffoldText}`);
+            }
+
+            if (d._heavyWindowCount > 0 && !userSuppliesMaterials) {
+                let liftPrice = d._heavyWindowCount * (indexCat['Leje af glasløfter/sugekop (pr. tungt vindue)'] || 750);
+                materialCost += liftPrice; // INGEN markup på materielleje!
+                bArr.push(`Tillæg: Maskinleje (glasløfter/sugekop) til montering af ${d._heavyWindowCount} tunge partier`);
             }
         }
 
