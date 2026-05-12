@@ -342,8 +342,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Opretning af undergulv'] || 120) * dbSettings.material_markup;
             bArr.push(`Standard: Opretning af undergulv (inkl. tid og materialer)`);
 
-            // Tilføj kun almindelig foam, hvis der IKKE bygges med sporplader, da disse erstatter behovet for normal foam
-            if (!(d.underfloorHeating && d.underfloorHeating.includes('sporplader'))) {
+            // Tilføj kun almindelig foam, hvis der slet ikke er gulvvarme. Både sporplader og støbt gulvvarme kræver eget/special underlag!
+            if (!(d.underfloorHeating && d.underfloorHeating.startsWith('Ja'))) {
                 laborHours += numericAmount * (formula.underlayHours || 0.1);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Trinlydsunderlag (Foam)'] || 45) * dbSettings.material_markup;
                 bArr.push(`Standard: Montering af trinlydsdæmpende underlag (foam/pap)`);
