@@ -103,7 +103,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                         aiHtml = `
                             <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
                                 <strong style="display: block; color: #0f172a; margin-bottom: 4px;">AI Opgave-beskrivelse:</strong>
-                                <span style="color: #334155;">${projectData.details?.aiSummary || projectData.details?.aiProjectTitle || 'Specialopgave'}</span>
+                                <span style="color: #334155;">${projectData.details?.aiProjectTitle || 'Specialopgave'}</span>
                             </li>
                         `;
                     }
@@ -214,10 +214,18 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     </h3>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '16px' }}>
                         {projectData.category === 'special' ? (
-                            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.05rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                                <span style={{ color: 'var(--accent)', marginTop: '2px' }}>✓</span>
-                                <span>{projectData.details?.aiSummary || projectData.details?.aiProjectTitle || 'Specialopgave'}</span>
-                            </li>
+                            <>
+                                <li style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.05rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                                    <span style={{ color: 'var(--accent)', marginTop: '2px' }}>✓</span>
+                                    <span><strong>{projectData.details?.aiProjectTitle || 'Specialopgave'}</strong></span>
+                                </li>
+                                {Array.isArray(projectData.details?.summaryBullets) && projectData.details.summaryBullets.map((bullet, idx) => (
+                                    <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.0rem', color: 'var(--text-secondary)', lineHeight: '1.5', background: 'rgba(0,0,0,0.02)', padding: '12px 16px', borderRadius: '8px' }}>
+                                        <span style={{ color: '#10b981', marginTop: '2px' }}>✓</span>
+                                        <span>{bullet}</span>
+                                    </li>
+                                ))}
+                            </>
                         ) : (
                             Object.entries(projectData.details || {}).map(([key, value]) => {
                                 const categoryQuestions = QUESTIONS[projectData.category] || [];
