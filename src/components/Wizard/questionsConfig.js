@@ -52,7 +52,7 @@ export const QUESTIONS = {
         { id: 'chimney', type: 'select', label: 'Inddækning: Er der skorsten eller udluftningshætter, der kræver ny inddækning (bly/zink)?', options: ['Ja', 'Nej'] },
 
         { id: 'extensions', type: 'select', label: 'Er der nogen kviste (fremspring på taget) eller specielle tilbygninger?', options: ['Ja', 'Nej'] },
-        { id: 'extensionsDetails', type: 'text', label: 'Uddyb gerne hvor mange kviste/tilbygninger:', condition: { field: 'extensions', value: 'Ja' } },
+        { id: 'extensionsAmount', type: 'number', label: 'Hvor mange kviste/tilbygninger er der på taget?', condition: { field: 'extensions', value: 'Ja' } },
         
         { id: 'skylights', type: 'select', label: 'Skal der monteres nye ovenlysvinduer (fx Velux)?', options: ['Ja', 'Nej'] },
         { id: 'skylightAmount', type: 'number', label: 'Hvor mange ovenlysvinduer skal der monteres?', condition: { field: 'skylights', value: 'Ja' } },

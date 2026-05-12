@@ -39,8 +39,13 @@ export const MATERIAL_INDEX = {
         'Stern træværk (pr løbende meter)': 150,
         'Tagrender og nedløb (pr løbende meter)': 250,
         'Skorstensinddækning (Zink/Bly)': 3500,
-        'Tillæg: Stillads 1½-plan / 2-plan': 15000,
-        'Tillæg: Stillads (Høj rejsning)': 10000
+        'Stilladsleje 1½-plan/2-plan (pr m2 grundplan)': 150,
+        'Stilladsleje høj rejsning (pr m2 grundplan)': 100,
+        'Miljødeponi asbest (pr m2)': 150,
+        'Bortskaffelse af stråtag (ekstra volumen pr m2)': 200,
+        'Efterisolering af tag (pr m2)': 120,
+        'Montagematerialer (Skruer, fugleklodser, rygning) pr m2': 75,
+        'Kvist (Inddækning og montering pr stk)': 12000
     },
     windows: {
         'Træ': 5000,                                  // Standard træ-vindue 1,2x1,2m 4-6,5k
