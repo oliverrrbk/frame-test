@@ -168,9 +168,7 @@ const Dashboard = () => {
                     window.history.replaceState({}, document.title, window.location.pathname);
                     setCarpenterProfile(prev => prev ? {...prev, minuba_api_key: 'pending_authorization'} : null);
                     
-                    const redirectUri = window.location.origin.includes('localhost') 
-                        ? 'http://localhost:5173/dashboard?integration=minuba' 
-                        : 'https://bisonframe.dk/dashboard?integration=minuba';
+                    const redirectUri = 'https://bisonframe.dk/dashboard?integration=minuba';
                         
                     const { data, error } = await supabase.functions.invoke('minuba-auth', {
                         body: { code: code, redirectUri: redirectUri }
@@ -3627,18 +3625,32 @@ const Dashboard = () => {
                                                 <CheckCircle size={20} /> Minuba er forbundet!
                                             </div>
                                         ) : (
-                                            <button 
-                                                className="primary-btn" 
-                                                style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
-                                                onClick={() => {
-                                                    const redirectUri = window.location.origin.includes('localhost') 
-                                                        ? 'http://localhost:5173/dashboard?integration=minuba' 
-                                                        : 'https://bisonframe.dk/dashboard?integration=minuba';
-                                                    window.location.href = `https://app.minuba.dk/oauth/authorize?client_id=clientId_N1xLuFzSOtsKKEsnOuvV4dweJQ8s2p1v&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}`;
-                                                }}
-                                            >
-                                                Log ind med Minuba
-                                            </button>
+                                            <>
+                                                <div className="input-group" style={{ marginBottom: '16px' }}>
+                                                    <input 
+                                                        type="password" 
+                                                        value={carpenterProfile?.minuba_api_key || ''} 
+                                                        onChange={(e) => setCarpenterProfile(prev => ({ ...prev, minuba_api_key: e.target.value }))} 
+                                                        placeholder="Indsæt personlig API-nøgle fra Minuba" 
+                                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1' }}
+                                                    />
+                                                </div>
+                                                <button 
+                                                    className="primary-btn" 
+                                                    style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
+                                                    onClick={async () => {
+                                                        if (!carpenterProfile?.minuba_api_key) return;
+                                                        const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, minuba_api_key: carpenterProfile.minuba_api_key });
+                                                        if (!error) {
+                                                            alert("Minuba API-nøgle gemt!");
+                                                        } else {
+                                                            alert("Fejl ved gemning: " + error.message);
+                                                        }
+                                                    }}
+                                                >
+                                                    Gem API-nøgle
+                                                </button>
+                                            </>
                                         )}
                                         
                                         {carpenterProfile?.minuba_api_key && carpenterProfile.minuba_api_key !== 'pending_authorization' && (
