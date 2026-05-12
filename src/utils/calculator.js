@@ -342,13 +342,17 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Opretning af undergulv'] || 120) * dbSettings.material_markup;
             bArr.push(`Standard: Opretning af undergulv (inkl. tid og materialer)`);
 
-            laborHours += numericAmount * (formula.underlayHours || 0.1);
-            if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Trinlydsunderlag (Foam)'] || 45) * dbSettings.material_markup;
-            bArr.push(`Standard: Montering af trinlydsdæmpende underlag (foam/pap)`);
+            // Tilføj kun almindelig foam, hvis der IKKE bygges med sporplader, da disse erstatter behovet for normal foam
+            if (!(d.underfloorHeating && d.underfloorHeating.includes('sporplader'))) {
+                laborHours += numericAmount * (formula.underlayHours || 0.1);
+                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Trinlydsunderlag (Foam)'] || 45) * dbSettings.material_markup;
+                bArr.push(`Standard: Montering af trinlydsdæmpende underlag (foam/pap)`);
+            }
 
             if (d.floorFoundation === 'Strøer / Trækonstruktion') {
-                laborHours += numericAmount * 0.2; // Lidt ekstra tid til tilpasning på strøer vs flad beton
-                bArr.push(`Tillæg: Underlag på strøer/trækonstruktion kræver ekstra tilpasningstid`);
+                laborHours += numericAmount * 0.4; // Øget tid til lægning af bærende undergulv på strøer
+                if (!userSuppliesMaterials) materialCost += numericAmount * 120 * dbSettings.material_markup; // Pris for bærende gulvspånplader
+                bArr.push(`Tillæg: Opbygning af bærende undergulv (fx spånplader) på strøer/trækonstruktion`);
             }
 
             if (d.specificFloorWishes === 'Ja, jeg har specifikke ønsker' && d.specificFloorDetails) {
@@ -362,10 +366,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
             
             if (d.floorPattern === 'Ja, i mønster (fx Sildeben / Chevron)') {
-                // Sildeben/Chevron-lægning er reelt +25-35% ekstra tid (præcision og afkortninger).
-                // Tidligere +50% blev compoundet på opretning/foam/lister og pumpede 80 m²-opgaver kraftigt op.
-                laborHours += initialInstallHours * 0.35;
-                bArr.push(`Tillæg: Forøget tidsforbrug ved specialmønster (fx Sildeben) på gulv (+35% tid)`);
+                laborHours += initialInstallHours * 1.0; // Sildeben tager oftest dobbelt så lang tid pga. præcision, limning og mange skæringer
+                bArr.push(`Tillæg: Forøget tidsforbrug ved specialmønster (fx Sildeben/Chevron) på gulv (+100% tid)`);
             }
 
             if (d.underfloorHeating && d.underfloorHeating.includes('sporplader')) {
