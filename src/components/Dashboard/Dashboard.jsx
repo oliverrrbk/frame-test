@@ -2220,13 +2220,9 @@ const Dashboard = () => {
                                                             <a href={`https://app.minuba.dk/`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
                                                                 <ExternalLink size={18} /> Åbn Minuba
                                                             </a>
-                                                        ) : selectedLead.raw_data?.synced_to_management ? (
-                                                            <a href={`https://app.minuba.dk/`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
-                                                                <ExternalLink size={18} /> Åbn Minuba
-                                                            </a>
                                                         ) : (
                                                             <button onClick={() => syncToMinuba(selectedLead)} style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
-                                                                <UploadCloud size={18} /> Minuba
+                                                                <UploadCloud size={18} /> Overfør til Minuba
                                                             </button>
                                                         )
                                                     )}
