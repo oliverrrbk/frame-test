@@ -613,11 +613,16 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
 
             // Obligatoriske tagrender for alle tagudskiftninger
-            laborHours += estimatedGutterMeters * (formula.guttersHoursPerMeter || 0.35);
-            if (!userSuppliesMaterials) {
-                materialCost += estimatedGutterMeters * (indexCat['Tagrender og nedløb (pr løbende meter)'] || 250) * dbSettings.material_markup;
+            let actualGutterMeters = estimatedGutterMeters;
+            if (d.roofType === 'Valmtag (Tag med fald på alle 4 sider - ingen gavle)') {
+                actualGutterMeters = estimatedSternMeters; // Valmtag har tagrender hele vejen rundt
             }
-            bArr.push(`Standard: Udskiftning til nye tagrender og nedløbsrør er inkluderet (estimeret ${estimatedGutterMeters} løbende meter).`);
+            
+            laborHours += actualGutterMeters * (formula.guttersHoursPerMeter || 0.35);
+            if (!userSuppliesMaterials) {
+                materialCost += actualGutterMeters * (indexCat['Tagrender og nedløb (pr løbende meter)'] || 250) * dbSettings.material_markup;
+            }
+            bArr.push(`Standard: Udskiftning til nye tagrender og nedløbsrør er inkluderet (estimeret ${actualGutterMeters} løbende meter).`);
             if (d.chimney && d.chimney.startsWith('Ja')) {
                 const chimneyCount = parseInt(d.chimneyAmount) || 1;
                 laborHours += chimneyCount * (formula.chimneyHours || 6.0);
