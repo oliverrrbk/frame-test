@@ -309,8 +309,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             laborHours += dispTime;
 
             let threshold = formula.containerThreshold;
-            if (threshold && threshold > 0) {
-                // Skalér containere: 1 container pr. fuld threshold. (fx 50 m2 tag kræver 1, 100 m2 kræver 2).
+            if (threshold && threshold > 0 && numericAmount >= threshold) {
+                // Skalér containere: 1 container pr. fuld threshold. (fx 150 m2 tag kræver 1, 300 m2 kræver 2).
                 let containerCount = Math.ceil(numericAmount / threshold);
                 // Sikkerhedsgrænse, så fejlindtastninger på fx 1000m2 ikke sprænger tilbuddet fuldstændig ud af proportioner.
                 if (containerCount > 5) containerCount = 5; 
@@ -691,7 +691,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Forskalling'] || 50) * dbSettings.material_markup;
             bArr.push(`Standard: Forskalling (træskelet) til underlag for det nye loft`);
 
-            if (d.vaporAndInsulation && d.vaporAndInsulation.includes('dampspærre')) {
+            if (d.vaporAndInsulation && d.vaporAndInsulation.includes('Koldt tagrum')) {
                 laborHours += numericAmount * (formula.vaporBarrierHours || 0.2);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Dampspærre inkl tape'] || 35) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Montering af plast-dampspærre mod koldt tagrum`);
