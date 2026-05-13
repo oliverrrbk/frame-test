@@ -294,7 +294,7 @@ export const WORK_FORMULAS = {
         insulationHours: 0.2, // Isolering pr m2
         plasteringHours: 0.4, // Spartling pr m2 gips (var 0.6 — håndværker spartler 12-15 m²/dag)
         mouldingHours: 0.2, // Opsætning af lister/fuge pr m2
-        containerThreshold: 30
+        containerThreshold: 150 // Loftsmaterialer (gips/træ) er lette, så 30m2 gav for mange containere
     },
     facades: {
         hoursPerUnit: 1.2, // Basis montering af klinkbeklædning pr m2
@@ -303,7 +303,7 @@ export const WORK_FORMULAS = {
         windBarrierHours: 0.4, // Montering af vindspærre og klemlister pr m2
         openingHours: 1.5, // Ekstra tid til inddækning/lysning pr vindue eller dør
         verticalMultiplier: 1.4, // Lodret listebeklædning tager længere tid at skrue og line op
-        containerThreshold: 15
+        containerThreshold: 50
     },
     extensions: {
         hoursPerUnit: 12.0, // Meget groft skøn: timer pr. m2 for tilbygning
