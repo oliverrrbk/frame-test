@@ -292,8 +292,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
         if (cat === 'windows' && d.pcbCheck && d.pcbCheck.startsWith('Ja')) {
             laborHours += numericAmount * 1.5; // Ekstra nedrivningstid pga. asbestdragter/afskærmning
-            materialCost += (numericAmount * 350) * dbSettings.material_markup; // Special deponi
-            bArr.push(`Miljøtillæg: Miljøsanering forventet (Fuger/vinduer før 1977 kræver specialhåndtering af PCB/Bly)`);
+            materialCost += (numericAmount * 350); // Special deponi (INGEN markup på miljø/sikkerhed)
+            bArr.push(`Miljøtillæg: Miljøsanering forventet (Fuger/vinduer før 1977 kræver specialhåndtering af PCB/Bly) - Uden avance`);
         }
 
         if (d.disposal && d.disposal.startsWith('Ja')) {
@@ -303,20 +303,23 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (cat === 'roof' && formula.disposalHoursByOldType && formula.disposalHoursByOldType[d.oldRoofType]) {
                 disposalRate = formula.disposalHoursByOldType[d.oldRoofType];
             }
-            let dispTime = (cat === 'kitchen') ? disposalRate : (disposalRate * numericAmount);
+            
+            // SOP #3 & #7: Alt nedrivning skal skaleres med mængden! 
+            let dispTime = (disposalRate * numericAmount);
             laborHours += dispTime;
 
-            if (numericAmount > formula.containerThreshold) {
+            let threshold = formula.containerThreshold;
+            if (threshold && threshold > 0) {
                 // Skalér containere: 1 container pr. fuld threshold. (fx 50 m2 tag kræver 1, 100 m2 kræver 2).
-                let containerCount = Math.ceil(numericAmount / formula.containerThreshold);
-                // Sikkerhedsgrænse, så fejlindtastninger på fx 1000m2 ikke sprænger tilbuddet fuldstændig ud af proportioner før et menneske kigger på det.
+                let containerCount = Math.ceil(numericAmount / threshold);
+                // Sikkerhedsgrænse, så fejlindtastninger på fx 1000m2 ikke sprænger tilbuddet fuldstændig ud af proportioner.
                 if (containerCount > 5) containerCount = 5; 
                 
                 materialCost += dbSettings.container_disposal_fee * containerCount;
-                bArr.push(`Bortskaffelse af stort volumen (${containerCount}x Containerleje/afhentning + ${dispTime.toFixed(1)} arbejdstimer)`);
+                bArr.push(`Miljøtillæg: Bortskaffelse af stort volumen (${containerCount}x Containerleje/afhentning + ${dispTime.toFixed(1)} arbejdstimer) - Uden avance`);
             } else {
                 materialCost += dbSettings.trailer_disposal_fee;
-                bArr.push(`Miljøtillæg: Bortskaffelse af mindre volumen på trailer (+ ${dispTime.toFixed(1)} arbejdstimer incl. sortering)`);
+                bArr.push(`Miljøtillæg: Bortskaffelse af mindre volumen på trailer (+ ${dispTime.toFixed(1)} arbejdstimer incl. sortering) - Uden avance`);
             }
         }
 
@@ -350,15 +353,30 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
 
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldFloorType) {
+                let disposalHours = 0.2; // default
                 if (d.oldFloorType.includes('Klinker')) {
-                    laborHours += numericAmount * 0.6;
+                    disposalHours = 0.6;
                     bArr.push(`Tillæg: Tung nedrivning af eksisterende klinker/fliser`);
                 } else if (d.oldFloorType.includes('Beton')) {
-                    laborHours += numericAmount * 1.0;
+                    disposalHours = 1.0;
                     bArr.push(`Tillæg: Tung nedrivning og ophugning af betongulv`);
-                } else if (d.oldFloorType.includes('Gulvtæppe')) {
-                    laborHours += numericAmount * 0.1;
-                    bArr.push(`Tillæg: Fjernelse af fuldlimet gulvtæppe/linoleum`);
+                } else if (d.oldFloorType.includes('Gulvtæppe') || d.oldFloorType.includes('Linoleum')) {
+                    disposalHours = 0.15;
+                    bArr.push(`Tillæg: Fjernelse af fuldlimet gulvtæppe/linoleum/vinyl`);
+                } else if (d.oldFloorType.includes('Trægulv')) {
+                    disposalHours = 0.25;
+                    bArr.push(`Tillæg: Nedbrydning af eksisterende trægulv/parket/laminat`);
+                }
+                laborHours += numericAmount * disposalHours;
+
+                // SOP #2: Usynlige Omkostninger (Containerleje/bortskaffelse)
+                if (!userSuppliesMaterials) {
+                    let disposalFeePerM2 = indexCat['Bortskaffelse af gulv (pr m2)'] || 50;
+                    if (d.oldFloorType.includes('Beton') || d.oldFloorType.includes('Klinker')) {
+                        disposalFeePerM2 = indexCat['Bortskaffelse af tungt gulv (pr m2)'] || 120;
+                    }
+                    materialCost += numericAmount * disposalFeePerM2; // Ingen markup på affaldsgebyr
+                    bArr.push(`Miljøtillæg: Containerleje og affaldsgebyrer for bortskaffelse af eksisterende gulv (Uden avance)`);
                 }
             }
 

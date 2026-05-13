@@ -85,7 +85,9 @@ export const MATERIAL_INDEX = {
         'Gulvvarme (Sporplader)': 450,
         'Gulvvarme (Specialunderlag)': 80,
         'Limning (Fuldlimning af mønstergulv)': 60,
-        'Fodlister (pr. m2 gulvareal proxy)': 50
+        'Fodlister (pr. m2 gulvareal proxy)': 50,
+        'Bortskaffelse af gulv (pr m2)': 50,
+        'Bortskaffelse af tungt gulv (pr m2)': 120
     },
     doors: {
         'Træ': 3000,                                  // Standard HT-dør m. karm 2-4k (var voldsomt højt før)
@@ -277,8 +279,8 @@ export const WORK_FORMULAS = {
         assemblyHours: 0.8, // Ekstra timer pr. element hvis det er flat-pack (IKEA)
         worktopHours: 4.0, // Fast tidstillæg til tilpasning af træ/laminat bordplade, fræsning af hjørner og udskæringer til vask/kogeplade
         applianceHours: 1.5, // Fast tidstillæg til finjustering af træfronter på integrerede hvidevarer
-        disposalHours: 6, // Fast anslået tid for nedrivning af standart køkken
-        containerThreshold: 0
+        disposalHours: 0.5, // Timer pr. køkkenelement til demontering og sortering
+        containerThreshold: 15 // Et gennemsnitligt køkken over 15 elementer udløser en hel container
     },
     ceilings: {
         hoursPerUnit: 0.8, // Timer pr. m2 loft (kun selve loftet)
