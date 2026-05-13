@@ -295,10 +295,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             materialCost += (numericAmount * 350); // Special deponi (INGEN markup på miljø/sikkerhed)
             bArr.push(`Miljøtillæg: Miljøsanering forventet (Fuger/vinduer før 1977 kræver specialhåndtering af PCB/Bly) - Uden avance`);
         }
+        // Automatisk nedrivnings-tjek (SOP)
+        let needsDisposal = false;
+        if (d.disposal && d.disposal.startsWith('Ja')) needsDisposal = true;
+        if (cat === 'facades' && d.oldFacadeMaterial && d.oldFacadeMaterial.includes('rives ned')) needsDisposal = true;
 
-        if (d.disposal && d.disposal.startsWith('Ja')) {
-            // For tag: brug gammelt-tag-materiale specifik disposal-sats (asbest-/strå-tillæg
-            // håndteres separat længere nede, så her er det den generiske nedrivningstid)
+        if (needsDisposal) {
+            // Generisk nedrivnings-sats (som kan overskrives hvis der er asbest/andet specielt)
             let disposalRate = formula.disposalHours;
             if (cat === 'roof' && formula.disposalHoursByOldType && formula.disposalHoursByOldType[d.oldRoofType]) {
                 disposalRate = formula.disposalHoursByOldType[d.oldRoofType];
@@ -729,27 +732,17 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'facades') {
-            if (d.disposal && d.disposal.startsWith('Ja') && d.oldFacadeMaterial) {
-                if (d.oldFacadeMaterial.includes('Eternit')) {
-                    laborHours += numericAmount * 0.4;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * 50) * dbSettings.material_markup; 
-                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdig facade`);
-                } else if (d.oldFacadeMaterial.includes('Pudset') || d.oldFacadeMaterial.includes('Mursten')) {
-                    laborHours += numericAmount * 0.8;
-                    bArr.push(`Tillæg: Tung nedrivning af pudset facade / mursten`);
-                }
+            // SOP: Obligatorisk underkonstruktion for træfacader
+            laborHours += numericAmount * (formula.windBarrierHours || 0.4);
+            if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Vindspærre og Klemlister'] || 150) * dbSettings.material_markup;
+            bArr.push(`Standard: Montering af ny underkonstruktion (vindspærre og klemlister/afsætning)`);
+
+            // SOP: Montering uden på eksisterende murværk kræver lidt ekstra tid til forboring/plugs
+            if (d.oldFacadeMaterial && d.oldFacadeMaterial.includes('Mursten')) {
+                laborHours += numericAmount * 0.15;
+                bArr.push(`Tillæg: Forøget tidsforbrug til forboring og fastgørelse af underkonstruktion i eksisterende murværk/puds`);
             }
 
-            if (d.windBarrier === 'Ja') {
-                laborHours += numericAmount * (formula.windBarrierHours || 0.4);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Vindspærre og Klemlister'] || 150) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Montering af ny underkonstruktion (vindspærre og klemlister)`);
-            }
-            if (d.insulation && d.insulation.startsWith('Ja')) {
-                laborHours += numericAmount * (formula.insulationHours || 0.3);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Efterisolering (50-100mm)'] || 120) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Efterisolering af facade (50-100mm)`);
-            }
             if (d.mountingStyle && d.mountingStyle.startsWith('Lodret')) {
                 laborHours += initialInstallHours * 0.4; // 40% ekstra af basis-montage tid
                 bArr.push(`Tillæg: Lodret montering (fx listebeklædning) kræver øget præcision og mere tidsforbrug`);

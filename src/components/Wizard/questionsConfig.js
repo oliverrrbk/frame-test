@@ -293,21 +293,17 @@ export const QUESTIONS = {
     ],
     facades: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 træfacade drejer projektet sig om cirka?' },
-        { id: 'disposal', type: 'select', label: 'Skal en eksisterende facadebeklædning afmonteres og afskaffes?', options: ['Ja', 'Nej, der monteres direkte ovenpå/ikke relevant'] },
         { 
             id: 'oldFacadeMaterial', 
-            type: 'visual_select', 
-            label: 'Hvilket materiale er den nuværende facadebeklædning lavet af?', 
-            condition: { field: 'disposal', value: 'Ja' },
+            type: 'select', 
+            label: 'Hvad består den nuværende facade/yderbeklædning af?', 
             options: [
-                { label: 'Gammel træbeklædning', img: '/images/old_facade_wood_1777278987653.png' },
-                { label: 'Eternit / Plademateriale (mulig asbest)', img: '/images/old_facade_eternit_1777279001289.png' },
-                { label: 'Pudset facade / Mursten', img: '/images/old_facade_brick_1777279017419.png' },
-                { label: 'Ved ikke / Andet' }
+                'Mursten / Pudset væg (Beholdes som underlag, ny facade monteres udenpå)',
+                'Gammel træbeklædning (Skal rives ned og fjernes)',
+                'Stålplader / Plademateriale (Skal rives ned og fjernes)',
+                'Ingen (Nybyg / Råt træskelet)'
             ] 
         },
-        { id: 'windBarrier', type: 'select', label: 'Underkonstruktion: Skal vi opsætte ny vindspærre og klemlister (anbefales for ventilation)?', tooltip: 'Vindspærre er en sort vind- og vandtæt membran, der beskytter isoleringen bag facaden. Klemlister er de trælister, der skaber et nødvendigt hulrum til luftcirkulation bag de nye brædder.', options: ['Ja', 'Nej, det eksisterende er i orden / ikke nødvendigt'] },
-        { id: 'insulation', type: 'select', label: 'Efterisolering: Skal facaden isoleres yderligere udefra, nu hvor vi er i gang?', options: ['Nej', 'Ja (ca. 50-100mm)'] },
         { 
             id: 'material', 
             type: 'visual_select', 
