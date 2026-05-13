@@ -240,7 +240,17 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         // Generer URL til at åbne overslaget igen
                         const overslagUrl = `${window.location.origin}/${carpenter?.slug || 'demo'}/overslag/${leadId}`;
                         
-                        if (!isUpdate) {
+                        if (res.priceRange === 'Besigtigelse kræves') {
+                            import('../../utils/emailTemplates').then(({ getCustomerComplexProjectTemplate }) => {
+                                sendEmail({
+                                    to: customerDetails.email,
+                                    subject: `Din forespørgsel hos ${carpenterCompanyName}`,
+                                    html: getCustomerComplexProjectTemplate(customerDetails.fullName, categoryName, carpenter, overslagUrl),
+                                    fromName: senderName,
+                                    replyTo: carpenter?.email
+                                });
+                            });
+                        } else if (!isUpdate) {
                             sendEmail({
                                 to: customerDetails.email,
                                 subject: `Dit vejledende overslag fra ${carpenterCompanyName}`,
