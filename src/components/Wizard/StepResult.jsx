@@ -48,14 +48,16 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
             // Vi opdaterer den eksisterende lead, der blev oprettet som kladde
             let newLeadId = projectData.leadId;
             if (newLeadId) {
-                const { error } = await supabase
+                let updateQuery = supabase
                     .from('leads')
                     .update({
                         contact_preference: contactPreferenceStr,
                         status: 'Ny forespørgsel', // Nu gøres den aktiv, så tømreren kan se den
                         raw_data: projectData
-                    })
-                    .eq('id', newLeadId);
+                    });
+                    
+                const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(newLeadId);
+                const { error } = await (isUUID ? updateQuery.eq('quote_token', newLeadId) : updateQuery.eq('id', newLeadId));
                     
                 if (error) throw error;
             } else {
