@@ -221,9 +221,10 @@ export const QUESTIONS = {
             type: 'visual_select', 
             label: 'Hvilket materiale skal den nye terrasse bygges i?',
             options: [
-                { label: 'Trykimprægneret fyr', img: '/images/terrace_pine_1776267659903.png' },
-                { label: 'Hardwood / Hårdttræ', img: '/images/terrace_hardwood_1776267675662.png' },
-                { label: 'Komposit (vedligeholdelsesfrit biomateriale)', img: '/images/terrace_composite_1776267690895.png' }
+                { label: 'Trykimprægneret', img: '/images/terrace_pine_1776267659903.png' },
+                { label: 'Thermowood', img: '/images/facade_thermowood_1776270455644.png' },
+                { label: 'Cedertræ / Hardwood', img: '/images/terrace_hardwood_1776267675662.png' },
+                { label: 'Komposit', img: '/images/terrace_composite_1776267690895.png' }
             ] 
         },
         { id: 'fastening', type: 'select', label: 'Montering: Ønsker du standard eller skjult montering af skruer?', options: ['Synlige skruer (Standard montering skruet fra toppen)', 'Skjult montering af skruer (Skrues fra siden/med beslag så der ikke er skruehuller i overfladen)'] },
@@ -311,8 +312,9 @@ export const QUESTIONS = {
             options: [
                 { label: 'Trykimprægneret', img: '/images/facade_pine_1776270383566.png' },
                 { label: 'Superwood', img: '/images/facade_superwood_1776270423784.png' },
+                { label: 'Thermowood', img: '/images/facade_thermowood_1776270455644.png' },
                 { label: 'Cedertræ / Hardwood', img: '/images/facade_cedar_1776270440422.png' },
-                { label: 'Thermowood', img: '/images/facade_thermowood_1776270455644.png' }
+                { label: 'Komposit', img: '/images/terrace_composite_1776267690895.png' }
             ] 
         },
         { id: 'mountingStyle', type: 'select', label: 'Hvordan skal beklædningen monteres?', options: ['Vandret (fx Klinkbeklædning)', 'Lodret (fx Listebeklædning - tager lidt længere tid)'] },
@@ -321,33 +323,7 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til facaden (fx malerarbejde)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     extensions: [
-        { id: 'amount', type: 'number', label: 'Hvor mange kvadratmeter (grundplan) skal tilbygningen være?' },
-        { id: 'breakthrough', type: 'select', label: 'Skal der laves en gennembrydning/hul ind til det eksisterende hus?', options: ['Nej, det er en fritstående bygning', 'Ja, en almindelig døråbning', 'Ja, en stor åbning (kræver ståldrager/ingeniør)'] },
-        { id: 'wetRoom', type: 'select', label: 'Skal tilbygningen indeholde vådrum (badeværelse, bryggers eller køkken)?', options: ['Nej, kun almindelige rum (stue, værelse mv.)', 'Ja, der skal trækkes VVS og kloak (vådrum)'] },
-        { id: 'windowsDoors', type: 'number', label: 'Hvor mange vinduer og udvendige døre skal der ca. sættes i?' },
-        { 
-            id: 'foundationType', 
-            type: 'visual_select', 
-            label: 'Hvilken type fundament ønskes der?', 
-            options: [
-                { label: 'Støbt terrændæk (Beton)', img: '/images/foundation_slab_1777280046564.png' },
-                { label: 'Krybekælder (Hævet trægulv)', img: '/images/foundation_crawlspace_1777280061901.png' }
-            ] 
-        },
-        { id: 'access', type: 'select', label: 'Er der fri adgang for maskiner (gravemaskine/lastbil) helt op til fundamentet?', options: ['Ja, nem adgang', 'Nej, al jord skal graves/køres ud med trillebør'] },
-        { id: 'underfloorHeating', type: 'select', label: 'Skal der etableres gulvvarme i tilbygningen?', options: ['Ja', 'Nej'] },
-        { id: 'floors', type: 'select', label: 'Hvor mange etager skal tilbygningen have?', options: ['1-plan', '1½-plan', '2-plan'] },
-        { 
-            id: 'material', 
-            type: 'visual_select', 
-            label: 'Hvilken udvendig facadebeklædning ønsker du?', 
-            options: [
-                { label: 'Træbeklædning (Fx Gran, Fyr eller Superwood)', img: '/images/facade_pine_1776270383566.png' },
-                { label: 'Eksklusivt træ (Fx Hardwood eller Cedertræ)', img: '/images/facade_cedar_1776270440422.png' }
-            ] 
-        },
-        { id: 'roofType', type: 'select', label: 'Hvilken tagtype skal tilbygningen have?', options: ['Fladt tag med tagpap', 'Tag med hældning (Tegl/Stål/Pap)'] },
-        { id: 'notes', type: 'textarea', label: 'Kort beskrivelse af drømmen om tilbygningen (f.eks. badeværelse, soveværelse, osv.):' }
+        { id: 'notes', type: 'textarea', label: 'Beskriv jeres drømme og tanker om tilbygningen:', placeholder: 'Hvad skal tilbygningen bruges til, og hvor stor tænker I, den skal være? (Har I f.eks. allerede tegninger eller idéer til badeværelse/stue?)' }
     ],
     annex: [
         { id: 'annexType', type: 'select', label: 'Hvad er det primære formål med byggeriet?', options: ['Uisoleret skur til opbevaring', 'Isoleret skur/værksted', 'Fuldt beboeligt anneks'] },
@@ -365,24 +341,16 @@ export const QUESTIONS = {
                 { label: 'Andet' }
             ] 
         },
-        { id: 'access', type: 'select', label: 'Er der fri adgang for maskiner (gravemaskine/lastbil) helt op til byggepladsen?', options: ['Ja, nem maskinadgang', 'Nej, jord/grus skal køres med trillebør'] },
-        { 
-            id: 'foundationType', 
-            type: 'visual_select', 
-            label: 'Hvilken type fundament ønskes der?', 
-            options: [
-                { label: 'Støbt terrændæk (Beton)', img: '/images/foundation_slab_1777280046564.png' },
-                { label: 'Punktfundament / Trægulv', img: '/images/foundation_crawlspace_1777280061901.png' }
-            ] 
-        },
         { 
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilket materiale skal de udvendige facader være i?', 
             options: [
-                { label: 'Trykimprægneret fyr', img: '/images/facade_pine_1776270383566.png' },
-                { label: 'Eksklusivt træ (Cedertræ/Hardwood)', img: '/images/facade_cedar_1776270440422.png' },
-                { label: 'Vedligeholdelsesfrit (Komposit)', img: '/images/terrace_composite_1776267690895.png' }
+                { label: 'Trykimprægneret', img: '/images/facade_pine_1776270383566.png' },
+                { label: 'Superwood', img: '/images/facade_superwood_1776270423784.png' },
+                { label: 'Thermowood', img: '/images/facade_thermowood_1776270455644.png' },
+                { label: 'Cedertræ / Hardwood', img: '/images/facade_cedar_1776270440422.png' },
+                { label: 'Komposit', img: '/images/terrace_composite_1776267690895.png' }
             ] 
         },
         { 
@@ -397,7 +365,7 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Er der specielle ønsker (f.eks. ekstra store døre, indlagt strøm, osv.)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     carport: [
-        { id: 'amount', type: 'number', label: 'Hvor mange carporte ønsker du tilbud på?', placeholder: 'Oftest 1' },
+        { id: 'amount', type: 'select', label: 'Hvor mange carporte ønsker du tilbud på?', options: ['1', '2', '3', 'Flere (Beskrives i noter)'] },
         { id: 'disposal', type: 'select', label: 'Skal der rives en eksisterende carport ned?', options: ['Nej', 'Ja'] },
         { 
             id: 'oldMaterial', 
@@ -427,9 +395,12 @@ export const QUESTIONS = {
             type: 'visual_select', 
             label: 'Hvilket hovedmateriale skal carporten bygges i?', 
             options: [
-                { label: 'Standard træ (Trykimprægneret)', img: '/images/facade_pine_1776270383566.png' },
-                { label: 'Eksklusivt træ (Cedertræ/Hardwood)', img: '/images/facade_cedar_1776270440422.png' },
-                { label: 'Vedligeholdelsesfrit (Stål/Alu)', img: '/images/door_aluminum_1776258935245.png' }
+                { label: 'Trykimprægneret', img: '/images/facade_pine_1776270383566.png' },
+                { label: 'Superwood', img: '/images/facade_superwood_1776270423784.png' },
+                { label: 'Thermowood', img: '/images/facade_thermowood_1776270455644.png' },
+                { label: 'Cedertræ / Hardwood', img: '/images/facade_cedar_1776270440422.png' },
+                { label: 'Komposit', img: '/images/terrace_composite_1776267690895.png' },
+                { label: 'Stål/Alu', img: '/images/door_aluminum_1776258935245.png' }
             ] 
         },
         { 
@@ -441,7 +412,6 @@ export const QUESTIONS = {
                 { label: 'Sadel tag (Høj rejsning m. tegl/stål)', img: '/images/annex_roof_pitched_1777280812965.png' }
             ] 
         },
-        { id: 'access', type: 'select', label: 'Er der fri maskinadgang til hvor fundamenterne (stolperne) skal graves?', options: ['Ja, nem maskinadgang', 'Nej, manuel udgravning kræves'] },
         { id: 'notes', type: 'textarea', label: 'Skriv gerne hvis du har andre detaljer (f.eks. oplader til elbil, cykelskur, osv.): (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     fence: [
@@ -465,10 +435,11 @@ export const QUESTIONS = {
             type: 'visual_select', 
             label: 'Hvilken type hegn ønsker du?', 
             options: [
-                { label: 'Klinkehegn (Træ)', img: '/images/facade_pine_1776270383566.png' },
-                { label: 'Lamelhegn (Træ)', img: '/images/facade_superwood_1776270423784.png' },
-                { label: 'Raftehegn', img: '/images/facade_thermowood_1776270455644.png' },
-                { label: 'Komposit (Vedligeholdelsesfrit)', img: '/images/terrace_composite_1776267690895.png' }
+                { label: 'Klinkehegn (Træ)', img: '/images/fence_klinke_1778675155755.png' },
+                { label: 'Listehegn (Træ)', img: '/images/fence_liste_1778675176127.png' },
+                { label: 'Lamelhegn (Træ)', img: '/images/fence_lamel_1778675189539.png' },
+                { label: 'Raftehegn (Træ)', img: '/images/fence_rafte_1778675204391.png' },
+                { label: 'Komposithegn', img: '/images/fence_komposit_1778675219569.png' }
             ] 
         },
         { id: 'notes', type: 'textarea', label: 'Er der specielle udfordringer (f.eks. meget skrå grund, træer i vejen)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }

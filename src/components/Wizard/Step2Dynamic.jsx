@@ -1,6 +1,6 @@
 import React from 'react';
 import toast from 'react-hot-toast';
-import { ImagePlus } from 'lucide-react';
+import { ImagePlus, Info } from 'lucide-react';
 import { QUESTIONS } from './questionsConfig';
 import CustomSelect from './CustomSelect';
 
@@ -520,15 +520,32 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
     return (
         <section className="wizard-step active">
             <div className="step-header">
-                <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>Specifikation af projekt</h2>
-                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>For at jeg bedst muligt kan give dig det rigtige estimat og forstå opgaven, bedes du svare på følgende spørgsmål om projektet.</p>
+                <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>
+                    {['special', 'extensions'].includes(category) ? 'Projektbeskrivelse' : 'Specifikation af projekt'}
+                </h2>
+                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>
+                    {['special', 'extensions'].includes(category) 
+                        ? 'For at vi kan yde den bedste rådgivning, bedes du beskrive projektet nedenfor. Da denne type opgaver er komplekse, udarbejdes der ikke en automatisk prisberegning på forhånd.' 
+                        : 'For at jeg bedst muligt kan give dig det rigtige estimat og forstå opgaven, bedes du svare på følgende spørgsmål om projektet.'}
+                </p>
                 
                 <div style={{ background: '#f8fafc', borderLeft: '4px solid #10b981', padding: '16px', borderRadius: '8px', marginBottom: '32px', fontSize: '0.9rem', color: '#475569', lineHeight: '1.5' }}>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                        <span style={{ fontSize: '1.2rem' }}>💡</span>
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
+                            <Info size={20} color="#10b981" />
+                        </span>
                         <div>
-                            <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Vejledende oplysninger</strong>
-                            Du vil som udgangspunkt aldrig blive holdt ansvarlig for nøjagtigheden af dine mål eller valg. Tømreren kommer <strong>altid</strong> ud og kigger på projektet inden en endelig aftale indgås, medmindre du aktivt fravælger opmålingsbesøget mod en prisreduktion (hvor dette er en mulighed). Overslaget er til for at give dig et realistisk prisleje.
+                            {['special', 'extensions'].includes(category) ? (
+                                <>
+                                    <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Fysisk besigtigelse og rådgivning</strong>
+                                    Dette trin fungerer som forberedelse til vores indledende dialog. Din beskrivelse sendes direkte til tømreren, som herefter vil kontakte dig for at aftale en uforpligtende besigtigelse af opgaven. Først efter besigtigelsen udarbejdes der et præcist og retvisende prisestimat.
+                                </>
+                            ) : (
+                                <>
+                                    <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Vejledende oplysninger</strong>
+                                    Du vil som udgangspunkt aldrig blive holdt ansvarlig for nøjagtigheden af dine mål eller valg. Tømreren kommer <strong>altid</strong> ud og kigger på projektet inden en endelig aftale indgås, medmindre du aktivt fravælger opmålingsbesøget mod en prisreduktion (hvor dette er en mulighed). Overslaget er til for at give dig et realistisk prisleje.
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

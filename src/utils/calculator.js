@@ -124,6 +124,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         bArr.push(`Opgaven er estimeret automatisk via AI Assistent.`);
         bArr.push(`AI vurdering: ${laborHours} arbejdstimer`);
         bArr.push(`AI vurdering af materialer: ${rawMat} kr.`);
+    } else if (cat === 'extensions') {
+        laborHours = 0;
+        materialCost = 0;
+        bArr.push(`Tilbygning/Kompleks opgave: Der foretages ingen automatisk prisudregning.`);
+        bArr.push(`Kunden har indsendt en beskrivelse, og afventer kontakt for besigtigelse.`);
     } else if (cat === 'doors') {
         if (d.doorType === 'Blanding') {
             let eAmount = parseInt(d.exteriorAmount) || 0;
@@ -854,26 +859,18 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'annex') {
-            if (d.access && d.access.startsWith('Nej')) {
-                laborHours += 15;
-                bArr.push(`Tillæg: Forøget tidsforbrug til udgravning pga. manglende maskin-adgang (håndkraft/trillebør)`);
-            }
-            if (d.foundationType && d.foundationType.includes('Støbt')) {
-                laborHours += numericAmount * 1.5;
-                let betonPris = indexCat['Tillæg: Støbt terrændæk (pr m2)'] || 1500;
-                if (!userSuppliesMaterials) materialCost += (numericAmount * betonPris) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Udregnet med støbt terrændæk/beton fundament (inkl. isolering)`);
-            }
 
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldMaterial) {
                 if (d.oldMaterial.includes('Eternit')) {
                     laborHours += numericAmount * 0.5;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * 100) * dbSettings.material_markup;
-                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdig bygning/tag`);
+                    let eternitDisposal = indexCat['Miljøtillæg: Eternit nedrivning (pr m2)'] || 100;
+                    if (!userSuppliesMaterials) materialCost += (numericAmount * eternitDisposal); // INGEN MARKUP på miljødeponi
+                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdig bygning/tag (Uden avance)`);
                 } else if (d.oldMaterial.includes('Mursten') || d.oldMaterial.includes('Beton')) {
                     laborHours += numericAmount * 1.0;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * 200) * dbSettings.material_markup;
-                    bArr.push(`Tillæg: Tung nedrivning af bygning i mursten/beton inkl. byggeaffald/container`);
+                    let tungDisposal = indexCat['Tillæg: Tung nedrivning Mursten/Beton (pr m2)'] || 200;
+                    if (!userSuppliesMaterials) materialCost += (numericAmount * tungDisposal); // INGEN MARKUP på container/deponi
+                    bArr.push(`Tillæg: Tung nedrivning af bygning i mursten/beton inkl. byggeaffald/container (Uden avance)`);
                 }
             }
 
@@ -886,7 +883,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Fuld isolering og beklædning indvendigt medregnet`);
             } else if (d.annexType === 'Fuldt beboeligt anneks') {
                 laborHours += initialInstallHours * 1.2;
-                let beboPris = indexCat['Tillæg: Fuldt beboeligt/BR18 (pr m2)'] || 4000;
+                let beboPris = indexCat['Tillæg: Fuldt beboeligt/BR18 (pr m2)'] || 3500;
                 if (!userSuppliesMaterials) materialCost += (numericAmount * beboPris) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Opgaven udregnet som fuldt beboeligt (Krav til isolering iht. bygningsreglementet, ekstra finish)`);
             }
@@ -896,16 +893,23 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 if (!userSuppliesMaterials) materialCost += (numericAmount * sadelPris) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Sadel tag med rejsning i stedet for simpelt fladt tag`);
             }
+            
+            // SOP #2: Spild (afskær) og Montagematerialer
+            // Tømreren har altid afskær på facadebrædder, reglar, mv. + skruer, fuge, beslag.
+            if (!userSuppliesMaterials) {
+                let baseMatPrice = indexCat[d.material] || 500;
+                let spildM2 = numericAmount * 0.10; 
+                materialCost += (spildM2 * baseMatPrice) * dbSettings.material_markup;
+                bArr.push(`Standard tillæg: Forventet materialespild (+10%) samt montagematerialer (skruer, beslag, fuge)`);
+            }
         }
 
         if (cat === 'carport') {
-            if (d.access && d.access.startsWith('Nej')) {
-                laborHours += 10;
-                bArr.push(`Tillæg: Forøget tidsforbrug til stolpehuller pga. manglende maskin-adgang (manuel gravning)`);
-            }
             if (d.roofType && d.roofType.includes('Sadel tag')) {
                 laborHours += initialInstallHours * 0.4;
-                let carportSadelPris = d.carportType && d.carportType.includes('Dobbelt') ? 15000 : 8000;
+                let carportSadelPris = d.carportType && d.carportType.includes('Dobbelt') ? 
+                    (indexCat['Tillæg: Sadel tag dobbelt (fast pris)'] || 15000) : 
+                    (indexCat['Tillæg: Sadel tag enkelt (fast pris)'] || 8000);
                 if (!userSuppliesMaterials) materialCost += (numericAmount * carportSadelPris) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Sadel tag med rejsning i stedet for simpelt fladt tag`);
             }
@@ -915,12 +919,14 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 // ud fra en standard-størrelse på ca. 25 m². Asbest var tidligere kraftigt undervurderet.
                 if (d.oldMaterial.includes('Eternit')) {
                     laborHours += numericAmount * 8.0;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * 8000) * dbSettings.material_markup;
-                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdig carport/tag`);
+                    let eternitPris = indexCat['Miljøtillæg: Eternit nedrivning (fast pris)'] || 8000;
+                    if (!userSuppliesMaterials) materialCost += (numericAmount * eternitPris); // INGEN MARKUP på miljødeponi
+                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdig carport/tag (Uden avance)`);
                 } else if (d.oldMaterial.includes('Mursten') || d.oldMaterial.includes('Beton')) {
                     laborHours += numericAmount * 8.0;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * 2500) * dbSettings.material_markup;
-                    bArr.push(`Tillæg: Tung nedrivning af carport i mursten/beton inkl. byggeaffald/container`);
+                    let tungPris = indexCat['Tillæg: Tung nedrivning Mursten/Beton (fast pris)'] || 2500;
+                    if (!userSuppliesMaterials) materialCost += (numericAmount * tungPris); // INGEN MARKUP på container/deponi
+                    bArr.push(`Tillæg: Tung nedrivning af carport i mursten/beton inkl. byggeaffald/container (Uden avance)`);
                 } else if (d.oldMaterial.includes('Stål') || d.oldMaterial.includes('Alu')) {
                     laborHours += numericAmount * 2.0;
                     bArr.push(`Tillæg: Nedrivning og afskaffelse af stål/alu carport`);
@@ -944,14 +950,23 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 if (!userSuppliesMaterials) materialCost += (numericAmount * isoleretSkurPris) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Indbygget isoleret redskabsskur`);
             }
+            
+            // SOP #2: Spild (afskær) og Montagematerialer for carport
+            if (!userSuppliesMaterials) {
+                let baseMatPrice = indexCat[d.material] || 500;
+                let spildStyk = numericAmount * 0.10; // 10% tillæg af basismaterialerne
+                materialCost += (spildStyk * baseMatPrice) * dbSettings.material_markup;
+                bArr.push(`Standard tillæg: Forventet materialespild (+10%) samt montagematerialer (skruer, beslag, stolpesko)`);
+            }
         }
 
         if (cat === 'fence') {
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldMaterial) {
                 if (d.oldMaterial.includes('Hæk') || d.oldMaterial.includes('Levende')) {
                     laborHours += numericAmount * 0.5;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * 50) * dbSettings.material_markup;
-                    bArr.push(`Tillæg: Fældning, rodfræsning/opgravning af hæk inkl. deponi og maskinleje`);
+                    let rodPris = indexCat['Miljøtillæg: Rodfræsning/deponi af hæk (pr m)'] || 50;
+                    if (!userSuppliesMaterials) materialCost += (numericAmount * rodPris); // INGEN MARKUP på miljødeponi/maskinleje
+                    bArr.push(`Tillæg: Fældning, rodfræsning/opgravning af hæk inkl. deponi og maskinleje (Uden avance)`);
                 } else if (d.oldMaterial.includes('raftehegn') || d.oldMaterial.includes('Stammer')) {
                     laborHours += numericAmount * 0.2;
                     bArr.push(`Tillæg: Tung opgravning af gl. raftehegn/stammer`);
@@ -963,6 +978,28 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 let ekstraHøjdePris = indexCat['Tillæg: Ekstra højde >1,8m (pr m)'] || 200;
                 if (!userSuppliesMaterials) materialCost += (numericAmount * ekstraHøjdePris) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Ekstra højde på hegn (kræver dybere huller og mere materiale)`);
+            }
+
+            // SOP #7: Skalering og arbejdsbyrde baseret på stil
+            if (d.material) {
+                if (d.material.includes('Listehegn')) {
+                    laborHours += numericAmount * 0.4; // 1.2 timer/m total
+                    bArr.push(`Tillæg: Øget tidsforbrug til opskruning af hundredvis af enkelte trælister`);
+                } else if (d.material.includes('Lamelhegn')) {
+                    laborHours -= numericAmount * 0.4; // 0.4 timer/m total
+                    bArr.push(`Besparelse: Hurtigere montage af præfabrikerede hegnselementer`);
+                } else if (d.material.includes('Raftehegn')) {
+                    laborHours += numericAmount * 0.2; // 1.0 timer/m total
+                    bArr.push(`Tillæg: Øget tidsforbrug pga. tung og mere omstændig håndtering af rafter`);
+                }
+            }
+            
+            // SOP #2: Spild (afskær) og Montagematerialer for hegn
+            if (!userSuppliesMaterials) {
+                let baseMatPrice = indexCat[d.material] || 500;
+                let spildM = numericAmount * 0.10; // 10% tillæg af basismaterialerne
+                materialCost += (spildM * baseMatPrice) * dbSettings.material_markup;
+                bArr.push(`Standard tillæg: Forventet materialespild (+10%) samt montagematerialer (skruer, stolpebeton, beslag)`);
             }
         }
         

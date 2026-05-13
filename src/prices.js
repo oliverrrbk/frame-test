@@ -106,9 +106,10 @@ export const MATERIAL_INDEX = {
         'Gerigter (sæt)': 300
     },
     terrace: {
-        'Trykimprægneret fyr': 220,                   // Standard trykimp. brædder 180-280
-        'Hardwood / Hårdttræ': 850,                   // Cumaru/Ipé 700-1100
-        'Komposit (vedligeholdelsesfrit biomateriale)': 950,
+        'Trykimprægneret': 220,                       // Standard trykimp. brædder 180-280
+        'Thermowood': 600,
+        'Cedertræ / Hardwood': 850,                   // Cumaru/Ipé 700-1100
+        'Komposit': 950,
         'Default': 400,
         // Tillæg terrasse
         'Tagterrasse plastfødder (pr m2 overslag)': 90,
@@ -144,8 +145,9 @@ export const MATERIAL_INDEX = {
     facades: {
         'Trykimprægneret': 280,
         'Superwood': 500,                             // Superwood 400-600
-        'Cedertræ / Hardwood': 900,
         'Thermowood': 600,
+        'Cedertræ / Hardwood': 900,
+        'Komposit': 800,
         'Default': 450,
         // Tillæg facader
         'Efterisolering (50-100mm)': 100,
@@ -164,27 +166,40 @@ export const MATERIAL_INDEX = {
         'Default': 18000
     },
     annex: {
-        'Trykimprægneret fyr': 2500,                  // Basis-skur materialer
-        'Eksklusivt træ (Cedertræ/Hardwood)': 5000,
-        'Vedligeholdelsesfrit (Komposit)': 4000,
+        'Trykimprægneret': 2500,                  // Basis-skur materialer
+        'Superwood': 3500,
+        'Thermowood': 4000,
+        'Cedertræ / Hardwood': 5000,
+        'Komposit': 4000,
         'Default': 4000,
         // Tillægspakker — base trykimprægneret indeholder ikke isolering eller fuld beboelig finish
         'Tillæg: Isolering/værksted (pr m2)': 800,    // Isolering + indvendig beklædning (var fallback 1200)
         'Tillæg: Fuldt beboeligt/BR18 (pr m2)': 3500,
         'Tillæg: Sadel tag (pr m2)': 500,
-        'Tillæg: Støbt terrændæk (pr m2)': 1500
+        'Miljøtillæg: Eternit nedrivning (pr m2)': 100,
+        'Tillæg: Tung nedrivning Mursten/Beton (pr m2)': 200
     },
     carport: {
-        'Standard træ (Trykimprægneret)': 18000,      // Trykimp. byggesæt 15-25k
-        'Eksklusivt træ (Cedertræ/Hardwood)': 35000,
-        'Vedligeholdelsesfrit (Stål/Alu)': 35000,
+        'Trykimprægneret': 18000,      // Trykimp. byggesæt 15-25k
+        'Superwood': 22000,
+        'Thermowood': 26000,
+        'Cedertræ / Hardwood': 35000,
+        'Komposit': 30000,
+        'Stål/Alu': 35000,
+        'Tillæg: Sadel tag enkelt (fast pris)': 8000,
+        'Tillæg: Sadel tag dobbelt (fast pris)': 15000,
+        'Miljøtillæg: Eternit nedrivning (fast pris)': 8000,
+        'Tillæg: Tung nedrivning Mursten/Beton (fast pris)': 2500,
         'Default': 25000
     },
     fence: {
         'Klinkehegn (Træ)': 550,
+        'Listehegn (Træ)': 800,        // Moderne listehegn kræver flere materialer og tid
         'Lamelhegn (Træ)': 450,
-        'Raftehegn': 700,
-        'Komposit (Vedligeholdelsesfrit)': 1000,
+        'Raftehegn (Træ)': 700,
+        'Komposithegn': 1000,
+        'Tillæg: Ekstra højde >1,8m (pr m)': 200,
+        'Miljøtillæg: Rodfræsning/deponi af hæk (pr m)': 50,
         'Default': 700
     }
 };

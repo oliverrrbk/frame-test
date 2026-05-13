@@ -172,7 +172,8 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                 windows: 'Nye Vinduer',
                 doors: 'Nye Døre',
                 terrace: 'Ny Terrasse',
-                special: 'Specialopgave'
+                special: 'Specialopgave',
+                extensions: 'Tilbygning'
             };
             const categoryName = categoryMap[updatedProjectData.category] || updatedProjectData.category;
 
@@ -181,32 +182,36 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             let insertedData = null;
 
             if (isUpdate) {
+                // Tjek om leadId er UUID (fra den nye quote_token) eller BIGINT (fra tidligere)
+                const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(leadId);
+
                 // OPDATER EKSISTERENDE LEAD
-                const { data, error } = await supabase
+                const updateQuery = supabase
                     .from('leads')
                     .update({
                         price_estimate: res.priceRange,
                         raw_data: updatedProjectData,
                         updated_at: new Date().toISOString()
-                    })
-                    .eq('id', leadId)
-                    .select()
-                    .single();
+                    });
+                
+                const { error } = await (isUUID ? updateQuery.eq('quote_token', leadId) : updateQuery.eq('id', leadId));
                 
                 if (error) {
-                    console.error("Fejl ved opdatering af lead:", error);
-                    // Hvis opdatering fejler, falder vi tilbage til at oprette et nyt
+                    console.error("Fejl ved opdatering af lead (RLS blokerer muligvis kunde):", error);
+                    // Hvis opdatering fejler (f.eks. pga sikkerhed/RLS), opret et nyt
                     isUpdate = false; 
                 } else {
-                    insertedData = data;
+                    insertedData = { id: leadId };
                 }
             }
 
             if (!isUpdate) {
                 // OPRET LEAD TIDLIGT SOM "Overslag (Afventer)"
-                const { data, error } = await supabase
+                const newLeadToken = crypto.randomUUID();
+                const { error } = await supabase
                     .from('leads')
                     .insert([{
+                        quote_token: newLeadToken,
                         customer_name: customerDetails?.fullName || 'Ukendt',
                         customer_email: customerDetails?.email || 'Ukendt',
                         customer_phone: customerDetails?.phone || '',
@@ -217,13 +222,11 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         raw_data: updatedProjectData,
                         carpenter_id: carpenter?.id || null,
                         status: 'Overslag (Afventer)'
-                    }])
-                    .select()
-                    .single();
+                    }]);
                 
                 if (error) throw error;
-                insertedData = data;
-                leadId = insertedData.id;
+                leadId = newLeadToken;
+                insertedData = { id: newLeadToken };
                 updatedProjectData.leadId = leadId;
             }
 
@@ -269,7 +272,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
         } catch (error) {
             console.error(error);
             import('react-hot-toast').then(toast => {
-                toast.default.error('Der skete en fejl under beregningen. Kontroller din internetforbindelse og prøv igen.');
+                toast.default.error(`Fejl: ${error.message || 'Ukendt fejl under beregning.'}. Prøv igen.`);
             });
             setIsCalculating(false);
         }
