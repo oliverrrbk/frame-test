@@ -68,10 +68,12 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
         setSuccessMsg('');
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
             const response = await fetch('/api/invite-employee', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
                 },
                 body: JSON.stringify({
                     name: inviteData.name,

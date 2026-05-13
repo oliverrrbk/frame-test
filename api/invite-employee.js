@@ -1,17 +1,40 @@
 import { createClient } from '@supabase/supabase-js';
+import { randomBytes } from 'crypto';
+import { applyCors } from './_cors.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-// Ideelt set bruger man SUPABASE_SERVICE_ROLE_KEY her for at omgå RLS, 
-// men hvis vi tillader signUp, kan vi bruge ANON_KEY.
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Genererer et læsevenligt password med ~52 bits entropi (uden forvekslingstegn 0/O/1/l/I)
+function generatePassword() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = randomBytes(10);
+    let out = '';
+    for (let i = 0; i < bytes.length; i++) {
+        out += alphabet[bytes[i] % alphabet.length];
+    }
+    return `BISON-${out}`;
+}
+
 export default async function handler(req, res) {
+    if (applyCors(req, res)) return;
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method not allowed' });
     }
 
     try {
+        // Verificér kalderen før noget som helst andet
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Ikke logget ind.' });
+        }
+        const jwt = authHeader.replace('Bearer ', '');
+        const { data: { user: caller }, error: callerErr } = await supabase.auth.getUser(jwt);
+        if (callerErr || !caller) {
+            return res.status(401).json({ error: 'Ugyldig session.' });
+        }
+
         const { name, email, phone, role, companyId, adminId } = req.body;
 
         if (!['sales', 'admin', 'accountant'].includes(role)) {
@@ -22,9 +45,21 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Mangler påkrævede felter.' });
         }
 
-        // Generer en læsevenlig engangskode
-        const randomNumbers = Math.floor(1000 + Math.random() * 9000);
-        const finalPassword = `BISON-${randomNumbers}`;
+        // Verificér at kalderen er admin i det firma der inviteres til
+        const { data: callerProfile, error: profileErr } = await supabase
+            .from('carpenters')
+            .select('id, role, company_id')
+            .eq('id', caller.id)
+            .single();
+        if (profileErr || !callerProfile) {
+            return res.status(403).json({ error: 'Profil ikke fundet.' });
+        }
+        const callerCompanyId = callerProfile.company_id || callerProfile.id; // ejeren har company_id = sit eget id eller null
+        if (callerCompanyId !== companyId || (callerProfile.role !== 'admin' && callerProfile.id !== companyId)) {
+            return res.status(403).json({ error: 'Du har ikke rettigheder til at invitere her.' });
+        }
+
+        const finalPassword = generatePassword();
 
         // 1. Opret brugeren i Supabase Auth
         // Bemærk: Hvis vi bruger admin.createUser, kræver det Service Role Key.

@@ -1,14 +1,28 @@
 import { OpenAI } from 'openai';
-import dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
+import { applyCors } from './_cors.js';
+import { rateLimit } from './_ratelimit.js';
+
+// dotenv kun nødvendigt lokalt; i Vercel-produktion er env'erne allerede injected
+if (!process.env.VERCEL) {
+    const dotenv = await import('dotenv');
+    dotenv.config({ path: '.env.local' });
+}
 
 export const maxDuration = 60; // Tillad op til 60 sekunders eksekveringstid
 
 const MAX_MESSAGES = 30; // Max 30 beskeder for at forhindre misbrug og limitere token-forbrug
 
 export default async function handler(req, res) {
+    if (applyCors(req, res)) return;
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    // Rate limit: max 60 chat-requests pr. IP pr. time (≈ 2 fulde samtaler)
+    const rl = await rateLimit(req, { limit: 60, windowSec: 3600, suffix: 'chat' });
+    if (!rl.ok) {
+        if (rl.retryAfter) res.setHeader('Retry-After', String(rl.retryAfter));
+        return res.status(429).json({ error: 'For mange forespørgsler. Prøv igen om lidt.' });
     }
 
     try {

@@ -52,8 +52,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     const cat = projectData.category;
     const d = projectData.details;
 
-    // Sanity defaults så manglende DB-værdier ikke producerer NaN gennem hele pris-beregningen
-    dbSettings = {
+    // Sanity defaults så manglende DB-værdier ikke producerer NaN gennem hele pris-beregningen.
+    // Vigtigt: vi må IKKE bruge spread direkte, fordi en NULL-værdi i DB ellers overskriver fallback'en
+    // og hele pris-beregningen ender med NaN.
+    const SETTINGS_DEFAULTS = {
         hourly_rate: 550,
         material_markup: 1.15,
         container_disposal_fee: 2500,
@@ -61,9 +63,25 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         risk_margin: 1.25,
         driving_calc_method: 'fast',
         vehicle_cost_per_km: 3.8,
-        crew_size: 2,
-        ...(dbSettings || {})
+        crew_size: 2
     };
+    const incoming = dbSettings || {};
+    const merged = { ...SETTINGS_DEFAULTS };
+    for (const key of Object.keys(SETTINGS_DEFAULTS)) {
+        const v = incoming[key];
+        if (typeof SETTINGS_DEFAULTS[key] === 'number') {
+            if (typeof v === 'number' && Number.isFinite(v)) merged[key] = v;
+        } else if (v !== null && v !== undefined && v !== '') {
+            merged[key] = v;
+        }
+    }
+    // Bevar evt. ekstra felter fra DB (som ikke har en default), men kun hvis de ikke er null
+    for (const key of Object.keys(incoming)) {
+        if (!(key in SETTINGS_DEFAULTS) && incoming[key] !== null && incoming[key] !== undefined) {
+            merged[key] = incoming[key];
+        }
+    }
+    dbSettings = merged;
 
     let laborHours = 0;
     let materialCost = 0;

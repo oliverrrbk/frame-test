@@ -24,10 +24,11 @@ dist-ssr
 *.sw?
 
 .env
+.env.*
+!.env.example
 
 # Supabase
 supabase/.env*
 
 .vercel
 supabase/.temp
-.env*.local

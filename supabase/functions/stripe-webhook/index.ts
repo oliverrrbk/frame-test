@@ -29,11 +29,26 @@ serve(async (req) => {
       STRIPE_WEBHOOK_SECRET
     );
 
-    console.log("Modtog Stripe Webhook event:", event.type);
+    console.log("Modtog Stripe Webhook event:", event.type, event.id);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Idempotens: Stripe retry'er events. Hvis vi allerede har behandlet dette event_id,
+    // returnerer vi 200 og dropper. Kræver tabellen 'stripe_events' (id text primary key).
+    const { error: dupErr } = await supabaseClient
+        .from('stripe_events')
+        .insert({ id: event.id, type: event.type })
+    if (dupErr) {
+        // Postgres unique violation = vi har set eventet før → drop stille
+        if (dupErr.code === '23505') {
+            console.log(`Event ${event.id} allerede behandlet, springer over.`);
+            return new Response(JSON.stringify({ success: true, duplicate: true }), { status: 200 })
+        }
+        // Anden fejl (fx tabel mangler): log men fortsæt så vi ikke blokerer Stripe
+        console.warn('Kunne ikke registrere event_id (tjek at stripe_events tabellen findes):', dupErr.message)
+    }
 
     let customerId = '';
 

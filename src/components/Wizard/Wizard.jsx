@@ -71,7 +71,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             setIsDbLoading(false);
         };
         fetchDb();
-    }, []);
+    }, [carpenter?.id]);
     
     // Extracted state corresponding to old `projectData`
     const [projectData, setProjectData] = useState({
