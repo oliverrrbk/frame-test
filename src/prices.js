@@ -46,6 +46,7 @@ export const MATERIAL_INDEX = {
         'Miljødeponi asbest (pr m2)': 150,
         'Bortskaffelse af stråtag (ekstra volumen pr m2)': 200,
         'Efterisolering af tag (pr m2)': 120,
+        'Gavlbeklædning i træ (pr m2 gavl)': 500,
         'Montagematerialer (Skruer, fugleklodser, rygning) pr m2': 75,
         'Kvist (Inddækning og montering pr stk)': 12000
     },
@@ -229,6 +230,7 @@ export const WORK_FORMULAS = {
         eavesHoursPerMeter: 0.4,   // Tidligere "eavesHours: 0.5" pr m² → nu pr løbende meter
         guttersHoursPerMeter: 0.35, // Tidligere "guttersHours: 0.4" pr m² → nu pr løbende meter
         chimneyHours: 6.0, // Fast tid til skorstensinddækning
+        gableHours: 0.8, // Timer pr m2 gavlbeklædning
         extensionHours: 15.0, // Timer pr kvist/tilbygning
         insulationHours: 0.4, // Timer pr m2 efterisolering
         trailerAccessHours: 0.15, // Ekstra bæretid pr m2 ved utilgængelig container

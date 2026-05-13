@@ -19,7 +19,9 @@ export const QUESTIONS = {
         { id: 'amount', type: 'number', label: 'Hvor stort er grundplanet af huset cirka i m2?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl. Tømreren dobbelttjekker altid de faktiske forhold ved en besigtigelse.' },
         { id: 'floors', type: 'select', label: 'Hvor mange plan/etager er huset?', options: ['1-plan (Stueplan)', '1½-plan / 2-plan / Mere'] },
         { id: 'roofPitch', type: 'select', label: 'Hvordan er hældningen på taget?', tooltip: 'Høj rejsning betyder at taget har en stejl vinkel, ofte over 15 grader (typisk huse med loftrum). Fladt tag har kun en svag hældning for at lede vandet væk.', options: ['Fladt tag / Meget lav hældning', 'Høj rejsning / Normal hældning'] },
-        { id: 'houseAge', type: 'number', label: 'Hvor gammelt er huset ca. (årstal)?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl.' },
+        { id: 'houseAge', type: 'number', label: 'Hvilket år er huset bygget (årstal)?', tooltip: 'Indtast byggeåret, fx 1970. Det hjælper tømreren med at forudsige byggestil og konstruktion.' },
+        { id: 'roofType', type: 'select', label: 'Hvilken type tag er det?', condition: { field: 'roofPitch', value: 'Høj rejsning / Normal hældning' }, options: ['Saddeltag (Almindeligt tag med 2 gavle)', 'Valmtag (Tag med fald på alle 4 sider - ingen gavle)'] },
+        { id: 'gables', type: 'select', label: 'Skal gavlene beklædes med nyt træ/facadebeklædning?', condition: { field: 'roofType', value: 'Saddeltag (Almindeligt tag med 2 gavle)' }, options: ['Ja, skift beklædningen på begge gavle', 'Nej, de er murede / skal ikke skiftes'] },
         
         { id: 'disposal', type: 'select', label: 'Skal det gamle tag afmonteres og afskaffes?', options: ['Ja', 'Nej, lægges ovenpå / ikke relevant'] },
         { 
@@ -43,14 +45,11 @@ export const QUESTIONS = {
             ] 
         },
         
-        { id: 'leveling', type: 'select', label: 'Spæropretning: Skal det gamle spærlag rettes op i vater, før det nye tag lægges?', tooltip: 'Hvis det gamle træskelet (spærene) under taget buer eller er skævt, skal tømreren montere nye brædder (påforing) på siden af dem, så det nye tag kommer til at ligge helt plant.', condition: { field: 'roofPitch', value: 'Høj rejsning / Normal hældning' }, options: ['Ja, det buer / er skævt (Påforing kræves)', 'Nej, det er snorlige / nybyg'] },
-        { id: 'underroof', type: 'select', label: 'Undertag: Skal der monteres nyt undertag (dug/plader)?', tooltip: 'Et undertag er en beskyttende dug eller tynd plade, der ligger usynligt under selve tagbelægningen og beskytter loftet mod fygesne og kondensvand.', condition: { field: 'roofPitch', value: 'Høj rejsning / Normal hældning' }, options: ['Ja', 'Nej, lægges uden / Ikke relevant for valgt tag'] },
-        { id: 'insulation', type: 'select', label: 'Skal der efterisoleres udefra, mens taget er af?', options: ['Ja (fx 50-100mm ekstra)', 'Nej'] },
+        { id: 'insulation', type: 'select', label: 'Skal der efterisoleres udefra, mens taget er af?', tooltip: 'Som standard regner vi med ca. 200mm ekstra isolering for at leve op til moderne varmekrav.', options: ['Ja (200mm efterisolering)', 'Nej'] },
         
         { id: 'eaves', type: 'select', label: 'Træværk: Skal stern og udhæng (underbeklædning) skiftes ud med nyt?', options: ['Ja, alt træværk langs kanten skiftes', 'Nej, vi beholder det gamle'] },
-        { id: 'gutters', type: 'select', label: 'Tagrender: Skal der monteres nye tagrender og nedløb?', options: ['Ja (fx Zink/Plast)', 'Nej'] },
-        { id: 'chimney', type: 'select', label: 'Inddækning: Er der skorsten eller udluftningshætter, der kræver ny inddækning (bly/zink)?', options: ['Ja', 'Nej'] },
-        { id: 'chimneyAmount', type: 'number', label: 'Hvor mange skorstene / hætter drejer det sig om?', condition: { field: 'chimney', value: 'Ja' } },
+        { id: 'chimney', type: 'select', label: 'Inddækning: Er der en eller flere skorstene, der kræver ny inddækning (bly/zink)?', options: ['Ja', 'Nej'] },
+        { id: 'chimneyAmount', type: 'number', label: 'Hvor mange skorstene drejer det sig om?', condition: { field: 'chimney', value: 'Ja' } },
 
         { id: 'extensions', type: 'select', label: 'Er der nogen kviste (fremspring på taget) eller specielle tilbygninger?', options: ['Ja', 'Nej'] },
         { id: 'extensionsAmount', type: 'number', label: 'Hvor mange kviste/tilbygninger er der på taget?', condition: { field: 'extensions', value: 'Ja' } },

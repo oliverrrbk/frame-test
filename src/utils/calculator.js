@@ -324,10 +324,14 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         // Brug initialInstallHours i stedet for laborHours for ikke at compound oven på
         // alle øvrige tag-tillæg (asbest, stillads, undertag, tagrender, kviste osv.)
         if (cat === 'roof' && d.houseAge) {
-            const age = parseInt(d.houseAge);
-            if (age && age < 1960) {
-                laborHours += initialInstallHours * (dbSettings.risk_margin - 1);
-                bArr.push(`Risikoramme (+${(dbSettings.risk_margin * 100 - 100).toFixed(0)}% tid på basis-monteringen) lagt til pga. husets alder (${age}) – ældre huse har ofte skjulte konstruktionsproblemer`);
+            const buildYear = parseInt(d.houseAge);
+            if (!isNaN(buildYear) && buildYear > 1000) {
+                const currentYear = new Date().getFullYear();
+                const age = Math.max(0, currentYear - buildYear);
+                if (age > 40) {
+                    laborHours += initialInstallHours * (dbSettings.risk_margin - 1);
+                    bArr.push(`Risikoramme (+${(dbSettings.risk_margin * 100 - 100).toFixed(0)}% tid på basis-monteringen) lagt til pga. husets alder (ca. ${age} år gammelt) – ældre huse har ofte skjulte konstruktionsproblemer`);
+                }
             }
         }
 
@@ -579,16 +583,17 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 }
             }
             
-            if (d.leveling && d.leveling.startsWith('Ja')) {
+            // Obligatorisk spæropretning og undertag for skrå tage
+            if (d.roofPitch === 'Høj rejsning / Normal hældning') {
                 laborHours += numericAmount * (formula.levelingHours || 0.6);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Opretning af spær (Påforing)'] || 80) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Påforing og præcis opretning af eksisterende spærlag`);
-            }
-            if (d.underroof && d.underroof.startsWith('Ja')) {
                 laborHours += numericAmount * (formula.underroofHours || 0.3);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Undertag (dug)'] || 120) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Levering og montering af nyt undertag`);
+                if (!userSuppliesMaterials) {
+                    materialCost += numericAmount * (indexCat['Opretning af spær (Påforing)'] || 80) * dbSettings.material_markup;
+                    materialCost += numericAmount * (indexCat['Undertag (dug)'] || 120) * dbSettings.material_markup;
+                }
+                bArr.push(`Standard: Påforing/opretning af eksisterende spærlag samt montering af nyt undertag er obligatorisk inkluderet.`);
             }
+
             if (d.eaves && d.eaves.startsWith('Ja')) {
                 // Stern måles i løbende meter (hele tagomkredsen), ikke m² roof
                 laborHours += estimatedSternMeters * (formula.eavesHoursPerMeter || 0.4);
@@ -596,12 +601,23 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Udskiftning af stern/udhæng (estimeret ${estimatedSternMeters} løbende meter omkreds)`);
             }
 
-            if (d.gutters && d.gutters.startsWith('Ja')) {
-                // Tagrender sidder på de to langside-eaves, halvdelen af omkredsen
-                laborHours += estimatedGutterMeters * (formula.guttersHoursPerMeter || 0.35);
-                if (!userSuppliesMaterials) materialCost += estimatedGutterMeters * (indexCat['Tagrender og nedløb (pr løbende meter)'] || 250) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Nye tagrender og nedløbsrør (estimeret ${estimatedGutterMeters} løbende meter)`);
+            // Gavlsider (Træbeklædning)
+            if (d.roofType === 'Saddeltag (Almindeligt tag med 2 gavle)' && d.gables && d.gables.startsWith('Ja')) {
+                // Et skønnet gavlareal. En simpel tommelfingerregel: gavltrekant areal = ca. 15% af grundplanet samlet for 2 gavle.
+                const estimatedGableArea = roofGrundplanM2 * 0.15; 
+                laborHours += estimatedGableArea * (formula.gableHours || 0.8);
+                if (!userSuppliesMaterials) {
+                    materialCost += estimatedGableArea * (indexCat['Gavlbeklædning i træ (pr m2 gavl)'] || 500) * dbSettings.material_markup;
+                }
+                bArr.push(`Tillæg: Udskiftning af træ-/facadebeklædning på 2 gavltrekanter (estimeret ${estimatedGableArea.toFixed(1)} m2).`);
             }
+
+            // Obligatoriske tagrender for alle tagudskiftninger
+            laborHours += estimatedGutterMeters * (formula.guttersHoursPerMeter || 0.35);
+            if (!userSuppliesMaterials) {
+                materialCost += estimatedGutterMeters * (indexCat['Tagrender og nedløb (pr løbende meter)'] || 250) * dbSettings.material_markup;
+            }
+            bArr.push(`Standard: Udskiftning til nye tagrender og nedløbsrør er inkluderet (estimeret ${estimatedGutterMeters} løbende meter).`);
             if (d.chimney && d.chimney.startsWith('Ja')) {
                 const chimneyCount = parseInt(d.chimneyAmount) || 1;
                 laborHours += chimneyCount * (formula.chimneyHours || 6.0);
@@ -612,7 +628,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (d.insulation && d.insulation.startsWith('Ja')) {
                 laborHours += numericAmount * (formula.insulationHours || 0.4);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Efterisolering af tag (pr m2)'] || 120) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Arbejdstid og eventuelle materialer til efterisolering af taget (50-100mm)`);
+                bArr.push(`Tillæg: Arbejdstid og eventuelle materialer til 200mm efterisolering af taget`);
             }
             if (d.extensions === 'Ja') {
                 const extAmount = parseInt(d.extensionsAmount) || 1;
