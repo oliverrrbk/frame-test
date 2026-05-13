@@ -180,27 +180,57 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
         <section className="wizard-step active" style={{ maxWidth: '800px', margin: '0 auto' }}>
             <div className="result-card" style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '16px' }}>
-                        Dit vejledende overslag er klar!
-                    </h2>
-                    <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
-                        Du kan trygt bruge dette overslag til at sammenligne markedet. Vi tror på fuld gennemsigtighed fra start.
-                    </p>
+                    {['special', 'extensions'].includes(projectData.category) ? (
+                        <>
+                            <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                                Vi har forstået din opgave!
+                            </h2>
+                            <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
+                                Du har nu givet os et utrolig stærkt udgangspunkt for at hjælpe dig videre med projektet.
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                                Dit vejledende overslag er klar!
+                            </h2>
+                            <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
+                                Du kan trygt bruge dette overslag til at sammenligne markedet. Vi tror på fuld gennemsigtighed fra start.
+                            </p>
+                        </>
+                    )}
                 </div>
                 
-                <div style={{ 
-                    background: '#f8fafc', 
-                    border: '2px solid #e2e8f0',
-                    borderRadius: 'var(--radius-xl)', 
-                    padding: '40px', 
-                    color: 'var(--text-primary)', 
-                    textAlign: 'center', 
-                    marginBottom: '32px'
-                }}>
-                    <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Forventet prisramme</span>
-                    <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: 'var(--text-primary)' }}>{priceRange}</h1>
-                    <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Dette er et stærkt vejledende overslag inkl. moms. Vores erfaring er, at det endelige, bindende tilbud fra tømreren oftest lander lidt lavere – men med denne pris har du et realistisk udgangspunkt.</p>
-                </div>
+                {['special', 'extensions'].includes(projectData.category) ? (
+                    <div style={{ 
+                        background: '#f8fafc', 
+                        border: '2px solid #e2e8f0',
+                        borderRadius: 'var(--radius-xl)', 
+                        padding: '40px', 
+                        color: 'var(--text-primary)', 
+                        textAlign: 'center', 
+                        marginBottom: '32px'
+                    }}>
+                        <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Komplekst Projekt</span>
+                        <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: 'var(--text-primary)' }}>Kræver fysisk besigtigelse</h1>
+                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}>At bygge en tilbygning (eller en stor specialopgave) er et fantastisk projekt. Fordi den endelige pris afhænger stærkt af jordbundsforhold, ingeniørberegninger og eksisterende konstruktioner, er det ikke muligt at give et retvisende overslag gennem en beregner.</p>
+                        <p style={{ fontSize: '1.05rem', marginTop: '16px', color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}><strong>Men dit forarbejde er guld værd!</strong> Vi har nu de helt rigtige forudsætninger for at forstå din drøm. Send opgaven ind til os nedenfor, så ringer vi dig op og aftaler et møde.</p>
+                    </div>
+                ) : (
+                    <div style={{ 
+                        background: '#f8fafc', 
+                        border: '2px solid #e2e8f0',
+                        borderRadius: 'var(--radius-xl)', 
+                        padding: '40px', 
+                        color: 'var(--text-primary)', 
+                        textAlign: 'center', 
+                        marginBottom: '32px'
+                    }}>
+                        <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Forventet prisramme</span>
+                        <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: 'var(--text-primary)' }}>{priceRange}</h1>
+                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Dette er et stærkt vejledende overslag inkl. moms. Vores erfaring er, at det endelige, bindende tilbud fra tømreren oftest lander lidt lavere – men med denne pris har du et realistisk udgangspunkt.</p>
+                    </div>
+                )}
 
                 <div style={{ 
                     background: 'var(--bg-card)', 
@@ -273,8 +303,17 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     alignItems: 'flex-start'
                 }}>
                     <div>
-                        <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Er du klar til at vælge {carpenter?.company_name || 'os'}?</strong>
-                        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Overslaget er allerede sendt til din mail, så du kan tænke over det. Hvis du går videre herfra, bekræfter du, at vi skal udføre opgaven for dig. Vi kommer ud og kigger på detaljerne, så vi sammen kan låse den endelige pris og lave en fast aftale.</p>
+                        {['special', 'extensions'].includes(projectData.category) ? (
+                            <>
+                                <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Få besøg af {carpenter?.company_name || 'os'}</strong>
+                                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Hvis du går videre herfra, sender du blot opgaven til os. Vi kvitterer med en mail og ringer dig op for at aftale et uforpligtende tidspunkt, hvor vi kan komme ud og se på projektet i virkeligheden.</p>
+                            </>
+                        ) : (
+                            <>
+                                <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Er du klar til at vælge {carpenter?.company_name || 'os'}?</strong>
+                                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Overslaget er allerede sendt til din mail, så du kan tænke over det. Hvis du går videre herfra, bekræfter du, at vi skal udføre opgaven for dig. Vi kommer ud og kigger på detaljerne, så vi sammen kan låse den endelige pris og lave en fast aftale.</p>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -305,7 +344,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                             }, 100);
                         }}
                     >
-                        Vælg {carpenter?.company_name || 'os'} til at udføre opgaven
+                        {['special', 'extensions'].includes(projectData.category) ? 'Send oplysninger og bliv ringet op' : `Vælg ${carpenter?.company_name || 'os'} til at udføre opgaven`}
                     </button>
                     <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
                         {/* Ret opgaven knappen er flyttet op under opsummeringen */}

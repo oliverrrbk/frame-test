@@ -335,29 +335,19 @@ export const QUESTIONS = {
             ] 
         },
         { id: 'access', type: 'select', label: 'Er der fri adgang for maskiner (gravemaskine/lastbil) helt op til fundamentet?', options: ['Ja, nem adgang', 'Nej, al jord skal graves/køres ud med trillebør'] },
-        { id: 'underfloorHeating', type: 'select', label: 'Skal der etableres vandbåren gulvvarme i tilbygningen?', options: ['Ja', 'Nej'] },
+        { id: 'underfloorHeating', type: 'select', label: 'Skal der etableres gulvvarme i tilbygningen?', options: ['Ja', 'Nej'] },
         { id: 'floors', type: 'select', label: 'Hvor mange etager skal tilbygningen have?', options: ['1-plan', '1½-plan', '2-plan'] },
         { 
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilken udvendig facadebeklædning ønsker du?', 
             options: [
-                { label: 'Træbeklædning', img: '/images/facade_pine_1776270383566.png' },
-                { label: 'Hardwood / Cedertræ', img: '/images/facade_cedar_1776270440422.png' },
-                { label: 'Skalmur / Mursten', img: '/images/facade_brick_1777276085592.png' } 
+                { label: 'Træbeklædning (Fx Gran, Fyr eller Superwood)', img: '/images/facade_pine_1776270383566.png' },
+                { label: 'Eksklusivt træ (Fx Hardwood eller Cedertræ)', img: '/images/facade_cedar_1776270440422.png' }
             ] 
         },
         { id: 'roofType', type: 'select', label: 'Hvilken tagtype skal tilbygningen have?', options: ['Fladt tag med tagpap', 'Tag med hældning (Tegl/Stål/Pap)'] },
-        { 
-            id: 'interiorFinish', 
-            type: 'visual_select', 
-            label: 'Hvor meget af det indvendige arbejde skal vi stå for?', 
-            options: [
-                { label: 'Nøglefærdig (Vi laver gulve, lofter, gips og lister)', img: '/images/interior_finished_1777280081398.png' },
-                { label: 'Råhus (Du står selv for at lukke det indvendigt)', img: '/images/interior_raw_1777280098290.png' }
-            ] 
-        },
-        { id: 'notes', type: 'textarea', label: 'Kort beskrivelse af drømmen om tilbygningen (f.eks. badeværelse, soveværelse, osv.): (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
+        { id: 'notes', type: 'textarea', label: 'Kort beskrivelse af drømmen om tilbygningen (f.eks. badeværelse, soveværelse, osv.):' }
     ],
     annex: [
         { id: 'annexType', type: 'select', label: 'Hvad er det primære formål med byggeriet?', options: ['Uisoleret skur til opbevaring', 'Isoleret skur/værksted', 'Fuldt beboeligt anneks'] },
