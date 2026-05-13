@@ -137,8 +137,9 @@ export const MATERIAL_INDEX = {
         'Forskalling': 50,
         'Dampspærre inkl tape': 35,
         'Isolering (50-100mm)': 75,                   // Rockwool 50-90 kr/m²
-        'Spartelmasse og tape': 30,
-        'Skyggelister / Fuge': 45
+        'Skyggelister / Fuge': 45,
+        'Maler: Spartel, filt og maling (pr m2)': 250,
+        'Maler: Koordineringsgebyr (Fast pris)': 5000
     },
     facades: {
         'Trykimprægneret': 280,

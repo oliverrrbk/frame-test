@@ -267,8 +267,7 @@ export const QUESTIONS = {
     ceilings: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 loft skal der laves cirka?' },
         { id: 'disposal', type: 'select', label: 'Skal nuværende loft afmonteres og afskaffes?', options: ['Ja', 'Nej'] },
-        { id: 'battensAndLeveling', type: 'select', label: 'Underlag: Skal der laves ny forskalling (træskelet), og evt. rettes op i vater?', tooltip: 'Forskalling er et underlag af trælister, som det nye loft skal skrues fast i. Hvis det gamle loft er skævt, retter tømreren listerne op, så det nye loft bliver snorlige.', options: ['Nej, monteres direkte på eksisterende lige underlag', 'Ja, standard forskalling', 'Ja, forskalling inkl. stor opretning (skævt loft)'] },
-        { id: 'vaporAndInsulation', type: 'select', label: 'Dampspærre/Isolering: Ligger loftet op mod et koldt tagrum?', tooltip: 'En dampspærre er et tyndt lag plast, der forhindrer varm, fugtig luft fra boligen i at trænge op i det kolde loft og skabe råd og svamp. Dette er især kritisk i huse fra før 1970.', options: ['Nej', 'Ja, monter kun dampspærre', 'Ja, monter dampspærre og isolering (50-100mm)'] },
+        { id: 'vaporAndInsulation', type: 'select', label: 'Hvad ligger der umiddelbart ovenover det nye loft?', tooltip: 'Hvis der er et koldt loftrum (f.eks. spidsloft), skal der lovmæssigt monteres en dampspærre (en plastdug) under loftet for at forhindre fugtskader i tagkonstruktionen.', options: ['Opvarmet etage (Ingen dampspærre nødvendig)', 'Koldt tagrum (Lovkrav om plast-dampspærre)', 'Koldt tagrum inkl. ny isolering (Dampspærre + Isolering)'] },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -285,22 +284,11 @@ export const QUESTIONS = {
         { 
             id: 'plastering', 
             type: 'select', 
-            label: 'Spartling (for gips/fibergips): Skal loftet spartles og slibes (klar til maler)?', 
+            label: 'Skal vi sørge for en professionel maler til at fuldspartle og male loftet?', 
             condition: (d) => !d.material || ['Gipsloft', 'Fibergipsloft (Fermacel)'].includes(d.material),
-            options: ['Nej, vi står selv for spartling/malerarbejde', 'Ja, tømreren skal fuldspartle og slibe (klar til maling)'] 
-        },
-        { 
-            id: 'mouldings', 
-            type: 'visual_select', 
-            label: 'Afslutning: Hvordan skal kanten mellem loft og væg afsluttes?', 
-            options: [
-                { label: 'Skyggelister (træ)', img: '/images/ceiling_moulding_1777278068690.png' },
-                { label: 'Akrylfuge (malbar)', img: '/images/ceiling_caulk_1777278082407.png' },
-                { label: 'Ingen afslutning / Gør det selv' }
-            ] 
+            options: ['Nej, jeg finder selv en maler / gør det selv', 'Ja, jeg vil gerne have en samlet pris inkl. malerarbejde'] 
         },
         { id: 'ceilingHeight', type: 'select', label: 'Lofthøjde: Er der tale om loft-til-kip eller lofthøjde over 2,5 meter?', options: ['Nej, standard lofthøjde', 'Ja, loft-til-kip eller højere end 2,5m'] },
-        { id: 'spots', type: 'select', label: 'Spots: Skal tømreren bore ud til indbygningsspots i det nye loft?', options: ['Nej, ingen spots overhovedet', 'Ja, der skal bores ud til spots (fx 1 stk. pr 2. m2)'] },
         { id: 'notes', type: 'textarea', label: 'Er der eventuelle bemærkninger i forhold til montering af loftet? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     facades: [

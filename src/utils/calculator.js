@@ -682,45 +682,44 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'ceilings') {
-            if (d.spots === 'Ja, der skal bores ud til spots (fx 1 stk. pr 2. m2)') {
-                let estimatedSpots = Math.floor(numericAmount / 2); 
-                laborHours += estimatedSpots * 0.25; 
-                bArr.push(`Tillæg: Arbejdstid afsat til præcis opmåling og udskæring til ca. ${estimatedSpots} spots`);
-            }
-            
-            if (d.battensAndLeveling && d.battensAndLeveling.startsWith('Ja')) {
-                laborHours += numericAmount * (formula.battenHours || 0.3);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Forskalling'] || 50) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Forskalling (træskelet) til loft`);
-                
-                if (d.battensAndLeveling.includes('opretning')) {
-                    laborHours += numericAmount * (formula.levelingHours || 0.5);
-                    bArr.push(`Tillæg: Stor opretning af skævt loft (ekstra tid)`);
-                }
-            }
+            // SOP: Spots er nu automatisk inkluderet i standardprisen
+            laborHours += numericAmount * 0.1;
+            bArr.push(`Standard: Udskæring og tilpasning til spots og lampesteder er medregnet i tidsforbruget`);
 
-            if (d.vaporAndInsulation && d.vaporAndInsulation.startsWith('Ja')) {
+            // SOP: Forskalling er nu altid obligatorisk (inkluderer standard opretning)
+            laborHours += numericAmount * (formula.battenHours || 0.3);
+            if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Forskalling'] || 50) * dbSettings.material_markup;
+            bArr.push(`Standard: Forskalling (træskelet) til underlag for det nye loft`);
+
+            if (d.vaporAndInsulation && d.vaporAndInsulation.includes('dampspærre')) {
                 laborHours += numericAmount * (formula.vaporBarrierHours || 0.2);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Dampspærre inkl tape'] || 35) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Montering af dampspærre`);
+                bArr.push(`Tillæg: Montering af plast-dampspærre mod koldt tagrum`);
 
-                if (d.vaporAndInsulation.includes('isolering')) {
+                if (d.vaporAndInsulation.includes('Isolering')) {
                     laborHours += numericAmount * (formula.insulationHours || 0.2);
                     if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Isolering (50-100mm)'] || 85) * dbSettings.material_markup;
-                    bArr.push(`Tillæg: Montering af isolering (50-100mm)`);
+                    bArr.push(`Tillæg: Montering af ekstra isolering`);
                 }
             }
 
-            if (d.plastering && d.plastering.startsWith('Ja')) {
-                laborHours += numericAmount * (formula.plasteringHours || 0.6);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Spartelmasse og tape'] || 30) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Fuldspartling og armering af gips/fibergips (Klar til maler)`);
+            // SOP: Maler håndteres eksternt, og William tildeles ikke arbejdstimer
+            if (d.plastering && d.plastering.includes('Ja')) {
+                let malerKvmPris = indexCat['Maler: Spartel, filt og maling (pr m2)'] || 250;
+                let malerCoord = indexCat['Maler: Koordineringsgebyr (Fast pris)'] || 5000;
+                
+                if (!userSuppliesMaterials) {
+                    materialCost += (numericAmount * malerKvmPris); // Ingen tømrer-avance på malerens arbejdsløn/materialer
+                    materialCost += malerCoord; 
+                }
+                bArr.push(`Håndværker-tillæg: Komplet spartling, fugning og maling af gipsloft (Udføres af professionel maler - Uden tømrer-avance). Inkl. koordinering (${malerCoord} kr)`);
             }
 
-            if (d.mouldings && d.mouldings !== 'Ingen afslutning / Gør det selv') {
+            // SOP: Automatiseret finish baseret på loftstype
+            if (d.material === 'Træloft (listeloft/paneler/rustikloft)' || d.material === 'Troldtekt (akustikloft)') {
                 laborHours += numericAmount * (formula.mouldingHours || 0.2);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Skyggelister / Fuge'] || 45) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Afslutning mod væg (${d.mouldings})`);
+                bArr.push(`Standard: Opsætning af skyggelister langs vægge (inkl. tid og materiale)`);
             }
             
             if (d.ceilingHeight === 'Ja, loft-til-kip eller højere end 2,5m') {
