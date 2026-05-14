@@ -276,7 +276,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                                                 appUrl, 
                                                 leadId, 
                                                 projectDetailsHtml, 
-                                                res.priceRange, 
+                                                '', 
                                                 'Hurtigst muligt'
                                             ),
                                             fromName: customerDetails.fullName,

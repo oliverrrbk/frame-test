@@ -2293,6 +2293,13 @@ const Dashboard = () => {
                                                             {selectedLead.raw_data?.actual_quote_price ? Math.round(selectedLead.raw_data.actual_quote_price).toLocaleString('da-DK') : '?'} kr. inkl. moms
                                                         </p>
                                                     </>
+                                                ) : selectedLead.project_category === 'extensions' ? (
+                                                    <>
+                                                        <span style={{ fontSize: '0.85rem', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overslag udeladt</span>
+                                                        <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#d97706', fontSize: '1.1rem' }}>
+                                                            Kræver besigtigelse
+                                                        </p>
+                                                    </>
                                                 ) : (
                                                     <>
                                                         <span style={{ fontSize: '0.85rem', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overslag sendt til kunde</span>
@@ -2320,7 +2327,7 @@ const Dashboard = () => {
                                                 
                                                 const renderElements = [];
                                                 
-                                                const renderRow = (label, rawValue, keyInput) => {
+                                                const renderRow = (label, rawValue, keyInput, type) => {
                                                     if (rawValue === undefined || rawValue === null || rawValue === '') return null;
                                                     
                                                     // Hvis det er et Array (F.eks filer/billeder der er gemt som Base64 i Step2Dynamic)
@@ -2359,6 +2366,17 @@ const Dashboard = () => {
                                                     if (displayVal.toLowerCase() === 'yes') displayVal = 'Ja';
                                                     if (displayVal.toLowerCase() === 'no') displayVal = 'Nej';
                                                     
+                                                    if (type === 'textarea') {
+                                                        return (
+                                                            <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#fcfcfc' }}>
+                                                                <strong style={{ color: '#6b7280' }}>{label}</strong>
+                                                                <div style={{ color: '#1a1a1a', fontWeight: '500', wordBreak: 'break-word', whiteSpace: 'pre-wrap', backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', lineHeight: '1.6' }}>
+                                                                    {displayVal}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    
                                                     // Håndter Links og Orddeling
                                                     let finalValElement = <span style={{ color: '#1a1a1a', textAlign: 'right', fontWeight: '500', maxWidth: '55%', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{displayVal}</span>;
                                                     
@@ -2384,7 +2402,7 @@ const Dashboard = () => {
                                                 
                                                 // Gennemløb alle spørgsmålene præcis som i konfigurationen!
                                                 categoryQuestions.forEach(q => {
-                                                    const rowEl = renderRow(q.label, details[q.id], q.id);
+                                                    const rowEl = renderRow(q.label, details[q.id], q.id, q.type);
                                                     if (rowEl) renderElements.push(rowEl);
                                                 });
                                                 
