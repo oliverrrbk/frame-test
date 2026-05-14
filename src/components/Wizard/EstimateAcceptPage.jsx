@@ -114,7 +114,7 @@ const EstimateAcceptPage = () => {
                         .map(([key, value]) => {
                             const question = categoryQuestions.find(q => q.id === key);
                             if (!question || value === undefined || value === null || value === '') return '';
-                            if (question.type === 'textarea' || question.type === 'file') return '';
+                            if (question.type === 'file') return '';
                             
                             let displayValue = value;
                             if (question.type === 'window_configurator' && Array.isArray(value)) {
@@ -126,7 +126,7 @@ const EstimateAcceptPage = () => {
                             return `
                                 <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
                                     <strong style="display: block; color: #0f172a; margin-bottom: 4px;">${question.label}</strong>
-                                    <span style="color: #334155;">${displayValue}</span>
+                                    <span style="color: #334155; white-space: pre-wrap;">${displayValue}</span>
                                 </li>
                             `;
                         })
@@ -275,7 +275,7 @@ const EstimateAcceptPage = () => {
                                 const question = categoryQuestions.find(q => q.id === key);
                                 
                                 if (!question || value === undefined || value === null || value === '') return null;
-                                if (question.type === 'textarea' || question.type === 'file') return null;
+                                if (question.type === 'file') return null;
 
                                 let displayValue = value;
                                 if (question.type === 'window_configurator' && Array.isArray(value)) {
@@ -289,7 +289,7 @@ const EstimateAcceptPage = () => {
                                         <span style={{ color: '#10b981', marginTop: '2px' }}>✓</span>
                                         <div>
                                             <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>{question.label}</strong>
-                                            <span>{displayValue}</span>
+                                            <span style={{ whiteSpace: 'pre-wrap' }}>{displayValue}</span>
                                         </div>
                                     </li>
                                 );
