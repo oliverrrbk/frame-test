@@ -160,7 +160,11 @@ const OnboardingModal = ({ profile, onComplete }) => {
 
                                 <button 
                                     disabled={!accepted}
-                                    onClick={() => setStep(2)}
+                                    onClick={() => {
+                                        // Gem immediately i DB så den aldrig popper op igen hvis brugeren lukker siden
+                                        supabase.from('carpenters').update({ has_completed_onboarding: true }).eq('id', profile.id);
+                                        setStep(2);
+                                    }}
                                     className={`w-full py-3.5 font-semibold rounded-xl transition-all flex justify-center items-center gap-2 mt-2
                                         ${accepted ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-lg' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
                                 >
