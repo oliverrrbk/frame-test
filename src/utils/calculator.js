@@ -143,10 +143,25 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         bArr.push(`AI vurdering: ${laborHours} arbejdstimer`);
         bArr.push(`AI vurdering af materialer: ${rawMat} kr.`);
     } else if (cat === 'extensions') {
-        laborHours = 0;
-        materialCost = 0;
         bArr.push(`Tilbygning/Kompleks opgave: Der foretages ingen automatisk prisudregning.`);
         bArr.push(`Kunden har indsendt en beskrivelse, og afventer kontakt for besigtigelse.`);
+        return {
+            priceRange: "Besigtigelse kræves",
+            breakdownArr: bArr,
+            calcData: {
+                laborHours: 0,
+                drivingHours: 0,
+                hourlyRate: dbSettings.hourly_rate || 500,
+                totalLaborCost: 0,
+                materialCost: 0,
+                drivingCost: 0,
+                hiddenBuffer: 0,
+                strictPrice: 0,
+                calibrationFactor: 1.0,
+                finalEstimateIncVat: 0,
+                finalEstimateExVat: 0
+            }
+        };
     } else if (cat === 'doors') {
         if (d.doorType === 'Blanding') {
             let eAmount = parseInt(d.exteriorAmount) || 0;

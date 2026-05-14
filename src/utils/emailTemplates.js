@@ -184,6 +184,34 @@ export const getCustomerUpdatedEstimateTemplate = (customerName, categoryName, p
     return getBaseTemplate("Dit opdaterede overslag er klar", content, `Her er dit nye vejledende overslag på ${categoryName}`, carpenter);
 };
 
+export const getCustomerComplexProjectTemplate = (customerName, categoryName, carpenter, quoteUrl) => {
+    const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
+    const signatureName = getCarpenterSenderName(carpenter);
+
+    const content = `
+        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Hej ${customerName},</h2>
+        <p style="color: #334155;">Tak for din henvendelse vedrørende dit projekt: <strong>${categoryName}</strong>.</p>
+        <p style="color: #334155;">Da dette er en større og mere kompleks opgave, kan vi ikke give et præcist automatisk estimat. For at sikre, at vi giver dig den absolut bedste pris og løsning, kræver det en professionel besigtigelse.</p>
+        
+        <div style="background-color: #f1f5f9; padding: 24px; border-radius: 8px; margin: 24px 0; border: 1px solid #e2e8f0; text-align: center;">
+            <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 18px;">Hvad sker der nu?</h3>
+            <p style="margin: 0; color: #475569; font-size: 15px; line-height: 1.6;">
+                Vi har modtaget din beskrivelse og vil kigge den igennem. Vi kontakter dig hurtigst muligt for at aftale et tidspunkt, hvor vi kan komme forbi, høre om dine idéer og besigtige forholdene. Derefter vil du modtage et skræddersyet, uforpligtende tilbud.
+            </p>
+        </div>
+        
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${quoteUrl}" style="${buttonStyle}; padding: 16px 32px; font-size: 18px;">Se din opgave</a>
+        </div>
+
+        <p style="color: #334155; margin-bottom: 0;">Vi glæder os til at høre mere om dit projekt!</p>
+        <p style="color: #334155; margin-bottom: 0;">Med venlig hilsen,</p>
+        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
+    `;
+    return getBaseTemplate("Tak for din henvendelse", content, `Vi har modtaget din forespørgsel på ${categoryName}`, carpenter);
+};
+
+
 export const getCarpenterNewRequestTemplate = (carpenterName, customerName, categoryName, customerEmail, customerPhone, appUrl = 'https://app.bisonframe.dk', leadId = null, projectDetailsHtml = '', priceEstimate = '', contactPreference = '') => {
     // Til tømreren selv bruger vi bare standard Bison Frame header
     const content = `

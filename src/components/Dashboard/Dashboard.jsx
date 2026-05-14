@@ -2517,8 +2517,14 @@ const Dashboard = () => {
                                                 </div>
                                             ) : (
                                             <div style={{ marginTop: '24px', padding: '24px', backgroundColor: '#f3f1ed', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                <h3 style={{ margin: '0', color: '#1a1a1a' }}>Tilpas & Send Endeligt Tilbud</h3>
-                                                <p style={{ margin: '0', color: '#6b7280', fontSize: '0.95rem' }}>Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig.</p>
+                                                <h3 style={{ margin: '0', color: '#1a1a1a' }}>
+                                                    {selectedLead.project_category === 'extensions' ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
+                                                </h3>
+                                                <p style={{ margin: '0', color: '#6b7280', fontSize: '0.95rem' }}>
+                                                    {selectedLead.project_category === 'extensions' 
+                                                        ? "Dette er en tilbygning uden auto-estimat. Opbyg tilbuddet fra bunden ved at indtaste dine beregnede timer og materialer, så bygger systemet en professionel PDF-kontrakt." 
+                                                        : "Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig."}
+                                                </p>
                                                 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
                                                     <div className="input-group">
