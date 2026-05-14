@@ -28,8 +28,8 @@ const OnboardingModal = ({ profile, onComplete }) => {
         return () => setMounted(false);
     }, []);
 
-    const handleImageUpload = async (e, type) => {
-        const file = e.target.files[0];
+    const handleImageUpload = async (e, type, droppedFile = null) => {
+        const file = droppedFile || e?.target?.files?.[0];
         if (!file) return;
 
         try {
@@ -191,6 +191,13 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                     {/* Firmalogo */}
                                     <div 
                                         onClick={() => !uploadingImage && logoInputRef.current?.click()}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            if (!uploadingImage && e.dataTransfer.files?.[0]) {
+                                                handleImageUpload(null, 'logo', e.dataTransfer.files[0]);
+                                            }
+                                        }}
                                         className="border-2 border-dashed border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center bg-slate-50 hover:bg-emerald-50 hover:border-emerald-400 cursor-pointer transition-all group relative"
                                     >
                                         <p className="text-sm font-semibold text-slate-700 mb-3 group-hover:text-emerald-700 transition-colors">Firmalogo</p>
@@ -211,13 +218,20 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                             onChange={(e) => handleImageUpload(e, 'logo')}
                                         />
                                         <p className="text-xs text-slate-500 font-medium group-hover:text-emerald-600 transition-colors flex items-center gap-1.5">
-                                            {uploadingImage === 'logo' ? 'Uploader...' : <><Upload size={14} /> Klik for at uploade</>}
+                                            {uploadingImage === 'logo' ? 'Uploader...' : <><Upload size={14} /> Klik eller træk fil her</>}
                                         </p>
                                     </div>
 
                                     {/* Profilbillede */}
                                     <div 
                                         onClick={() => !uploadingImage && ownerInputRef.current?.click()}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            if (!uploadingImage && e.dataTransfer.files?.[0]) {
+                                                handleImageUpload(null, 'owner', e.dataTransfer.files[0]);
+                                            }
+                                        }}
                                         className="border-2 border-dashed border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center bg-slate-50 hover:bg-emerald-50 hover:border-emerald-400 cursor-pointer transition-all group relative"
                                     >
                                         <p className="text-sm font-semibold text-slate-700 mb-3 group-hover:text-emerald-700 transition-colors">Profilbillede (Mester)</p>
@@ -238,7 +252,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                             onChange={(e) => handleImageUpload(e, 'owner')}
                                         />
                                         <p className="text-xs text-slate-500 font-medium group-hover:text-emerald-600 transition-colors flex items-center gap-1.5">
-                                            {uploadingImage === 'owner' ? 'Uploader...' : <><Upload size={14} /> Klik for at uploade</>}
+                                            {uploadingImage === 'owner' ? 'Uploader...' : <><Upload size={14} /> Klik eller træk fil her</>}
                                         </p>
                                     </div>
                                 </div>
