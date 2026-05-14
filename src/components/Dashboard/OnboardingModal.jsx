@@ -36,16 +36,16 @@ const OnboardingModal = ({ profile, onComplete }) => {
             setUploadingImage(type);
             const fileExt = file.name.split('.').pop();
             const fileName = `${profile.id}_${type}_${Math.random()}.${fileExt}`;
-            const filePath = `company_assets/${fileName}`;
+            const filePath = `${fileName}`;
 
             let { error: uploadError } = await supabase.storage
-                .from('assets')
-                .upload(filePath, file);
+                .from('avatars')
+                .upload(filePath, file, { upsert: true });
 
             if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage
-                .from('assets')
+                .from('avatars')
                 .getPublicUrl(filePath);
 
             if (type === 'logo') {
