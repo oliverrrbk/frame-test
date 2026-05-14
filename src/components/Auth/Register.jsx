@@ -316,9 +316,9 @@ const Register = ({ setSession }) => {
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                        <div className="input-group">
-                            <label>Vælg Adgangskode (Min. 6 tegn) *</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', alignItems: 'flex-end' }}>
+                        <div className="input-group" style={{ marginBottom: 0 }}>
+                            <label>Adgangskode (min. 6 tegn) *</label>
                             <div style={{ position: 'relative' }}>
                                 <Lock size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
                                 <input 
@@ -333,8 +333,8 @@ const Register = ({ setSession }) => {
                             </div>
                         </div>
 
-                        <div className="input-group">
-                            <label>Gentag Adgangskode *</label>
+                        <div className="input-group" style={{ marginBottom: 0 }}>
+                            <label>Gentag adgangskode *</label>
                             <div style={{ position: 'relative' }}>
                                 <Lock size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
                                 <input 
