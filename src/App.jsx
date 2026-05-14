@@ -11,6 +11,7 @@ import GetStartedPage from './components/Landing/GetStartedPage';
 import AboutUsPage from './components/Landing/AboutUsPage';
 import Register from './components/Auth/Register';
 import Login from './components/Auth/Login';
+import ResetPassword from './components/Auth/ResetPassword';
 import ConfirmedPage from './components/Auth/ConfirmedPage';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import QuoteAcceptPage from './components/Wizard/QuoteAcceptPage';
@@ -196,6 +197,7 @@ function App() {
             <Route path="/:slug/overslag/:lead_id" element={<EstimateAcceptPage />} />
             <Route path="/:slug/tilbud/:lead_id" element={<QuoteAcceptPage />} />
             <Route path="/bekraeftet" element={<ConfirmedPage />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/register" element={
               session ? (
                 session.user?.email === 'team@bisoncompany.dk' 

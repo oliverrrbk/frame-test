@@ -16,6 +16,7 @@ const Register = ({ setSession }) => {
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [selectedTier, setSelectedTier] = useState('');
     
@@ -54,6 +55,11 @@ const Register = ({ setSession }) => {
     const handleRegister = async (e) => {
         e.preventDefault();
         
+        if (password !== confirmPassword) {
+            setErrorMsg("Adgangskoderne stemmer ikke overens.");
+            return;
+        }
+
         if (!acceptedTerms) {
             setErrorMsg("Du skal acceptere handelsbetingelserne for at oprette din portal.");
             return;
@@ -310,19 +316,37 @@ const Register = ({ setSession }) => {
                         </div>
                     </div>
 
-                    <div className="input-group" style={{ marginTop: '12px' }}>
-                        <label>Vælg Adgangskode (Min. 6 tegn) *</label>
-                        <div style={{ position: 'relative' }}>
-                            <Lock size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
-                            <input 
-                                type="password" 
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                minLength={6}
-                                style={{ paddingLeft: '44px', width: '100%' }}
-                                required 
-                            />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                        <div className="input-group">
+                            <label>Vælg Adgangskode (Min. 6 tegn) *</label>
+                            <div style={{ position: 'relative' }}>
+                                <Lock size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
+                                <input 
+                                    type="password" 
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    minLength={6}
+                                    style={{ paddingLeft: '44px', width: '100%' }}
+                                    required 
+                                />
+                            </div>
+                        </div>
+
+                        <div className="input-group">
+                            <label>Gentag Adgangskode *</label>
+                            <div style={{ position: 'relative' }}>
+                                <Lock size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
+                                <input 
+                                    type="password" 
+                                    placeholder="••••••••"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    minLength={6}
+                                    style={{ paddingLeft: '44px', width: '100%' }}
+                                    required 
+                                />
+                            </div>
                         </div>
                     </div>
 
