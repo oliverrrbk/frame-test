@@ -16,48 +16,79 @@
         }
         .document {
             background-color: #ffffff;
-            padding: 50px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 60px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        .header img {
+            height: 48px;
+            margin-bottom: 15px;
         }
         h1 {
             color: #0f172a;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 15px;
-            margin-bottom: 30px;
-            font-size: 24px;
+            font-size: 28px;
+            margin: 0;
+            letter-spacing: -0.02em;
         }
         h2 {
             color: #1e293b;
             font-size: 18px;
             margin-top: 35px;
             margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        h2::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 18px;
+            background-color: #10b981;
+            border-radius: 2px;
         }
         p {
             margin-bottom: 15px;
             text-align: justify;
+            color: #475569;
+        }
+        strong {
+            color: #1e293b;
         }
         .footer {
             margin-top: 50px;
             padding-top: 20px;
             border-top: 1px solid #e2e8f0;
-            font-size: 12px;
+            font-size: 13px;
             color: #94a3b8;
             text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         @media print {
             body { background-color: #fff; padding: 0; }
-            .document { box-shadow: none; padding: 0; }
+            .document { box-shadow: none; padding: 0; border: none; }
         }
     </style>
 </head>
 <body>
     <div class="document">
-        <h1>Forretningsvilkår for Bison Frame</h1>
+        <div class="header">
+            <img src="/logo.png" alt="Bison Logo" onerror="this.style.display='none'">
+            <h1>Forretningsvilkår for Bison Frame</h1>
+        </div>
 
         <h2>1. Generelle vilkår</h2>
         <p>1.1. Bison Company ApS udvikler og leverer softwareløsningen Bison Frame (herefter ”Applikationen”) målrettet til håndværksvirksomheder med henblik på at samle og optimere tilbudsgivning, sagsstyring og kundekommunikation.</p>
-        <p>1.2. Nærværende forretningsvilkår (herefter ”Vilkår” eller ”Vilkårene”) regulerer brugen af Applikationen i forholdet mellem Bison Company ApS, CVR-nr. 43899713 (herefter benævnt ”Bison Company”) og kunden (herefter benævnt ”Kunden”).</p>
+        <p>1.2. Nærværende forretningsvilkår (herefter ”Vilkår” eller ”Vilkårene”) regulerer brugen af Applikationen i forholdet mellem Bison Company ApS, CVR-nr. 45899713 (herefter benævnt ”Bison Company”) og kunden (herefter benævnt ”Kunden”).</p>
         <p>1.3. Bison Company er til enhver tid berettiget til at ændre Vilkårene herunder abonnementstyper, prisstrukturer, priser og tilknyttede ydelser. Væsentlige ændringer af Vilkårene vil blive varslet overfor Kunden senest 30 dage før ikrafttrædelse via e-mail. Kundens brug af Applikationen efter ikrafttræden af de ændrede Vilkår udgør Kundens accept af de ændrede Vilkår.</p>
         <p>1.4. De til enhver tid gældende Vilkår er tilgængelige i Applikationen. Kunden opfordres til løbende at holde sig orienteret om den til enhver tid gældende version.</p>
 
@@ -72,7 +103,7 @@
 
         <h2>4. Datasikkerhed og Persondatabehandling</h2>
         <p>4.1. Bison Company forpligter sig til at opretholde et højt sikkerhedsniveau og træffer passende tekniske foranstaltninger i overensstemmelse med databeskyttelsesforordningen (GDPR) for at beskytte data mod uautoriseret adgang, tab eller ændring.</p>
-        <p>4.2. Kunden er dataansvarlig for de personoplysninger (fx om slutkunder), der behandles gennem Applikationen, mens Bison Company er databehandler. For denne behandling gælder en særskilt <a href="/Bison_Frame_Databehandleraftale.html" target="_blank" style="color: #3b82f6; text-decoration: underline;">Databehandleraftale (DPA)</a>, som automatisk accepteres ved oprettelse.</p>
+        <p>4.2. Kunden er dataansvarlig for de personoplysninger (fx om slutkunder), der behandles gennem Applikationen, mens Bison Company er databehandler. For denne behandling gælder en særskilt <a href="/Bison_Frame_Databehandleraftale.html" target="_blank" style="color: #10b981; text-decoration: underline;">Databehandleraftale (DPA)</a>, som automatisk accepteres ved oprettelse.</p>
         <p>4.3. Det påhviler Kunden at sikre, at indsamling af data fra deres slutkunder via Applikationens tilbuds-wizard sker på et lovligt grundlag, jf. GDPR artikel 13 og 14.</p>
 
         <h2>5. Applikationen, Support og driftsstabilitet</h2>
@@ -114,8 +145,8 @@
         <p>12.2. Enhver tvist skal søges løst i mindelighed og kan ellers anlægges ved de danske domstole.</p>
 
         <div class="footer">
-            Dokument opdateret: April 2026<br>
-            Bison Company ApS · CVR: 43899713
+            <div>Bison Company ApS · CVR: 45899713</div>
+            <div>Senest opdateret: Maj 2026</div>
         </div>
     </div>
 </body>

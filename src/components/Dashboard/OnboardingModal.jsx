@@ -139,7 +139,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                             </div>
                                         </div>
                                         <span className="text-sm text-slate-600">
-                                            Jeg bekræfter at have læst og accepteret de officielle <a href="/Bison_Frame_Vilkaar.html" target="_blank" className="text-blue-600 hover:underline">Vilkår & Betingelser</a> samt Databehandleraftalen.
+                                            Jeg bekræfter at have læst og accepteret de officielle <a href="/Bison_Frame_Vilkaar.html" target="_blank" className="text-blue-600 hover:underline">Vilkår & Betingelser</a> samt <a href="/Bison_Frame_Databehandleraftale.html" target="_blank" className="text-blue-600 hover:underline">Databehandleraftalen</a>.
                                         </span>
                                     </label>
                                 </div>

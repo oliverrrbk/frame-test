@@ -16,22 +16,43 @@
         }
         .document {
             background-color: #ffffff;
-            padding: 50px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 60px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        .header img {
+            height: 48px;
+            margin-bottom: 15px;
         }
         h1 {
             color: #0f172a;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 15px;
-            margin-bottom: 30px;
-            font-size: 24px;
+            font-size: 28px;
+            margin: 0;
+            letter-spacing: -0.02em;
         }
         h2 {
             color: #1e293b;
             font-size: 18px;
             margin-top: 35px;
             margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        h2::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 18px;
+            background-color: #10b981;
+            border-radius: 2px;
         }
         h3 {
             color: #334155;
@@ -42,33 +63,45 @@
         p, li {
             margin-bottom: 15px;
             text-align: justify;
+            color: #475569;
         }
         ul {
             margin-bottom: 15px;
+            color: #475569;
+        }
+        strong {
+            color: #1e293b;
         }
         .party {
-            background: #f1f5f9;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #e2e8f0;
         }
         .footer {
             margin-top: 50px;
             padding-top: 20px;
             border-top: 1px solid #e2e8f0;
-            font-size: 12px;
+            font-size: 13px;
             color: #94a3b8;
             text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         @media print {
             body { background-color: #fff; padding: 0; }
-            .document { box-shadow: none; padding: 0; }
+            .document { box-shadow: none; padding: 0; border: none; }
         }
     </style>
 </head>
 <body>
     <div class="document">
-        <h1>Databehandleraftale (DPA)</h1>
+        <div class="header">
+            <img src="/logo.png" alt="Bison Logo" onerror="this.style.display='none'">
+            <h1>Databehandleraftale (DPA)</h1>
+        </div>
         
         <p>Denne databehandleraftale ("Aftalen") er indgået i overensstemmelse med Europa-Parlamentets og Rådets forordning (EU) 2016/679 (Databeskyttelsesforordningen / GDPR).</p>
 
@@ -121,9 +154,8 @@
         <p>Behandlingen varer indtil Kundens abonnement opsiges og sletteprocedurer iværksættes.</p>
 
         <div class="footer">
-            Bison Company ApS · CVR: 45899713<br>
-            Senest opdateret: April 2026<br>
-            Aftalen accepteres elektronisk ved oprettelse i Bison Frame.
+            <div>Bison Company ApS · CVR: 45899713</div>
+            <div>Senest opdateret: Maj 2026</div>
         </div>
     </div>
 </body>
