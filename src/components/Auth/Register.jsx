@@ -303,7 +303,7 @@ const Register = ({ setSession }) => {
                         </div>
                         
                         <div className="input-group">
-                            <label>Bruger E-mail (og Faktura) *</label>
+                            <label>Bruger E-mail *</label>
                             <div style={{ position: 'relative' }}>
                                 <Mail size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: '#c5cdd6', zIndex: 1 }} />
                                 <input 
