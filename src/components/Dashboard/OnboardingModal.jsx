@@ -11,7 +11,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
     
     // Uploads
     const [logoUrl, setLogoUrl] = useState(profile?.logo_url || '');
-    const [ownerImageUrl, setOwnerImageUrl] = useState(profile?.owner_image_url || '');
+    const [ownerImageUrl, setOwnerImageUrl] = useState(profile?.portrait_url || '');
     const [uploadingImage, setUploadingImage] = useState(null);
     const logoInputRef = useRef(null);
     const ownerInputRef = useRef(null);
@@ -64,18 +64,23 @@ const OnboardingModal = ({ profile, onComplete }) => {
         setIsSaving(true);
         
         const updateData = {
-            has_completed_onboarding: true,
-            hourly_rate: Number(hourlyRate)
+            has_completed_onboarding: true
         };
         
         if (logoUrl) updateData.logo_url = logoUrl;
-        if (ownerImageUrl) updateData.owner_image_url = ownerImageUrl;
+        if (ownerImageUrl) updateData.portrait_url = ownerImageUrl;
 
         const { error } = await supabase
             .from('carpenters')
             .update(updateData)
             .eq('id', profile.id);
             
+        // Also try to update the hourly rate in settings
+        await supabase
+            .from('settings')
+            .update({ hourly_rate: Number(hourlyRate) })
+            .eq('carpenter_id', profile.company_id || profile.id);
+
         setIsSaving(false);
         if (!error) {
             // Send Velkomstmail til kunden (flyttet fra Register.jsx)
@@ -162,7 +167,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                     disabled={!accepted}
                                     onClick={() => {
                                         // Gem immediately i DB så den aldrig popper op igen hvis brugeren lukker siden
-                                        supabase.from('carpenters').update({ has_completed_onboarding: true }).eq('id', profile.id);
+                                        supabase.from('carpenters').update({ has_completed_onboarding: true }).eq('id', profile.id).then();
                                         setStep(2);
                                     }}
                                     className={`w-full py-3.5 font-semibold rounded-xl transition-all flex justify-center items-center gap-2 mt-2
