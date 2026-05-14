@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
@@ -157,6 +157,23 @@ const Register = ({ setSession }) => {
         
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (!isSuccess) return;
+
+        // Lyt efter om kunden godkender e-mailen i en anden fane
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+                if (typeof setSession === 'function') {
+                    localStorage.setItem('dashboard_active_tab', 'overview');
+                    setSession(session);
+                }
+                navigate('/dashboard');
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, [isSuccess, navigate, setSession]);
 
     if (isSuccess) {
         return (
