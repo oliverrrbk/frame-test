@@ -167,23 +167,26 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                     <ImageIcon size={40} />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Virksomhedsprofil</h2>
+                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Gør din beregner personlig</h2>
                                     <p className="text-slate-600 text-sm">
-                                        Kunder foretrækker håndværkere med en tydelig identitet. Tilføj logo og profilbillede for at øge tilliden i dine overslag.
+                                        Når kunderne bruger din prisberegner, er det dit logo og dit ansigt, der byder dem velkommen. Det skaber tryghed og øger chancen for, at de vælger netop dig til opgaven. Du kan altid tilføje billederne senere under indstillinger.
                                     </p>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 w-full">
                                     {/* Firmalogo */}
-                                    <div className="border border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center bg-slate-50">
-                                        <p className="text-sm font-medium text-slate-700 mb-3">Firmalogo</p>
+                                    <div 
+                                        onClick={() => !uploadingImage && logoInputRef.current?.click()}
+                                        className="border-2 border-dashed border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center bg-slate-50 hover:bg-emerald-50 hover:border-emerald-400 cursor-pointer transition-all group relative"
+                                    >
+                                        <p className="text-sm font-semibold text-slate-700 mb-3 group-hover:text-emerald-700 transition-colors">Firmalogo</p>
                                         {logoUrl ? (
                                             <div className="relative mb-3">
                                                 <img src={logoUrl} alt="Logo" className="h-16 object-contain" />
                                             </div>
                                         ) : (
-                                            <div className="w-16 h-16 bg-white border border-slate-200 rounded-lg flex items-center justify-center mb-3">
-                                                <Building2 size={24} className="text-slate-300" />
+                                            <div className="w-16 h-16 bg-white border border-slate-200 rounded-xl flex items-center justify-center mb-3 group-hover:border-emerald-300 group-hover:shadow-sm transition-all">
+                                                {uploadingImage === 'logo' ? <Loader2 size={24} className="animate-spin text-emerald-500" /> : <Building2 size={24} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />}
                                             </div>
                                         )}
                                         <input 
@@ -193,26 +196,24 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                             ref={logoInputRef}
                                             onChange={(e) => handleImageUpload(e, 'logo')}
                                         />
-                                        <button 
-                                            onClick={() => logoInputRef.current?.click()}
-                                            disabled={uploadingImage === 'logo'}
-                                            className="text-xs bg-white border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 font-medium"
-                                        >
-                                            {uploadingImage === 'logo' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                                            Upload fil
-                                        </button>
+                                        <p className="text-xs text-slate-500 font-medium group-hover:text-emerald-600 transition-colors flex items-center gap-1.5">
+                                            {uploadingImage === 'logo' ? 'Uploader...' : <><Upload size={14} /> Klik for at uploade</>}
+                                        </p>
                                     </div>
 
                                     {/* Profilbillede */}
-                                    <div className="border border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center bg-slate-50">
-                                        <p className="text-sm font-medium text-slate-700 mb-3">Profilbillede (Mester)</p>
+                                    <div 
+                                        onClick={() => !uploadingImage && ownerInputRef.current?.click()}
+                                        className="border-2 border-dashed border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center bg-slate-50 hover:bg-emerald-50 hover:border-emerald-400 cursor-pointer transition-all group relative"
+                                    >
+                                        <p className="text-sm font-semibold text-slate-700 mb-3 group-hover:text-emerald-700 transition-colors">Profilbillede (Mester)</p>
                                         {ownerImageUrl ? (
                                             <div className="relative mb-3">
-                                                <img src={ownerImageUrl} alt="Profil" className="w-16 h-16 rounded-full object-cover border border-slate-200" />
+                                                <img src={ownerImageUrl} alt="Profil" className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm" />
                                             </div>
                                         ) : (
-                                            <div className="w-16 h-16 bg-white border border-slate-200 rounded-full flex items-center justify-center mb-3">
-                                                <ImageIcon size={24} className="text-slate-300" />
+                                            <div className="w-16 h-16 bg-white border border-slate-200 rounded-full flex items-center justify-center mb-3 group-hover:border-emerald-300 group-hover:shadow-sm transition-all">
+                                                {uploadingImage === 'owner' ? <Loader2 size={24} className="animate-spin text-emerald-500" /> : <ImageIcon size={24} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />}
                                             </div>
                                         )}
                                         <input 
@@ -222,23 +223,20 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                             ref={ownerInputRef}
                                             onChange={(e) => handleImageUpload(e, 'owner')}
                                         />
-                                        <button 
-                                            onClick={() => ownerInputRef.current?.click()}
-                                            disabled={uploadingImage === 'owner'}
-                                            className="text-xs bg-white border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 font-medium"
-                                        >
-                                            {uploadingImage === 'owner' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                                            Upload fil
-                                        </button>
+                                        <p className="text-xs text-slate-500 font-medium group-hover:text-emerald-600 transition-colors flex items-center gap-1.5">
+                                            {uploadingImage === 'owner' ? 'Uploader...' : <><Upload size={14} /> Klik for at uploade</>}
+                                        </p>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col gap-3 mt-4 w-full">
                                     <button 
+                                        disabled={!(logoUrl || ownerImageUrl)}
                                         onClick={() => setStep(3)}
-                                        className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition-colors flex justify-center items-center gap-2"
+                                        className={`w-full py-3.5 font-semibold rounded-xl transition-all flex justify-center items-center gap-2
+                                            ${(logoUrl || ownerImageUrl) ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-lg' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
                                     >
-                                        Gem og fortsæt <ChevronRight size={18} />
+                                        Gem billeder og fortsæt <ChevronRight size={18} />
                                     </button>
                                     <button 
                                         onClick={() => setStep(3)}
@@ -325,7 +323,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                         <MessageSquare size={18} className="text-blue-500 shrink-0 mt-0.5" />
                                         <p className="text-sm text-slate-600">
                                             <strong className="text-slate-900 block">Direkte kundekontakt</strong>
-                                            Send linket på SMS inden besigtigelse. Lad kunden indtaste opgaven selv og undgå unødig kørsel.
+                                            Send assistentlinket via SMS eller e-mail inden en besigtigelse. Lad kunden indtaste opgaven selv, så du undgår at køre ud og bruge tid på at lave tilbud forgæves.
                                         </p>
                                     </div>
                                     <div className="flex items-start gap-3">
