@@ -78,6 +78,20 @@ const OnboardingModal = ({ profile, onComplete }) => {
             
         setIsSaving(false);
         if (!error) {
+            // Send Velkomstmail til kunden (flyttet fra Register.jsx)
+            if (profile?.email) {
+                import('../../utils/sendEmail').then(({ sendEmail }) => {
+                    import('../../utils/emailTemplates').then(({ getCarpenterWelcomeTemplate }) => {
+                        const loginUrl = window.location.origin;
+                        sendEmail({
+                            to: profile.email,
+                            subject: 'Velkommen til Bison Frame! 🚀',
+                            html: getCarpenterWelcomeTemplate(profile.company_name || 'Håndværker', loginUrl),
+                            fromName: 'Bison Frame'
+                        }).catch(err => console.error("Fejl ved velkomstmail:", err));
+                    });
+                });
+            }
             onComplete();
         } else {
             console.error("Systemfejl ved lagring af onboarding:", error);
