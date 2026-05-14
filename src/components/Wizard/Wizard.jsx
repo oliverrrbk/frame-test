@@ -218,10 +218,10 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         customer_address: `${customerDetails?.street || ''}, ${customerDetails?.zip || ''} ${customerDetails?.city || ''}`,
                         project_category: categoryName,
                         price_estimate: res.priceRange,
-                        contact_preference: 'Afventer accept',
+                        contact_preference: projectData.category === 'extensions' ? 'Hurtigst muligt' : 'Afventer accept',
                         raw_data: updatedProjectData,
                         carpenter_id: carpenter?.id || null,
-                        status: 'Overslag (Afventer)'
+                        status: projectData.category === 'extensions' ? 'Ny forespørgsel' : 'Overslag (Afventer)'
                     }]);
                 
                 if (error) throw error;
@@ -241,15 +241,61 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         const overslagUrl = `${window.location.origin}/${carpenter?.slug || 'demo'}/overslag/${leadId}`;
                         
                         if (res.priceRange === 'Besigtigelse kræves') {
-                            import('../../utils/emailTemplates').then(({ getCustomerComplexProjectTemplate }) => {
-                                sendEmail({
-                                    to: customerDetails.email,
-                                    subject: `Din forespørgsel hos ${carpenterCompanyName}`,
-                                    html: getCustomerComplexProjectTemplate(customerDetails.fullName, categoryName, carpenter, overslagUrl),
-                                    fromName: senderName,
-                                    replyTo: carpenter?.email
+                            if (projectData.category === 'extensions') {
+                                // Fast-track flow for extensions
+                                import('../../utils/emailTemplates').then(({ getCustomerFastTrackTemplate, getCarpenterNewRequestTemplate }) => {
+                                    const notesText = updatedProjectData.details?.notes || '';
+                                    const projectDetailsHtml = `
+                                        <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
+                                            <strong style="display: block; color: #0f172a; margin-bottom: 4px;">Kundens beskrivelse:</strong>
+                                            <span style="color: #334155; white-space: pre-wrap;">${notesText}</span>
+                                        </li>
+                                    `;
+                                    
+                                    // Send to customer
+                                    sendEmail({
+                                        to: customerDetails.email,
+                                        subject: `Vi har modtaget din forespørgsel - ${carpenterCompanyName}`,
+                                        html: getCustomerFastTrackTemplate(customerDetails.fullName, categoryName, carpenter, notesText),
+                                        fromName: senderName,
+                                        replyTo: carpenter?.email
+                                    });
+                                    
+                                    // Send to carpenter immediately
+                                    if (carpenter?.email) {
+                                        const appUrl = window.location.origin;
+                                        sendEmail({
+                                            to: carpenter.email,
+                                            subject: `Ny forespørgsel fra ${customerDetails.fullName} - ${categoryName}`,
+                                            html: getCarpenterNewRequestTemplate(
+                                                carpenterCompanyName, 
+                                                customerDetails.fullName, 
+                                                categoryName, 
+                                                customerDetails.email, 
+                                                customerDetails.phone, 
+                                                appUrl, 
+                                                leadId, 
+                                                projectDetailsHtml, 
+                                                res.priceRange, 
+                                                'Hurtigst muligt'
+                                            ),
+                                            fromName: customerDetails.fullName,
+                                            replyTo: customerDetails.email
+                                        });
+                                    }
                                 });
-                            });
+                            } else {
+                                // Standard flow for special tasks
+                                import('../../utils/emailTemplates').then(({ getCustomerComplexProjectTemplate }) => {
+                                    sendEmail({
+                                        to: customerDetails.email,
+                                        subject: `Din forespørgsel hos ${carpenterCompanyName}`,
+                                        html: getCustomerComplexProjectTemplate(customerDetails.fullName, categoryName, carpenter, overslagUrl),
+                                        fromName: senderName,
+                                        replyTo: carpenter?.email
+                                    });
+                                });
+                            }
                         } else if (!isUpdate) {
                             sendEmail({
                                 to: customerDetails.email,
@@ -278,7 +324,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             }));
 
             setIsCalculating(false);
-            setCurrentStep(5);
+            setCurrentStep(projectData.category === 'extensions' ? 6 : 5);
         } catch (error) {
             console.error(error);
             import('react-hot-toast').then(toast => {
