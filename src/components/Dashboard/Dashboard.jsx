@@ -260,16 +260,18 @@ const Dashboard = () => {
     }, [leadsData, geocodedLeads, isLoaded]);
 
     useEffect(() => {
-        if (selectedLead && selectedLead.raw_data?.calc_data) {
+        if (selectedLead && selectedLead.raw_data) {
             const cat = selectedLead.raw_data.category;
             const cName = categoryNames[cat] || cat;
             const defaultMessage = generateHumanQuoteText(cat, selectedLead.raw_data.details, cName);
 
+            const calc = selectedLead.raw_data.calc_data || {};
+
             setQuoteBuilder({
-                laborHours: selectedLead.raw_data.calc_data.laborHours || 0,
-                hourlyRate: selectedLead.raw_data.calc_data.hourlyRate || 0,
-                materialCost: selectedLead.raw_data.calc_data.materialCost || 0,
-                drivingCost: selectedLead.raw_data.calc_data.drivingCost || 0,
+                laborHours: calc.laborHours || 0,
+                hourlyRate: calc.hourlyRate || carpenterProfile?.hourly_rate || 500,
+                materialCost: calc.materialCost || 0,
+                drivingCost: calc.drivingCost || 0,
                 customLines: [], 
                 showPreview: false,
                 isGeneratingPdf: false,
@@ -279,7 +281,7 @@ const Dashboard = () => {
         } else {
             setQuoteBuilder(null);
         }
-    }, [selectedLead]);
+    }, [selectedLead, carpenterProfile]);
 
     const initProfileAndData = async (authUser) => {
         const userId = authUser.id;
