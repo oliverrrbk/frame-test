@@ -202,27 +202,56 @@ const EstimateAcceptPage = () => {
             <div style={{ maxWidth: '800px', width: '100%', background: '#fff', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', overflow: 'hidden', border: '1px solid #e2e8f0', padding: '40px' }}>
                 
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: '#0f172a', marginBottom: '16px' }}>
-                        Dit vejledende overslag
-                    </h2>
-                    <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
-                        Du kan trygt bruge dette overslag til at sammenligne markedet. Vi tror på fuld gennemsigtighed fra start.
-                    </p>
+                    {['special', 'extensions'].includes(projectData?.category) ? (
+                        <>
+                            <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: '#0f172a', marginBottom: '16px' }}>
+                                Vi har modtaget din opgave
+                            </h2>
+                            <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
+                                For at sikre dig det mest præcise tilbud, kræver dette projekt en fysisk besigtigelse.
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: '#0f172a', marginBottom: '16px' }}>
+                                Dit vejledende overslag
+                            </h2>
+                            <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
+                                Du kan trygt bruge dette overslag til at sammenligne markedet. Vi tror på fuld gennemsigtighed fra start.
+                            </p>
+                        </>
+                    )}
                 </div>
 
-                <div style={{ 
-                    background: '#f8fafc', 
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '16px', 
-                    padding: '40px', 
-                    color: '#0f172a', 
-                    textAlign: 'center', 
-                    marginBottom: '32px'
-                }}>
-                    <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Forventet prisramme</span>
-                    <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: '#0f172a' }}>{lead.price_estimate}</h1>
-                    <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Dette er et stærkt vejledende overslag inkl. moms. Vores erfaring er, at det endelige, bindende tilbud fra tømreren oftest lander lidt lavere – men med denne pris har du et realistisk udgangspunkt.</p>
-                </div>
+                {['special', 'extensions'].includes(projectData?.category) ? (
+                    <div style={{ 
+                        background: '#f8fafc', 
+                        border: '2px solid #e2e8f0',
+                        borderRadius: '16px', 
+                        padding: '40px', 
+                        color: '#0f172a', 
+                        textAlign: 'center', 
+                        marginBottom: '32px'
+                    }}>
+                        <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Komplekst Projekt</span>
+                        <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: '#0f172a' }}>Besigtigelse kræves</h1>
+                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}>At bygge en tilbygning eller en stor specialopgave afhænger stærkt af de præcise forhold på din adresse. Vi vil rigtig gerne besigtige projektet, så vi kan give dig et skarpt og uforpligtende tilbud.</p>
+                    </div>
+                ) : (
+                    <div style={{ 
+                        background: '#f8fafc', 
+                        border: '2px solid #e2e8f0',
+                        borderRadius: '16px', 
+                        padding: '40px', 
+                        color: '#0f172a', 
+                        textAlign: 'center', 
+                        marginBottom: '32px'
+                    }}>
+                        <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Forventet prisramme</span>
+                        <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: '#0f172a' }}>{lead.price_estimate}</h1>
+                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Dette er et stærkt vejledende overslag inkl. moms. Vores erfaring er, at det endelige, bindende tilbud fra tømreren oftest lander lidt lavere – men med denne pris har du et realistisk udgangspunkt.</p>
+                    </div>
+                )}
 
                 <div style={{ 
                     background: '#fff', 
@@ -295,13 +324,19 @@ const EstimateAcceptPage = () => {
                                 }, 100);
                             }}
                         >
-                            Vælg {carpenter?.company_name || 'os'} til at udføre opgaven
+                            {['special', 'extensions'].includes(projectData?.category) ? `Anmod om besigtigelse af ${carpenter?.company_name || 'os'}` : `Vælg ${carpenter?.company_name || 'os'} til at udføre opgaven`}
                         </button>
                     </div>
                 ) : (
                     <div ref={bookingRef} className="visit-booking" style={{ marginTop: '40px', padding: '32px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-                        <h3 style={{ marginBottom: '12px', fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>Lad os få aftalt det sidste</h3>
-                        <p style={{ marginBottom: '24px', color: '#64748b', fontSize: '1.05rem', lineHeight: '1.5' }}>Vælg hvordan du foretrækker at blive kontaktet for at få et eksakt og bindende tilbud.</p>
+                        <h3 style={{ marginBottom: '12px', fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
+                            {['special', 'extensions'].includes(projectData?.category) ? 'Hvornår passer det at vi ringer?' : 'Lad os få aftalt det sidste'}
+                        </h3>
+                        <p style={{ marginBottom: '24px', color: '#64748b', fontSize: '1.05rem', lineHeight: '1.5' }}>
+                            {['special', 'extensions'].includes(projectData?.category) 
+                                ? 'Vælg hvordan du foretrækker at blive kontaktet, så vi kan aftale et tidspunkt for besigtigelse.' 
+                                : 'Vælg hvordan du foretrækker at blive kontaktet for at få et eksakt og bindende tilbud.'}
+                        </p>
                         
                         <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexDirection: 'row' }}>
                             <button 
@@ -412,7 +447,11 @@ const EstimateAcceptPage = () => {
                                 boxShadow: ((!isAsap && selectedDays.length === 0) || isSaving) ? 'none' : '0 10px 25px rgba(59,130,246,0.3)'
                             }}
                         >
-                            {isSaving ? 'Arbejder...' : `Bekræft valget af ${carpenter?.company_name || 'os'}`}
+                            {isSaving ? 'Arbejder...' : (
+                                ['special', 'extensions'].includes(projectData?.category) 
+                                ? `Anmod om besigtigelse` 
+                                : `Bekræft valget af ${carpenter?.company_name || 'os'}`
+                            )}
                         </button>
                     </div>
                 )}
