@@ -153,6 +153,8 @@ const Register = ({ setSession }) => {
             } else {
                 setIsSuccess(true);
             }
+        } else if (!error) {
+            setErrorMsg("Kunne ikke oprette profilen. E-mailen er muligvis allerede i brug.");
         }
         
         setLoading(false);
@@ -172,7 +174,18 @@ const Register = ({ setSession }) => {
             }
         });
 
-        return () => subscription.unsubscribe();
+        // Eksplicit fallback listener for tværgående faner (Cross-tab)
+        const handleStorageChange = (e) => {
+            if (e.key && e.key.includes('supabase.auth.token')) {
+                window.location.href = '/dashboard';
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => {
+            subscription.unsubscribe();
+            window.removeEventListener('storage', handleStorageChange);
+        };
     }, [isSuccess, navigate, setSession]);
 
     if (isSuccess) {
