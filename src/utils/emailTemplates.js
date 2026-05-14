@@ -237,6 +237,31 @@ export const getCustomerFastTrackTemplate = (customerName, categoryName, carpent
 };
 
 
+export const getCarpenterWelcomeTemplate = (companyName, loginUrl) => {
+    const content = `
+        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Velkommen til Bison Frame, ${companyName}! 🎉</h2>
+        <p style="color: #334155; font-size: 16px; line-height: 1.6;">Vi er super glade for at have dig ombord. Din nye tilbuds- og lead-portal er nu oprettet og klar til at skaffe dig flere (og bedre) kunder.</p>
+        
+        <div style="background-color: #f8fafc; padding: 24px; border-radius: 8px; margin: 32px 0; border: 1px solid #e2e8f0; border-left: 4px solid #10b981;">
+            <h3 style="margin: 0 0 16px 0; color: #0f172a; font-size: 16px;">Kom godt fra start i 3 nemme trin:</h3>
+            <ol style="margin: 0; color: #475569; font-size: 15px; line-height: 1.8; padding-left: 20px;">
+                <li style="margin-bottom: 12px;"><strong>Log ind i Dashboardet:</strong> Følg din opsætning og indstil din timepris.</li>
+                <li style="margin-bottom: 12px;"><strong>Test din beregner:</strong> Tryk på "Kopiér Link" og prøv at udfylde en opgave som var du en kunde.</li>
+                <li style="margin-bottom: 0;"><strong>Del dit link:</strong> Læg linket på din hjemmeside eller Facebook-side for at lade kunderne beregne priser døgnet rundt.</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin: 40px 0;">
+            <a href="${loginUrl}" style="${buttonStyle}; padding: 16px 32px; font-size: 18px; background-color: #10b981;">Log ind på din portal</a>
+        </div>
+
+        <p style="color: #334155; margin-bottom: 0;">Har du brug for hjælp? Du kan altid svare direkte på denne mail.</p>
+        <p style="color: #334155; margin-bottom: 0;">Endnu engang velkommen til teamet!</p>
+        <p style="color: #0f172a; font-weight: 600; margin-top: 16px;">Mads & Team Bison</p>
+    `;
+    return getBaseTemplate("Velkommen til Bison Frame!", content);
+};
+
 export const getCarpenterNewRequestTemplate = (carpenterName, customerName, categoryName, customerEmail, customerPhone, appUrl = 'https://app.bisonframe.dk', leadId = null, projectDetailsHtml = '', priceEstimate = '', contactPreference = '') => {
     // Til tømreren selv bruger vi bare standard Bison Frame header
     const content = `

@@ -101,15 +101,23 @@ const Register = ({ setSession }) => {
             // under oprettelsen her. Dashboard.jsx aflæser user_metadata og bygger profilen perfekt, 
             // næste gang man lander på appen (sikkert), selv hvis man ventede på en email confirmation.
             
-            // Send notifikation til Mads (Admin)
+            // Send notifikation til Mads (Admin) og Velkomstmail til kunden
             import('../../utils/sendEmail').then(({ sendEmail }) => {
-                import('../../utils/emailTemplates').then(({ getAdminNewSignupTemplate }) => {
+                import('../../utils/emailTemplates').then(({ getAdminNewSignupTemplate, getCarpenterWelcomeTemplate }) => {
                     sendEmail({
                         to: 'mbc@bisoncompany.dk',
                         subject: `🎉 Ny Tømrer: ${companyName}`,
                         html: getAdminNewSignupTemplate(companyName, cvr, ownerName, email, phone),
                         fromName: 'Bison Frame System'
                     }).catch(err => console.error("Fejl ved admin mail:", err));
+
+                    const loginUrl = window.location.origin;
+                    sendEmail({
+                        to: email,
+                        subject: 'Velkommen til Bison Frame! 🚀',
+                        html: getCarpenterWelcomeTemplate(companyName, loginUrl),
+                        fromName: 'Bison Frame'
+                    }).catch(err => console.error("Fejl ved velkomstmail:", err));
                 });
             });
 
