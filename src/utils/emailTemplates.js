@@ -255,9 +255,15 @@ export const getCarpenterWelcomeTemplate = (companyName, loginUrl) => {
             <a href="${loginUrl}" style="${buttonStyle}; padding: 16px 32px; font-size: 18px; background-color: #10b981;">Log ind på din portal</a>
         </div>
 
-        <p style="color: #334155; margin-bottom: 0;">Har du brug for hjælp? Du kan altid svare direkte på denne mail.</p>
-        <p style="color: #334155; margin-bottom: 0;">Endnu engang velkommen til teamet!</p>
-        <p style="color: #0f172a; font-weight: 600; margin-top: 16px;">Mads & Team Bison</p>
+        <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+            <p style="color: #334155; margin-bottom: 12px; font-size: 15px; line-height: 1.6;">
+                <strong>P.S. Personlig hotline fra ejer til mester</strong><br/>
+                Systemet er bygget til at gøre din hverdag nemmere. Hvis du oplever problemer, er det mindste i tvivl, eller har forslag til forbedringer, så ring direkte til mig på <strong>40 26 50 02</strong> – uanset hvilken dag på ugen det er. Jeg tager telefonen, og vi tager hånd om det med det samme.
+            </p>
+            <p style="color: #334155; margin-bottom: 0; font-size: 15px;">Med venlig hilsen,</p>
+            <p style="color: #0f172a; font-weight: 600; margin-top: 4px; font-size: 15px;">Mads Brunsbjerg Christensen</p>
+            <p style="color: #64748b; font-size: 13px; margin-top: 2px;">Ejer & Udvikler, Bison Frame</p>
+        </div>
     `;
     return getBaseTemplate("Velkommen til Bison Frame!", content);
 };

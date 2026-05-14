@@ -361,6 +361,21 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                     </div>
                                 </div>
 
+                                <div className="mt-6 border-t border-slate-200 pt-6">
+                                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
+                                        <h4 className="font-semibold text-slate-900 text-sm mb-2 flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                            Personlig hotline: Fra ejer til mester
+                                        </h4>
+                                        <p className="text-sm text-slate-600 leading-relaxed mb-3">
+                                            Er du det mindste i tvivl, mangler du en specifik funktion, eller har du forslag til forbedringer? Ring direkte til mig alle ugens dage. Jeg er ejer og udvikler af Bison Frame, og jeg tager telefonen med det samme.
+                                        </p>
+                                        <div className="font-medium text-slate-900 text-sm">
+                                            Ring til Mads Brunsbjerg Christensen på: <a href="tel:40265002" className="text-blue-600 hover:underline">40 26 50 02</a>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <button 
                                     disabled={isSaving}
                                     onClick={saveAndComplete}
