@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { QUESTIONS } from './questionsConfig';
-
+import { generateTaskDescription } from '../../utils/taskDescription';
 const EstimateAcceptPage = () => {
     const { slug, lead_id } = useParams();
     const navigate = useNavigate();
@@ -229,20 +229,21 @@ const EstimateAcceptPage = () => {
                     {['special', 'extensions'].includes(projectData?.category) ? (
                         <>
                             <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: '#0f172a', marginBottom: '16px' }}>
-                                Vi har modtaget din opgave
+                                Tak for dit valg!
                             </h2>
                             <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
-                                For at sikre dig det mest præcise tilbud, kræver dette projekt en fysisk besigtigelse.
+                                For at sikre dig det mest præcise tilbud, kræver dette projekt en fysisk besigtigelse. <br/><br/>
+                                <strong style={{ color: '#0f172a' }}>Rul ned og bekræft i bunden</strong> for at sende din forespørgsel direkte afsted til {carpenter?.company_name || 'tømreren'}.
                             </p>
                         </>
                     ) : (
                         <>
                             <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: '#0f172a', marginBottom: '16px' }}>
-                                Gå videre med opgaven
+                                Tak for dit valg!
                             </h2>
                             <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
-                                Tak for at vælge os til opgaven. Vi tager dit projekt meget seriøst og vil gå igennem detaljerne. <br/><br/>
-                                <strong style={{ color: '#0f172a' }}>For at vi får direkte besked, skal du blot rulle ned til bunden og bekræfte forespørgslen.</strong> Din forventede prisramme kan ses herunder.
+                                Vi tager dit projekt meget seriøst og glæder os til at gå detaljerne igennem. <br/><br/>
+                                <strong style={{ color: '#0f172a' }}>Rul ned og bekræft i bunden</strong> for at sende din forespørgsel afsted til {carpenter?.company_name || 'tømreren'}. Din forventede prisramme kan ses herunder.
                             </p>
                         </>
                     )}
@@ -272,11 +273,44 @@ const EstimateAcceptPage = () => {
                         textAlign: 'center', 
                         marginBottom: '32px'
                     }}>
-                        <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Forventet prisramme</span>
+                        <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Opgavens Prisramme</span>
                         <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: '#0f172a' }}>{lead.price_estimate}</h1>
-                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Dette er et stærkt vejledende overslag inkl. moms. Vores erfaring er, at det endelige, bindende tilbud fra tømreren oftest lander lidt lavere – men med denne pris har du et realistisk udgangspunkt.</p>
+                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Vejledende pris inkl. moms, materialer og arbejdsløn.</p>
                     </div>
                 )}
+
+                {(() => {
+                    const taskList = generateTaskDescription(projectData?.category, projectData?.details);
+                    if (taskList.length > 0) {
+                        return (
+                            <div style={{ 
+                                background: '#f0fdf4', 
+                                borderRadius: '12px', 
+                                padding: '32px', 
+                                border: '1px solid #bbf7d0', 
+                                marginBottom: '24px'
+                            }}>
+                                <h3 style={{ fontSize: '1.3rem', color: '#166534', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#16a34a' }}>
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    Overslaget inkluderer:
+                                </h3>
+                                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '16px' }}>
+                                    {taskList.map((task, idx) => (
+                                        <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.05rem', color: '#166534', lineHeight: '1.5' }}>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#22c55e', marginTop: '3px', flexShrink: 0 }}>
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                            <span>{task}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        );
+                    }
+                    return null;
+                })()}
 
                 <div style={{ 
                     background: '#fff', 
@@ -285,8 +319,8 @@ const EstimateAcceptPage = () => {
                     border: '1px solid #e2e8f0', 
                     marginBottom: '32px'
                 }}>
-                    <h3 style={{ fontSize: '1.3rem', color: '#0f172a', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        Opsummering af din opgave:
+                    <h3 style={{ fontSize: '1.1rem', color: '#64748b', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        Dine indtastede valg:
                     </h3>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '16px' }}>
                         {projectData.category === 'special' ? (

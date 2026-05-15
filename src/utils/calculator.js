@@ -334,11 +334,22 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             bArr.push(`Miljøtillæg: Miljøsanering forventet (Fuger/vinduer før 1977 kræver specialhåndtering af PCB/Bly) - Uden avance`);
         }
         // Automatisk nedrivnings-tjek (SOP)
-        let needsDisposal = false;
-        if (d.disposal && d.disposal.startsWith('Ja')) needsDisposal = true;
-        if (cat === 'facades' && d.oldFacadeMaterial && d.oldFacadeMaterial.includes('rives ned')) needsDisposal = true;
+        let needsDisposalLabor = false;
+        let needsDisposalFee = false;
 
-        if (needsDisposal) {
+        if (d.disposal && d.disposal.startsWith('Ja')) {
+            needsDisposalLabor = true;
+            if (d.disposal.toLowerCase().includes('bortskaffe')) {
+                needsDisposalFee = true;
+            }
+        }
+        
+        if (cat === 'facades' && d.oldFacadeMaterial && d.oldFacadeMaterial.includes('rives ned')) {
+            needsDisposalLabor = true;
+            needsDisposalFee = true;
+        }
+
+        if (needsDisposalLabor) {
             // Generisk nedrivnings-sats (som kan overskrives hvis der er asbest/andet specielt)
             let disposalRate = formula.disposalHours;
             if (cat === 'roof' && formula.disposalHoursByOldType && formula.disposalHoursByOldType[d.oldRoofType]) {
@@ -349,18 +360,22 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             let dispTime = (disposalRate * numericAmount);
             laborHours += dispTime;
 
-            let threshold = formula.containerThreshold;
-            if (threshold && threshold > 0 && numericAmount >= threshold) {
-                // Skalér containere: 1 container pr. fuld threshold. (fx 150 m2 tag kræver 1, 300 m2 kræver 2).
-                let containerCount = Math.ceil(numericAmount / threshold);
-                // Sikkerhedsgrænse, så fejlindtastninger på fx 1000m2 ikke sprænger tilbuddet fuldstændig ud af proportioner.
-                if (containerCount > 5) containerCount = 5; 
-                
-                materialCost += dbSettings.container_disposal_fee * containerCount;
-                bArr.push(`Miljøtillæg: Bortskaffelse af stort volumen (${containerCount}x Containerleje/afhentning + ${dispTime.toFixed(1)} arbejdstimer) - Uden avance`);
+            if (needsDisposalFee) {
+                let threshold = formula.containerThreshold;
+                if (threshold && threshold > 0 && numericAmount >= threshold) {
+                    // Skalér containere: 1 container pr. fuld threshold. (fx 150 m2 tag kræver 1, 300 m2 kræver 2).
+                    let containerCount = Math.ceil(numericAmount / threshold);
+                    // Sikkerhedsgrænse, så fejlindtastninger på fx 1000m2 ikke sprænger tilbuddet fuldstændig ud af proportioner.
+                    if (containerCount > 5) containerCount = 5; 
+                    
+                    materialCost += dbSettings.container_disposal_fee * containerCount;
+                    bArr.push(`Miljøtillæg: Bortskaffelse af stort volumen (${containerCount}x Containerleje/afhentning + ${dispTime.toFixed(1)} arbejdstimer) - Uden avance`);
+                } else {
+                    materialCost += dbSettings.trailer_disposal_fee;
+                    bArr.push(`Miljøtillæg: Bortskaffelse af mindre volumen på trailer (+ ${dispTime.toFixed(1)} arbejdstimer incl. sortering) - Uden avance`);
+                }
             } else {
-                materialCost += dbSettings.trailer_disposal_fee;
-                bArr.push(`Miljøtillæg: Bortskaffelse af mindre volumen på trailer (+ ${dispTime.toFixed(1)} arbejdstimer incl. sortering) - Uden avance`);
+                bArr.push(`Nedrivning: ${dispTime.toFixed(1)} arbejdstimer (Kunden forestår selv bortskaffelse)`);
             }
         }
 
@@ -411,7 +426,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 laborHours += numericAmount * disposalHours;
 
                 // SOP #2: Usynlige Omkostninger (Containerleje/bortskaffelse)
-                if (!userSuppliesMaterials) {
+                if (!userSuppliesMaterials && d.disposal.toLowerCase().includes('bortskaffe')) {
                     let disposalFeePerM2 = indexCat['Bortskaffelse af gulv (pr m2)'] || 50;
                     if (d.oldFloorType.includes('Beton') || d.oldFloorType.includes('Klinker')) {
                         disposalFeePerM2 = indexCat['Bortskaffelse af tungt gulv (pr m2)'] || 120;

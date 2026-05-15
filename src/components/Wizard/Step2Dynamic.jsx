@@ -240,7 +240,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         value={details[q.id] || ''} 
                         onChange={(e) => handleInputChange(q.id, parseFloat(e.target.value))} 
                         onKeyDown={handleKeyDown}
-                        placeholder={q.placeholder || ''}
+                        placeholder={q.placeholder || 'Indtast tal her...'}
                         style={{ 
                             width: '100%', 
                             padding: '14px 20px', 
@@ -248,11 +248,13 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             border: '2px solid var(--border)', 
                             fontSize: '1rem',
                             color: 'var(--text-primary)',
-                            background: 'rgba(255, 255, 255, 0.8)',
-                            transition: 'var(--transition-fast)'
+                            background: '#f8fafc',
+                            transition: 'all 0.2s ease',
+                            outline: 'none',
+                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                         }}
-                        onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
-                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                        onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)'; }}
+                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)'; }}
                     />
                 )}
 
@@ -262,7 +264,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         value={details[q.id] || ''} 
                         onChange={(e) => handleInputChange(q.id, e.target.value)} 
                         onKeyDown={handleKeyDown}
-                        placeholder={q.placeholder || ''}
+                        placeholder={q.placeholder || 'Indtast tekst her...'}
                         style={{ 
                             width: '100%', 
                             padding: '14px 20px', 
@@ -270,11 +272,13 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             border: '2px solid var(--border)', 
                             fontSize: '1rem',
                             color: 'var(--text-primary)',
-                            background: 'rgba(255, 255, 255, 0.8)',
-                            transition: 'var(--transition-fast)'
+                            background: '#f8fafc',
+                            transition: 'all 0.2s ease',
+                            outline: 'none',
+                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                         }}
-                        onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
-                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                        onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)'; }}
+                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)'; }}
                     />
                 )}
 

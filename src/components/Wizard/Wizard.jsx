@@ -296,21 +296,26 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                                     });
                                 });
                             }
-                        } else if (!isUpdate) {
-                            sendEmail({
-                                to: customerDetails.email,
-                                subject: `Dit vejledende overslag fra ${carpenterCompanyName}`,
-                                html: getCustomerEstimateTemplate(customerDetails.fullName, categoryName, res.priceRange, carpenter, overslagUrl),
-                                fromName: senderName,
-                                replyTo: carpenter?.email
-                            });
                         } else {
-                            sendEmail({
-                                to: customerDetails.email,
-                                subject: `Dit opdaterede overslag fra ${carpenterCompanyName}`,
-                                html: getCustomerUpdatedEstimateTemplate(customerDetails.fullName, categoryName, res.priceRange, carpenter, overslagUrl),
-                                fromName: senderName,
-                                replyTo: carpenter?.email
+                            import('../../utils/taskDescription').then(({ generateTaskAndQaHtml }) => {
+                                const fullDetailsHtml = generateTaskAndQaHtml(updatedProjectData);
+                                if (!isUpdate) {
+                                    sendEmail({
+                                        to: customerDetails.email,
+                                        subject: `Dit vejledende overslag fra ${carpenterCompanyName}`,
+                                        html: getCustomerEstimateTemplate(customerDetails.fullName, categoryName, res.priceRange, carpenter, overslagUrl, fullDetailsHtml),
+                                        fromName: senderName,
+                                        replyTo: carpenter?.email
+                                    });
+                                } else {
+                                    sendEmail({
+                                        to: customerDetails.email,
+                                        subject: `Dit opdaterede overslag fra ${carpenterCompanyName}`,
+                                        html: getCustomerUpdatedEstimateTemplate(customerDetails.fullName, categoryName, res.priceRange, carpenter, overslagUrl, fullDetailsHtml),
+                                        fromName: senderName,
+                                        replyTo: carpenter?.email
+                                    });
+                                }
                             });
                         }
                     });

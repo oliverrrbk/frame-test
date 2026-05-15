@@ -104,7 +104,7 @@ const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
 `;
 };
 
-export const getCustomerRequestReceivedTemplate = (customerName, categoryName, carpenter) => {
+export const getCustomerRequestReceivedTemplate = (customerName, categoryName, carpenter, projectDetailsHtml = '') => {
     const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
     const signatureName = getCarpenterSenderName(carpenter);
 
@@ -116,6 +116,12 @@ export const getCustomerRequestReceivedTemplate = (customerName, categoryName, c
         <p style="color: #334155;">Jeg ser frem til et rigtig godt samarbejde!</p>
         <br/>
         
+        ${projectDetailsHtml ? `
+        <div style="margin-bottom: 24px;">
+            ${projectDetailsHtml}
+        </div>
+        ` : ''}
+
         <div style="background-color: #f8fafc; padding: 12px; border-left: 3px solid #cbd5e1; margin-bottom: 24px;">
             <p style="margin: 0; font-size: 11px; color: #64748b; font-style: italic; line-height: 1.4;">
                 <strong>Vigtig information:</strong> Prisestimatet genereret på vores hjemmeside er udelukkende vejledende og udgør ikke et juridisk bindende tilbud. En endelig pris aftales altid efter en fysisk besigtigelse eller personlig dialog.
@@ -128,7 +134,7 @@ export const getCustomerRequestReceivedTemplate = (customerName, categoryName, c
     return getBaseTemplate("Tak for din forespørgsel", content, "Jeg glæder mig til at kigge på dit projekt.", carpenter);
 };
 
-export const getCustomerEstimateTemplate = (customerName, categoryName, priceEstimate, carpenter, quoteUrl) => {
+export const getCustomerEstimateTemplate = (customerName, categoryName, priceEstimate, carpenter, quoteUrl, projectDetailsHtml = '') => {
     const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
     const signatureName = getCarpenterSenderName(carpenter);
 
@@ -145,6 +151,12 @@ export const getCustomerEstimateTemplate = (customerName, categoryName, priceEst
         <p style="color: #334155;">Vores erfaring er, at det endelige, bindende tilbud ofte lander lidt lavere – men med denne pris har du et realistisk og stærkt udgangspunkt.</p>
         <p style="color: #334155;">Du kan bruge dette overslag til at sammenligne, og du har altid adgang til det via knappen nedenfor.</p>
 
+        ${projectDetailsHtml ? `
+        <div style="margin: 32px 0;">
+            ${projectDetailsHtml}
+        </div>
+        ` : ''}
+
         <div style="text-align: center; margin: 32px 0;">
             <a href="${quoteUrl}" style="${buttonStyle}; padding: 16px 32px; font-size: 18px;">Vælg ${carpenterCompanyName} til opgaven</a>
             <p style="color: #64748b; font-size: 13px; margin-top: 12px;">Tryk på knappen for at gå videre og anmode om det endelige tilbud.</p>
@@ -156,7 +168,7 @@ export const getCustomerEstimateTemplate = (customerName, categoryName, priceEst
     return getBaseTemplate("Dit overslag er klar", content, `Her er dit vejledende overslag på ${categoryName}`, carpenter);
 };
 
-export const getCustomerUpdatedEstimateTemplate = (customerName, categoryName, priceEstimate, carpenter, quoteUrl) => {
+export const getCustomerUpdatedEstimateTemplate = (customerName, categoryName, priceEstimate, carpenter, quoteUrl, projectDetailsHtml = '') => {
     const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
     const signatureName = getCarpenterSenderName(carpenter);
 
@@ -172,6 +184,12 @@ export const getCustomerUpdatedEstimateTemplate = (customerName, categoryName, p
         </div>
         
         <p style="color: #334155;">Du har altid adgang til din opgave via knappen nedenfor.</p>
+
+        ${projectDetailsHtml ? `
+        <div style="margin: 32px 0;">
+            ${projectDetailsHtml}
+        </div>
+        ` : ''}
 
         <div style="text-align: center; margin: 32px 0;">
             <a href="${quoteUrl}" style="${buttonStyle}; padding: 16px 32px; font-size: 18px;">Vælg ${carpenterCompanyName} til opgaven</a>

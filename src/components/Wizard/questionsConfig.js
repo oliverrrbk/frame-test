@@ -23,7 +23,7 @@ export const QUESTIONS = {
         { id: 'roofType', type: 'select', label: 'Hvilken type tag er det?', condition: { field: 'roofPitch', value: 'Høj rejsning / Normal hældning' }, options: ['Saddeltag (Almindeligt tag med 2 gavle)', 'Valmtag (Tag med fald på alle 4 sider - ingen gavle)'] },
         { id: 'gables', type: 'select', label: 'Skal gavlene beklædes med nyt træ/facadebeklædning?', condition: { field: 'roofType', value: 'Saddeltag (Almindeligt tag med 2 gavle)' }, options: ['Ja, skift beklædningen på begge gavle', 'Nej, de er murede / skal ikke skiftes'] },
         
-        { id: 'disposal', type: 'select', label: 'Skal det gamle tag afmonteres og afskaffes?', options: ['Ja', 'Nej, lægges ovenpå / ikke relevant'] },
+        { id: 'disposal', type: 'select', label: 'Skal det gamle tag afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, lægges ovenpå / ikke relevant'] },
         { 
             id: 'oldRoofType', 
             type: 'visual_select', 
@@ -92,7 +92,7 @@ export const QUESTIONS = {
             ] 
         },
         { id: 'floors', type: 'select', label: 'På hvilken etage skal vinduerne primært monteres?', tooltip: 'Høje etager tager længere tid pga. bæring af tunge vinduer og mulig udvendig fugearbejde.', options: ['Stueplan (Jordniveau)', '1. sal (Kræver evt. rullestillads/ekstra bæring)', '2. sal eller højere (Kræver lift/stillads)'] },
-        { id: 'disposal', type: 'select', label: 'Skal de nuværende vinduer afmonteres og afskaffes?', options: ['Ja', 'Nej'] },
+        { id: 'disposal', type: 'select', label: 'Skal de nuværende vinduer afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe dem', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi har selv afmonteret dem'] },
         { id: 'pcbCheck', type: 'select', label: 'Er huset (eller de eksisterende vinduer) fra før 1977?', tooltip: 'Fuger og materialer fra før 1977 kan indeholde PCB eller bly, hvilket kræver særlig miljøsanering og lovpligtig special-bortskaffelse.', condition: (d) => d.disposal === 'Ja', options: ['Ja, det er fra før 1977 (Risiko for miljøsanering)', 'Nej, bygget/skiftet efter 1977'] },
         { id: 'twoTone', type: 'select', label: 'Skal vinduerne have to farver (fx sort udvendig / hvid indvendig)?', tooltip: '2-farvede vinduer koster typisk 10-15% ekstra fra producentens side.', options: ['Nej, samme farve ude og inde', 'Ja, 2-farvede vinduer'] },
         { id: 'amount', type: 'number', label: 'Hvor mange vinduer drejer opgaven sig om i alt?', placeholder: 'F.eks. 4' },
@@ -103,7 +103,7 @@ export const QUESTIONS = {
     ],
     floor: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven cirka?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise areal måles op senere af tømreren.' },
-        { id: 'disposal', type: 'select', label: 'Skal det gamle gulv afmonteres og fjernes?', options: ['Ja', 'Nej'] },
+        { id: 'disposal', type: 'select', label: 'Skal det gamle gulv afmonteres og fjernes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi har selv afmonteret det / der er tomt'] },
         { 
             id: 'oldFloorType', 
             type: 'visual_select', 
@@ -144,7 +144,7 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet, som vi ikke har taget højde for? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     doors: [
-        { id: 'disposal', type: 'select', label: 'Skal den/de nuværende døre afmonteres og afskaffes?', options: ['Ja', 'Nej'] },
+        { id: 'disposal', type: 'select', label: 'Skal den/de nuværende døre afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe den/dem', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi har selv afmonteret'] },
         { id: 'doorType', type: 'select', label: 'Er det indvendige døre eller en ude/fordør?', options: ['Indvendige døre', 'Ude/fordøre', 'Blanding'] },
         { id: 'thresholds', type: 'select', label: 'Dørtrin: Skal der monteres nye dørtrin (bundstykker) mellem rummene?', condition: (d) => d.doorType === 'Indvendige døre' || d.doorType === 'Blanding', options: ['Ja', 'Nej'] },
         { id: 'hardware', type: 'select', label: 'Beslag: Hvad med dørgreb og evt. låsecylindere?', options: ['Tømreren skal levere standard greb/låse', 'Special/Elektrisk lås (Elektrisk tillægges senere)'] },
@@ -214,7 +214,7 @@ export const QUESTIONS = {
     terrace: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 terrasse skal der bygges?', tooltip: 'Giv dit eget kvalificerede bud. Arealet dobbelttjekkes ved en fysisk besigtigelse.' },
         { id: 'elevation', type: 'select', label: 'Hvilken type terrasse er der tale om?', options: ['Jordniveau (Almindelig træterrasse på jorden)', 'Hævet terrasse (Hævet mere end 0,5m fra jorden, fx på stolper)', 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)'] },
-        { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja', 'Nej'] },
+        { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja, tømreren skal afmontere OG bortskaffe den', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej'] },
         { id: 'roofTerraceFeet', type: 'select', label: 'Tagterrasse underlag: Skal terrassen opklodses på justerbare terrassefødder (skåner tagpappet)?', condition: { field: 'elevation', value: 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)' }, options: ['Ja, den skal klodses op på plastfødder', 'Nej'] },
         { 
             id: 'material', 
@@ -242,8 +242,8 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til byggeriet (fx hvis der skal laves fald på tagterrassen)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     kitchen: [
-        { id: 'disposal', type: 'select', label: 'Skal det gamle køkken afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere og afskaffe det', 'Nej, vi gør det selv / der er allerede tomt'] },
-        { id: 'oldKitchenPhotos', type: 'file', label: 'Upload evt. et billede af det gamle køkken/rummet:', condition: { field: 'disposal', value: 'Ja, tømreren skal afmontere og afskaffe det' } },
+        { id: 'disposal', type: 'select', label: 'Skal det gamle køkken afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi gør det selv / der er allerede tomt'] },
+        { id: 'oldKitchenPhotos', type: 'file', label: 'Upload evt. et billede af det gamle køkken/rummet:', condition: { field: 'disposal', value: 'Ja, tømreren skal afmontere OG bortskaffe det' } },
         { id: 'kitchenBrand', type: 'text', label: 'Hvilket mærke/leverandør er det nye køkken fra (fx IKEA, HTH, Kvik)?' },
         { id: 'ownMaterials', type: 'select', label: 'Står du selv for indkøb af selve køkkenet?', options: ['Ja, jeg har allerede købt det (kun pris på montering)', 'Nej, tømreren skal stå for indkøb'] },
         { id: 'materialLink', type: 'text', label: 'Indsæt evt. et link til det køkken du har købt:', condition: { field: 'ownMaterials', value: 'Ja, jeg har allerede købt det (kun pris på montering)' } },
@@ -267,7 +267,7 @@ export const QUESTIONS = {
     ],
     ceilings: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 loft skal der laves cirka?' },
-        { id: 'disposal', type: 'select', label: 'Skal nuværende loft afmonteres og afskaffes?', options: ['Ja', 'Nej'] },
+        { id: 'disposal', type: 'select', label: 'Skal nuværende loft afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi monterer ovenpå / der er allerede tomt'] },
         { id: 'vaporAndInsulation', type: 'select', label: 'Hvad ligger der umiddelbart ovenover det nye loft?', tooltip: 'Hvis der er et koldt loftrum (f.eks. spidsloft), skal der lovmæssigt monteres en dampspærre (en plastdug) under loftet for at forhindre fugtskader i tagkonstruktionen.', options: ['Opvarmet etage (Ingen dampspærre nødvendig)', 'Koldt tagrum (Lovkrav om plast-dampspærre)', 'Koldt tagrum inkl. ny isolering (Dampspærre + Isolering)'] },
         { 
             id: 'material', 
@@ -328,7 +328,7 @@ export const QUESTIONS = {
     annex: [
         { id: 'annexType', type: 'select', label: 'Hvad er det primære formål med byggeriet?', options: ['Uisoleret skur til opbevaring', 'Isoleret skur/værksted', 'Fuldt beboeligt anneks'] },
         { id: 'amount', type: 'number', label: 'Hvor stort skal det være i m2?' },
-        { id: 'disposal', type: 'select', label: 'Skal der rives et eksisterende skur/anneks ned?', options: ['Nej', 'Ja'] },
+        { id: 'disposal', type: 'select', label: 'Skal der rives et eksisterende skur/anneks ned?', options: ['Nej, der er frit', 'Ja, tømreren skal rive ned OG bortskaffe det', 'Ja, tømreren skal kun rive ned (vi kører det selv væk)'] },
         { 
             id: 'oldMaterial', 
             type: 'visual_select', 
@@ -366,7 +366,7 @@ export const QUESTIONS = {
     ],
     carport: [
         { id: 'amount', type: 'select', label: 'Hvor mange carporte ønsker du tilbud på?', options: ['1', '2', '3', 'Flere (Beskrives i noter)'] },
-        { id: 'disposal', type: 'select', label: 'Skal der rives en eksisterende carport ned?', options: ['Nej', 'Ja'] },
+        { id: 'disposal', type: 'select', label: 'Skal der rives en eksisterende carport ned?', options: ['Nej, der er frit', 'Ja, tømreren skal rive ned OG bortskaffe den', 'Ja, tømreren skal kun rive ned (vi kører det selv væk)'] },
         { 
             id: 'oldMaterial', 
             type: 'visual_select', 
@@ -416,7 +416,7 @@ export const QUESTIONS = {
     ],
     fence: [
         { id: 'amount', type: 'number', label: 'Hvor mange løbende meter hegn skal der cirka sættes op?' },
-        { id: 'disposal', type: 'select', label: 'Skal et eksisterende hegn fjernes?', options: ['Nej', 'Ja'] },
+        { id: 'disposal', type: 'select', label: 'Skal et eksisterende hegn fjernes?', options: ['Nej, der er frit', 'Ja, tømreren skal fjerne det OG bortskaffe det', 'Ja, tømreren skal kun fjerne det (vi kører det selv væk)'] },
         { 
             id: 'oldMaterial', 
             type: 'visual_select', 
