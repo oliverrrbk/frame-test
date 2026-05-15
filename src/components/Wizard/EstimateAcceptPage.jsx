@@ -238,10 +238,10 @@ const EstimateAcceptPage = () => {
                     ) : (
                         <>
                             <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: '#0f172a', marginBottom: '16px' }}>
-                                Dit vejledende overslag
+                                Gå videre med opgaven
                             </h2>
                             <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
-                                Du kan trygt bruge dette overslag til at sammenligne markedet. Vi tror på fuld gennemsigtighed fra start.
+                                Tak for at vælge os til opgaven. Vi tager dit projekt meget seriøst og vil nu gå igennem detaljerne. Din forventede prisramme kan ses herunder.
                             </p>
                         </>
                     )}
