@@ -2918,8 +2918,9 @@ const Dashboard = () => {
                                                                                 hourlyRate: quoteBuilder.hourlyRate,
                                                                                 materialCost: quoteBuilder.materialCost,
                                                                                 drivingCost: quoteBuilder.drivingCost,
+                                                                                customLines: quoteBuilder.customLines,
                                                                             },
-                                                                            quote_settings: quoteBuilder.settings,
+                                                                            quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown },
                                                                             custom_message: quoteBuilder.customMessage
                                                                         };
                                                                         
@@ -2970,8 +2971,9 @@ const Dashboard = () => {
                                                                                 hourlyRate: quoteBuilder.hourlyRate,
                                                                                 materialCost: quoteBuilder.materialCost,
                                                                                 drivingCost: quoteBuilder.drivingCost,
+                                                                                customLines: quoteBuilder.customLines,
                                                                             },
-                                                                            quote_settings: quoteBuilder.settings,
+                                                                            quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown },
                                                                             custom_message: quoteBuilder.customMessage
                                                                         };
                                                                         

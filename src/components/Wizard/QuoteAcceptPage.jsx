@@ -223,7 +223,8 @@ const QuoteAcceptPage = () => {
     const calcData = lead?.raw_data?.calc_data;
     const settings = lead?.raw_data?.quote_settings;
 
-    const totalPris = calcData ? (calcData.laborHours * calcData.hourlyRate) + calcData.materialCost + calcData.drivingCost : 0;
+    const customLinesSum = calcData?.customLines ? calcData.customLines.reduce((acc, line) => acc + (line.price || 0), 0) : 0;
+    const totalPris = calcData ? (calcData.laborHours * calcData.hourlyRate) + calcData.materialCost + calcData.drivingCost + customLinesSum : 0;
     const moms = totalPris * 0.25;
     const totalMedMoms = totalPris + moms;
 
@@ -277,7 +278,7 @@ const QuoteAcceptPage = () => {
                         <h3 style={{ margin: '0 0 20px 0', fontSize: '1.2rem', color: '#1e293b' }}>Prisoverslag</h3>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {(!settings || settings.showDetailedBreakdown) ? (
+                            {settings?.showDetailedBreakdown ? (
                                 <>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
                                         <span style={{ color: '#475569' }}>Materialer (inkl. spild)</span>
@@ -293,6 +294,12 @@ const QuoteAcceptPage = () => {
                                             <span style={{ fontWeight: '600', color: '#0f172a' }}>{formatCurrency(calcData.drivingCost)}</span>
                                         </div>
                                     )}
+                                    {calcData.customLines && calcData.customLines.length > 0 && calcData.customLines.map((line, idx) => (
+                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                                            <span style={{ color: '#475569' }}>{line.description || 'Ekstra ydelser'}</span>
+                                            <span style={{ fontWeight: '600', color: '#0f172a' }}>{formatCurrency(line.price || 0)}</span>
+                                        </div>
+                                    ))}
                                 </>
                             ) : (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
