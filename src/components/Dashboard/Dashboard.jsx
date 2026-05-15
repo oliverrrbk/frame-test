@@ -267,12 +267,36 @@ const Dashboard = () => {
 
             const calc = selectedLead.raw_data.calc_data || {};
 
+            let initialCustomLines = [];
+            const activeHourlyRate = calc.hourlyRate || carpenterProfile?.hourly_rate || 500;
+            const activeLaborHours = calc.laborHours || 0;
+            const activeMaterialCost = calc.materialCost || 0;
+            const activeDrivingCost = calc.drivingCost || 0;
+            
+            // Udregn differencen mellem de rå materialer/timer og det endelige kundetilbud
+            if (calc.finalEstimateExVat) {
+                const baseExVat = (activeLaborHours * activeHourlyRate) + activeMaterialCost + activeDrivingCost;
+                const difference = calc.finalEstimateExVat - baseExVat;
+                
+                if (difference > 0) {
+                    initialCustomLines.push({
+                        description: 'Ekstra materialer (smådele) & Sikkerhedsbuffer',
+                        price: difference
+                    });
+                } else if (difference < 0) {
+                    initialCustomLines.push({
+                        description: 'System-rabat / Afrunding',
+                        price: difference
+                    });
+                }
+            }
+
             setQuoteBuilder({
-                laborHours: calc.laborHours || 0,
-                hourlyRate: calc.hourlyRate || carpenterProfile?.hourly_rate || 500,
-                materialCost: calc.materialCost || 0,
-                drivingCost: calc.drivingCost || 0,
-                customLines: [], 
+                laborHours: activeLaborHours,
+                hourlyRate: activeHourlyRate,
+                materialCost: activeMaterialCost,
+                drivingCost: activeDrivingCost,
+                customLines: initialCustomLines, 
                 showPreview: false,
                 isGeneratingPdf: false,
                 showDetailedBreakdown: false, // Nu skjult som standard
