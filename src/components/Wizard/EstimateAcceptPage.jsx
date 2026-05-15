@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import confetti from 'canvas-confetti';
 import { QUESTIONS } from './questionsConfig';
 
 const EstimateAcceptPage = () => {
@@ -12,6 +13,7 @@ const EstimateAcceptPage = () => {
     const [carpenter, setCarpenter] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isAccepted, setIsAccepted] = useState(false);
     
     const [wantsQuote, setWantsQuote] = useState(false);
     const [selectedDays, setSelectedDays] = useState([]);
@@ -134,8 +136,11 @@ const EstimateAcceptPage = () => {
                 }
 
                 import('../../utils/sendEmail').then(({ sendEmail }) => {
-                    import('../../utils/emailTemplates').then(({ getCarpenterNewRequestTemplate, getCarpenterSenderName }) => {
+                    import('../../utils/emailTemplates').then(({ getCarpenterNewRequestTemplate, getCustomerBookingConfirmationTemplate, getCarpenterSenderName }) => {
                         const appUrl = window.location.origin;
+                        const senderName = getCarpenterSenderName(carpenter);
+
+                        // Send til tømrer
                         sendEmail({
                             to: carpenterEmail,
                             subject: `Ny forespørgsel (Overslag Godkendt) fra ${customerName} - ${categoryName}`,
@@ -143,12 +148,31 @@ const EstimateAcceptPage = () => {
                             fromName: carpenterName,
                             replyTo: customerEmail
                         });
+
+                        // Send til kunden
+                        if (customerEmail && customerEmail !== 'Ukendt') {
+                            sendEmail({
+                                to: customerEmail,
+                                subject: `Tak for din anmodning til ${carpenterName}`,
+                                html: getCustomerBookingConfirmationTemplate(customerName, categoryName, carpenter, contactPreferenceStr),
+                                fromName: senderName,
+                                replyTo: carpenterEmail
+                            });
+                        }
                     });
                 });
             }
             
+            // Affyr confetti
+            confetti({
+                particleCount: 150,
+                spread: 80,
+                origin: { y: 0.6 },
+                colors: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6']
+            });
+
             window.scrollTo(0, 0);
-            navigate('/bekraeftet');
+            setIsAccepted(true);
         } catch (err) {
             console.error("Fejl ved accept af overslag:", err);
             toast.error("Hov! Der skete en fejl. Prøv igen.");
@@ -298,7 +322,14 @@ const EstimateAcceptPage = () => {
                     </ul>
                 </div>
 
-                {!wantsQuote ? (
+                {isAccepted ? (
+                    <div style={{ backgroundColor: '#ecfdf5', borderRadius: '12px', border: '2px solid #10b981', padding: '40px', textAlign: 'center', marginTop: '32px' }}>
+                        <div style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '50%', width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 24px' }}>✓</div>
+                        <h2 style={{ margin: '0 0 16px 0', color: '#065f46', fontSize: '1.8rem', fontWeight: '800' }}>Forespørgsel sendt!</h2>
+                        <p style={{ margin: '0 0 16px 0', color: '#047857', fontSize: '1.1rem', lineHeight: '1.6' }}>Tak for din tillid. Vi har også sendt en bekræftelse til din e-mail.</p>
+                        <p style={{ margin: 0, color: '#065f46', fontSize: '1.05rem', opacity: 0.9 }}><strong>Næste skridt:</strong> Vi kontakter dig {isAsap ? 'hurtigst muligt' : 'på dit valgte tidspunkt'} for at aftale nærmere, så vi kan udarbejde et endeligt og bindende tilbud til dig.</p>
+                    </div>
+                ) : !wantsQuote ? (
                     <div className="result-actions" style={{ marginTop: '40px', display: 'flex', gap: '16px', flexDirection: 'column' }}>
                         <button 
                             style={{ 

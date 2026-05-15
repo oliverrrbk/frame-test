@@ -472,3 +472,31 @@ export const getFeedbackTemplate = (carpenter, feedbackText) => {
     `;
     return getBaseTemplate("System Feedback: " + carpenterName, content, `Feedback fra ${carpenterName}`);
 };
+
+export const getCustomerBookingConfirmationTemplate = (customerName, categoryName, carpenter, contactPreference) => {
+    const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
+    const signatureName = getCarpenterSenderName(carpenter);
+
+    const contactText = contactPreference === 'Hurtigst muligt' 
+        ? 'hurtigst muligt' 
+        : `på dit valgte tidspunkt: ${contactPreference}`;
+
+    const content = `
+        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Kære ${customerName},</h2>
+        <p style="color: #334155;">Mange tak fordi du har valgt <strong>${carpenterCompanyName}</strong> til at kigge nærmere på din opgave vedrørende <strong>${categoryName}</strong>.</p>
+        
+        <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 20px; border-radius: 4px; margin: 24px 0;">
+            <h3 style="margin-top: 0; font-size: 16px; color: #065f46;">Hvad sker der nu?</h3>
+            <p style="margin: 0; color: #047857; line-height: 1.6;">
+                Vi har modtaget dine kontaktoplysninger i vores system. Vi ringer dig op <strong>${contactText}</strong> for at tage en kort indledende snak. 
+                Ofte aftaler vi her et tidspunkt, hvor vi kan komme forbi og besigtige forholdene fysisk. På den måde sikrer vi, at du får et præcist, skræddersyet og bindende tilbud på din opgave.
+            </p>
+        </div>
+
+        <p style="color: #334155;">Vi glæder os meget til at høre mere om dine byggedrømme!</p>
+        <br/>
+        <p style="color: #334155; margin-bottom: 0;">Med venlig hilsen,</p>
+        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
+    `;
+    return getBaseTemplate("Tak for din bekræftelse", content, `Vi kontakter dig ${contactText}`, carpenter);
+};
