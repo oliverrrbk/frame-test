@@ -239,7 +239,7 @@ export const getCustomerFastTrackTemplate = (customerName, categoryName, carpent
 
 export const getCarpenterWelcomeTemplate = (companyName, loginUrl) => {
     const content = `
-        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Velkommen til Bison Frame, ${companyName}! 🎉</h2>
+        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Velkommen til Bison Frame, ${companyName}!</h2>
         <p style="color: #334155; font-size: 16px; line-height: 1.6;">Vi er super glade for at have dig ombord. Din nye tilbuds- og lead-portal er nu oprettet og klar til at skaffe dig flere (og bedre) kunder.</p>
         
         <div style="background-color: #f8fafc; padding: 24px; border-radius: 8px; margin: 32px 0; border: 1px solid #e2e8f0; border-left: 4px solid #10b981;">
@@ -304,7 +304,7 @@ export const getCarpenterNewRequestTemplate = (carpenterName, customerName, cate
 export const getAdminNewSignupTemplate = (companyName, cvr, ownerName, email, phone) => {
     const content = `
         <div style="text-align: center; margin-bottom: 32px;">
-            <h2 style="margin: 0; color: #10b981; font-size: 24px;">🎉 Ny Tømrer på Platformen!</h2>
+            <h2 style="margin: 0; color: #10b981; font-size: 24px;">Ny Tømrer på Platformen!</h2>
         </div>
         
         <p style="color: #334155; font-size: 16px;">Hej Mads,</p>
@@ -335,7 +335,7 @@ export const getAdminNewSignupTemplate = (companyName, cvr, ownerName, email, ph
             </table>
         </div>
         
-        <p style="color: #334155; font-size: 16px;">Ring til dem nu og vind point på den personlige service! 🚀</p>
+        <p style="color: #334155; font-size: 16px;">Ring til dem nu og vind point på den personlige service!</p>
     `;
     return getBaseTemplate("Ny Tømrer Oprettet", content, `Ny bruger: ${companyName}`);
 };
@@ -424,7 +424,7 @@ export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, c
     
     const content = `
         <div style="text-align: center; margin-bottom: 32px;">
-            <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+            <div style="font-size: 48px; margin-bottom: 16px; color: #10b981;">✓</div>
             <h2 style="margin: 0; color: #10b981; font-size: 24px;">En kunde har accepteret dit tilbud!</h2>
         </div>
         

@@ -112,7 +112,7 @@ const Register = ({ setSession }) => {
                 import('../../utils/emailTemplates').then(({ getAdminNewSignupTemplate }) => {
                     sendEmail({
                         to: 'mbc@bisoncompany.dk',
-                        subject: `🎉 Ny Tømrer: ${companyName}`,
+                        subject: `Ny Tømrer: ${companyName}`,
                         html: getAdminNewSignupTemplate(companyName, cvr, ownerName, email, phone),
                         fromName: 'Bison Frame System'
                     }).catch(err => console.error("Fejl ved admin mail:", err));

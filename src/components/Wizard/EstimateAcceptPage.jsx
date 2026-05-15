@@ -241,7 +241,8 @@ const EstimateAcceptPage = () => {
                                 Gå videre med opgaven
                             </h2>
                             <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
-                                Tak for at vælge os til opgaven. Vi tager dit projekt meget seriøst og vil nu gå igennem detaljerne. Din forventede prisramme kan ses herunder.
+                                Tak for at vælge os til opgaven. Vi tager dit projekt meget seriøst og vil gå igennem detaljerne. <br/><br/>
+                                <strong style={{ color: '#0f172a' }}>For at vi får direkte besked, skal du blot rulle ned til bunden og bekræfte forespørgslen.</strong> Din forventede prisramme kan ses herunder.
                             </p>
                         </>
                     )}

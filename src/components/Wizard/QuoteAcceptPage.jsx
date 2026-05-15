@@ -182,7 +182,7 @@ const QuoteAcceptPage = () => {
                                 const appUrl = window.location.origin;
                                 sendEmail({
                                     to: carpenter.email,
-                                    subject: `✅ Tilbud accepteret: ${categoryName} - ${lead.customer_name}`,
+                                    subject: `Tilbud accepteret: ${categoryName} - ${lead.customer_name}`,
                                     html: getCarpenterOfferAcceptedTemplate(carpenter.company_name, lead.customer_name, categoryName, appUrl, carpenter, lead.id),
                                     fromName: carpenterName,
                                     replyTo: lead.customer_email

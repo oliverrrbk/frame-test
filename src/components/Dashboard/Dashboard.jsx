@@ -136,13 +136,20 @@ const Dashboard = () => {
         if (tabParam === 'Bekræftet opgave') {
             setActiveTab('leads');
             setLeadFilter('Bekræftet opgave');
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('tab');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
         } else if (tabParam === 'leads') {
             setActiveTab('leads');
             setLeadFilter('Ny forespørgsel');
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('tab');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
         } else if (tabParam === 'integrations') {
             setActiveTab('integrations');
-            // Fjern parameteren så man kan skifte væk igen uden at blive låst
-            window.history.replaceState({}, document.title, window.location.pathname);
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('tab');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
         }
 
         // Global URL parametre

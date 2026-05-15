@@ -90,7 +90,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
                         const loginUrl = window.location.origin;
                         sendEmail({
                             to: profile.email,
-                            subject: 'Velkommen til Bison Frame! 🚀',
+                            subject: 'Velkommen til Bison Frame!',
                             html: getCarpenterWelcomeTemplate(profile.company_name || 'Håndværker', loginUrl),
                             fromName: 'Bison Frame'
                         }).catch(err => console.error("Fejl ved velkomstmail:", err));
