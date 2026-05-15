@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { QUESTIONS } from './questionsConfig';
+import { generateTaskDescription } from '../../utils/taskDescription';
 
 const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard, nextStep, carpenter, isManualCreation = false, onComplete = null, editProject }) => {
     const [wantsQuote, setWantsQuote] = useState(false);
@@ -184,102 +185,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                 )}
 
                 {(() => {
-                    const generateTaskDescription = (category, details) => {
-                        if (!details || ['special', 'extensions'].includes(category)) return [];
-                        let tasks = [];
-                        
-                        // 1. Nedrivning / Bortskaffelse
-                        if (details.disposal && details.disposal.startsWith('Ja')) {
-                            let text = 'Afmontering af eksisterende';
-                            if (category === 'floor') text += ' gulv';
-                            else if (category === 'roof') text += ' tag';
-                            else if (category === 'windows') text += ' vinduer/døre';
-                            else if (category === 'kitchen') text += ' køkken';
-                            else if (category === 'terrace') text += ' terrasse';
-                            else if (category === 'doors') text += ' døre';
-                            else if (category === 'ceilings') text += ' loft';
-                            else if (category === 'facades') text += ' beklædning';
-                            
-                            if (details.disposal.toLowerCase().includes('bortskaffe')) {
-                                text += ' inkl. miljøgebyr, bortskaffelse og kørsel til genbrugsplads';
-                            } else {
-                                text += ' (Kunden står selv for bortskaffelse)';
-                            }
-                            tasks.push(text);
-                        } else if (details.disposal && details.disposal.includes('rives ned')) {
-                             let text = 'Nedrivning af eksisterende konstruktion';
-                             if (details.disposal.toLowerCase().includes('bortskaffe')) {
-                                text += ' inkl. miljøgebyr og bortskaffelse';
-                             } else {
-                                text += ' (Kunden står selv for bortskaffelse)';
-                             }
-                             tasks.push(text);
-                        }
-                        
-                        // 2. Klargøring / Underlag
-                        if (category === 'floor') {
-                            if (details.underfloorHeating && details.underfloorHeating.startsWith('Ja')) {
-                                tasks.push('Etablering af underlag til gulvvarme (f.eks. varmefordelingsplader / sporplader)');
-                            }
-                            if (details.material === 'Massivt træ' && details.floorFoundation === 'Strøer / Trækonstruktion') {
-                                tasks.push('Opklodsning og nivellering af strøer før montering');
-                            } else {
-                                tasks.push('Opretning af undergulv og udlægning af trinlydsdæmpende underlag (foam/pap)');
-                            }
-                        }
-                        if (category === 'roof') {
-                            if (details.underRoof && details.underRoof === 'Ja') {
-                                tasks.push('Montering af nyt diffusionstårbedt undertag og klemlister');
-                            } else {
-                                tasks.push('Gennemgang og klargøring af eksisterende spær/lægter');
-                            }
-                        }
-                        
-                        // 3. Montering / Levering
-                        let qty = details.amount || details.kvm || '';
-                        if (qty) qty = qty + ' ';
-                        
-                        if (category === 'floor') {
-                            tasks.push(`Levering og professionel montering af ${qty}m² ${details.material || 'nyt gulv'}`);
-                        } else if (category === 'windows') {
-                            tasks.push(`Levering og isætning af ${details.amount || 'nye'} elementer efter gældende standarder`);
-                        } else if (category === 'roof') {
-                            tasks.push(`Levering og montering af ${qty}m² ${details.material || 'nyt tag'}`);
-                        } else if (category === 'doors') {
-                            tasks.push(`Montering og justering af ${details.amount || 'nye'} døre inkl. beslag`);
-                        } else if (category === 'kitchen') {
-                            tasks.push(`Montering, samling og tilpasning af nye køkkenelementer i vater`);
-                        } else if (category === 'terrace') {
-                            tasks.push(`Opbygning af bærende konstruktion og lægning af ${qty}m² ${details.material || 'terrassebrædder'}`);
-                        } else if (category === 'ceilings') {
-                            tasks.push(`Opsætning af ${qty}m² ${details.material || 'nyt loft'} inkl. evt. forskalling`);
-                        } else if (category === 'facades') {
-                            tasks.push(`Montering af ${qty}m² ${details.material || 'ny facadebeklædning'}`);
-                        }
-                        
-                        // 4. Finish
-                        if (category === 'floor') {
-                            if (details.skirtingBoards && details.skirtingBoards.startsWith('Ja')) {
-                                tasks.push('Indvendig finish med montering og tilpasning af nye fodlister samt fugearbejde');
-                            } else {
-                                tasks.push('Grov finish (uden montering af fodlister)');
-                            }
-                        } else if (category === 'windows' || category === 'doors') {
-                            tasks.push('Indvendig og udvendig finish inkl. isolering, fugning og evt. lister');
-                        } else if (category === 'roof') {
-                            if (details.gutters && details.gutters.startsWith('Ja')) {
-                                tasks.push('Montering af nye tagrender og nedløbsrør');
-                            }
-                            tasks.push('Færdiggørelse med rygning, vindskeder og nødvendige inddækninger');
-                        } else if (category === 'kitchen') {
-                            tasks.push('Montering af bordplade, paneler, greb og finish-lister (eks. vvs/el)');
-                        }
-                        
-                        // 5. Kørsel og Oprydning
-                        tasks.push('Kørsel til og fra adressen, brug af værktøj samt grov-oprydning af arbejdsområdet');
-                        
-                        return tasks;
-                    };
+
 
                     const taskList = generateTaskDescription(projectData.category, projectData.details);
 
