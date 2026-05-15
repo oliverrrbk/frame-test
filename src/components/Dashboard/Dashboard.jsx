@@ -240,26 +240,54 @@ const Dashboard = () => {
             const geocoder = new window.google.maps.Geocoder();
             let updated = {...geocodedLeads};
             
+            // Lokalt cache-objekt for at spare på Google Maps kald ved ens adresser
+            const addressCache = {};
+            
             for (const lead of toGeocode) {
                 try {
-                    // Google's geocoder
-                    const response = await geocoder.geocode({ 
-                        address: lead.customer_address,
-                        componentRestrictions: { country: "DK" }
-                    });
+                    let baseLocation = null;
                     
-                    if (response.results && response.results.length > 0) {
-                        const location = response.results[0].geometry.location;
-                        updated[lead.id] = { lat: location.lat(), lng: location.lng() }; // Google bruger {lat, lng} objekt
+                    // Tjek om vi allerede har slået denne adresse op i dette loop
+                    if (addressCache[lead.customer_address]) {
+                        baseLocation = addressCache[lead.customer_address];
+                    } else {
+                        // Kald Google's geocoder
+                        const response = await geocoder.geocode({ 
+                            address: lead.customer_address,
+                            componentRestrictions: { country: "DK" }
+                        });
+                        
+                        if (response.results && response.results.length > 0) {
+                            baseLocation = response.results[0].geometry.location;
+                            addressCache[lead.customer_address] = baseLocation;
+                        }
+                        
+                        // Delay kun når vi reelt rammer API'et (4 requests pr. sekund)
+                        await new Promise(r => setTimeout(r, 250));
+                    }
+                    
+                    if (baseLocation) {
+                        // Tilføj en minimal "jitter" (ca. 10-20 meter) så leads på samme adresse ikke ligger oveni hinanden 100%
+                        const jitterLat = (Math.random() - 0.5) * 0.0003;
+                        const jitterLng = (Math.random() - 0.5) * 0.0003;
+                        
+                        // Håndtér forskellen på rigtigt Google objekt vs vores locale cache objekt (som måske kun er lat/lng tal hvis vi udvidede den senere)
+                        const lat = typeof baseLocation.lat === 'function' ? baseLocation.lat() : baseLocation.lat;
+                        const lng = typeof baseLocation.lng === 'function' ? baseLocation.lng() : baseLocation.lng;
+                        
+                        updated[lead.id] = { lat: lat + jitterLat, lng: lng + jitterLng }; 
                     } else {
                         updated[lead.id] = null; // Markerer som null, hvis adr er fuldstændig uforståelig
                     }
                 } catch (err) {
                     console.error("Google Geocoder fejl:", err);
-                    updated[lead.id] = null;
+                    if (err?.code === 'OVER_QUERY_LIMIT') {
+                        console.warn("Ramte Google Maps Rate Limit. Stopper geocoding batch.");
+                        break; // Stop løkken, lad systemet prøve igen senere uden at gemme null
+                    } else {
+                        updated[lead.id] = null;
+                    }
                 }
-                // Ekstremt kort delay for maksimal kort-hastighed (vi smadrede den 300ms tjekning)
-                await new Promise(r => setTimeout(r, 10));
             }
             setGeocodedLeads(prev => ({...prev, ...updated}));
         };
