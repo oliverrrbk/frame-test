@@ -19,6 +19,7 @@ import SuperAdminView from './SuperAdminView';
 import MyProfileView from './MyProfileView';
 import SubscriptionSettings from './SubscriptionSettings';
 import DashboardOverview from './DashboardOverview';
+import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 
 // Konfiguration til det nye Google Map
 const MAP_LIBRARIES = ['places'];
@@ -3281,6 +3282,9 @@ const Dashboard = () => {
                                 </div>
                                 <div className="card-footer">
                                     <button className="btn-primary" onClick={handleSave}>{isSaving ? 'Gemmer...' : 'Gem Ændringer'}</button>
+                                </div>
+                                <div style={{ padding: '0 24px 24px 24px' }}>
+                                    <CalculatorFaqAccordion />
                                 </div>
                             </div>
                         </div>

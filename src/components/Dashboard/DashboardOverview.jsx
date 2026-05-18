@@ -34,6 +34,7 @@ import {
 } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import CalculatorWorkflowSteps from './CalculatorWorkflowSteps';
 
 export default function DashboardOverview({ leadsData, carpenterProfile, myProfile }) {
     const [timeframe, setTimeframe] = useState('30d'); // '7d', '30d', 'ytd', 'all'
@@ -214,6 +215,8 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                     </button>
                 </div>
             </div>
+            
+            <CalculatorWorkflowSteps />
 
             {/* Main Layout: Sidebar & Graph Combined */}
             <div className="glass-panel" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', minHeight: '600px', overflow: 'hidden' }}>
