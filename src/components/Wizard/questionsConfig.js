@@ -11,7 +11,7 @@ export const initialCategories = [
     { id: 'annex', label: 'Annekser & Skure', desc: 'Værksted, beboelse', img: '/images/annex_ai.png' },
     { id: 'carport', label: 'Carport', desc: 'Enkelt, dobbelt, med skur', img: '/images/carport_ai.png' },
     { id: 'fence', label: 'Hegn', desc: 'Træ, lamel, komposit', img: '/images/fence_ai.png' },
-    { id: 'special', label: 'Specialopgave', desc: 'Chat med AI Tømrer', img: '/images/special_carpenter.png' }
+    { id: 'special', label: 'Special- & Kombiprojekter', desc: 'Sammensæt flere opgaver / Chat med AI', img: '/images/special_carpenter.png' }
 ];
 
 export const QUESTIONS = {
