@@ -204,7 +204,6 @@ Når du er HELT sikker på at have al info til at regne et overslag ud, skal du 
                 messages: fullMessages,
                 tools: openaiTools,
                 tool_choice: "auto",
-                temperature: 0.7,
                 max_completion_tokens: 2500,
             }, { signal: controller.signal });
 
