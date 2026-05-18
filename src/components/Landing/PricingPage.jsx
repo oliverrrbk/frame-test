@@ -136,7 +136,7 @@ export default function PricingPage({ setSession }) {
                         <ul className="flex flex-col gap-4 text-sm text-slate-600 dark:text-slate-300 flex-grow relative z-10 pb-8 pt-4">
                             <li className="flex items-start gap-3">
                                 <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Interaktiv Tilbudsberegner</span>
+                                <span>Beregn Standardopgaver (Tag, Gulv mm.)</span>
                             </li>
                             <li className="flex items-start gap-3">
                                 <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
@@ -200,7 +200,7 @@ export default function PricingPage({ setSession }) {
                             </li>
                             <li className="flex items-start gap-3">
                                 <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>AI "Specialopgave" Assistent</span>
+                                <span>AI-Agent til Special- & Kombiprojekter</span>
                             </li>
                             <li className="flex items-start gap-3">
                                 <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />

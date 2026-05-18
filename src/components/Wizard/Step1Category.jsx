@@ -3,7 +3,10 @@ import React from 'react';
 import { initialCategories } from './questionsConfig';
 
 const Step1Category = ({ projectData, updateCategory, disabledCategories, carpenter }) => {
-    const categories = initialCategories.map(c => ({...c, title: c.label}));
+    const isBasisTier = carpenter?.tier === 'basis';
+    const categories = initialCategories
+        .map(c => ({...c, title: c.label}))
+        .filter(c => !(isBasisTier && c.id === 'special'));
 
     const handleSelect = (categoryId) => {
         updateCategory(categoryId);

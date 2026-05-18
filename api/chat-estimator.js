@@ -40,6 +40,11 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Beskeden er for lang (max 1000 tegn).' });
         }
         
+        // Sørg for at basis pakker ikke kan trække OpenAI tokens
+        if (contextData?.carpenterInfo?.tier === 'basis') {
+            return res.status(403).json({ error: 'Denne virksomhed har ikke adgang til AI-modulet. Opgrader venligst til Professionel pakken.' });
+        }
+        
         // Tjek om grænsen er nået (for at beskytte mod uendelige chats / misbrug)
         if (messages.length >= MAX_MESSAGES) {
             return res.status(200).json({
