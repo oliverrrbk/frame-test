@@ -103,32 +103,7 @@ const EstimateAcceptPage = () => {
                 // Byg project details HTML
                 let projectDetailsHtml = '';
                 const projectData = lead.raw_data || {};
-                if (projectData.category === 'special') {
-                    projectDetailsHtml = generateTaskAndQaHtml ? generateTaskAndQaHtml(projectData, true) : '';
-                } else {
-                    const categoryQuestions = QUESTIONS[projectData.category] || [];
-                    projectDetailsHtml = Object.entries(projectData.details || {})
-                        .map(([key, value]) => {
-                            const question = categoryQuestions.find(q => q.id === key);
-                            if (!question || value === undefined || value === null || value === '') return '';
-                            if (question.type === 'file') return '';
-                            
-                            let displayValue = value;
-                            if (question.type === 'window_configurator' && Array.isArray(value)) {
-                                displayValue = value.map(v => `${v.type || 'Standard'} (${v.width}x${v.height} cm)`).join(', ');
-                            } else if (typeof value === 'boolean') {
-                                displayValue = value ? 'Ja' : 'Nej';
-                            }
-
-                            return `
-                                <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
-                                    <strong style="display: block; color: #0f172a; margin-bottom: 4px;">${question.label}</strong>
-                                    <span style="color: #334155; white-space: pre-wrap;">${displayValue}</span>
-                                </li>
-                            `;
-                        })
-                        .join('');
-                }
+                projectDetailsHtml = generateTaskAndQaHtml ? generateTaskAndQaHtml(projectData, true) : '';
 
                 import('../../utils/sendEmail').then(({ sendEmail }) => {
                     import('../../utils/emailTemplates').then(({ getCarpenterNewRequestTemplate, getCustomerBookingConfirmationTemplate, getCarpenterSenderName }) => {
