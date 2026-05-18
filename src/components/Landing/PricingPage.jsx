@@ -152,7 +152,7 @@ export default function PricingPage({ setSession }) {
                             </li>
                             <li className="flex items-start gap-3">
                                 <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Integration til e-conomic</span>
+                                <span>Integration til e-conomic & Dinero</span>
                             </li>
                         </ul>
                         <div className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-slate-900 dark:text-slate-100 flex items-baseline gap-1 mt-4 mb-2">

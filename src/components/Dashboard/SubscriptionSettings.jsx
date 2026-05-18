@@ -126,7 +126,7 @@ const SubscriptionSettings = () => {
     }
 
     const tiers = {
-        basis: { name: 'Basis', price: '390', features: ['Beregn Standardopgaver (Tag, Gulv mm.)', 'Op til 20 tilbud / måned', 'Integration til e-conomic'] },
+        basis: { name: 'Basis', price: '390', features: ['Beregn Standardopgaver (Tag, Gulv mm.)', 'Op til 20 tilbud / måned', 'Integration til e-conomic & Dinero'] },
         standard: { name: 'Professionel', price: '790', features: ['Alt fra Basis', 'AI-Agent til Special- & Kombiprojekter', 'Ubegrænsede tilbud', 'Ordrestyring integration'] },
         enterprise: { name: 'Enterprise', price: '1.890', features: ['Alt fra Professionel', 'Multi-bruger adgang', 'Specialtilpasset CSS Design'] }
     };
