@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { QUESTIONS } from './questionsConfig';
-import { generateTaskDescription } from '../../utils/taskDescription';
+import { generateTaskDescription, generateTaskAndQaHtml } from '../../utils/taskDescription';
 const EstimateAcceptPage = () => {
     const { slug, lead_id } = useParams();
     const navigate = useNavigate();
@@ -104,12 +104,7 @@ const EstimateAcceptPage = () => {
                 let projectDetailsHtml = '';
                 const projectData = lead.raw_data || {};
                 if (projectData.category === 'special') {
-                    projectDetailsHtml = `
-                        <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
-                            <strong style="display: block; color: #0f172a; margin-bottom: 4px;">AI Opgave-beskrivelse:</strong>
-                            <span style="color: #334155;">${projectData.details?.aiSummary || projectData.details?.aiProjectTitle || 'Specialopgave'}</span>
-                        </li>
-                    `;
+                    projectDetailsHtml = generateTaskAndQaHtml ? generateTaskAndQaHtml(projectData, true) : '';
                 } else {
                     const categoryQuestions = QUESTIONS[projectData.category] || [];
                     projectDetailsHtml = Object.entries(projectData.details || {})

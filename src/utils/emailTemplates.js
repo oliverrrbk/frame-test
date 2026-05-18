@@ -305,9 +305,9 @@ export const getCarpenterNewRequestTemplate = (carpenterName, customerName, cate
         <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #e2e8f0;">
             <h3 style="margin-top: 0; font-size: 16px; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px;">Opgaven: ${categoryName}</h3>
             ${priceEstimate ? `<div style="margin-bottom: 20px; padding: 12px; background: #ecfdf5; border-radius: 8px; border: 1px solid #a7f3d0;"><strong style="color: #065f46;">Overslag sendt til kunde:</strong> <span style="color: #047857; font-weight: bold;">${priceEstimate}</span></div>` : ''}
-            <ul style="list-style-type: none; padding: 0; margin: 0; color: #334155;">
-                ${projectDetailsHtml || '<li style="color: #64748b; font-style: italic;">Ingen specifikke detaljer valgt.</li>'}
-            </ul>
+            ${projectDetailsHtml && projectDetailsHtml.includes('<li') 
+                ? `<ul style="list-style-type: none; padding: 0; margin: 0; color: #334155;">${projectDetailsHtml}</ul>`
+                : projectDetailsHtml || '<ul style="list-style-type: none; padding: 0; margin: 0; color: #334155;"><li style="color: #64748b; font-style: italic;">Ingen specifikke detaljer valgt.</li></ul>'}
         </div>
         
         <p style="color: #334155;">Log ind på dit Bison Frame dashboard for at udarbejde et tilbud til kunden.</p>
