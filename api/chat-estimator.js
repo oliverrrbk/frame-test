@@ -156,7 +156,7 @@ Når du er HELT sikker på at have al info til at regne et overslag ud, skal du 
 
         try {
             const completion = await openai.chat.completions.create({
-                model: "gpt-4o",
+                model: "gpt-5.5",
                 messages: fullMessages,
                 tools: tools,
                 tool_choice: "auto",
