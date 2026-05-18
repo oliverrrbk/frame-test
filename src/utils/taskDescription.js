@@ -159,7 +159,7 @@ export const generateTaskDescription = (category, details) => {
     return tasks;
 };
 
-export const generateTaskAndQaHtml = (projectData) => {
+export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter = false) => {
     if (!projectData) return '';
     const { category, details } = projectData;
     
@@ -190,6 +190,49 @@ export const generateTaskAndQaHtml = (projectData) => {
                 </div>
             `;
         }
+
+        if (details?.aiBreakdown && details.aiBreakdown.length > 0) {
+            if (includeBreakdownForCarpenter) {
+                aiHtml += `
+                    <div style="background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; padding: 24px; margin-bottom: 24px;">
+                        <strong style="display: block; color: #166534; font-size: 18px; margin-bottom: 16px;">AI Udregning / Opgavedele (KUN TIL TØMRER):</strong>
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 15px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #bbf7d0; color: #166534;">
+                                    <th style="padding: 8px 4px;">Opgavedel</th>
+                                    <th style="padding: 8px 4px; text-align: right;">Timer</th>
+                                    <th style="padding: 8px 4px; text-align: right;">Materialer</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${details.aiBreakdown.map(item => `
+                                    <tr style="border-bottom: 1px solid #e2e8f0; color: #334155;">
+                                        <td style="padding: 8px 4px; font-weight: 500;">${item.item}</td>
+                                        <td style="padding: 8px 4px; text-align: right;">${item.hours} t</td>
+                                        <td style="padding: 8px 4px; text-align: right;">${item.materials.toLocaleString('da-DK')} kr.</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                aiHtml += `
+                    <div style="background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; padding: 24px; margin-bottom: 24px;">
+                        <strong style="display: block; color: #166534; font-size: 18px; margin-bottom: 16px;">Overslaget inkluderer:</strong>
+                        <ul style="margin: 0; padding: 0; list-style: none;">
+                            ${details.aiBreakdown.map(t => `
+                                <li style="display: flex; align-items: flex-start; margin-bottom: 12px; color: #166534; line-height: 1.5;">
+                                    <span style="color: #22c55e; margin-right: 12px; font-weight: bold;">✓</span>
+                                    <span>${t.item}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+
         return aiHtml;
     }
 
