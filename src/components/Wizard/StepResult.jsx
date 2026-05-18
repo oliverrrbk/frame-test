@@ -129,11 +129,13 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
 
     const daysOfWeek = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 
+    const needsPhysicalInspection = projectData.category === 'extensions' || (projectData.category === 'special' && (!projectData.details?.aiLaborHours && !projectData.details?.aiMaterialCost));
+
     return (
         <section className="wizard-step active" style={{ maxWidth: '800px', margin: '0 auto' }}>
             <div className="result-card" style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    {['special', 'extensions'].includes(projectData.category) ? (
+                    {needsPhysicalInspection ? (
                         <>
                             <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '16px' }}>
                                 Vi har forstået din opgave!
@@ -154,7 +156,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     )}
                 </div>
                 
-                {['special', 'extensions'].includes(projectData.category) ? (
+                {needsPhysicalInspection ? (
                     <div style={{ 
                         background: '#f8fafc', 
                         border: '2px solid #e2e8f0',

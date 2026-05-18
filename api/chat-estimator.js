@@ -93,7 +93,7 @@ UDOVER DATABASEN GÆLDER DISSE REGLER FOR BEREGNING (I DIN REASONING):
 - GANG ALTID DIT ENDELIGE TIMEESTIMAT MED 1.30 (Tillæg 30% til uforudsete forhindringer).
 
 NÅR DU ER KLAR TIL AT GIVE OVERSLAG:
-Når du er HELT sikker på at have al info til at regne et overslag ud, skal du bruge funktionen \`submit_estimate\`. Du skal IKKE spørge om lov først.`;
+DU SKAL DRIVE SAMTALEN. Spørg kun om det absolut nødvendige (mål/kvadratmeter og materialevalg). Så snart du har nok information til at lave et realistisk overslag, SKAL du STRAKS afbryde samtalen og bruge funktionen \`submit_estimate\`. Du må ALDRIG spørge kunden "Er du klar til at få et overslag?" eller trække samtalen ud med smådetaljer. Gør det proaktivt!`;
 
         const parametersSchema = {
             type: "object",
