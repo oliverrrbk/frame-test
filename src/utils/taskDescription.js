@@ -168,13 +168,13 @@ export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter 
         if (details?.summaryBullets && details.summaryBullets.length > 0) {
             aiHtml += `
                 <div style="background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981; padding: 16px; margin-bottom: 24px;">
-                    <strong style="display: block; color: #0f172a; margin-bottom: 12px; font-size: 16px;">AI Opsummering af Kundens Ønsker:</strong>
+                    <strong style="display: block; color: #0f172a; margin-bottom: 12px; font-size: 16px;">Opsummering af kundens ønsker:</strong>
                     <ul style="margin: 0; padding-left: 20px; color: #334155; line-height: 1.6;">
                         ${details.summaryBullets.map(b => `<li style="margin-bottom: 8px;">${b}</li>`).join('')}
                     </ul>
                 </div>
             `;
-            if (details?.obsNotes && details.obsNotes.toLowerCase() !== 'ingen særlige forbehold') {
+            if (includeBreakdownForCarpenter && details?.obsNotes && details.obsNotes.toLowerCase() !== 'ingen særlige forbehold') {
                 aiHtml += `
                     <div style="background: #fffbeb; border-radius: 8px; border-left: 4px solid #f59e0b; padding: 16px; margin-bottom: 24px;">
                         <strong style="display: block; color: #b45309; margin-bottom: 8px; font-size: 16px;">⚠️ OBS / Særlige Forbehold:</strong>
