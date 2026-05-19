@@ -2,6 +2,7 @@ import { OpenAI } from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { applyCors } from './_cors.js';
 import { rateLimit } from './_ratelimit.js';
+import { QUESTIONS } from '../src/components/Wizard/questionsConfig.js';
 
 // dotenv kun nødvendigt lokalt; i Vercel-produktion er env'erne allerede injected
 if (!process.env.VERCEL) {
@@ -140,24 +141,65 @@ Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
             additionalProperties: false
         };
 
-        const standardProjectSchema = {
+        
+        
+function getDynamicTools(provider) {
+    const tools = [];
+    for (const [category, questions] of Object.entries(QUESTIONS)) {
+        if (category === 'special') continue;
+        
+        const properties = {};
+        for (const q of questions) {
+            if (q.type === 'file' || q.type === 'window_configurator') continue;
+            const prop = { description: q.label };
+            if (q.type === 'number') {
+                prop.type = 'number';
+            } else if (q.type === 'checkbox') {
+                prop.type = 'boolean';
+            } else {
+                prop.type = 'string';
+                if (q.options && q.options.length > 0) {
+                    prop.enum = q.options.map(opt => typeof opt === 'string' ? opt : opt.label);
+                }
+            }
+            properties[q.id] = prop;
+        }
+
+        const schema = {
             type: "object",
             properties: {
-                category: { type: "string", description: "Kategorien (fx 'roof', 'floor', 'windows', 'doors', 'terrace', 'kitchen', 'facades')" },
-                formState: { 
-                    type: "object", 
-                    description: "Nøgle-værdi par, der præcist matcher de engelske ID'er og de danske svarmuligheder, du spurgte kunden om fra Tjeklisten. Brug KUN de præcise tekststrenge angivet i mulighederne."
+                formState: {
+                    type: "object",
+                    properties: properties,
+                    additionalProperties: false
                 },
-                summaryBullets: { 
-                    type: "array", 
-                    description: "Kort ultra-præcis liste af opgavefakta",
-                    items: { type: "string" } 
-                },
-                obsNotes: { type: "string", description: "Vigtige forbehold nævnt i chatten" }
+                summaryBullets: { type: "array", items: { type: "string" } },
+                obsNotes: { type: "string" }
             },
-            required: ["category", "formState", "summaryBullets", "obsNotes"],
+            required: ["formState", "summaryBullets", "obsNotes"],
             additionalProperties: false
         };
+
+        if (provider === 'claude') {
+            tools.push({
+                name: `calculate_${category}`,
+                description: `KALD DENNE NÅR OPGAVEN ER KATEGORIEN: ${category}. Udfyld så mange felter som muligt baseret på kundens svar. Brug de eksakte svarmuligheder (enums).`,
+                input_schema: schema
+            });
+        } else {
+            tools.push({
+                type: "function",
+                function: {
+                    name: `calculate_${category}`,
+                    description: `KALD DENNE NÅR OPGAVEN ER KATEGORIEN: ${category}. Udfyld så mange felter som muligt baseret på kundens svar. Brug de eksakte svarmuligheder (enums).`,
+                    parameters: schema,
+                    strict: false
+                }
+            });
+        }
+    }
+    return tools;
+}
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 55000);
@@ -170,11 +212,7 @@ Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
             });
 
             const claudeTools = [
-                {
-                    name: "calculate_standard_project",
-                    description: "KALD DENNE NÅR OPGAVEN ER EN STANDARD KATEGORI (Tag, Gulv, Vinduer osv). Du udtager data og lader systemet regne.",
-                    input_schema: standardProjectSchema
-                },
+                ...getDynamicTools('claude'),
                 {
                     name: "submit_estimate",
                     description: "KALD KUN DENNE NÅR DET ER EN ÆGTE SPECIALOPGAVE SOM IKKE FINDES I TJEKLISTEN. Du udregner selv pris.",
@@ -198,13 +236,19 @@ Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
             const textBlock = response.content.find(block => block.type === 'text');
 
             if (toolUseBlock) {
+                let toolName = toolUseBlock.name;
+                let args = toolUseBlock.input;
+                if (toolName.startsWith('calculate_')) {
+                    args.category = toolName.split('_')[1];
+                    toolName = 'calculate_standard_project';
+                }
                 returnMessage = {
                     role: "assistant",
                     content: textBlock ? textBlock.text : null,
                     tool_calls: [{
                         function: {
-                            name: toolUseBlock.name,
-                            arguments: JSON.stringify(toolUseBlock.input)
+                            name: toolName,
+                            arguments: JSON.stringify(args)
                         }
                     }]
                 };
@@ -222,15 +266,7 @@ Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
             });
 
             const openaiTools = [
-                {
-                    type: "function",
-                    function: {
-                        name: "calculate_standard_project",
-                        description: "KALD DENNE NÅR OPGAVEN ER EN STANDARD KATEGORI (Tag, Gulv, Vinduer osv). Du udtager data og lader systemet regne.",
-                        parameters: standardProjectSchema,
-                        strict: false
-                    }
-                },
+                ...getDynamicTools('openai'),
                 {
                     type: "function",
                     function: {
@@ -254,6 +290,17 @@ Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
 
             clearTimeout(timeoutId);
             returnMessage = completion.choices[0].message;
+            if (returnMessage && returnMessage.tool_calls) {
+                returnMessage.tool_calls.forEach(tc => {
+                    let toolName = tc.function.name;
+                    if (toolName.startsWith('calculate_')) {
+                        const args = JSON.parse(tc.function.arguments);
+                        args.category = toolName.split('_')[1];
+                        tc.function.name = 'calculate_standard_project';
+                        tc.function.arguments = JSON.stringify(args);
+                    }
+                });
+            }
         }
         // MATH VALIDATOR (Sikring af håndværkerens avance)
         if (returnMessage && returnMessage.tool_calls && returnMessage.tool_calls.length > 0) {
