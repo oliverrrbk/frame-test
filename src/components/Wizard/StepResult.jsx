@@ -305,7 +305,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     alignItems: 'flex-start'
                 }}>
                     <div>
-                        {['special', 'extensions'].includes(projectData.category) ? (
+                        {needsPhysicalInspection ? (
                             <>
                                 <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Få besøg af {carpenter?.company_name || 'os'}</strong>
                                 <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Hvis du går videre herfra, sender du blot opgaven til os. Vi kvitterer med en mail og ringer dig op for at aftale et uforpligtende tidspunkt, hvor vi kan komme ud og se på projektet i virkeligheden.</p>
@@ -346,7 +346,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                             }, 100);
                         }}
                     >
-                        {['special', 'extensions'].includes(projectData.category) ? 'Send oplysninger og bliv ringet op' : `Vælg ${carpenter?.company_name || 'os'} til at udføre opgaven`}
+                        {needsPhysicalInspection ? 'Send oplysninger og bliv ringet op' : `Vælg ${carpenter?.company_name || 'os'} til at udføre opgaven`}
                     </button>
                     <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
                         {/* Ret opgaven knappen er flyttet op under opsummeringen */}

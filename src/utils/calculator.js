@@ -158,9 +158,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
         laborHours = (Number.isFinite(parsedHours) && parsedHours > 0) ? parsedHours : 10;
         const rawMat = (Number.isFinite(parsedMat) && parsedMat >= 0) ? parsedMat : 5000;
-        // AI-estimat antages at indeholde tømrerens avance allerede (prompten beder om kundepris).
-        // Vi undgår derfor dobbelt-markup her.
-        materialCost = rawMat;
+        // AI'en udregner nu kun rene netto-materialer + spild (fordi vi bad den om det).
+        // Vi GANGER derfor med markup, ligesom vi gør på alle andre kategorier, så prisen matcher!
+        materialCost = rawMat * (dbSettings.material_markup || 1.15);
         bArr.push(`Opgaven er estimeret automatisk via den digitale assistent.`);
         bArr.push(`Systemets vurdering: ${laborHours} arbejdstimer`);
         bArr.push(`Systemets vurdering af materialer: ${rawMat} kr.`);
