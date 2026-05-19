@@ -56,7 +56,7 @@ export default async function handler(req, res) {
             });
         }
 
-        const aiProvider = process.env.AI_PROVIDER || 'openai';
+        const aiProvider = process.env.AI_PROVIDER || 'anthropic';
 
         // Hent data fra klienten sikkert
         const dbContext = contextData?.dbContext || '';
