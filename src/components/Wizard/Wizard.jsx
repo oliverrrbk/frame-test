@@ -425,15 +425,28 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                     materialsData={dbMaterials}
                     prevStep={prevStep}
                     onComplete={(aiData) => {
-                        setProjectData(prev => ({ ...prev, details: { ...prev.details, ...aiData } }));
+                        if (aiData.isStandardCategory) {
+                            setProjectData({
+                                category: aiData.category,
+                                details: {
+                                    ...aiData.formState,
+                                    isAiExtracted: true,
+                                    chatLog: aiData.chatLog,
+                                    summaryBullets: aiData.summaryBullets,
+                                    notes: aiData.obsNotes
+                                }
+                            });
+                        } else {
+                            setProjectData(prev => ({ ...prev, details: { ...prev.details, ...aiData } }));
+                        }
                         setCurrentStep(3); // Gå til foto-upload
                     }} 
                 />
             )}
             {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} />}
-            {currentStep === 3 && <Step3Photos category={projectData.category} photos={projectData.details.photos || []} setPhotos={(photos) => updateDetails('photos', photos)} notes={projectData.details.notes || ''} setNotes={(notes) => updateDetails('notes', notes)} nextStep={nextStep} prevStep={() => projectData.category === 'special' ? setCurrentStep('special_chat') : prevStep()} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} />}
+            {currentStep === 3 && <Step3Photos category={projectData.category} photos={projectData.details.photos || []} setPhotos={(photos) => updateDetails('photos', photos)} notes={projectData.details.notes || ''} setNotes={(notes) => updateDetails('notes', notes)} nextStep={nextStep} prevStep={() => (projectData.category === 'special' || projectData.details.isAiExtracted) ? setCurrentStep('special_chat') : prevStep()} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} />}
             {currentStep === 4 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} />}
-            {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details.notes} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => setCurrentStep(projectData.category === 'special' ? 'special_chat' : 2)} />}
+            {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details.notes} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => setCurrentStep((projectData.category === 'special' || projectData.details.isAiExtracted) ? 'special_chat' : 2)} />}
             {currentStep === 6 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
 
             <div style={{ position: 'absolute', bottom: '16px', left: '0', right: '0', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>

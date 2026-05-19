@@ -97,9 +97,12 @@ UDOVER DATABASEN GÆLDER DISSE REGLER FOR BEREGNING (I DIN REASONING):
 - MATERIALE-TYPER: De 5 standardmaterialer for udendørs træ er: Trykimprægneret, Superwood, Thermowood, Cedertræ/Hardwood, og Komposit. De 5 hegnstyper er: Klinkehegn, Listehegn, Lamelhegn, Raftehegn, Komposithegn.
 
 NÅR DU ER NÅET IGENNEM HELE TJEKLISTEN:
-Når kunden har svaret på alle relevante punkter i din tjekliste (mål, nedrivning, underlag, materiale, gelænder osv.), SKAL du proaktivt afbryde samtalen og kalde funktionen \`submit_estimate\`. Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
+Når kunden har svaret på alle relevante punkter i din tjekliste, SKAL du proaktivt afbryde samtalen og kalde den korrekte funktion.
+Hvis projektet er en standard-kategori fra Tjeklisten (fx roof, floor, windows, doors, terrace osv.), SKAL du kalde funktionen \`calculate_standard_project\` og overlevere svarene som et struktureret JSON-objekt.
+Hvis projektet IKKE findes i tjeklisten (en ægte specialopgave, fx bygning af en hundekennel), skal du bruge \`submit_estimate\` og selv regne timer og materialer ud!
+Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
 
-        const parametersSchema = {
+        const submitEstimateSchema = {
             type: "object",
             properties: {
                 reasoning: { 
@@ -137,6 +140,25 @@ Når kunden har svaret på alle relevante punkter i din tjekliste (mål, nedrivn
             additionalProperties: false
         };
 
+        const standardProjectSchema = {
+            type: "object",
+            properties: {
+                category: { type: "string", description: "Kategorien (fx 'roof', 'floor', 'windows', 'doors', 'terrace', 'kitchen', 'facades')" },
+                formState: { 
+                    type: "object", 
+                    description: "Nøgle-værdi par, der præcist matcher de engelske ID'er og de danske svarmuligheder, du spurgte kunden om fra Tjeklisten. Brug KUN de præcise tekststrenge angivet i mulighederne."
+                },
+                summaryBullets: { 
+                    type: "array", 
+                    description: "Kort ultra-præcis liste af opgavefakta",
+                    items: { type: "string" } 
+                },
+                obsNotes: { type: "string", description: "Vigtige forbehold nævnt i chatten" }
+            },
+            required: ["category", "formState", "summaryBullets", "obsNotes"],
+            additionalProperties: false
+        };
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 55000);
 
@@ -147,11 +169,18 @@ Når kunden har svaret på alle relevante punkter i din tjekliste (mål, nedrivn
                 apiKey: process.env.ANTHROPIC_API_KEY
             });
 
-            const claudeTools = [{
-                name: "submit_estimate",
-                description: "Kald denne funktion for at give dit endelige overslag i arbejdstimer og materialeindkøb. KALD KUN DENNE NÅR DU ER HELT FÆRDIG MED AT SPØRGE. Du SKAL udfylde 'reasoning' feltet først for at beregne prisen korrekt.",
-                input_schema: parametersSchema
-            }];
+            const claudeTools = [
+                {
+                    name: "calculate_standard_project",
+                    description: "KALD DENNE NÅR OPGAVEN ER EN STANDARD KATEGORI (Tag, Gulv, Vinduer osv). Du udtager data og lader systemet regne.",
+                    input_schema: standardProjectSchema
+                },
+                {
+                    name: "submit_estimate",
+                    description: "KALD KUN DENNE NÅR DET ER EN ÆGTE SPECIALOPGAVE SOM IKKE FINDES I TJEKLISTEN. Du udregner selv pris.",
+                    input_schema: submitEstimateSchema
+                }
+            ];
 
             const response = await anthropic.messages.create({
                 model: "claude-sonnet-4-5-20250929",
@@ -192,15 +221,26 @@ Når kunden har svaret på alle relevante punkter i din tjekliste (mål, nedrivn
                 apiKey: process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY,
             });
 
-            const openaiTools = [{
-                type: "function",
-                function: {
-                    name: "submit_estimate",
-                    description: "Kald denne funktion for at give dit endelige overslag i arbejdstimer og materialeindkøb. KALD KUN DENNE NÅR DU ER HELT FÆRDIG MED AT SPØRGE. Du SKAL udfylde 'reasoning' feltet først for at beregne prisen korrekt.",
-                    parameters: parametersSchema,
-                    strict: true
+            const openaiTools = [
+                {
+                    type: "function",
+                    function: {
+                        name: "calculate_standard_project",
+                        description: "KALD DENNE NÅR OPGAVEN ER EN STANDARD KATEGORI (Tag, Gulv, Vinduer osv). Du udtager data og lader systemet regne.",
+                        parameters: standardProjectSchema,
+                        strict: false
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "submit_estimate",
+                        description: "KALD KUN DENNE NÅR DET ER EN ÆGTE SPECIALOPGAVE SOM IKKE FINDES I TJEKLISTEN. Du udregner selv pris.",
+                        parameters: submitEstimateSchema,
+                        strict: true
+                    }
                 }
-            }];
+            ];
 
             const fullMessages = [{ role: 'system', content: systemPromptText }, ...messages];
 

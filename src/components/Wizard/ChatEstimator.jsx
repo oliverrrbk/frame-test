@@ -133,7 +133,8 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
             // Hvis AI'en kalder funktionen for at afgive estimat
             if (aiMsgObject.tool_calls && aiMsgObject.tool_calls.length > 0) {
                 const toolCall = aiMsgObject.tool_calls[0];
-                if (toolCall.function.name === 'submit_estimate') {
+                if (toolCall.function.name === 'submit_estimate' || toolCall.function.name === 'calculate_standard_project') {
+                    const isStandard = toolCall.function.name === 'calculate_standard_project';
                     let args;
                     try {
                         args = JSON.parse(toolCall.function.arguments);
@@ -160,17 +161,29 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                     
                     setMessages(prev => [...prev, finalAiMsg]);
                     
+                    
                     // I stedet for timeout gemmer vi data, og viser knappen. DATA SANITERES for negative tal/NaN!
-                    setEstimateData({ 
-                        chatLog: [...messages, userMsg, finalAiMsg], 
-                        isAiEstimate: true,
-                        aiProjectTitle: args.projectTitle || 'Specialopgave',
-                        aiLaborHours: Math.max(0, Number(args.laborHours) || 0),
-                        aiMaterialCost: Math.max(0, Number(args.materialCost) || 0),
-                        aiBreakdown: args.breakdown,
-                        summaryBullets: args.summaryBullets || [],
-                        obsNotes: args.obsNotes || "Ingen særlige forbehold"
-                    });
+                    if (isStandard) {
+                        setEstimateData({
+                            chatLog: [...messages, userMsg, finalAiMsg],
+                            isStandardCategory: true,
+                            category: args.category,
+                            formState: args.formState,
+                            summaryBullets: args.summaryBullets || [],
+                            obsNotes: args.obsNotes || "Ingen særlige forbehold"
+                        });
+                    } else {
+                        setEstimateData({ 
+                            chatLog: [...messages, userMsg, finalAiMsg], 
+                            isAiEstimate: true,
+                            aiProjectTitle: args.projectTitle || 'Specialopgave',
+                            aiLaborHours: Math.max(0, Number(args.laborHours) || 0),
+                            aiMaterialCost: Math.max(0, Number(args.materialCost) || 0),
+                            aiBreakdown: args.breakdown,
+                            summaryBullets: args.summaryBullets || [],
+                            obsNotes: args.obsNotes || "Ingen særlige forbehold"
+                        });
+                    }
                     
                     setIsLoading(false);
                     return; // Stop her, da vi er færdige
