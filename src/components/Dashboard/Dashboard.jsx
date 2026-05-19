@@ -20,6 +20,7 @@ import MyProfileView from './MyProfileView';
 import SubscriptionSettings from './SubscriptionSettings';
 import DashboardOverview from './DashboardOverview';
 import CalculatorFaqAccordion from './CalculatorFaqAccordion';
+import MobileQuickShare from './MobileQuickShare';
 
 // Konfiguration til det nye Google Map
 const MAP_LIBRARIES = ['places'];
@@ -3996,6 +3997,7 @@ const Dashboard = () => {
                 </AnimatePresence>,
                 document.body
             )}
+            <MobileQuickShare carpenterProfile={carpenterProfile} />
         </div>
     );
 };
