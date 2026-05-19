@@ -155,7 +155,7 @@ DU SKAL DRIVE SAMTALEN. Spørg kun om det absolut nødvendige (mål/kvadratmeter
             }];
 
             const response = await anthropic.messages.create({
-                model: "claude-4-5-sonnet-20260219",
+                model: "claude-sonnet-4-5-20250929",
                 system: systemPromptText,
                 messages: messages, // Claude expects pure user/assistant messages here
                 max_tokens: 4000,
