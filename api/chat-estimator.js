@@ -91,11 +91,8 @@ ${questionsContext}
 ${dbContext}
 
 UDOVER DATABASEN GÆLDER DISSE REGLER FOR BEREGNING (I DIN REASONING):
-- SOP #2 SPILD OG MATERIALER: Du SKAL ALTID lægge +10% oveni dine beregnede nettomaterialer. Dette dækker afskær (spild) samt montagematerialer (skruer, beslag, fuge, stolpebeton). Hvis du udregner 10.000 kr i brædder, skal du skrive: 10.000 + 10% = 11.000 kr.
+- SPILD OG TILLÆG VIL BLIVE LAGT TIL AF SYSTEMET: Du skal KUN udregne de RENE netto-timer og RENE netto-materialepriser for selve udførelsen! Systemet lægger selv 30% til timer, 7 timer til opstart/oprydning, og 10% til spild oveni dit endelige resultat. Hold dine timer og priser strictly netto.
 - MATERIALE-TYPER: De 5 standardmaterialer for udendørs træ er: Trykimprægneret, Superwood, Thermowood, Cedertræ/Hardwood, og Komposit. De 5 hegnstyper er: Klinkehegn, Listehegn, Lamelhegn, Raftehegn, Komposithegn.
-- Opstart, besigtigelse og opmåling tager ALTID min. 2-4 timer pr. opgave. Læg oveni. (KØRSEL udregnes automatisk).
-- Oprydning og slutfinish tager ALTID min. 3-5 timer. Læg oveni.
-- GANG ALTID DIT ENDELIGE TIMEESTIMAT MED 1.30 (Tillæg 30% til uforudsete forhindringer).
 
 NÅR DU ER NÅET IGENNEM HELE TJEKLISTEN:
 Når kunden har svaret på alle relevante punkter i din tjekliste (mål, nedrivning, underlag, materiale, gelænder osv.), SKAL du proaktivt afbryde samtalen og kalde funktionen \`submit_estimate\`. Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
@@ -238,35 +235,12 @@ Når kunden har svaret på alle relevante punkter i din tjekliste (mål, nedrivn
                         const expectedHours = (sumHours * 1.30) + 7;
                         const expectedMaterials = (sumMaterials * 1.10);
 
-                        let modified = false;
-
-                        // FEJL 1: AI'en har helt glemt at lægge tillæggene på (totalen er lig med rå-summen)
-                        if (Math.abs(args.laborHours - sumHours) <= 2 && args.laborHours > 0) {
-                            args.laborHours = Math.round(expectedHours);
-                            modified = true;
-                        }
-                        if (Math.abs(args.materialCost - sumMaterials) <= 50 && args.materialCost > 0) {
-                            args.materialCost = Math.round(expectedMaterials);
-                            modified = true;
-                        }
-
-                        // FEJL 2: AI'en har regnet fuldstændig forkert i totalerne (afviger > 15% fra forventet SOP)
-                        const hoursDeviation = Math.abs(args.laborHours - expectedHours) / (expectedHours || 1);
-                        const materialsDeviation = Math.abs(args.materialCost - expectedMaterials) / (expectedMaterials || 1);
+                        // Systemet påtager sig nu ansvaret for at lægge avance/spild på AI'ens netto-tal.
+                        // AI'en bedes om at outputte netto, så vi kan gøre det 100% deterministisk.
+                        args.laborHours = Math.round(expectedHours);
+                        args.materialCost = Math.round(expectedMaterials);
                         
-                        if (args.laborHours > 0 && hoursDeviation > 0.15) {
-                            args.laborHours = Math.round(expectedHours);
-                            modified = true;
-                        }
-                        
-                        if (args.materialCost > 0 && materialsDeviation > 0.15) {
-                            args.materialCost = Math.round(expectedMaterials);
-                            modified = true;
-                        }
-
-                        if (modified) {
-                            toolCall.function.arguments = JSON.stringify(args);
-                        }
+                        toolCall.function.arguments = JSON.stringify(args);
                     } else if (args.breakdown && args.breakdown.length === 0 && (args.laborHours > 0 || args.materialCost > 0)) {
                         // Edge case: AI glemte breakdown linjer, men gav en total.
                         args.breakdown = [{
