@@ -46,7 +46,12 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
             qs += `\nKATEGORI: ${cat.toUpperCase()}\n`;
             questionsArray.forEach(q => {
                 if (q.label) {
-                    qs += `- ${q.label}\n`;
+                    qs += `- ${q.label}`;
+                    if (q.options && Array.isArray(q.options)) {
+                        const optStrings = q.options.map(opt => typeof opt === 'string' ? opt : (opt.label || ''));
+                        qs += ` (Muligheder: ${optStrings.filter(Boolean).join(', ')})`;
+                    }
+                    qs += `\n`;
                 }
             });
         });
