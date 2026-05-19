@@ -230,7 +230,6 @@ DU SKAL DRIVE SAMTALEN. Spørg kun om det absolut nødvendige (mål/kvadratmeter
         return res.status(500).json({ 
             error: error.message || 'Der opstod en fejl ved kontakt til AI.',
             debug: {
-                provider: aiProvider,
                 hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
                 keyLength: process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.length : 0
             }
