@@ -131,10 +131,17 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                         return;
                     }
                     
-                    // Lav en kortere og mere menneskelig afslutningsbesked
+                    const isComplex = Math.max(0, Number(args.laborHours) || 0) === 0 && Math.max(0, Number(args.materialCost) || 0) === 0;
+                    
+                    let finalMsgContent = `Sådan! Jeg har nu alle de detaljer, jeg skal bruge, for at kunne regne det ud for dig.\n\nFor at vi er helt sikre på, at vi taler om det samme, mangler vi blot et par billeder af området.\n\nTryk på knappen herunder, når du er klar til at se dit vejledende overslag! 👇`;
+                    
+                    if (isComplex) {
+                        finalMsgContent = `Tak for snakken! 🛠️\n\nDu har beskrevet et spændende, men komplekst projekt. For at kunne give dig en retvisende og tryg pris på dette, kræver det, at vi kommer ud og besigtiger opgaven fysisk først.\n\nTryk på knappen herunder for at sende dine oplysninger, så kontakter vi dig for at aftale et møde! 👇`;
+                    }
+
                     const finalAiMsg = {
                         role: 'assistant',
-                        content: `Sådan! Jeg har nu alle de detaljer, jeg skal bruge, for at kunne regne det ud for dig.\n\nFor at vi er helt sikre på, at vi taler om det samme, mangler vi blot et par billeder af området.\n\nTryk på knappen herunder, når du er klar til at se dit vejledende overslag! 👇`
+                        content: finalMsgContent
                     };
                     
                     setMessages(prev => [...prev, finalAiMsg]);
@@ -271,7 +278,9 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                 {estimateData ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                         <p style={{ color: '#475569', fontSize: '0.95rem', margin: 0, textAlign: 'center' }}>
-                            For at jeg kan vise dig det beregnede overslag, mangler vi blot dine kontaktoplysninger.
+                            {estimateData.aiLaborHours === 0 && estimateData.aiMaterialCost === 0 
+                                ? "Vi mangler blot dine kontaktoplysninger for at kunne arrangere en besigtigelse."
+                                : "For at jeg kan vise dig det beregnede overslag, mangler vi blot dine kontaktoplysninger."}
                         </p>
                         <button 
                             onClick={() => onComplete(estimateData)}
@@ -293,7 +302,9 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                                 boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2), 0 2px 4px -1px rgba(37, 99, 235, 0.1)'
                             }}
                         >
-                            Gå til Prisoverslag <Send size={18} />
+                            {estimateData.aiLaborHours === 0 && estimateData.aiMaterialCost === 0 
+                                ? "Anmod om besigtigelse"
+                                : "Gå til Prisoverslag"} <Send size={18} />
                         </button>
                     </div>
                 ) : (
