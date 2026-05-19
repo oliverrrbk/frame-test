@@ -56,7 +56,7 @@ export default async function handler(req, res) {
             });
         }
 
-        const aiProvider = 'anthropic'; // Tvunget til anthropic for at ignorere Vercel env indstillinger under test
+        const aiProvider = process.env.AI_PROVIDER || 'anthropic';
 
         // Hent data fra klienten sikkert
         const dbContext = contextData?.dbContext || '';
