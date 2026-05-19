@@ -91,6 +91,8 @@ ${questionsContext}
 ${dbContext}
 
 UDOVER DATABASEN GÆLDER DISSE REGLER FOR BEREGNING (I DIN REASONING):
+- BRUG DATABASEN PRÆCIST: Du har fået udleveret Tidsforbrug (WORK_FORMULAS) og Materialepriser. Du SKAL kombinere dem! Fx for et gulv skal du lægge 'hoursPerUnit' (selve lægningen) sammen med 'levelingHours' (opretning) og 'disposalHours' (nedrivning). For terrasser skal du tilføje 'groundFoundationHours' (fundament) og 'hiddenFasteningHours' til den normale timepris pr m2. Gør det for alle valgte faser!
+- HUSK ALLE MATERIALER: Du må ikke kun udregne prisen for overfladen (fx træbrædder). Du skal også slå prisen op for fundament, skruer, underpap, fuge osv., hvis opgaven kræver det.
 - SPILD OG TILLÆG VIL BLIVE LAGT TIL AF SYSTEMET: Du skal KUN udregne de RENE netto-timer og RENE netto-materialepriser for selve udførelsen! Systemet lægger selv 30% til timer, 7 timer til opstart/oprydning, og 10% til spild oveni dit endelige resultat. Hold dine timer og priser strictly netto.
 - MATERIALE-TYPER: De 5 standardmaterialer for udendørs træ er: Trykimprægneret, Superwood, Thermowood, Cedertræ/Hardwood, og Komposit. De 5 hegnstyper er: Klinkehegn, Listehegn, Lamelhegn, Raftehegn, Komposithegn.
 

@@ -39,7 +39,16 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
         }
         db += '\nLIVE TIDSFORBRUG (Timer pr. enhed/m2 fra databasen):\n';
         Object.entries(WORK_FORMULAS).forEach(([cat, data]) => {
-            db += `- ${cat.toUpperCase()}: ${Object.entries(data).filter(([k]) => k !== 'containerThreshold').map(([k, v]) => `${k}: ${v}t`).join(', ')}\n`;
+            let catStr = [];
+            Object.entries(data).forEach(([k, v]) => {
+                if (k === 'containerThreshold') return;
+                if (typeof v === 'object' && v !== null) {
+                    catStr.push(`${k}: { ${Object.entries(v).map(([subK, subV]) => `${subK}: ${subV}t`).join(', ')} }`);
+                } else {
+                    catStr.push(`${k}: ${v}t`);
+                }
+            });
+            db += `- ${cat.toUpperCase()}: ${catStr.join(', ')}\n`;
         });
         let qs = '\nFAGSPECIFIKKE TJEKLISTER (VIGTIGT!):\nHvis kunden nævner et projekt, der falder inden for en af nedenstående kategorier (fx tag, vinduer, køkken), SKAL du bruge de tilhørende spørgsmål som din interne huskeliste. Du MÅ ALDRIG give et estimat, før du har fået afklaret disse specifikke spørgsmål (spørg ind løbende, max 1-2 ad gangen):\n';
         Object.entries(QUESTIONS).forEach(([cat, questionsArray]) => {
