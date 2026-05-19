@@ -216,6 +216,71 @@ DU SKAL DRIVE SAMTALEN. Spørg kun om det absolut nødvendige (mål/kvadratmeter
             clearTimeout(timeoutId);
             returnMessage = completion.choices[0].message;
         }
+        // MATH VALIDATOR (Sikring af håndværkerens avance)
+        if (returnMessage && returnMessage.tool_calls && returnMessage.tool_calls.length > 0) {
+            const toolCall = returnMessage.tool_calls[0];
+            if (toolCall.function && toolCall.function.name === 'submit_estimate') {
+                try {
+                    const args = JSON.parse(toolCall.function.arguments);
+                    
+                    if (args.breakdown && Array.isArray(args.breakdown) && args.breakdown.length > 0) {
+                        let sumHours = 0;
+                        let sumMaterials = 0;
+                        
+                        args.breakdown.forEach(item => {
+                            sumHours += (Number(item.hours) || 0);
+                            sumMaterials += (Number(item.materials) || 0);
+                        });
+
+                        // Forventet korrekt total ifølge SOP:
+                        // Timer: (Sum * 1.30 uforudset) + ca. 7 timer (opstart/finish)
+                        // Materialer: (Sum * 1.10 spild)
+                        const expectedHours = (sumHours * 1.30) + 7;
+                        const expectedMaterials = (sumMaterials * 1.10);
+
+                        let modified = false;
+
+                        // FEJL 1: AI'en har helt glemt at lægge tillæggene på (totalen er lig med rå-summen)
+                        if (Math.abs(args.laborHours - sumHours) <= 2 && args.laborHours > 0) {
+                            args.laborHours = Math.round(expectedHours);
+                            modified = true;
+                        }
+                        if (Math.abs(args.materialCost - sumMaterials) <= 50 && args.materialCost > 0) {
+                            args.materialCost = Math.round(expectedMaterials);
+                            modified = true;
+                        }
+
+                        // FEJL 2: AI'en har regnet fuldstændig forkert i totalerne (afviger > 15% fra forventet SOP)
+                        const hoursDeviation = Math.abs(args.laborHours - expectedHours) / (expectedHours || 1);
+                        const materialsDeviation = Math.abs(args.materialCost - expectedMaterials) / (expectedMaterials || 1);
+                        
+                        if (args.laborHours > 0 && hoursDeviation > 0.15) {
+                            args.laborHours = Math.round(expectedHours);
+                            modified = true;
+                        }
+                        
+                        if (args.materialCost > 0 && materialsDeviation > 0.15) {
+                            args.materialCost = Math.round(expectedMaterials);
+                            modified = true;
+                        }
+
+                        if (modified) {
+                            toolCall.function.arguments = JSON.stringify(args);
+                        }
+                    } else if (args.breakdown && args.breakdown.length === 0 && (args.laborHours > 0 || args.materialCost > 0)) {
+                        // Edge case: AI glemte breakdown linjer, men gav en total.
+                        args.breakdown = [{
+                            item: "Samlet overslag på opgaven",
+                            hours: Math.max(0, Math.round((args.laborHours - 7) / 1.30)),
+                            materials: Math.max(0, Math.round(args.materialCost / 1.10))
+                        }];
+                        toolCall.function.arguments = JSON.stringify(args);
+                    }
+                } catch (e) {
+                    console.error("[Math Guard] Fejl under validering:", e);
+                }
+            }
+        }
 
         return res.status(200).json({ 
             success: true, 
