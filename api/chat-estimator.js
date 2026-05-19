@@ -93,7 +93,7 @@ ${dbContext}
 UDOVER DATABASEN GÆLDER DISSE REGLER FOR BEREGNING (I DIN REASONING):
 - BRUG DATABASEN PRÆCIST: Du har fået udleveret Tidsforbrug (WORK_FORMULAS) og Materialepriser. Du SKAL kombinere dem! Fx for et gulv skal du lægge 'hoursPerUnit' (selve lægningen) sammen med 'levelingHours' (opretning) og 'disposalHours' (nedrivning). For terrasser skal du tilføje 'groundFoundationHours' (fundament) og 'hiddenFasteningHours' til den normale timepris pr m2. Gør det for alle valgte faser!
 - HUSK ALLE MATERIALER: Du må ikke kun udregne prisen for overfladen (fx træbrædder). Du skal også slå prisen op for fundament, skruer, underpap, fuge osv., hvis opgaven kræver det.
-- SPILD OG TILLÆG VIL BLIVE LAGT TIL AF SYSTEMET: Du skal KUN udregne de RENE netto-timer og RENE netto-materialepriser for selve udførelsen! Systemet lægger selv 30% til timer, 7 timer til opstart/oprydning, og 10% til spild oveni dit endelige resultat. Hold dine timer og priser strictly netto.
+- SPILD OG TILLÆG: Du skal KUN udregne de RENE netto-timer og RENE netto-materialepriser for selve udførelsen! Systemet har en indbygget sikkerhedsbuffer (ca. 5-15.000 kr.) samt en 15% indkøbsavance på materialer, som lægges oveni dit resultat. Hold dine timer og priser strictly netto. Hvis opgaven kræver afskær (fx gulv/terrasse), skal du bare regne det med i dit netto-materialeestimat.
 - MATERIALE-TYPER: De 5 standardmaterialer for udendørs træ er: Trykimprægneret, Superwood, Thermowood, Cedertræ/Hardwood, og Komposit. De 5 hegnstyper er: Klinkehegn, Listehegn, Lamelhegn, Raftehegn, Komposithegn.
 
 NÅR DU ER NÅET IGENNEM HELE TJEKLISTEN:
@@ -231,11 +231,10 @@ Når kunden har svaret på alle relevante punkter i din tjekliste (mål, nedrivn
                             sumMaterials += (Number(item.materials) || 0);
                         });
 
-                        // Forventet korrekt total ifølge SOP:
-                        // Timer: (Sum * 1.30 uforudset) + ca. 7 timer (opstart/finish)
-                        // Materialer: (Sum * 1.10 spild)
-                        const expectedHours = (sumHours * 1.30) + 7;
-                        const expectedMaterials = (sumMaterials * 1.10);
+                        // Vi fjerner kunstige AI-tillæg (1.30 og 1.10) for at AI-chatten rammer PRÆCIS
+                        // samme priser som den deterministiske lommeregner! (som selv har en hidden buffer).
+                        const expectedHours = sumHours;
+                        const expectedMaterials = sumMaterials;
 
                         // Systemet påtager sig nu ansvaret for at lægge avance/spild på AI'ens netto-tal.
                         // AI'en bedes om at outputte netto, så vi kan gøre det 100% deterministisk.
@@ -243,15 +242,15 @@ Når kunden har svaret på alle relevante punkter i din tjekliste (mål, nedrivn
                         args.materialCost = Math.round(expectedMaterials);
                         
                         toolCall.function.arguments = JSON.stringify(args);
-                    } else if (args.breakdown && args.breakdown.length === 0 && (args.laborHours > 0 || args.materialCost > 0)) {
-                        // Edge case: AI glemte breakdown linjer, men gav en total.
-                        args.breakdown = [{
-                            item: "Samlet overslag på opgaven",
-                            hours: Math.max(0, Math.round((args.laborHours - 7) / 1.30)),
-                            materials: Math.max(0, Math.round(args.materialCost / 1.10))
-                        }];
-                        toolCall.function.arguments = JSON.stringify(args);
-                    }
+                        } else if (args.breakdown && args.breakdown.length === 0 && (args.laborHours > 0 || args.materialCost > 0)) {
+                            // Edge case: AI glemte breakdown linjer, men gav en total.
+                            args.breakdown = [{
+                                item: "Samlet overslag på opgaven",
+                                hours: Math.max(0, Math.round(args.laborHours)),
+                                materials: Math.max(0, Math.round(args.materialCost))
+                            }];
+                            toolCall.function.arguments = JSON.stringify(args);
+                        }
                 } catch (e) {
                     console.error("[Math Guard] Fejl under validering:", e);
                 }
