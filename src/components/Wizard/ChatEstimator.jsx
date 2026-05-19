@@ -58,7 +58,7 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
         const initChat = async () => {
             const greeting = {
                 role: 'assistant',
-                content: `Hej! Jeg er AI-assistenten for ${carpenter?.owner_name?.split(' ')[0] || 'tømreren'} hos ${carpenter?.company_name || 'firmaet'}.\n\nMin opgave er at hjælpe dig med at spore dig ind på dit projekt, så jeg kan give dig et vejledende prisoverslag med det samme.\n\nHvad drømmer du om at få bygget eller fikset?`
+                content: `Hej! Jeg er den digitale assistent for ${carpenter?.owner_name?.split(' ')[0] || 'tømreren'} fra ${carpenter?.company_name || 'firmaet'}.\n\nMin opgave er at hjælpe dig i mål med dine byggedrømme. For at kunne give dig det bedste vejledende prisoverslag, vil jeg stille dig et par spørgsmål om opgaven. Hvis der er noget, du er i tvivl om undervejs, skal du endelig bare bede mig om at uddybe!\n\nHvad drømmer du om at få lavet?`
             };
 
             setMessages([greeting]);

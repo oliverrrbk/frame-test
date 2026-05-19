@@ -133,8 +133,30 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
     if (cat === 'special') {
         const parsedHours = parseFloat(d.aiLaborHours);
-        laborHours = (Number.isFinite(parsedHours) && parsedHours > 0) ? parsedHours : 10;
         const parsedMat = parseFloat(d.aiMaterialCost);
+
+        if (parsedHours === 0 && parsedMat === 0) {
+            bArr.push(`Kompleks specialopgave: Projektet kræver besigtigelse.`);
+            bArr.push(`AI vurdering: Opgavens omfang eller karakter gør det ikke muligt at beregne et retvisende overslag via chat.`);
+            return {
+                priceRange: "Besigtigelse kræves",
+                breakdownArr: bArr,
+                calcData: {
+                    laborHours: 0,
+                    drivingHours: 0,
+                    hourlyRate: dbSettings.hourly_rate || 500,
+                    totalLaborCost: 0,
+                    materialCost: 0,
+                    drivingCost: 0,
+                    hiddenBuffer: 0,
+                    strictPrice: 0,
+                    calibrationFactor: 1.0,
+                    totalPriceVat: 0
+                }
+            };
+        }
+
+        laborHours = (Number.isFinite(parsedHours) && parsedHours > 0) ? parsedHours : 10;
         const rawMat = (Number.isFinite(parsedMat) && parsedMat >= 0) ? parsedMat : 5000;
         // AI-estimat antages at indeholde tømrerens avance allerede (prompten beder om kundepris).
         // Vi undgår derfor dobbelt-markup her.
