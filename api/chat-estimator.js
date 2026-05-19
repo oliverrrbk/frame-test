@@ -227,6 +227,13 @@ DU SKAL DRIVE SAMTALEN. Spørg kun om det absolut nødvendige (mål/kvadratmeter
         if (error.name === 'AbortError') {
             return res.status(504).json({ error: 'Systemet har usædvanligt travlt. Prøv igen om et øjeblik.' });
         }
-        return res.status(500).json({ error: error.message || 'Der opstod en fejl ved kontakt til AI.' });
+        return res.status(500).json({ 
+            error: error.message || 'Der opstod en fejl ved kontakt til AI.',
+            debug: {
+                provider: aiProvider,
+                hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
+                keyLength: process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.length : 0
+            }
+        });
     }
 }
