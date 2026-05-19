@@ -185,7 +185,7 @@ export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter 
         } else {
             aiHtml = `
                 <div style="background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981; padding: 16px; margin-bottom: 24px;">
-                    <strong style="display: block; color: #0f172a; margin-bottom: 8px; font-size: 16px;">AI Opgave-beskrivelse:</strong>
+                    <strong style="display: block; color: #0f172a; margin-bottom: 8px; font-size: 16px;">Opsummering af projektet:</strong>
                     <span style="color: #334155; line-height: 1.6;">${details?.aiProjectTitle || 'Specialopgave'}</span>
                 </div>
             `;
@@ -195,7 +195,7 @@ export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter 
             if (includeBreakdownForCarpenter) {
                 aiHtml += `
                     <div style="background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; padding: 24px; margin-bottom: 24px;">
-                        <strong style="display: block; color: #166534; font-size: 18px; margin-bottom: 16px;">AI Udregning / Opgavedele (KUN TIL TØMRER):</strong>
+                        <strong style="display: block; color: #166534; font-size: 18px; margin-bottom: 16px;">Systemets Udregning / Opgavedele (KUN TIL TØMRER):</strong>
                         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 15px;">
                             <thead>
                                 <tr style="border-bottom: 2px solid #bbf7d0; color: #166534;">

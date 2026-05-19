@@ -216,7 +216,7 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                     <img src={carpenter?.portrait_url || `https://ui-avatars.com/api/?name=${carpenter?.owner_name || 'Tømrer'}&background=0f172a&color=fff&size=50`} alt="Avatar" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
                     <div>
                         <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Chat med {carpenter?.owner_name?.split(' ')[0] || 'Tømreren'}</h3>
-                        <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>AI Tømrer Assistent</p>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Digital Assistent</p>
                     </div>
                 </div>
                 {prevStep && (

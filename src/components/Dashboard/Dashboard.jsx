@@ -2475,7 +2475,7 @@ const Dashboard = () => {
                                                         <div key="ai_chat" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: 'white' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                 <span style={{ fontSize: '1.2rem' }}>🤖</span>
-                                                                <strong style={{ color: '#1a1a1a', fontSize: '1.05rem' }}>AI Opsummering af Kundens Ønsker</strong>
+                                                                <strong style={{ color: '#1a1a1a', fontSize: '1.05rem' }}>Digital Opsummering af Kundens Ønsker</strong>
                                                             </div>
                                                             
                                                             {hasSummary ? (
@@ -2518,14 +2518,14 @@ const Dashboard = () => {
                                                                             fontSize: '0.95rem',
                                                                             boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                                                                         }}>
-                                                                            <strong style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px', display: 'block' }}>{msg.role === 'user' ? 'Kunde' : 'AI-Assistent'}</strong>
+                                                                            <strong style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px', display: 'block' }}>{msg.role === 'user' ? 'Kunde' : 'Digital Assistent'}</strong>
                                                                             <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content.replace(/\[KLAR_TIL_TILBUD.*?\]/i, '').trim()}</span>
                                                                         </div>
                                                                     ))}
                                                                 </div>
                                                             </details>
                                                             <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', color: '#065f46' }}>
-                                                                <strong>AI'ens skjulte estimat:</strong><br/>
+                                                                <strong>Systemets skjulte estimat:</strong><br/>
                                                                 Arbejdstid: {details.aiLaborHours} timer<br/>
                                                                 Materialer: {details.aiMaterialCost} kr. (før din avance)
                                                                 

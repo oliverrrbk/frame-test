@@ -137,7 +137,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
         if (parsedHours === 0 && parsedMat === 0) {
             bArr.push(`Kompleks specialopgave: Projektet kræver besigtigelse.`);
-            bArr.push(`AI vurdering: Opgavens omfang eller karakter gør det ikke muligt at beregne et retvisende overslag via chat.`);
+            bArr.push(`Systemets vurdering: Opgavens omfang eller karakter gør det ikke muligt at beregne et retvisende overslag via chat.`);
             return {
                 priceRange: "Besigtigelse kræves",
                 breakdownArr: bArr,
@@ -161,9 +161,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         // AI-estimat antages at indeholde tømrerens avance allerede (prompten beder om kundepris).
         // Vi undgår derfor dobbelt-markup her.
         materialCost = rawMat;
-        bArr.push(`Opgaven er estimeret automatisk via AI Assistent.`);
-        bArr.push(`AI vurdering: ${laborHours} arbejdstimer`);
-        bArr.push(`AI vurdering af materialer: ${rawMat} kr.`);
+        bArr.push(`Opgaven er estimeret automatisk via den digitale assistent.`);
+        bArr.push(`Systemets vurdering: ${laborHours} arbejdstimer`);
+        bArr.push(`Systemets vurdering af materialer: ${rawMat} kr.`);
     } else if (cat === 'extensions') {
         bArr.push(`Tilbygning/Kompleks opgave: Der foretages ingen automatisk prisudregning.`);
         bArr.push(`Kunden har indsendt en beskrivelse, og afventer kontakt for besigtigelse.`);
