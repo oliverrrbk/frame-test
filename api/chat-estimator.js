@@ -56,7 +56,7 @@ export default async function handler(req, res) {
             });
         }
 
-        const aiProvider = process.env.AI_PROVIDER || 'anthropic';
+        const aiProvider = process.env.AI_PROVIDER || 'claude';
 
         // Hent data fra klienten sikkert
         const dbContext = contextData?.dbContext || '';
