@@ -439,15 +439,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldFloorType) {
                 let disposalHours = 0.2; // default
-                if (d.oldFloorType.includes('Klinker')) {
-                    disposalHours = 0.6;
-                    bArr.push(`Tillæg: Tung nedrivning af eksisterende klinker/fliser`);
-                } else if (d.oldFloorType.includes('Beton')) {
-                    disposalHours = 1.0;
-                    bArr.push(`Tillæg: Tung nedrivning og ophugning af betongulv`);
-                } else if (d.oldFloorType.includes('Gulvtæppe') || d.oldFloorType.includes('Linoleum')) {
-                    disposalHours = 0.15;
-                    bArr.push(`Tillæg: Fjernelse af fuldlimet gulvtæppe/linoleum/vinyl`);
+                if (d.oldFloorType.includes('Gulvtæppe') || d.oldFloorType.includes('Linoleum')) {
+                    disposalHours = 0.3; // Fuldlimet tæppe/linoleum tager længere tid at skrabe/afmontere
+                    bArr.push(`Tillæg: Fjernelse og afskrabning af fuldlimet gulvtæppe/linoleum/vinyl`);
                 } else if (d.oldFloorType.includes('Trægulv')) {
                     disposalHours = 0.25;
                     bArr.push(`Tillæg: Nedbrydning af eksisterende trægulv/parket/laminat`);
@@ -457,9 +451,6 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 // SOP #2: Usynlige Omkostninger (Containerleje/bortskaffelse)
                 if (!userSuppliesMaterials && d.disposal.toLowerCase().includes('bortskaffe')) {
                     let disposalFeePerM2 = indexCat['Bortskaffelse af gulv (pr m2)'] || 50;
-                    if (d.oldFloorType.includes('Beton') || d.oldFloorType.includes('Klinker')) {
-                        disposalFeePerM2 = indexCat['Bortskaffelse af tungt gulv (pr m2)'] || 120;
-                    }
                     const floorDisposalFee = numericAmount * disposalFeePerM2;
                     materialCost += floorDisposalFee; // Ingen markup på affaldsgebyr
                     externalLeaseCost += floorDisposalFee;
@@ -473,27 +464,29 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             bArr.push(`Standard: Opretning af undergulv (inkl. tid og materialer)`);
 
             // Tilføj kun almindelig foam, hvis der slet ikke er gulvvarme. Både sporplader og støbt gulvvarme kræver eget/special underlag!
+            const isWoodFoundation = d.floorFoundation === 'Strøer / Trækonstruktion' || d.floorFoundation === 'Ved ikke / Andet';
             if (!(d.underfloorHeating && d.underfloorHeating.startsWith('Ja'))) {
                 // Massivt træ lagt direkte på strøer svømmer ikke, og bruger derfor ikke et fuldt lag foam/pap, kun evt. strimler.
-                if (!(d.material === 'Massivt træ' && d.floorFoundation === 'Strøer / Trækonstruktion')) {
+                if (!(d.material === 'Massivt træ' && isWoodFoundation)) {
                     laborHours += numericAmount * (formula.underlayHours || 0.1);
                     if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Trinlydsunderlag (Foam)'] || 45) * dbSettings.material_markup;
                     bArr.push(`Standard: Montering af trinlydsdæmpende underlag (foam/pap)`);
                 }
             }
 
-            if (d.floorFoundation === 'Strøer / Trækonstruktion') {
+            if (isWoodFoundation) {
+                const foundationText = d.floorFoundation === 'Ved ikke / Andet' ? 'Sikkerhedstillæg (Uvist underlag): ' : 'Tillæg: ';
                 // Undgå dobbeltkonfekt: Hvis de også får sporplader (gulvvarme), fungerer sporpladen som det bærende undergulv!
                 if (d.underfloorHeating && d.underfloorHeating.includes('sporplader')) {
                     laborHours += numericAmount * 0.2; // Kun lidt ekstra tid til tilpasning af selve strøerne
-                    bArr.push(`Tillæg: Tilpasning af strøer (bærende materialepris dækkes af sporpladerne)`);
+                    bArr.push(`${foundationText}Tilpasning af strøer (bærende materialepris dækkes af sporpladerne)`);
                 } else if (d.material === 'Massivt træ' && d.floorPattern !== 'Ja, i mønster (fx Sildeben / Chevron)') {
                     laborHours += numericAmount * 0.2; // Lidt tid til strø-tilpasning før plankerne lægges
-                    bArr.push(`Tillæg: Montering af massive træplanker direkte på strøer (kræver ikke bærende spånplade-undergulv)`);
+                    bArr.push(`${foundationText}Montering af massive træplanker direkte på strøer (kræver ikke bærende spånplade-undergulv)`);
                 } else {
                     laborHours += numericAmount * 0.4; // Øget tid til lægning af bærende undergulv på strøer for flydende gulve
                     if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Bærende undergulv (Spånplader)'] || 120) * dbSettings.material_markup; // Pris for bærende gulvspånplader
-                    bArr.push(`Tillæg: Opbygning af bærende undergulv (fx spånplader) på strøer forud for svømmende/mønster gulv`);
+                    bArr.push(`${foundationText}Opbygning af bærende undergulv (fx spånplader) på strøer forud for svømmende/mønster gulv`);
                 }
             }
 
@@ -501,11 +494,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Kundens note om gulvvalg: ${d.specificFloorDetails}`);
             }
 
-            if (d.skirting === 'Ja') {
-                laborHours += numericAmount * (formula.skirtingHoursPerUnit || 0.15);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Fodlister (pr. m2 gulvareal proxy)'] || 50) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Levering og montering af nye fodlister`);
-            }
+            // Fodlister inkluderes altid automatisk efter Laurits feedback (Sikring af komplet finish)
+            laborHours += numericAmount * (formula.skirtingHoursPerUnit || 0.15);
+            if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Fodlister (pr. m2 gulvareal proxy)'] || 50) * dbSettings.material_markup;
+            bArr.push(`Standard: Levering og montering af nye fodlister langs alle vægge for komplet finish`);
             
             if (d.floorPattern === 'Ja, i mønster (fx Sildeben / Chevron)') {
                 laborHours += initialInstallHours * 1.0; // Sildeben tager oftest dobbelt så lang tid pga. præcision, limning og mange skæringer
@@ -521,6 +513,22 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 laborHours += initialInstallHours * 0.3;
                 if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Gulvvarme (Specialunderlag)'] || 80)) * dbSettings.material_markup; 
                 bArr.push(`Tillæg: Montering over eksisterende gulvvarme kræver forøget arbejdstid og specialunderlag`);
+            }
+
+            // Faste forhindringer (køkkenø, søjler) tilføjelser
+            if (d.floorObstacles === 'Ja, det er der (køkkenø, søjler, skorsten eller rør)') {
+                laborHours += 4.0;
+                if (!userSuppliesMaterials) materialCost += 750;
+                bArr.push(`Tillæg: Præcisionsudskæring, tilpasning og finishlister omkring faste elementer (fx køkkenø, søjler eller rør) (+4 timer)`);
+            }
+
+            // Dørtilpasning
+            if (d.floorDoorsNear === 'Ja') {
+                const doorsCount = Math.max(1, parseInt(d.floorDoorsCount) || 1);
+                // Beregnes altid som tilpasning på 1.5 timer pr. dør under gulvkategorien
+                laborHours += doorsCount * 1.5;
+                bArr.push(`Tillæg: Afmontering, præcisions-høvling og genmontering af ${doorsCount} indvendige døre (+${(doorsCount * 1.5).toFixed(1)} timer)`);
+                bArr.push(`OBS: Da et nyt gulv ofte hæver gulvhøjden, er der medtaget standard tilpasning af ${doorsCount} døre. Hvis de eksisterende døre er af ældre finér eller ikke kan afkortes pænt, kan det kræve udskiftning (aftales ved besigtigelsen).`);
             }
         }
 

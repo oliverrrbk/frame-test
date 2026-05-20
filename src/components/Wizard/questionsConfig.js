@@ -111,12 +111,19 @@ export const QUESTIONS = {
             condition: (d) => d.disposal && d.disposal.startsWith('Ja'),
             options: [
                 { label: 'Trægulv / Parket / Laminat', img: '/images/floor_wood_1776266012828.png' },
-                { label: 'Klinker / Fliser', img: '/images/floor_tiles_1776266089581.png' },
-                { label: 'Gulvtæppe / Linoleum / Vinyl', img: '/images/floor_linoleum_1776266075430.png' },
-                { label: 'Beton', img: '/images/floor_concrete_1776266134608.png' }
+                { label: 'Gulvtæppe / Linoleum / Vinyl', img: '/images/floor_linoleum_1776266075430.png' }
             ]
         },
-        { id: 'floorFoundation', type: 'select', label: 'Ligger gulvet på beton eller strøer (trækonstruktion)?', options: ['Beton', 'Strøer / Trækonstruktion', 'Ved ikke / Andet'] },
+        { 
+            id: 'floorFoundation', 
+            type: 'visual_select', 
+            label: 'Ligger gulvet på beton eller strøer (trækonstruktion)?', 
+            options: [
+                { label: 'Beton / Støbt dæk', img: '/images/subfloor_concrete.png' },
+                { label: 'Strøer / Trækonstruktion', img: '/images/subfloor_joists.png' },
+                { label: 'Ved ikke / Andet', img: '/images/subfloor_unknown.png' }
+            ] 
+        },
         { id: 'underfloorHeating', type: 'select', label: 'Er der (eller skal der etableres) varme i gulvet?', options: ['Nej', 'Ja, der er allerede støbt gulvvarme (kun specialunderlag kræves)', 'Ja, tømreren skal opbygge nyt gulvvarme (sporplader/varmefordeling)'] },
         { 
             id: 'material', 
@@ -140,7 +147,30 @@ export const QUESTIONS = {
             condition: (d) => ['Træ', 'Massivt træ', 'Parket', 'Laminat'].includes(d.material),
             options: ['Nej, helt standard montering', 'Ja, i mønster (fx Sildeben / Chevron)'] 
         },
-        { id: 'skirting', type: 'select', label: 'Fodlister: Skal vi levere og montere nye fodlister langs væggene?', options: ['Ja', 'Nej, vi sætter selv lister op / genbruger de gamle'] },
+        { 
+            id: 'floorObstacles', 
+            type: 'select', 
+            label: 'Er der faste elementer midt i rummet (f.eks. køkkenø, bærende søjler, skorsten eller mange rør)?', 
+            tooltip: 'Faste elementer midt på gulvarealet kræver præcisions-udskæring, ekstra dækningslister/fuger og tager længere tid for tømreren.',
+            options: [
+                'Nej, rummet er regulært',
+                'Ja, det er der (køkkenø, søjler, skorsten eller rør)'
+            ] 
+        },
+        { 
+            id: 'floorDoorsNear', 
+            type: 'select', 
+            label: 'Er der indvendige døre i rummet (som grænser helt op til gulvet)?', 
+            tooltip: 'Nyt gulv (og evt. undergulv) ændrer ofte gulvhøjden. Det betyder, at indvendige døre, der støder op til det nye gulv, skal tilpasses i bunden eller udskiftes. Tømreren vil vurdere dette præcist ved besigtigelsen. Vi har medtaget en standard tilpasning af dørene i prisen, men hvis det ikke kan udføres pænt, kan det kræve udskiftning, hvilket afklares endeligt ved besigtigelsen.',
+            options: ['Nej', 'Ja'] 
+        },
+        { 
+            id: 'floorDoorsCount', 
+            type: 'number', 
+            label: 'Hvor mange indvendige døre er der i rummet i alt?', 
+            condition: { field: 'floorDoorsNear', value: 'Ja' },
+            default: 1
+        },
         { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet, som vi ikke har taget højde for? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     doors: [
