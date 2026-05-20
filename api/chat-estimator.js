@@ -99,8 +99,9 @@ UDOVER DATABASEN GÆLDER DISSE REGLER FOR BEREGNING (I DIN REASONING):
 
 NÅR DU ER NÅET IGENNEM HELE TJEKLISTEN:
 Når kunden har svaret på alle relevante punkter i din tjekliste, SKAL du proaktivt afbryde samtalen og kalde den korrekte funktion.
-Hvis projektet er en standard-kategori fra Tjeklisten (fx roof, floor, windows, doors, terrace osv.), SKAL du kalde funktionen \`calculate_standard_project\` og overlevere svarene som et struktureret JSON-objekt.
-Hvis projektet IKKE findes i tjeklisten (en ægte specialopgave, fx bygning af en hundekennel), skal du bruge \`submit_estimate\` og selv regne timer og materialer ud!
+VIGTIGT OM KOMBI-OPGAVER: Hvis kunden beder om et projekt, der spænder over FLERE forskellige kategorier på én gang (fx både tag og vinduer, eller gulv og loft), må du ALDRIG bruge standard-værktøjerne. Du SKAL i stedet betragte det som en samlet 'Specialopgave' og kalde værktøjet \`submit_estimate\`.
+Hvis projektet er ÉN ENKELT standard-kategori fra Tjeklisten (fx KUN roof, eller KUN floor), SKAL du kalde det tilsvarende værktøj (fx \`calculate_roof\`) og overlevere svarene som struktureret data.
+Hvis projektet IKKE findes i tjeklisten (en ægte specialopgave, fx bygning af en udestue), skal du bruge \`submit_estimate\` og selv udregne timer og materialer ud fra din viden!
 Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
 
         const submitEstimateSchema = {
