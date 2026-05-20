@@ -1,4 +1,4 @@
-import { WORK_FORMULAS } from '../prices';
+import { WORK_FORMULAS } from '../prices.js';
 
 export const fetchGoogleDistance = async (origin, destination) => {
     return new Promise((resolve) => {
