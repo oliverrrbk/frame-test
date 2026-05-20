@@ -188,9 +188,12 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                 )}
 
                 {(() => {
-
-
-                    const taskList = generateTaskDescription(projectData.category, projectData.details);
+                    let taskList = [];
+                    if (projectData.category === 'special' && Array.isArray(projectData.details?.aiBreakdown)) {
+                        taskList = projectData.details.aiBreakdown.map(itemObj => itemObj.item);
+                    } else {
+                        taskList = generateTaskDescription(projectData.category, projectData.details);
+                    }
 
                     if (taskList.length > 0) {
                         return (
@@ -244,17 +247,6 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                                     <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.0rem', color: 'var(--text-secondary)', lineHeight: '1.5', background: 'rgba(0,0,0,0.02)', padding: '12px 16px', borderRadius: '8px' }}>
                                         <span style={{ color: '#10b981', marginTop: '2px' }}>✓</span>
                                         <span>{bullet}</span>
-                                    </li>
-                                ))}
-                                {Array.isArray(projectData.details?.aiBreakdown) && projectData.details.aiBreakdown.length > 0 && (
-                                    <li style={{ marginTop: '16px', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>
-                                        <strong>Overslaget inkluderer:</strong>
-                                    </li>
-                                )}
-                                {Array.isArray(projectData.details?.aiBreakdown) && projectData.details.aiBreakdown.map((itemObj, idx) => (
-                                    <li key={`breakdown-${idx}`} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.0rem', color: 'var(--text-secondary)', lineHeight: '1.5', background: 'rgba(16, 185, 129, 0.05)', padding: '12px 16px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                                        <span style={{ color: '#10b981', marginTop: '2px' }}>✓</span>
-                                        <span>{itemObj.item}</span>
                                     </li>
                                 ))}
                             </>
