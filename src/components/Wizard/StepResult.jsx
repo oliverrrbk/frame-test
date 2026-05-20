@@ -132,7 +132,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
     const needsPhysicalInspection = projectData.category === 'extensions' || (projectData.category === 'special' && (!projectData.details?.aiLaborHours && !projectData.details?.aiMaterialCost));
 
     return (
-        <section className="wizard-step active" style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <section className="wizard-step active result-step-section" style={{ maxWidth: '800px', margin: '0 auto' }}>
             <div className="result-card" style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     {needsPhysicalInspection ? (
@@ -157,7 +157,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                 </div>
                 
                 {needsPhysicalInspection ? (
-                    <div style={{ 
+                    <div className="price-box-card" style={{ 
                         background: '#f8fafc', 
                         border: '2px solid #e2e8f0',
                         borderRadius: 'var(--radius-xl)', 
@@ -172,7 +172,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                         <p style={{ fontSize: '1.05rem', marginTop: '16px', color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}><strong>Men dit forarbejde er guld værd!</strong> Vi har nu de helt rigtige forudsætninger for at forstå din drøm. Send opgaven ind til os nedenfor, så ringer vi dig op og aftaler et møde.</p>
                     </div>
                 ) : (
-                    <div style={{ 
+                    <div className="price-box-card" style={{ 
                         background: '#f8fafc', 
                         border: '2px solid #e2e8f0',
                         borderRadius: 'var(--radius-xl)', 
@@ -197,7 +197,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
 
                     if (taskList.length > 0) {
                         return (
-                            <div style={{ 
+                            <div className="task-list-card" style={{ 
                                 background: '#f0fdf4', 
                                 borderRadius: 'var(--radius-lg)', 
                                 padding: '32px', 
@@ -226,7 +226,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     return null;
                 })()}
 
-                <div style={{ 
+                <div className="details-list-card" style={{ 
                     background: 'var(--bg-card)', 
                     borderRadius: 'var(--radius-lg)', 
                     padding: '32px', 
@@ -348,12 +348,13 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     </div>
                 </div>
             ) : (
-                <div ref={bookingRef} className="visit-booking" style={{ marginTop: '40px', padding: '32px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                <div ref={bookingRef} className="visit-booking visit-booking-card" style={{ marginTop: '40px', padding: '32px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                     <h3 style={{ marginBottom: '12px', fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)' }}>Lad os få aftalt det sidste</h3>
                     <p style={{ marginBottom: '24px', color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.5' }}>Vælg hvordan du foretrækker at blive kontaktet for at få et eksakt og bindende tilbud.</p>
                     
-                    <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexDirection: 'row' }}>
+                    <div className="booking-options-row" style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexDirection: 'row' }}>
                         <button 
+                            className="booking-option-btn"
                             onClick={() => {
                                 setIsAsap(true);
                                 setSelectedDays([]);
@@ -375,6 +376,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                             Kontakt mig hurtigst muligt
                         </button>
                         <button 
+                            className="booking-option-btn"
                             onClick={() => setIsAsap(false)}
                             style={{
                                 flex: 1,
@@ -397,10 +399,11 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     {!isAsap && (
                         <div style={{ padding: '24px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '32px' }}>
                             <label style={{ display: 'block', fontWeight: '700', marginBottom: '12px', color: 'var(--text-primary)' }}>Hvilke ugedage passer dig bedst? (Vælg gerne flere)</label>
-                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '24px' }}>
+                            <div className="days-selector-flex" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '24px' }}>
                                 {daysOfWeek.map(day => (
                                     <button 
                                         key={day}
+                                        className="day-select-btn"
                                         onClick={() => handleDayToggle(day)}
                                         style={{
                                             padding: '10px 16px',
@@ -419,10 +422,11 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                             </div>
                             
                             <label style={{ display: 'block', fontWeight: '700', marginBottom: '12px', color: 'var(--text-primary)' }}>Tidspunkt på dagen?</label>
-                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            <div className="days-selector-flex" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                 {['Formiddag (8-12)', 'Eftermiddag (12-16)', 'Hele dagen'].map(time => (
                                     <button 
                                         key={time}
+                                        className="day-select-btn"
                                         onClick={() => setSelectedTime(time)}
                                         style={{
                                             padding: '10px 16px',

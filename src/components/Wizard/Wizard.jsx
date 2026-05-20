@@ -384,9 +384,9 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     return (
         <main className="wizard-container" style={{ position: 'relative', paddingBottom: '40px' }}>
             {activeStepNum < 5 && (
-                <div className="progress-section" style={{ marginBottom: '32px', maxWidth: '800px', marginInline: 'auto' }}>
+                <div className="progress-section progress-steps-container" style={{ marginBottom: '32px', maxWidth: '800px', marginInline: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
-                        <div style={{ position: 'absolute', top: '16px', left: '10%', right: '10%', height: '3px', background: '#e2e8f0', zIndex: 0 }}>
+                        <div className="progress-step-line" style={{ position: 'absolute', top: '16px', left: '10%', right: '10%', height: '3px', background: '#e2e8f0', zIndex: 0 }}>
                             <div style={{ width: `${(activeStepNum - 1) / (totalSteps - 1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #10b981, #2563eb)', transition: 'width 0.4s ease' }}></div>
                         </div>
                         {['Opgave', 'Detaljer', 'Billeder', 'Kontakt'].map((name, idx) => {
@@ -395,8 +395,8 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                             const isCompleted = activeStepIndex > stepNum;
                             const isActive = activeStepIndex === stepNum;
                             return (
-                                <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, position: 'relative', background: 'transparent' }}>
-                                    <div style={{ 
+                                <div key={name} className="progress-step-item" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, position: 'relative', background: 'transparent' }}>
+                                    <div className="progress-step-circle" style={{ 
                                         width: '34px', height: '34px', borderRadius: '50%', 
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', 
                                         background: isCompleted ? '#10b981' : (isActive ? '#2563eb' : '#f1f5f9'),
@@ -408,7 +408,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                                     }}>
                                         {isCompleted ? '✓' : stepNum}
                                     </div>
-                                    <span style={{ fontSize: '0.85rem', marginTop: '8px', color: isActive ? '#1e293b' : '#64748b', fontWeight: isActive ? '700' : '500' }}>{name}</span>
+                                    <span className="progress-step-label" style={{ fontSize: '0.85rem', marginTop: '8px', color: isActive ? '#1e293b' : '#64748b', fontWeight: isActive ? '700' : '500' }}>{name}</span>
                                 </div>
                             );
                         })}
@@ -418,9 +418,9 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
 
             {/* Sticky Tømrer Profil for Steps 2-4 */}
             {activeStepNum > 1 && activeStepNum < 5 && (
-                <div style={{ maxWidth: '800px', margin: '0 auto 24px auto', display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px' }}>
-                    <img src={carpenter?.portrait_url || `https://ui-avatars.com/api/?name=${carpenter?.owner_name || 'Tømrer'}&background=0f172a&color=fff&size=250`} alt="Tømrer" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="sticky-carpenter-profile" style={{ maxWidth: '800px', margin: '0 auto 24px auto', display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px' }}>
+                    <img className="sticky-carpenter-avatar" src={carpenter?.portrait_url || `https://ui-avatars.com/api/?name=${carpenter?.owner_name || 'Tømrer'}&background=0f172a&color=fff&size=250`} alt="Tømrer" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', flexShrink: 0 }} />
+                    <div className="sticky-carpenter-details" style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ display: 'block', fontSize: '0.9rem', color: '#64748b', fontWeight: '500', marginBottom: '2px' }}>Dit tilbud udarbejdes af:</span>
                         <span style={{ display: 'block', fontSize: '1.15rem', color: '#0f172a', fontWeight: '800', wordBreak: 'break-word' }}>{carpenter?.owner_name || 'Tømreren'} fra {carpenter?.company_name || 'Tømrerfirmaet'}</span>
                     </div>

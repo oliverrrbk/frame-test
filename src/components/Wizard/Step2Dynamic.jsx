@@ -141,7 +141,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
         if (!isVisible(q.condition)) return null;
 
         return (
-            <div key={q.id} className="form-group" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+            <div key={q.id} className="form-group wizard-question-card" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                     <label style={{ fontWeight: '700', margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
                         {q.label}
@@ -522,7 +522,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
     };
 
     return (
-        <section className="wizard-step active">
+        <section className="wizard-step active dynamic-form-section">
             <div className="step-header">
                 <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>
                     {['special', 'extensions'].includes(category) ? 'Projektbeskrivelse' : 'Specifikation af projekt'}

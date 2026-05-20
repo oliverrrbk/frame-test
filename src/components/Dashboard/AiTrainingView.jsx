@@ -17,6 +17,37 @@ import {
     Coins 
 } from 'lucide-react';
 
+const safeJsonParse = (val) => {
+    if (!val) return {};
+    if (typeof val === 'object') return val;
+    try {
+        const parsed = JSON.parse(val);
+        return typeof parsed === 'object' && parsed !== null ? parsed : {};
+    } catch (e) {
+        console.error("Failed to parse JSON:", e, val);
+        return {};
+    }
+};
+
+const formatPrice = (value) => {
+    if (value === null || value === undefined) return '?';
+    const num = Number(value);
+    if (isNaN(num)) return '?';
+    try {
+        return `${new Intl.NumberFormat('da-DK').format(num)} DKK`;
+    } catch (e) {
+        console.error("formatPrice error:", e);
+        return `${num} DKK`;
+    }
+};
+
+const formatHours = (value) => {
+    if (value === null || value === undefined) return '?';
+    const num = Number(value);
+    if (isNaN(num)) return '?';
+    return `${num} t`;
+};
+
 const AiTrainingView = ({ carpenterId }) => {
     const [aiLeads, setAiLeads] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -54,9 +85,16 @@ const AiTrainingView = ({ carpenterId }) => {
             if (error) throw error;
 
             // Filter leads where project_category is 'AI Opgave' or raw_data has isAiEstimate
-            const filtered = (data || []).filter(lead => {
-                const raw = lead.raw_data || {};
-                const details = raw.details || {};
+            const filtered = (data || []).map(lead => {
+                const parsedRaw = safeJsonParse(lead.raw_data);
+                const parsedOverrides = safeJsonParse(lead.ai_curation_overrides);
+                return {
+                    ...lead,
+                    raw_data: parsedRaw,
+                    ai_curation_overrides: parsedOverrides
+                };
+            }).filter(lead => {
+                const details = lead.raw_data?.details || {};
                 return lead.project_category === 'AI Opgave' || details.isAiEstimate === true;
             });
 
@@ -71,16 +109,24 @@ const AiTrainingView = ({ carpenterId }) => {
 
     // Load curation values when selecting a lead
     const handleSelectLead = (lead) => {
-        setSelectedLead(lead);
+        if (!lead) return;
+        const parsedRaw = safeJsonParse(lead.raw_data);
+        const parsedOverrides = safeJsonParse(lead.ai_curation_overrides);
+        const sanitizedLead = {
+            ...lead,
+            raw_data: parsedRaw,
+            ai_curation_overrides: parsedOverrides
+        };
+        setSelectedLead(sanitizedLead);
         
         // Extract values using columns, falling back to raw_data.curation JSON object
-        const curStatus = lead.ai_curation_status || lead.raw_data?.curation?.status || 'pending';
-        const curRating = lead.ai_curation_rating || lead.raw_data?.curation?.rating || 0;
-        const curNotes = lead.ai_curation_notes || lead.raw_data?.curation?.notes || lead.ai_feedback || lead.raw_data?.aiFeedbackFallback || '';
+        const curStatus = sanitizedLead.ai_curation_status || parsedRaw?.curation?.status || 'pending';
+        const curRating = sanitizedLead.ai_curation_rating || parsedRaw?.curation?.rating || 0;
+        const curNotes = sanitizedLead.ai_curation_notes || parsedRaw?.curation?.notes || sanitizedLead.ai_feedback || parsedRaw?.aiFeedbackFallback || '';
         
-        const curOverrides = lead.ai_curation_overrides || lead.raw_data?.curation?.overrides || {};
-        const originalHours = lead.raw_data?.details?.aiLaborHours || 0;
-        const originalMaterials = lead.raw_data?.details?.aiMaterialCost || 0;
+        const curOverrides = parsedOverrides || parsedRaw?.curation?.overrides || {};
+        const originalHours = parsedRaw?.details?.aiLaborHours || 0;
+        const originalMaterials = parsedRaw?.details?.aiMaterialCost || 0;
         
         setCurationStatus(curStatus);
         setCurationRating(curRating);
@@ -135,8 +181,9 @@ const AiTrainingView = ({ carpenterId }) => {
             console.warn('Kolonner ikke fuldt migreret i DB. Gemmer robust i raw_data fallback...', error);
             // Fallback: If columns do not exist, save structure in raw_data JSONB
             try {
+                const parsedRaw = safeJsonParse(selectedLead.raw_data);
                 const newRawData = { 
-                    ...(selectedLead.raw_data || {}), 
+                    ...parsedRaw, 
                     curation: curationPayload,
                     aiFeedbackFallback: curationNotes // Fallback sync
                 };
@@ -204,7 +251,7 @@ const AiTrainingView = ({ carpenterId }) => {
 
                 // Append user and assistant logs
                 chatLog.forEach(msg => {
-                    if (msg.role !== 'system') {
+                    if (msg && msg.role && msg.role !== 'system') {
                         messages.push({
                             role: msg.role,
                             content: msg.content || ''
@@ -623,7 +670,7 @@ const AiTrainingView = ({ carpenterId }) => {
                                             background: '#0f172a'
                                         }}>
                                             {selectedLead.raw_data?.details?.chatLog?.map((msg, idx) => (
-                                                msg.role !== 'system' && (
+                                                msg && msg.role && msg.role !== 'system' && (
                                                     <div 
                                                         key={idx} 
                                                         style={{ 
@@ -847,13 +894,13 @@ const AiTrainingView = ({ carpenterId }) => {
                                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
                                                 <span style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block' }}>Timer Gæt</span>
                                                 <strong style={{ fontSize: '1.2rem', color: '#fff' }}>
-                                                    {selectedLead.raw_data?.details?.aiLaborHours || '?'} t
+                                                    {formatHours(selectedLead.raw_data?.details?.aiLaborHours)}
                                                 </strong>
                                             </div>
                                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
                                                 <span style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block' }}>Materialepris Netto</span>
                                                 <strong style={{ fontSize: '1.2rem', color: '#fff' }}>
-                                                    {selectedLead.raw_data?.details?.aiMaterialCost ? `${new Intl.NumberFormat('da-DK').format(selectedLead.raw_data.details.aiMaterialCost)} DKK` : '?'}
+                                                    {formatPrice(selectedLead.raw_data?.details?.aiMaterialCost)}
                                                 </strong>
                                             </div>
                                         </div>

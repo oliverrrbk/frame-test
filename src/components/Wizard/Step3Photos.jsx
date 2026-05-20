@@ -131,13 +131,13 @@ const Step3Photos = ({ category, photos, setPhotos, notes, setNotes, nextStep, p
 
 
     return (
-        <section className="wizard-step active">
+        <section className="wizard-step active photos-upload-section">
             <div className="step-header">
                 <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>{category === 'special' ? 'Vedhæft billeder af opgaven' : 'Beskriv de særlige forhold'}</h2>
-                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>{category === 'special' ? 'Vi har nu et godt overblik over dit projekt! Vedhæft meget gerne et par billeder af området, så tømreren kan se opgaven med egne øjne og få en bedre indsigt i, hvordan den bedst løses. På den måde er vi bedst muligt forberedt til at give dig et hurtigt og præcist tilbud.' : 'Har du nogle specifikke krav, udfordringer eller drømme? Skriv dem her og vedhæft meget gerne et par billeder af området.'}</p>
+                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>{category === 'special' ? 'Vi have nu et godt overblik over dit projekt! Vedhæft meget gerne et par billeder af området, så tømreren kan se opgaven med egne øjne og få en bedre indsigt i, hvordan den bedst løses. På den måde er vi bedst muligt forberedt til at give dig et hurtigt og præcist tilbud.' : 'Har du nogle specifikke krav, udfordringer eller drømme? Skriv dem her og vedhæft meget gerne et par billeder af området.'}</p>
             </div>
             
-            <div className="form-group" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+            <div className="form-group photos-upload-card" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                 <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.1rem', color: 'var(--text-primary)' }}>Eksakt situation og specielle ønsker (Valgfrit men godt)</label>
                 <textarea 
                     rows="4" 

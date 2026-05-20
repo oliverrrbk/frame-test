@@ -237,8 +237,8 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                 .typing-dot:nth-child(3) { animation-delay: 0s; }
                 `}
             </style>
-            <div className="wizard-step active" style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', minHeight: '400px', maxHeight: '75vh', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' }}>
-                <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}>
+            <div className="wizard-step active chat-estimator-card" style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', minHeight: '400px', maxHeight: '75vh', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' }}>
+                <div className="chat-header-bar" style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <img src={carpenter?.portrait_url || `https://ui-avatars.com/api/?name=${carpenter?.owner_name || 'Tømrer'}&background=0f172a&color=fff&size=50`} alt="Avatar" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
                     <div>
@@ -268,7 +268,7 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                 )}
             </div>
 
-            <div role="log" aria-live="polite" style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="chat-messages-log" role="log" aria-live="polite" style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {messages.filter(m => m.role !== 'system').map((msg, i) => (
                     <div key={i} style={{ display: 'flex', gap: '12px', alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
                         {msg.role === 'assistant' && (
@@ -301,7 +301,7 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                 <div ref={messagesEndRef} />
             </div>
 
-            <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', backgroundColor: 'white', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
+            <div className="chat-input-bar" style={{ padding: '20px', borderTop: '1px solid #e2e8f0', backgroundColor: 'white', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
                 {estimateData ? (
                     (() => {
                         const isComplexProject = !estimateData.isStandardCategory && (estimateData.aiLaborHours === 0 && estimateData.aiMaterialCost === 0);

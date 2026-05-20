@@ -1160,3 +1160,208 @@ button:focus-visible {
         display: block;
     }
 }
+
+/* ═══════════════════════════════════════
+   BISON FRAME - CUSTOMER FLOW MOBILE RESPONSIVENESS
+   ═══════════════════════════════════════ */
+@media (max-width: 768px) {
+    /* 1. Hoved-Wizard & Overordnet layout */
+    .wizard-container {
+        padding: 12px 10px !important;
+        padding-bottom: 60px !important;
+    }
+    
+    /* 2. Progress-trin (Gør dem kompakte så de ikke overlapper) */
+    .progress-steps-container {
+        margin-bottom: 24px !important;
+        padding: 0 4px !important;
+    }
+    .progress-step-circle {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.85rem !important;
+        border-width: 2px !important;
+    }
+    .progress-step-label {
+        font-size: 0.75rem !important;
+        margin-top: 6px !important;
+    }
+    
+    /* 3. Tømrer Sticky Profil */
+    .sticky-carpenter-profile {
+        padding: 10px 14px !important;
+        gap: 12px !important;
+        border-radius: 12px !important;
+        margin-bottom: 20px !important;
+    }
+    .sticky-carpenter-avatar {
+        width: 44px !important;
+        height: 44px !important;
+    }
+    .sticky-carpenter-details span:first-child {
+        font-size: 0.75rem !important;
+    }
+    .sticky-carpenter-details span:last-child {
+        font-size: 0.95rem !important;
+    }
+    
+    /* 4. Wizard Step Headers & Avatar */
+    .header-with-avatar {
+        flex-direction: column-reverse !important;
+        text-align: center !important;
+        gap: 16px !important;
+        padding: 20px !important;
+        margin-bottom: 24px !important;
+    }
+    .header-avatar img {
+        width: 80px !important;
+        height: 80px !important;
+        border-width: 3px !important;
+    }
+    .header-text h2 {
+        font-size: 1.5rem !important;
+    }
+    .header-text p {
+        font-size: 0.95rem !important;
+        margin-inline: auto !important;
+    }
+    
+    /* 5. Kategori- og Materiale-kort (Flot 2-kolonners layout på mobil) */
+    .card-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+    .card-image {
+        height: 100px !important;
+    }
+    .card-content {
+        padding: 12px !important;
+    }
+    .card-content h3 {
+        font-size: 0.95rem !important;
+    }
+    .materials-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+    .material-img {
+        height: 75px !important;
+    }
+    .material-label {
+        font-size: 11px !important;
+        padding: 6px !important;
+    }
+    
+    /* 6. Spørgsmåls-kort og Formularer */
+    .wizard-question-card, .photos-upload-card, .contact-form-card {
+        padding: 16px !important;
+        margin-bottom: 18px !important;
+        border-radius: 12px !important;
+    }
+    .wizard-question-card label, .contact-form-card label {
+        font-size: 0.95rem !important;
+    }
+    .contact-form-card input {
+        padding: 12px 16px !important;
+        font-size: 0.95rem !important;
+    }
+    
+    /* Sørg for at dual postnummer/by og andre inputs stables pænt lodret */
+    .form-grid.dual {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        margin-top: 16px !important;
+        margin-bottom: 16px !important;
+    }
+    .form-grid.dual .form-group {
+        margin-bottom: 0 !important;
+    }
+    
+    /* GDPR Samtykke */
+    .gdpr-checkbox-container {
+        padding: 12px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* Knapper / Actions */
+    .actions {
+        margin-top: 24px !important;
+        padding-top: 16px !important;
+    }
+    .wizard-btn {
+        padding: 12px 18px !important;
+        font-size: 0.95rem !important;
+    }
+    
+    /* 7. AI Chat Estimator (Optimer chatoplevelsen) */
+    .chat-estimator-card {
+        max-height: 85vh !important;
+        min-height: 450px !important;
+        border-radius: 12px !important;
+    }
+    .chat-messages-log {
+        padding: 12px !important;
+        gap: 12px !important;
+    }
+    .chat-input-bar {
+        padding: 12px !important;
+    }
+    
+    /* 8. Prisestimat & Booking Resultater */
+    .price-box-card {
+        padding: 24px 16px !important;
+        border-radius: 16px !important;
+        margin-bottom: 20px !important;
+    }
+    .price-box-card h1 {
+        font-size: 1.8rem !important;
+    }
+    .task-list-card, .details-list-card {
+        padding: 20px 16px !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Stable ASAP / Planlæg booking knapper */
+    .booking-options-row {
+        flex-direction: column !important;
+        gap: 10px !important;
+        margin-bottom: 20px !important;
+    }
+    .booking-option-btn {
+        width: 100% !important;
+        padding: 14px !important;
+        font-size: 0.95rem !important;
+    }
+    .days-selector-flex {
+        gap: 8px !important;
+    }
+    .day-select-btn {
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* 9. Offentlig Accept Side & PDF visning */
+    .accept-page-wrapper {
+        padding: 16px 10px !important;
+    }
+    .accept-page-card {
+        padding: 24px 16px !important;
+        border-radius: 12px !important;
+    }
+}
+
+/* Yderligere finpudsning for helt små mobilskærme (fx iPhone SE) */
+@media (max-width: 480px) {
+    .progress-step-label {
+        display: none !important; /* Skjul tekst-labels på små telefoner, vis kun cirkel-numre */
+    }
+    .wizard-btn {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+    .actions {
+        flex-direction: column-reverse !important;
+        gap: 12px !important;
+    }
+}

@@ -229,7 +229,7 @@ const QuoteAcceptPage = () => {
     const totalMedMoms = totalPris + moms;
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' }}>
+        <div className="accept-page-wrapper" style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' }}>
             
             {/* Tømrer Branding Header */}
             <div style={{ maxWidth: '800px', width: '100%', marginBottom: '24px', textAlign: 'center' }}>
@@ -248,7 +248,7 @@ const QuoteAcceptPage = () => {
             </div>
 
             {/* Document Container */}
-            <div style={{ maxWidth: '800px', width: '100%', background: '#fff', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+            <div className="accept-page-card" style={{ maxWidth: '800px', width: '100%', background: '#fff', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 
                 {(accepted || lead.status === 'Bekræftet opgave') && (
                     <div style={{ backgroundColor: '#ecfdf5', borderBottom: '1px solid #10b981', padding: '24px 32px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>

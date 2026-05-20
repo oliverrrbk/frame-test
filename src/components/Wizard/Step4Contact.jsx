@@ -111,13 +111,13 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
     };
 
     return (
-        <section className="wizard-step active">
+        <section className="wizard-step active contact-step-section">
             <div className="step-header">
                 <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>Kontaktoplysninger</h2>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>For at jeg kan kontakte dig med dit personlige overslag, skal jeg bruge et par oplysninger om dig.</p>
             </div>
             
-            <div className="form-group" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '32px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+            <div className="form-group contact-form-card" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '32px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                 <div className="form-grid">
                     <div className="form-group" style={{ marginBottom: '20px' }}>
                         <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Fulde navn <span style={{ color: '#ef4444' }}>*</span></label>
@@ -246,7 +246,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
             </div>
             
             {/* NY: GDPR Checkbox før actions */}
-            <div style={{ marginTop: '24px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', background: 'var(--bg-muted)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }} onClick={() => setAcceptedTerms(!acceptedTerms)}>
+            <div className="gdpr-checkbox-container" style={{ marginTop: '24px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', background: 'var(--bg-muted)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }} onClick={() => setAcceptedTerms(!acceptedTerms)}>
                 <input 
                     type="checkbox" 
                     checked={acceptedTerms} 
