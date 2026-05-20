@@ -57,7 +57,8 @@ export default async function handler(req, res) {
             });
         }
 
-        const aiProvider = process.env.AI_PROVIDER || 'claude';
+        const aiProvider = (process.env.AI_PROVIDER || 'claude').toLowerCase();
+        const isClaude = aiProvider === 'claude' || aiProvider === 'anthropic';
 
         // Hent data fra klienten sikkert
         const dbContext = contextData?.dbContext || '';
@@ -78,7 +79,7 @@ GUARDRAILS & REGLER FOR SAMTALEN:
 5. KOM IGENNEM HELE TJEKLISTEN: Stil gerne 2-3 spørgsmål ad gangen for at holde fremdrift i samtalen. DU SKAL indsamle svar på ALLE de punkter, der findes i tjeklisten for den pågældende kategori. Ignorer aldrig et punkt fra tjeklisten, da hvert svar påvirker prisen præcist.
 6. BRUG ALDRIG MARKDOWN ELLER STJERNER (** eller *): Din tekst bliver vist råt i et system der ikke forstår markdown. Skriv ren tekst uden formatering.
 7. VIS ALDRIG UDTÆNKTE PRISER ELLER TIMER TIL KUNDEN: Hold alle udregninger 100% hemmelige i chatten. 
-8. KOMPLEKSE VS. STANDARD OPGAVER: Standardopgaver og kombinationer (fx Nyt Tag, Gulv og 3 Vinduer) SKAL udregnes med estimerede timer og materialer i det endelige JSON output. Hvis et projekt (eller kombinationen af projekter) er så avanceret, at det kræver vurdering af bærende konstruktioner (fx fjerne vægge), byggetilladelser, dybdegående el/vvs arbejde, eller kunden ønsker en totalrenovering uden at kende omfanget, SKAL du stoppe. Du skal straks kalde \`submit_estimate\` med laborHours = 0 og materialCost = 0. I dit resumé (summaryBullets) skal du skrive: 'Komplekst projekt: Kræver fysisk besigtigelse'.
+8. KOMPLEKSE VS. STANDARD OPGAVER: Standardopgaver og kombinationer (fx Nyt Tag, Gulv og 3 Vinduer) SKAL udregnes med estimerede timer og materialer i det endelige JSON output. Hvis et projekt (eller kombinationen af projekter) is så avanceret, at det kræver vurdering af bærende konstruktioner (fx fjerne vægge), byggetilladelser, dybdegående el/vvs arbejde, eller kunden ønsker en totalrenovering uden at kende omfanget, SKAL du stoppe. Du skal straks kalde \`submit_estimate\` med laborHours = 0 og materialCost = 0. I dit resumé (summaryBullets) skal du skrive: 'Komplekst projekt: Kræver fysisk besigtigelse'.
 9. KOMBI-PROJEKTER (Flere opgaver på én gang): Hvis kunden vil have lavet flere ting (fx både tag, vinduer og et nyt gulv), så er det den perfekte specialopgave! Afklar dem én ad gangen. Når du udregner det endelige tilbud, skal du splitte dem op som separate linjer i dit \`breakdown\` array, så kunden kan se, hvad der koster hvad.
 
 SIKKERHED & REALISME:
@@ -101,7 +102,7 @@ NÅR DU ER NÅET IGENNEM HELE TJEKLISTEN:
 Når kunden har svaret på alle relevante punkter i din tjekliste, SKAL du proaktivt afbryde samtalen og kalde den korrekte funktion.
 VIGTIGT OM KOMBI-OPGAVER: Hvis kunden beder om et projekt, der spænder over FLERE forskellige kategorier på én gang (fx både tag og vinduer, eller gulv og loft), må du ALDRIG bruge standard-værktøjerne. Du SKAL i stedet betragte det som en samlet 'Specialopgave' og kalde værktøjet \`submit_estimate\`.
 Hvis projektet er ÉN ENKELT standard-kategori fra Tjeklisten (fx KUN roof, eller KUN floor), SKAL du kalde det tilsvarende værktøj (fx \`calculate_roof\`) og overlevere svarene som struktureret data.
-Hvis projektet IKKE findes i tjeklisten (en ægte specialopgave, fx bygning af en udestue), skal du bruge \`submit_estimate\` og selv udregne timer og materialer ud fra din viden!
+If projektet IKKE findes i tjeklisten (en ægte specialopgave, fx bygning af en udestue), skal du bruge \`submit_estimate\` og selv udregne timer og materialer ud fra din viden!
 Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
 
         const submitEstimateSchema = {
@@ -207,7 +208,7 @@ function getDynamicTools(provider) {
 
         let returnMessage = null;
 
-        if (aiProvider === 'claude') {
+        if (isClaude) {
             const anthropic = new Anthropic({
                 apiKey: process.env.ANTHROPIC_API_KEY
             });
@@ -222,7 +223,7 @@ function getDynamicTools(provider) {
             ];
 
             const response = await anthropic.messages.create({
-                model: "claude-3-5-sonnet-20241022",
+                model: "claude-sonnet-4-6",
                 system: systemPromptText,
                 messages: messages, // Claude expects pure user/assistant messages here
                 max_tokens: 4000,
