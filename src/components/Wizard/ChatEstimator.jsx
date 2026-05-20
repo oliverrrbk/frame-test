@@ -146,7 +146,7 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                         return;
                     }
                     
-                    const isComplex = Math.max(0, Number(args.laborHours) || 0) === 0 && Math.max(0, Number(args.materialCost) || 0) === 0;
+                    const isComplex = !isStandard && Math.max(0, Number(args.laborHours) || 0) === 0 && Math.max(0, Number(args.materialCost) || 0) === 0;
                     
                     let finalMsgContent = `Sådan! Jeg har nu alle de detaljer, jeg skal bruge, for at kunne regne det ud for dig.\n\nFor at vi er helt sikre på, at vi taler om det samme, mangler vi blot et par billeder af området.\n\nTryk på knappen herunder, når du er klar til at se dit vejledende overslag! 👇`;
                     
@@ -303,37 +303,42 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
 
             <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', backgroundColor: 'white', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
                 {estimateData ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                        <p style={{ color: '#475569', fontSize: '0.95rem', margin: 0, textAlign: 'center' }}>
-                            {estimateData.aiLaborHours === 0 && estimateData.aiMaterialCost === 0 
-                                ? "Vi mangler blot dine kontaktoplysninger for at kunne arrangere en besigtigelse."
-                                : "For at jeg kan vise dig det beregnede overslag, mangler vi blot dine kontaktoplysninger."}
-                        </p>
-                        <button 
-                            onClick={() => onComplete(estimateData)}
-                            style={{
-                                backgroundColor: '#2563eb',
-                                color: 'white',
-                                border: 'none',
-                                padding: '16px 32px',
-                                borderRadius: '8px',
-                                fontSize: '1.1rem',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                width: '100%',
-                                maxWidth: '400px',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                gap: '8px',
-                                boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2), 0 2px 4px -1px rgba(37, 99, 235, 0.1)'
-                            }}
-                        >
-                            {estimateData.aiLaborHours === 0 && estimateData.aiMaterialCost === 0 
-                                ? "Anmod om besigtigelse"
-                                : "Gå til Prisoverslag"} <Send size={18} />
-                        </button>
-                    </div>
+                    (() => {
+                        const isComplexProject = !estimateData.isStandardCategory && (estimateData.aiLaborHours === 0 && estimateData.aiMaterialCost === 0);
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                <p style={{ color: '#475569', fontSize: '0.95rem', margin: 0, textAlign: 'center' }}>
+                                    {isComplexProject 
+                                        ? "Vi mangler blot dine kontaktoplysninger for at kunne arrangere en besigtigelse."
+                                        : "For at jeg kan vise dig det beregnede overslag, mangler vi blot dine kontaktoplysninger."}
+                                </p>
+                                <button 
+                                    onClick={() => onComplete(estimateData)}
+                                    style={{
+                                        backgroundColor: '#2563eb',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '16px 32px',
+                                        borderRadius: '8px',
+                                        fontSize: '1.1rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        width: '100%',
+                                        maxWidth: '400px',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2), 0 2px 4px -1px rgba(37, 99, 235, 0.1)'
+                                    }}
+                                >
+                                    {isComplexProject 
+                                        ? "Anmod om besigtigelse"
+                                        : "Gå til Prisoverslag"} <Send size={18} />
+                                </button>
+                            </div>
+                        );
+                    })()
                 ) : (
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <textarea

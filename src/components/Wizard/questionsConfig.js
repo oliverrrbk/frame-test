@@ -28,7 +28,7 @@ export const QUESTIONS = {
             id: 'oldRoofType', 
             type: 'visual_select', 
             label: 'Hvilket slags tag har du nu?', 
-            condition: { field: 'disposal', value: 'Ja' },
+            condition: (d) => d.disposal && d.disposal.startsWith('Ja'),
             options: [
                 { label: 'Paptag', img: '/images/roof_felt_1776270223442.png' },
                 { label: 'Tagplader (eternit asbest fri)', img: '/images/roof_eternit_1777277162521.png' },
@@ -57,7 +57,7 @@ export const QUESTIONS = {
         { id: 'skylights', type: 'select', label: 'Skal der monteres nye ovenlysvinduer (fx Velux)?', options: ['Ja', 'Nej'] },
         { id: 'skylightAmount', type: 'number', label: 'Hvor mange ovenlysvinduer skal der monteres?', condition: { field: 'skylights', value: 'Ja' } },
         
-        { id: 'trailerAccess', type: 'select', label: 'Afskaffelse af affald: Er der mulighed for at stille stor affaldscontainer helt op til huset?', options: ['Ja', 'Nej, den skal stå langt væk'] },
+        { id: 'trailerAccess', type: 'select', label: 'Afskaffelse af affald: Er der mulighed for at stille stor affaldscontainer helt op til huset?', condition: (d) => d.disposal && d.disposal.startsWith('Ja'), options: ['Ja', 'Nej, den skal stå langt væk'] },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -93,7 +93,7 @@ export const QUESTIONS = {
         },
         { id: 'floors', type: 'select', label: 'På hvilken etage skal vinduerne primært monteres?', tooltip: 'Høje etager tager længere tid pga. bæring af tunge vinduer og mulig udvendig fugearbejde.', options: ['Stueplan (Jordniveau)', '1. sal (Kræver evt. rullestillads/ekstra bæring)', '2. sal eller højere (Kræver lift/stillads)'] },
         { id: 'disposal', type: 'select', label: 'Skal de nuværende vinduer afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe dem', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi har selv afmonteret dem'] },
-        { id: 'pcbCheck', type: 'select', label: 'Er huset (eller de eksisterende vinduer) fra før 1977?', tooltip: 'Fuger og materialer fra før 1977 kan indeholde PCB eller bly, hvilket kræver særlig miljøsanering og lovpligtig special-bortskaffelse.', condition: (d) => d.disposal === 'Ja', options: ['Ja, det er fra før 1977 (Risiko for miljøsanering)', 'Nej, bygget/skiftet efter 1977'] },
+        { id: 'pcbCheck', type: 'select', label: 'Er huset (eller de eksisterende vinduer) fra før 1977?', tooltip: 'Fuger og materialer fra før 1977 kan indeholde PCB eller bly, hvilket kræver særlig miljøsanering og lovpligtig special-bortskaffelse.', condition: (d) => d.disposal && d.disposal.startsWith('Ja'), options: ['Ja, det er fra før 1977 (Risiko for miljøsanering)', 'Nej, bygget/skiftet efter 1977'] },
         { id: 'twoTone', type: 'select', label: 'Skal vinduerne have to farver (fx sort udvendig / hvid indvendig)?', tooltip: '2-farvede vinduer koster typisk 10-15% ekstra fra producentens side.', options: ['Nej, samme farve ude og inde', 'Ja, 2-farvede vinduer'] },
         { id: 'amount', type: 'number', label: 'Hvor mange vinduer drejer opgaven sig om i alt?', placeholder: 'F.eks. 4' },
         { id: 'windowsConfig', type: 'window_configurator', label: 'Specifikation af hvert vindue:', condition: (d) => d.amount > 0 },
@@ -108,7 +108,7 @@ export const QUESTIONS = {
             id: 'oldFloorType', 
             type: 'visual_select', 
             label: 'Hvilket slags gulv skal fjernes?', 
-            condition: { field: 'disposal', value: 'Ja' },
+            condition: (d) => d.disposal && d.disposal.startsWith('Ja'),
             options: [
                 { label: 'Trægulv / Parket / Laminat', img: '/images/floor_wood_1776266012828.png' },
                 { label: 'Klinker / Fliser', img: '/images/floor_tiles_1776266089581.png' },
@@ -333,7 +333,7 @@ export const QUESTIONS = {
             id: 'oldMaterial', 
             type: 'visual_select', 
             label: 'Hvilket materiale er det eksisterende bygget af?', 
-            condition: { field: 'disposal', value: 'Ja' },
+            condition: (d) => d.disposal && d.disposal.startsWith('Ja'),
             options: [
                 { label: 'Træ', img: '/images/old_facade_wood_1777278987653.png' },
                 { label: 'Mursten/Beton', img: '/images/old_facade_brick_1777279017419.png' },
@@ -371,7 +371,7 @@ export const QUESTIONS = {
             id: 'oldMaterial', 
             type: 'visual_select', 
             label: 'Hvilket materiale er den eksisterende bygget af?', 
-            condition: { field: 'disposal', value: 'Ja' },
+            condition: (d) => d.disposal && d.disposal.startsWith('Ja'),
             options: [
                 { label: 'Træ', img: '/images/old_facade_wood_1777278987653.png' },
                 { label: 'Stål/Alu', img: '/images/old_material_steel_1777285347500.png' },
@@ -421,7 +421,7 @@ export const QUESTIONS = {
             id: 'oldMaterial', 
             type: 'visual_select', 
             label: 'Hvilken type hegn er det eksisterende?', 
-            condition: { field: 'disposal', value: 'Ja' },
+            condition: (d) => d.disposal && d.disposal.startsWith('Ja'),
             options: [
                 { label: 'Træhegn (alm. brædder/lameller)', img: '/images/old_facade_wood_1777278987653.png' },
                 { label: 'Kraftigt raftehegn / Stammer', img: '/images/facade_thermowood_1776270455644.png' },
