@@ -134,7 +134,11 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     };
 
     const prevStep = () => {
-        setCurrentStep(prev => prev - 1);
+        if (currentStep === 'special_chat') {
+            setCurrentStep(1);
+        } else {
+            setCurrentStep(prev => prev - 1);
+        }
     };
 
     const calculateEstimate = async (customerDetails, isUpdateContext = false) => {
