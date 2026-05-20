@@ -85,6 +85,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
     let laborHours = 0;
     let materialCost = 0;
+    let externalLeaseCost = 0;
     let bArr = [];
 
     const indexCat = (dbMaterials && dbMaterials[cat]) || {};
@@ -352,7 +353,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
         if (cat === 'windows' && d.pcbCheck && d.pcbCheck.startsWith('Ja')) {
             laborHours += numericAmount * 1.5; // Ekstra nedrivningstid pga. asbestdragter/afskærmning
-            materialCost += (numericAmount * 350); // Special deponi (INGEN markup på miljø/sikkerhed)
+            const pcbDeponi = numericAmount * 350;
+            materialCost += pcbDeponi; // Special deponi (INGEN markup på miljø/sikkerhed)
+            externalLeaseCost += pcbDeponi;
             bArr.push(`Miljøtillæg: Miljøsanering forventet (Fuger/vinduer før 1977 kræver specialhåndtering af PCB/Bly) - Uden avance`);
         }
         // Automatisk nedrivnings-tjek (SOP)
@@ -390,10 +393,14 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     // Sikkerhedsgrænse, så fejlindtastninger på fx 1000m2 ikke sprænger tilbuddet fuldstændig ud af proportioner.
                     if (containerCount > 5) containerCount = 5; 
                     
-                    materialCost += dbSettings.container_disposal_fee * containerCount;
+                    const disposalFee = dbSettings.container_disposal_fee * containerCount;
+                    materialCost += disposalFee;
+                    externalLeaseCost += disposalFee;
                     bArr.push(`Miljøtillæg: Bortskaffelse af stort volumen (${containerCount}x Containerleje/afhentning + ${dispTime.toFixed(1)} arbejdstimer) - Uden avance`);
                 } else {
-                    materialCost += dbSettings.trailer_disposal_fee;
+                    const disposalFee = dbSettings.trailer_disposal_fee;
+                    materialCost += disposalFee;
+                    externalLeaseCost += disposalFee;
                     bArr.push(`Miljøtillæg: Bortskaffelse af mindre volumen på trailer (+ ${dispTime.toFixed(1)} arbejdstimer incl. sortering) - Uden avance`);
                 }
             } else {
@@ -453,7 +460,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     if (d.oldFloorType.includes('Beton') || d.oldFloorType.includes('Klinker')) {
                         disposalFeePerM2 = indexCat['Bortskaffelse af tungt gulv (pr m2)'] || 120;
                     }
-                    materialCost += numericAmount * disposalFeePerM2; // Ingen markup på affaldsgebyr
+                    const floorDisposalFee = numericAmount * disposalFeePerM2;
+                    materialCost += floorDisposalFee; // Ingen markup på affaldsgebyr
+                    externalLeaseCost += floorDisposalFee;
                     bArr.push(`Miljøtillæg: Containerleje og affaldsgebyrer for bortskaffelse af eksisterende gulv (Uden avance)`);
                 }
             }
@@ -547,18 +556,33 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             if (d.floors && d.floors.includes('1. sal')) {
                 laborHours += initialInstallHours * 0.2;
-                if (!userSuppliesMaterials) materialCost += scaffoldPrice; // INGEN markup på stillads/materiel!
-                bArr.push(`Tillæg: 1. sal – ekstra tidsforbrug (+20% tid) samt ${scaffoldText}`);
+                if (!userSuppliesMaterials) {
+                    let finalScaffoldPrice = scaffoldPrice;
+                    if (finalScaffoldPrice < 8000) {
+                        finalScaffoldPrice = 8000;
+                    }
+                    materialCost += finalScaffoldPrice; // INGEN markup på stillads/materiel!
+                    externalLeaseCost += finalScaffoldPrice;
+                    bArr.push(`Tillæg: 1. sal – ekstra tidsforbrug (+20% tid) samt ${scaffoldText} (min. 8.000 kr): ${finalScaffoldPrice} kr.`);
+                }
             } else if (d.floors && d.floors.includes('2. sal')) {
                 laborHours += initialInstallHours * 0.4;
-                if (!userSuppliesMaterials) materialCost += scaffoldPrice * 1.5; // Lift/Stillads til 2. sal er ca. 50% dyrere
-                bArr.push(`Tillæg: 2. sal eller højere – ekstra tidsforbrug (+40% tid) samt højde-${scaffoldText}`);
+                if (!userSuppliesMaterials) {
+                    let finalScaffoldPrice = scaffoldPrice * 1.5;
+                    if (finalScaffoldPrice < 8000) {
+                        finalScaffoldPrice = 8000;
+                    }
+                    materialCost += finalScaffoldPrice; // Lift/Stillads til 2. sal er ca. 50% dyrere
+                    externalLeaseCost += finalScaffoldPrice;
+                    bArr.push(`Tillæg: 2. sal eller højere – ekstra tidsforbrug (+40% tid) samt højde-${scaffoldText} (min. 8.000 kr): ${finalScaffoldPrice} kr.`);
+                }
             }
 
             if (d._heavyWindowCount > 0 && !userSuppliesMaterials) {
                 let liftPrice = d._heavyWindowCount * (indexCat['Leje af glasløfter/sugekop (pr. tungt vindue)'] || 750);
                 materialCost += liftPrice; // INGEN markup på materielleje!
-                bArr.push(`Tillæg: Maskinleje (glasløfter/sugekop) til montering af ${d._heavyWindowCount} tunge partier`);
+                externalLeaseCost += liftPrice;
+                bArr.push(`Tillæg: Maskinleje (glasløfter/sugekop) til montering af ${d._heavyWindowCount} tunge partier: ${liftPrice} kr.`);
             }
         }
 
@@ -584,7 +608,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 }
                 if (!userSuppliesMaterials) {
                     // SOP #2 + #4: Maskinleje (Materialehejs) til at få brædder op på taget. Uden material_markup!
-                    materialCost += (indexCat['Leje af materialehejs (Tagterrasse)'] || 1500);
+                    const hejsPrice = (indexCat['Leje af materialehejs (Tagterrasse)'] || 1500);
+                    materialCost += hejsPrice;
+                    externalLeaseCost += hejsPrice;
                 }
                 bArr.push(`Tillæg: Tagterrasse-montering (inkl. materialehejs og skånsom opklodsning)`);
             } else if (d.elevation && d.elevation.startsWith('Hævet terrasse')) {
@@ -662,19 +688,32 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 laborHours += initialInstallHours * 0.2; // Changed to additive
             }
             if (scaffoldCost > 0) {
+                // Stillads minimums-priser: Bundgrænsen på 10.000 kr. for stillads udløses kun ved tagopgaver over 40 m² (reelle tagskift)
+                if (roofGrundplanM2 > 40 && scaffoldCost < 10000) {
+                    scaffoldCost = 10000;
+                }
                 // SOP #4: Markup-Separation. Stillads er ekstern maskinleje og skal ikke have material_markup!
                 materialCost += scaffoldCost;
-                bArr.push(`Tillæg: Omfattende stillads/materiel-leje (skaleret efter m2) og forøget arbejdstid pga. husets plan/hældning`);
+                externalLeaseCost += scaffoldCost;
+                bArr.push(`Tillæg: Omfattende stillads/materiel-leje (skaleret efter m2, min. 10.000 kr ved tag > 40 m²): ${Math.round(scaffoldCost)} kr. (Uden avance) og forøget arbejdstid pga. husets plan/hældning`);
             }
 
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldRoofType) {
                 // Bemærk: Arbejdstiden (disposalHoursByOldType) er allerede lagt til ovenfor i linje 300-307!
                 // Så vi skal KUN håndtere de materielle miljø-udgifter (deponi/container) her, UDEN markup.
                 if ((d.oldRoofType.includes('asbest') || d.oldRoofType.includes('vides ikke')) && !d.oldRoofType.includes('fri')) {
-                    if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Miljødeponi asbest (pr m2)'] || 150); 
+                    if (!userSuppliesMaterials) {
+                        const asbestCost = numericAmount * (indexCat['Miljødeponi asbest (pr m2)'] || 150);
+                        materialCost += asbestCost;
+                        externalLeaseCost += asbestCost;
+                    }
                     bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af potentielt asbestholdigt tag (Uden avance)`);
                 } else if (d.oldRoofType === 'Stråtag (tækket tag)') {
-                    if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Bortskaffelse af stråtag (ekstra volumen pr m2)'] || 200); 
+                    if (!userSuppliesMaterials) {
+                        const straaCost = numericAmount * (indexCat['Bortskaffelse af stråtag (ekstra volumen pr m2)'] || 200);
+                        materialCost += straaCost;
+                        externalLeaseCost += straaCost;
+                    }
                     bArr.push(`Miljøtillæg: Stor container-volumen og ekstra deponi til bortskaffelse af stråtag (Uden avance)`);
                 }
             }
@@ -787,8 +826,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 let malerCoord = indexCat['Maler: Koordineringsgebyr (Fast pris)'] || 5000;
                 
                 if (!userSuppliesMaterials) {
-                    materialCost += (numericAmount * malerKvmPris); // Ingen tømrer-avance på malerens arbejdsløn/materialer
-                    materialCost += malerCoord; 
+                    const malerCost = (numericAmount * malerKvmPris) + malerCoord;
+                    materialCost += malerCost; // Ingen tømrer-avance på malerens arbejdsløn/materialer
+                    externalLeaseCost += malerCost;
                 }
                 bArr.push(`Håndværker-tillæg: Komplet spartling, fugning og maling af gipsloft (Udføres af professionel maler - Uden tømrer-avance). Inkl. koordinering (${malerCoord} kr)`);
             }
@@ -830,9 +870,16 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
             
             if (d.floors === '1½-plan / 2-plan / Mere') {
-                if (!userSuppliesMaterials) materialCost += (indexCat['Tillæg: Facadestilladsleje'] || 12000) * dbSettings.material_markup; 
+                if (!userSuppliesMaterials) {
+                    let facadeScaffold = indexCat['Tillæg: Facadestilladsleje'] || 15000;
+                    if (facadeScaffold < 8000) {
+                        facadeScaffold = 8000;
+                    }
+                    materialCost += facadeScaffold; // NO markup
+                    externalLeaseCost += facadeScaffold;
+                }
                 laborHours += initialInstallHours * 0.25;
-                bArr.push(`Tillæg: Facadestilladsleje samt forsinket arbejdsgang pga. husets højde (flere etager)`);
+                bArr.push(`Tillæg: Facadestilladsleje samt forsinket arbejdsgang pga. husets højde (flere etager) (Uden avance)`);
             }
         }
         
@@ -934,12 +981,20 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 if (d.oldMaterial.includes('Eternit')) {
                     laborHours += numericAmount * 0.5;
                     let eternitDisposal = indexCat['Miljøtillæg: Eternit nedrivning (pr m2)'] || 100;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * eternitDisposal); // INGEN MARKUP på miljødeponi
+                    if (!userSuppliesMaterials) {
+                        const dispCost = (numericAmount * eternitDisposal);
+                        materialCost += dispCost; // INGEN MARKUP på miljødeponi
+                        externalLeaseCost += dispCost;
+                    }
                     bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdig bygning/tag (Uden avance)`);
                 } else if (d.oldMaterial.includes('Mursten') || d.oldMaterial.includes('Beton')) {
                     laborHours += numericAmount * 1.0;
                     let tungDisposal = indexCat['Tillæg: Tung nedrivning Mursten/Beton (pr m2)'] || 200;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * tungDisposal); // INGEN MARKUP på container/deponi
+                    if (!userSuppliesMaterials) {
+                        const dispCost = (numericAmount * tungDisposal);
+                        materialCost += dispCost; // INGEN MARKUP på container/deponi
+                        externalLeaseCost += dispCost;
+                    }
                     bArr.push(`Tillæg: Tung nedrivning af bygning i mursten/beton inkl. byggeaffald/container (Uden avance)`);
                 }
             }
@@ -990,12 +1045,20 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 if (d.oldMaterial.includes('Eternit')) {
                     laborHours += numericAmount * 8.0;
                     let eternitPris = indexCat['Miljøtillæg: Eternit nedrivning (fast pris)'] || 8000;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * eternitPris); // INGEN MARKUP på miljødeponi
+                    if (!userSuppliesMaterials) {
+                        const dispCost = (numericAmount * eternitPris);
+                        materialCost += dispCost; // INGEN MARKUP på miljødeponi
+                        externalLeaseCost += dispCost;
+                    }
                     bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af asbestholdig carport/tag (Uden avance)`);
                 } else if (d.oldMaterial.includes('Mursten') || d.oldMaterial.includes('Beton')) {
                     laborHours += numericAmount * 8.0;
                     let tungPris = indexCat['Tillæg: Tung nedrivning Mursten/Beton (fast pris)'] || 2500;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * tungPris); // INGEN MARKUP på container/deponi
+                    if (!userSuppliesMaterials) {
+                        const dispCost = (numericAmount * tungPris);
+                        materialCost += dispCost; // INGEN MARKUP på container/deponi
+                        externalLeaseCost += dispCost;
+                    }
                     bArr.push(`Tillæg: Tung nedrivning af carport i mursten/beton inkl. byggeaffald/container (Uden avance)`);
                 } else if (d.oldMaterial.includes('Stål') || d.oldMaterial.includes('Alu')) {
                     laborHours += numericAmount * 2.0;
@@ -1035,7 +1098,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 if (d.oldMaterial.includes('Hæk') || d.oldMaterial.includes('Levende')) {
                     laborHours += numericAmount * 0.5;
                     let rodPris = indexCat['Miljøtillæg: Rodfræsning/deponi af hæk (pr m)'] || 50;
-                    if (!userSuppliesMaterials) materialCost += (numericAmount * rodPris); // INGEN MARKUP på miljødeponi/maskinleje
+                    if (!userSuppliesMaterials) {
+                        const dispCost = (numericAmount * rodPris);
+                        materialCost += dispCost; // INGEN MARKUP på miljødeponi/maskinleje
+                        externalLeaseCost += dispCost;
+                    }
                     bArr.push(`Tillæg: Fældning, rodfræsning/opgravning af hæk inkl. deponi og maskinleje (Uden avance)`);
                 } else if (d.oldMaterial.includes('raftehegn') || d.oldMaterial.includes('Stammer')) {
                     laborHours += numericAmount * 0.2;
@@ -1123,6 +1190,14 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
              materialCost += indexCat['Sikkerhed (Buffer-pris)'] * dbSettings.material_markup;
              bArr.push(`Sikkerhedsbuffer tillagt prisen for at dække uforudsete forhindringer/udgifter`);
          }
+
+         // SOP #2: Tilføj 10% forbrugsstoffer (skruer, fuge, lim, afdækning, slitage) lagt på fysiske materialer
+         if (!userSuppliesMaterials) {
+             const physicalMaterialCost = Math.max(0, materialCost - externalLeaseCost);
+             const consumablesCost = physicalMaterialCost * 0.10;
+             materialCost += consumablesCost;
+             bArr.push(`Tillæg: 10% forbrugsstoffer (skruer, fuge, lim, afdækning, slitage) lagt på fysiske materialer: ${Math.round(consumablesCost)} kr.`);
+         }
     } 
 
     if(d.notes && d.notes.trim() !== "") {
@@ -1181,23 +1256,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
     const strictPrice = totalLaborCost + materialCost + totalDriving;
 
-    // Rabat for selv-opmåling af vinduer
+    // Opmålingsrabat er fjernet jf. tømrerens retningslinjer (kontrolmål er altid nødvendigt)
     let opmaalingRabat = 0;
-    if (cat === 'windows' && d.waiveMeasurement) {
-        opmaalingRabat = 1500;
-        bArr.push(`Rabat: Kunden har påtaget sig opmålingsansvaret. Fradrag på opmålingsbesøg: -1.500 kr.`);
-    }
 
-    // --- OPTIMIZATION: SKJULT BUFFER I STEDET FOR FLAD MULTIPLIER ---
-    // Vi fjerner "marginFactor = 1.25", da det giver dobbelt-avance på materialer og absurde tillæg på store opgaver.
-    // I stedet lægger vi et fast, dynamisk beløb til den rå pris. Kunden ser ikke dette tillæg direkte,
-    // men det sikrer at tømrerens rigtige tilbud næsten altid kan lande lidt under systemets pris.
-    let hiddenBuffer = 5000;
-    if (strictPrice > 150000) {
-        hiddenBuffer = 15000;
-    } else if (strictPrice > 50000) {
-        hiddenBuffer = 10000;
-    }
+    // --- TØMRERENS PROCENTUELLE RISIKOBUFFER (+20% PÅ ARBEJDSLØN & TRANSPORT) ---
+    const hiddenBuffer = Math.round((totalLaborCost + totalDriving) * 0.20);
+    bArr.push(`Tillæg: 20% tømrer-risikobuffer lagt på arbejdsløn og transport for uforudsete forhold: ${hiddenBuffer} kr.`);
 
     // --- AUTO-LÆRING: KALIBRERING ---
     // Anvend tømrer-specifik (eller branche-aggregat) kalibreringsfaktor KUN på ikke-materiale-delen.

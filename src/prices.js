@@ -4,7 +4,7 @@
  * logget ind og sat deres egne takster.
  */
 export const CARPENTER_SETTINGS = {
-    hourlyRate: 550,           // Timeløn i DKK ekskl/inkl moms (antages at være med moms her for simpelhed pt)
+    hourlyRate: 550,           // Standard timeløn i DKK ekskl. moms (25% moms lægges oveni til sidst i beregneren)
     materialMarkup: 1.15,      // +15% avance på indkøb af materialer
     drivingFee: 600,           // Fast opstartsgebyr/kørsel
     trailerDisposalFee: 800,   // Lille miljøtillæg (kørsel til genbrugsplads med egen trailer)
@@ -54,13 +54,13 @@ export const MATERIAL_INDEX = {
         'Træ': 5000,                                  // Standard træ-vindue 1,2x1,2m 4-6,5k
         'PVC / plast': 3800,                          // PVC er reelt billigt
         'Aluminium': 8000,
-        'Træ/alu (kombination)': 7500,
+        'Træ/alu (kombination)': 9500,                // Hævet til high-end worst-case (før 7500)
         'Stål': 12000,                                // Stålvinduer (industri-look) 10-15k
         'Glas': 9500,
         'Default': 6000,
         // Specialvinduer — basispriser før areal-skalering i calculator
         'Panorama/Specialmål': 22000,                 // ca 4 m² panorama før skalering
-        'Skydedør': 55000,                            // hæveskydedør 2,8x2,2 (træ/alu) 50-80k
+        'Skydedør': 65000,                            // Hævet til high-end worst-case (før 55000)
         'Ovenlysvindue / Velux (pr. stk)': 8500,
         'Tillæg: Stillads/Lift leje': 8000,
         'Leje af rullestillads (lille opgave)': 1500,
@@ -72,9 +72,9 @@ export const MATERIAL_INDEX = {
     },
     floor: {
         'Træ': 600,
-        'Massivt træ': 1200,
+        'Massivt træ': 1500,                          // Hævet til high-end worst-case (før 1200)
         'Parket': 750,
-        'Laminat': 250,                               // Klik-laminat 150-350 kr/m²
+        'Laminat': 350,                               // Hævet til high-end worst-case (før 250)
         'Vinyl': 300,                                 // Klikvinyl 200-400 kr/m²
         'Linoleum': 400,
         'Default': 400,
@@ -92,12 +92,13 @@ export const MATERIAL_INDEX = {
     doors: {
         'Træ': 3000,                                  // Standard HT-dør m. karm 2-4k (var voldsomt højt før)
         'Massivt træ': 7500,                          // Massive yderdøre/specialdøre 6-9k
-        'Massivt træ og glas': 8500,
+        'Massivt træ og glass': 8500,                 // Legacy, men bevaret for bagudkompatibilitet
+        'Massivt træ og glas': 14500,                 // Hævet til high-end worst-case Swedoor (før 8500)
         'Finér': 2200,
         'PVC / plast': 4000,
         'Aluminium': 9000,                            // Alu-yderdøre 8-12k
         'Standard indvendig dør': 1200,
-        'Special indvendig dør': 5000,
+        'Special indvendig dør': 7500,                // Hævet til high-end worst-case (før 5000)
         'Default': 5500,
         // Tillæg døre
         'Dørgreb inkl roset': 350,
