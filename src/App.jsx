@@ -164,7 +164,7 @@ function App() {
   }
 
   return (
-    <div className="smooth-fade-in" style={{ minHeight: '100vh', width: '100vw' }}>
+    <div className="smooth-fade-in" style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
         <Toaster position="top-center" />
         <BrowserRouter>
           <Routes>
