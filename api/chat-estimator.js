@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { applyCors } from './_cors.js';
 import { rateLimit } from './_ratelimit.js';
 import { QUESTIONS } from '../src/components/Wizard/questionsConfig.js';
+import { createClient } from '@supabase/supabase-js';
 
 // dotenv kun nødvendigt lokalt; i Vercel-produktion er env'erne allerede injected
 if (!process.env.VERCEL) {
@@ -10,6 +11,10 @@ if (!process.env.VERCEL) {
     dotenv.config({ path: '.env' });
     dotenv.config({ path: '.env.local' });
 }
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const maxDuration = 60; // Tillad op til 60 sekunders eksekveringstid
 
@@ -66,6 +71,81 @@ export default async function handler(req, res) {
         const carpenterName = contextData?.carpenterInfo?.owner_name?.split(' ')[0] || 'Tømreren';
         const carpenterCompany = contextData?.carpenterInfo?.company_name || 'Tømrervirksomhed';
 
+        // ─── HENT GYLDNE EKSEMPLER FRA SUPABASE (DYNAMIC FEW-SHOT) ───
+        let goldenExamplesText = '';
+        try {
+            let goldenLeads = [];
+            // Prøv at hente via dedikerede kolonner først
+            const { data, error } = await supabase
+                .from('leads')
+                .select('*')
+                .or('ai_curation_status.eq.qualified,ai_curation_rating.eq.5')
+                .order('created_at', { ascending: false })
+                .limit(3);
+                
+            if (!error && data && data.length > 0) {
+                goldenLeads = data;
+            } else {
+                // Robust fallback: hent seneste 30 leads og filtrer in-memory på raw_data
+                const { data: fallbackData } = await supabase
+                    .from('leads')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(30);
+                    
+                if (fallbackData) {
+                    goldenLeads = fallbackData.filter(lead => {
+                        const status = lead.ai_curation_status || lead.raw_data?.curation?.status;
+                        const rating = lead.ai_curation_rating || lead.raw_data?.curation?.rating;
+                        return status === 'qualified' || rating === 5;
+                    }).slice(0, 3);
+                }
+            }
+
+            if (goldenLeads && goldenLeads.length > 0) {
+                goldenExamplesText = "\n\n=== EKSEMPLER PÅ FEJLFRIE SAMTALER OG BEREGNINGER SOM DU SKAL EFTERLIGNE ===\n";
+                goldenLeads.forEach((lead, index) => {
+                    const chatLog = lead.raw_data?.details?.chatLog || [];
+                    const category = lead.project_category === 'AI Opgave' 
+                        ? (lead.raw_data?.details?.category || 'special') 
+                        : lead.project_category;
+                    
+                    const curation = lead.raw_data?.curation || {};
+                    const finalHours = lead.ai_curation_overrides?.laborHours !== undefined 
+                        ? lead.ai_curation_overrides.laborHours 
+                        : (curation.overrides?.laborHours !== undefined ? curation.overrides.laborHours : (lead.raw_data?.details?.aiLaborHours || 0));
+                    
+                    const finalMaterials = lead.ai_curation_overrides?.materialCost !== undefined 
+                        ? lead.ai_curation_overrides.materialCost 
+                        : (curation.overrides?.materialCost !== undefined ? curation.overrides.materialCost : (lead.raw_data?.details?.aiMaterialCost || 0));
+
+                    goldenExamplesText += `\nEKSEMPEL ${index + 1} (Kategori: ${category}):\n`;
+                    chatLog.forEach(msg => {
+                        if (msg.role !== 'system') {
+                            const roleLabel = msg.role === 'user' ? 'Kunde' : 'AI-Assistent';
+                            goldenExamplesText += `${roleLabel}: ${msg.content || ''}\n`;
+                        }
+                    });
+                    
+                    const finalTool = category === 'special' ? 'submit_estimate' : `calculate_${category}`;
+                    goldenExamplesText += `AI-Assistent (Afbryder samtale proaktivt og kalder værktøj): Kører ${finalTool} med parametre: `;
+                    if (category === 'special') {
+                        goldenExamplesText += JSON.stringify({
+                            projectTitle: lead.raw_data?.details?.projectTitle || "Specialopgave",
+                            laborHours: finalHours,
+                            materialCost: finalMaterials,
+                            breakdown: lead.raw_data?.details?.breakdown || []
+                        }) + "\n";
+                    } else {
+                        goldenExamplesText += JSON.stringify(lead.raw_data?.details?.formState || {}) + "\n";
+                    }
+                });
+                goldenExamplesText += "\n=== SLUT PÅ EKSEMPLER TIL EFTERLIGNING (EFTERLIGN NØJAGTIGT PROCESSEN, TONEN OG DEN PROAKTIVE AFSLUTNING FRA DISSE EKSEMPLER) ===\n";
+            }
+        } catch (dbErr) {
+            console.warn("[Few-Shot Prompt] Fejl ved indlæsning af gyldne eksempler:", dbErr);
+        }
+
         // BYG SYSTEM PROMPTEN SIKKERT PÅ SERVEREN (Beskytter mod Prompt Injection)
         const systemPromptText = `Du er en dygtig, realistisk og erfaren AI-assistent, der arbejder for den danske tømrer ${carpenterName} fra firmaet ${carpenterCompany}.
 Din opgave er at afklare kundens specialopgave på vegne af tømreren, så systemet kan udregne et vejledende overslag (aldrig et bindende tilbud).
@@ -78,7 +158,7 @@ GUARDRAILS & REGLER FOR SAMTALEN:
 4. GIV ALDRIG HURTIGE ESTIMATER: Spring ikke trin over. Indsaml info først.
 5. KOM IGENNEM HELE TJEKLISTEN: Stil gerne 2-3 spørgsmål ad gangen for at holde fremdrift i samtalen. DU SKAL indsamle svar på ALLE de punkter, der findes i tjeklisten for den pågældende kategori, der er LOGISK RELEVANTE baseret på kundens valg (fx spring affaldscontainer og pcbCheck over, hvis der ikke skal bortskaffes noget). Ignorer aldrig et relevant punkt fra tjeklisten, da hvert svar påvirker prisen præcist.
 6. BRUG ALDRIG MARKDOWN ELLER STJERNER (** eller *): Din tekst bliver vist råt i et system der ikke forstår markdown. Skriv ren tekst uden formatering.
-7. VIS ALDRIG UDTÆNKTE PRISER ELLER TIMER TIL KUNDEN: Hold alle udregninger 100% hemmelige i chatten. 
+7. VIS ALDRIG UDTÄNKTE PRISER ELLER TIMER TIL KUNDEN: Hold alle udregninger 100% hemmelige i chatten. 
 8. KOMPLEKSE VS. STANDARD OPGAVER: Standardopgaver og kombinationer (fx Nyt Tag, Gulv og 3 Vinduer) SKAL udregnes med estimerede timer og materialer i det endelige JSON output. Hvis et projekt (eller kombinationen af projekter) is så avanceret, at det kræver vurdering af bærende konstruktioner (fx fjerne vægge), byggetilladelser, dybdegående el/vvs arbejde, eller kunden ønsker en totalrenovering uden at kende omfanget, SKAL du stoppe. Du skal straks kalde `submit_estimate` med laborHours = 0 og materialCost = 0. I dit resumé (summaryBullets) skal du skrive: 'Komplekst projekt: Kræver fysisk besigtigelse'.
 9. KOMBI-PROJEKTER (Flere opgaver på én gang): Hvis kunden vil have lavet flere ting (fx både tag, vinduer og et nyt gulv), så er det den perfekte specialopgave! Afklar dem én ad gangen. Når du udregner det endelige tilbud, skal du splitte dem op som separate linjer i dit `breakdown` array, så kunden kan se, hvad der koster hvad.
 10. LOGISKE AFHÆNGIGHEDER & BETINGELSER (VIGTIGT!): Du må ALDRIG stille irrelevante eller modstridende spørgsmål. Du skal tænke logisk som en rigtig tømrermester:
@@ -110,7 +190,7 @@ Når kunden har svaret på alle relevante punkter i din tjekliste, SKAL du proak
 VIGTIGT OM KOMBI-OPGAVER: Hvis kunden beder om et projekt, der spænder over FLERE forskellige kategorier på én gang (fx både tag og vinduer, eller gulv og loft), må du ALDRIG bruge standard-værktøjerne. Du SKAL i stedet betragte det som en samlet 'Specialopgave' og kalde værktøjet \`submit_estimate\`.
 Hvis projektet er ÉN ENKELT standard-kategori fra Tjeklisten (fx KUN roof, eller KUN floor), SKAL du kalde det tilsvarende værktøj (fx \`calculate_roof\`) og overlevere svarene som struktureret data.
 If projektet IKKE findes i tjeklisten (en ægte specialopgave, fx bygning af en udestue), skal du bruge \`submit_estimate\` og selv udregne timer og materialer ud fra din viden!
-Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!`;
+Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!${goldenExamplesText}`;
 
         const submitEstimateSchema = {
             type: "object",
