@@ -97,7 +97,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
 
         let defaultDetails = {};
         if (category === 'windows' || category === 'doors') {
-            defaultDetails = { amount: 1, finish: 'yes', material: category === 'windows' ? 'træ' : 'fyr' };
+            defaultDetails = { amount: 1, finish: 'yes', material: category === 'windows' ? 'Træ' : 'Massivt træ' };
         } else if (category === 'floor') {
             defaultDetails = { amount: 20, finish: 'yes', material: 'laminat' };
         } else {

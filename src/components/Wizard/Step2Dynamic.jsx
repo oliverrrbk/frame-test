@@ -144,6 +144,8 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
         const getWordCount = (str) => str ? str.trim().split(/\s+/).length : 0;
         const showLabelAudio = getWordCount(q.label) > 15 || q.speakable === true;
 
+        const resolvedOptions = typeof q.options === 'function' ? q.options(details) : (q.options || []);
+
         return (
             <div key={q.id} className="form-group wizard-question-card" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
@@ -219,7 +221,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         <CustomSelect 
                             value={details[q.id] || ''} 
                             onChange={(val) => handleInputChange(q.id, val)}
-                            options={q.options}
+                            options={resolvedOptions}
                             placeholder="-- Vælg en mulighed --"
                             style={{ width: '100%' }}
                         />
@@ -228,7 +230,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
 
                 {q.type === 'visual_select' && (
                     <div className="materials-grid" style={{ marginTop: '12px' }}>
-                        {q.options.map((opt, idx) => (
+                        {resolvedOptions.map((opt, idx) => (
                             <div 
                                 key={idx} 
                                 className={`material-card ${details[q.id] === opt.label ? 'selected' : ''}`}

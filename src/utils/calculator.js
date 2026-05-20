@@ -7,7 +7,7 @@ export const fetchGoogleDistance = async (origin, destination) => {
             resolve({ km: 25, hours: 0.5 });
         }, 4000);
 
-        if (!window.google || !window.google.maps) {
+        if (typeof window === 'undefined' || !window.google || !window.google.maps) {
             console.error("Google Maps script blev ikke indlæst.");
             clearTimeout(timeoutId);
             return resolve({ km: 25, hours: 0.5 }); // Fallback
@@ -108,9 +108,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     }
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) numericAmount = 1;
 
-    if (cat === 'doors' && d.doorType === 'Blanding') {
-        numericAmount = (parseInt(d.exteriorAmount) || 0) + (parseInt(d.interiorAmount) || 0);
-    } else if (cat === 'windows' && d.windowType === 'Blanding') {
+    if (cat === 'windows' && d.windowType === 'Blanding') {
         numericAmount = (parseInt(d.roofAmount) || 0) + (parseInt(d.facadeAmount) || 0);
     }
 
@@ -186,17 +184,41 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
         };
     } else if (cat === 'doors') {
-        if (d.doorType === 'Blanding') {
-            let eAmount = parseInt(d.exteriorAmount) || 0;
-            let iAmount = parseInt(d.interiorAmount) || 0;
-            laborHours += (eAmount * (formula.exteriorDoorHours || 5.5)) + (iAmount * formula.hoursPerUnit);
-            bArr.push(`Basis montering: ${eAmount} yderdøre og ${iAmount} indvendige døre beregnet`);
-        } else if (d.doorType === 'Ude/fordøre') {
-            laborHours += numericAmount * (formula.exteriorDoorHours || 5.5);
-            bArr.push(`Basis montering: ${numericAmount} yderdøre vurderet til ca. ${laborHours.toFixed(1)} arbejdstimer`);
-        } else {
-            laborHours += numericAmount * formula.hoursPerUnit;
+        if (d.doorStyle === 'Indvendig dør') {
+            laborHours += numericAmount * (formula.hoursPerUnit || 3.0);
             bArr.push(`Basis montering: ${numericAmount} indvendige døre vurderet til ca. ${laborHours.toFixed(1)} arbejdstimer`);
+        } else {
+            let baseHours = numericAmount * (formula.exteriorDoorHours || 7.0);
+            laborHours += baseHours;
+            bArr.push(`Basis montering: ${numericAmount} yder-/terrassedøre vurderet til ca. ${baseHours.toFixed(1)} arbejdstimer`);
+            
+            // Tømrer-audit: Special/dobbeltdøre tager væsentligt længere tid at bakse med og justere
+            if (d.doorModel === 'Special/Dobbelt terrassedør') {
+                let doubleDoorExtra = numericAmount * 3.0;
+                laborHours += doubleDoorExtra;
+                bArr.push(`Tillæg: Ekstra tid til montering og justering af dobbeltdør / specialmål (+3.0 timer pr. enhed)`);
+            }
+        }
+
+        // Tømrer-beskyttelse (SOP #2): Finish, gerigter og fuge tager tid (1.5 timer pr dør)
+        let finishHours = numericAmount * (formula.finishHoursPerUnit || 1.5);
+        laborHours += finishHours;
+        bArr.push(`Standard finish: Montering af indvendige gerigter samt ind-/udvendig fugning (+${finishHours.toFixed(1)} arbejdstimer)`);
+
+        // Tømrer-beskyttelse (SOP #2): Dørtrin / Bundstykke monteres ALTID automatisk
+        let thresholdHours = numericAmount * (formula.thresholdHours || 0.2);
+        laborHours += thresholdHours;
+        bArr.push(`Standard tillæg: Montering af nye dørtrin / bundstykker (+${thresholdHours.toFixed(1)} arbejdstimer)`);
+
+        // Elektrisk lås monteringstid (SOP #7 / Yale Doorman) eller standard hardware
+        if (d.electricLock === 'Ja, tømreren skal levere og montere elektrisk lås') {
+            let lockHoursExtra = numericAmount * 1.5;
+            laborHours += lockHoursExtra;
+            bArr.push(`Tillæg: Udfræsning i karm, kabeltræk og programmering af elektrisk lås (Yale Doorman) (+${lockHoursExtra.toFixed(1)} arbejdstimer)`);
+        } else {
+            let hardwareHours = numericAmount * (formula.hardwareHours || 0.3);
+            laborHours += hardwareHours;
+            bArr.push(`Tillæg: Montering af dørgreb og standard låsekasse (+${hardwareHours.toFixed(1)} arbejdstimer)`);
         }
     } else if (cat === 'windows') {
         if (d.windowsConfig && d.windowsConfig.length > 0) {
@@ -261,15 +283,134 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         if (userSuppliesMaterials) {
             bArr.push(`Materialer er ikke medregnet i prisen (Kunden leverer selv)`);
         } else {
-            if (cat === 'doors' && d.doorType === 'Blanding') {
-                let extCost = indexCat[d.exteriorMaterial] || 500;
-                let intCost = indexCat[d.interiorMaterial] || 500;
-                const extA = parseInt(d.exteriorAmount) || 0;
-                const intA = parseInt(d.interiorAmount) || 0;
+            if (cat === 'doors') {
+                // 1. Intelligent Model-Mapping mod databasen (dbMaterials / indexCat)
+                let modelPrice = 0;
+                let mappedName = d.doorModel;
+                
+                if (d.doorStyle === 'Indvendig dør') {
+                    if (d.doorModel === 'Standard indvendig dør') {
+                        mappedName = 'Indvendig dør (Celledør)';
+                        modelPrice = indexCat[mappedName] || 2500; // Database-pris for celledør eller standard fallback
+                    } else { // Special indvendig dør
+                        mappedName = 'Indvendig dør (Massiv)';
+                        modelPrice = indexCat[mappedName] || 4500; // Database-pris for massiv indvendig dør
+                    }
+                } else if (d.doorStyle === 'Terrassedør') {
+                    if (d.doorModel === 'Standard terrassedør') {
+                        // Vælg database yderdør (PVC eller Træ) afhængig af materialet
+                        if (d.material && d.material.includes('PVC')) {
+                            mappedName = 'Yderdør (PVC / plast)';
+                            modelPrice = indexCat[mappedName] || 6500;
+                        } else {
+                            mappedName = 'Yderdør (Træ)';
+                            modelPrice = indexCat[mappedName] || 8500;
+                        }
+                    } else { // Special/Dobbelt terrassedør
+                        mappedName = 'Dobbeltdør / Fransk dør';
+                        modelPrice = indexCat[mappedName] || 14000;
+                    }
+                } else { // Hoveddør (Udvendig)
+                    if (d.doorModel === 'Robust standard hoveddør') {
+                        if (d.material && d.material.includes('Træ / Alu')) {
+                            mappedName = 'Yderdør (Træ/Alu)';
+                            modelPrice = indexCat[mappedName] || 10500;
+                        } else if (d.material && d.material.includes('PVC')) {
+                            mappedName = 'Yderdør (PVC / plast)';
+                            modelPrice = indexCat[mappedName] || 6500;
+                        } else if (d.material && d.material.includes('Massivt træ')) {
+                            mappedName = 'Yderdør (Massivt træ)';
+                            modelPrice = indexCat[mappedName] || 12000;
+                        } else {
+                            mappedName = 'Yderdør (Træ)';
+                            modelPrice = indexCat[mappedName] || 8500;
+                        }
+                    } else { // Premium/High-End hoveddør
+                        mappedName = 'Yderdør (Massivt træ)';
+                        // For Premium dør tager vi den dyre massive trædør fra databasen og lægger et tømrerfagligt premium-tillæg på 6.500 kr.
+                        // Dette sikrer at baseline lander på de tømrerfaglige 18.500 kr, som derefter reguleres efter avancen.
+                        modelPrice = (indexCat[mappedName] || 12000) + 6500;
+                        mappedName = 'Premium hoveddør (baseret på Yderdør (Massivt træ))';
+                    }
+                }
 
-                doorBodyMatCost = ((extA * extCost) + (intA * intCost)) * dbSettings.material_markup;
+                // 2. Intelligent Materialetillæg (`matAdj`)
+                let matAdj = 0;
+                let matAdjText = "";
+                
+                if (d.doorStyle !== 'Indvendig dør' && d.material) {
+                    // Vi skalerer tillæggene intelligent med tømreriets egne databasepriser for råmaterialer (SOP #6)
+                    const baseWood = indexCat['Træ'] || 4500;
+                    const baseSolidWood = indexCat['Massivt træ'] || 7500;
+                    const baseAlu = indexCat['Aluminium'] || 8500;
+                    const basePvc = indexCat['PVC / plast'] || 4000;
+                    const baseVeneer = indexCat['Finér'] || 2500;
+                    const baseGlass = indexCat['Glas'] || 9000;
+
+                    if (d.material === 'Massivt træ') {
+                        matAdj = 0; // Baseline
+                    } else if (d.material === 'Massivt træ og glas') {
+                        // Tillæg for termoglas og udskæring (skalerer med glassets db-pris)
+                        matAdj = 3500 * (baseGlass / 9000);
+                    } else if (d.material === 'Finér') {
+                        matAdj = -1500 * (baseVeneer / 2500);
+                    } else if (d.material === 'PVC og glas') {
+                        matAdj = -1000 * (basePvc / 4000);
+                    } else if (d.material === 'Aluminium') {
+                        matAdj = 4500 * (baseAlu / 8500);
+                    } else if (d.material === 'Træ / Alu (Kombination)') {
+                        // Dynamisk tillæg for Træ/Alu baseret på differencen mellem Træ/Alu og standard trædør i databasen
+                        const dbTræAlu = indexCat['Yderdør (Træ/Alu)'] || 10500;
+                        const dbTræ = indexCat['Yderdør (Træ)'] || 8500;
+                        matAdj = dbTræAlu - dbTræ; // Typisk 2.000 kr.
+                    }
+
+                    modelPrice += matAdj;
+                    if (matAdj !== 0) {
+                        matAdjText = ` inkl. materialetillæg for '${d.material}' (${matAdj > 0 ? '+' : ''}${Math.round(matAdj)} kr.)`;
+                    }
+                }
+                
+                doorBodyMatCost = (numericAmount * modelPrice) * dbSettings.material_markup;
                 materialCost += doorBodyMatCost;
-                bArr.push(`Materialer udregnet (Blanding af yder/indre): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
+                bArr.push(`Materialer afregnet for '${d.doorModel}' (${mappedName})${matAdjText}: ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
+
+                // 3. Tilsætning af Tilbehør & Finish (Tømrer-beskyttelse - SOP #2)
+                let accessoriesCost = 0;
+
+                // A. Dørgreb / Cylinder
+                if (d.electricLock === 'Ja, tømreren skal levere og montere elektrisk lås') {
+                    // Elektrisk lås (Yale Doorman)
+                    const lockPrice = indexCat['Elektrisk lås'] || 3500;
+                    accessoriesCost += numericAmount * lockPrice;
+                    bArr.push(`Tilbehør: Yale Doorman / Elektrisk låseenhed komplet monteret (${numericAmount} stk)`);
+                } else {
+                    // Standard greb pr. dør
+                    const grebPrice = indexCat['Dørgreb inkl roset'] || 350;
+                    accessoriesCost += numericAmount * grebPrice;
+                    bArr.push(`Tilbehør: Standard dørgreb med roset og tilbehør (${numericAmount} stk)`);
+
+                    // Sikkerhedscylinder til yderdøre
+                    if (d.doorStyle !== 'Indvendig dør') {
+                        const cylPrice = indexCat['Sikkerhedslås (Yderdør)'] || 1200;
+                        accessoriesCost += numericAmount * cylPrice;
+                        bArr.push(`Tilbehør: Sikkerhedscylinder / låsekasse til yderdør (${numericAmount} stk)`);
+                    }
+                }
+
+                // B. Dørtrin / Bundstykke (Altid inkluderet som standard - SOP #2)
+                const trinPrice = indexCat['Dørtrin / Bundstykke'] || 250;
+                accessoriesCost += numericAmount * trinPrice;
+                bArr.push(`Tilbehør: Nye dørtrin / bundstykker i hårdttræ (${numericAmount} stk)`);
+
+                // C. Finish - Indvendige gerigter / lister
+                // Vi inkluderer altid gerigtsæt for at sikre en fuldstændig finish uden ubehagelige overraskelser (SOP #2)
+                const gerigtPrice = indexCat['Gerigter (sæt)'] || indexCat['Gerigtsæt'] || 300;
+                accessoriesCost += numericAmount * gerigtPrice;
+                bArr.push(`Tilbehør: Gerigtsæt og indvendige finishlister til begge sider af døren (${numericAmount} sæt)`);
+
+                // Samlet tilbehørspris ganges med material markup
+                materialCost += accessoriesCost * dbSettings.material_markup;
             } else if (cat === 'windows' && d.windowsConfig && d.windowsConfig.length > 0) {
                 // Udregn materiale-omkostninger baseret på de individuelle vinduer
                 let winMatCost = 0;
@@ -332,11 +473,6 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
                 materialCost += ((roofA * roofCost) + (facadeA * facadeCost)) * dbSettings.material_markup;
                 bArr.push(`Materialer udregnet (Blanding af tag/facade): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
-            } else if (cat === 'doors') {
-                let matPriceDb = indexCat[d.material] || 500;
-                doorBodyMatCost = (numericAmount * matPriceDb) * dbSettings.material_markup;
-                materialCost += doorBodyMatCost;
-                bArr.push(`Materialer afregnet inkl. tillæg: ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
             } else {
                 let matPriceDb = indexCat[d.material] || 500;
                 materialCost += (numericAmount * matPriceDb) * dbSettings.material_markup;
@@ -530,24 +666,6 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Afmontering, præcisions-høvling og genmontering af ${doorsCount} indvendige døre (+${(doorsCount * 1.5).toFixed(1)} timer)`);
                 bArr.push(`OBS: Da et nyt gulv ofte hæver gulvhøjden, er der medtaget standard tilpasning af ${doorsCount} døre. Hvis de eksisterende døre er af ældre finér eller ikke kan afkortes pænt, kan det kræve udskiftning (aftales ved besigtigelsen).`);
             }
-        }
-
-        if (cat === 'doors' && d.doorMeasurementType === 'Ja, der er dobbeltdøre/specialmål iblandt') {
-            // SOP #7: Løst Boolesk Fælde.
-            // Hvis kunden har "Ja" til dobbeltdøre/specialmål, må vi ikke gange ALLE deres 20 døre med 50%
-            // Vi estimerer matematisk, at ca. hver fjerde dør er en dobbeltdør (men mindst 1)
-            let specialDoorsCount = Math.ceil(numericAmount / 4); 
-            if (specialDoorsCount > numericAmount) specialDoorsCount = numericAmount;
-            
-            // +50% tid pr. specialdør
-            laborHours += specialDoorsCount * (formula.hoursPerUnit || 3.0) * 0.5;
-            
-            if (!userSuppliesMaterials) {
-                // +50% materialepris KUN for de estimerede specialdøre
-                let singleDoorPrice = (doorBodyMatCost / numericAmount);
-                materialCost += specialDoorsCount * singleDoorPrice * 0.5;
-            }
-            bArr.push(`Tillæg: Beregnet forøget tids- og materialeforbrug (+50%) for ca. ${specialDoorsCount} dobbeltdøre/specialmål`);
         }
 
         if (cat === 'windows') {
@@ -1148,32 +1266,6 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
         }
         
-        if (cat === 'doors') {
-            if (d.thresholds === 'Ja') {
-                laborHours += numericAmount * (formula.thresholdHours || 0.2);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Dørtrin / Bundstykke'] || 250) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Montering af nye dørtrin / bundstykker`);
-            }
-            if (d.hardware === 'Tømreren skal levere standard greb/låse') {
-                laborHours += numericAmount * (formula.hardwareHours || 0.3);
-                if (d.doorType === 'Blanding') {
-                    let eAmount = parseInt(d.exteriorAmount) || 0;
-                    let iAmount = parseInt(d.interiorAmount) || 0;
-                    let extHw = indexCat['Sikkerhedslås (Yderdør)'] || 1200;
-                    let intHw = indexCat['Dørgreb inkl roset'] || 350;
-                    if (!userSuppliesMaterials) materialCost += ((eAmount * extHw) + (iAmount * intHw)) * dbSettings.material_markup;
-                } else {
-                    let hwCost = d.doorType === 'Indvendige døre' ? (indexCat['Dørgreb inkl roset'] || 350) : (indexCat['Sikkerhedslås (Yderdør)'] || 1200);
-                    if (!userSuppliesMaterials) materialCost += numericAmount * hwCost * dbSettings.material_markup;
-                }
-                bArr.push(`Tillæg: Montering og levering af dørgreb / låse`);
-            } else if (d.hardware === 'Vi køber selv greb/låse (tømreren skal montere)') {
-                laborHours += numericAmount * (formula.hardwareHours || 0.3);
-                bArr.push(`Tillæg: Montering af jeres egne indkøbte dørgreb / låse`);
-            } else if (d.hardware && d.hardware.includes('Special/Elektrisk lås')) {
-                bArr.push(`Bemærk: Kunden ønsker elektrisk/special lås. Dette kræver elektriker og specialdele, pris for dette tillægges særskilt i endeligt tilbud.`);
-            }
-        }
 
         if ((cat === 'windows' || cat === 'doors') && !userSuppliesMaterials) {
             // SOP #2: Tilføj grundlæggende montagematerialer for vinduer/døre (karmskruer, fuge, kiler), som tømreren altid skal bruge uanset indvendig finish
@@ -1181,12 +1273,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             bArr.push(`Standard tillæg: Montagematerialer (skruer, kiler og fuge)`);
         }
 
-        if ((cat === 'windows' || cat === 'doors') && (d.finish === 'Ja' || d.finish === 'yes')) {
+        if (cat === 'windows' && (d.finish === 'Ja' || d.finish === 'yes')) {
              if(formula.finishHoursPerUnit) {
                  laborHours += numericAmount * formula.finishHoursPerUnit;
-                 if (cat === 'doors' && !userSuppliesMaterials) {
-                     materialCost += numericAmount * (indexCat['Gerigter (sæt)'] || 300) * dbSettings.material_markup;
-                 } else if (cat === 'windows' && !userSuppliesMaterials) {
+                 if (!userSuppliesMaterials) {
                      materialCost += numericAmount * (indexCat['Indvendig finish (Gerigter/Fuge) proxy'] || 200) * dbSettings.material_markup;
                  }
                  bArr.push(`Tid og materiale inkluderet til indvendig finish (fuger og lister/gerigter)`);

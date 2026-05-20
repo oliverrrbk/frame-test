@@ -90,21 +90,28 @@ export const MATERIAL_INDEX = {
         'Bortskaffelse af tungt gulv (pr m2)': 120
     },
     doors: {
-        'Træ': 3000,                                  // Standard HT-dør m. karm 2-4k (var voldsomt højt før)
-        'Massivt træ': 7500,                          // Massive yderdøre/specialdøre 6-9k
-        'Massivt træ og glass': 8500,                 // Legacy, men bevaret for bagudkompatibilitet
-        'Massivt træ og glas': 14500,                 // Hævet til high-end worst-case Swedoor (før 8500)
-        'Finér': 2200,
-        'PVC / plast': 4000,
-        'Aluminium': 9000,                            // Alu-yderdøre 8-12k
         'Standard indvendig dør': 1200,
-        'Special indvendig dør': 7500,                // Hævet til high-end worst-case (før 5000)
-        'Default': 5500,
+        'Special indvendig dør': 7500,
+        'Standard terrassedør': 6500,
+        'Special/Dobbelt terrassedør': 14500,
+        'Robust standard hoveddør': 9500,
+        'Premium/High-End hoveddør': 18500,
+        
+        // Materialer (tillæg/fradrag i forhold til baseline yderdør)
+        'Massivt træ': 0,
+        'Massivt træ og glas': 3500,
+        'Finér': -1500,
+        'PVC og glas': -1000,
+        'Aluminium': 4500,
+        'Træ / Alu (Kombination)': 3000,
+        
         // Tillæg døre
         'Dørgreb inkl roset': 350,
-        'Sikkerhedslås (Yderdør)': 1500,              // Ruko/Yale 1000-2500
+        'Sikkerhedslås (Yderdør)': 1500,
         'Dørtrin / Bundstykke': 250,
-        'Gerigter (sæt)': 300
+        'Gerigter (sæt)': 300,
+        'Elektrisk lås': 3500,
+        'Default': 5500
     },
     terrace: {
         'Trykimprægneret': 220,                       // Standard trykimp. brædder 180-280
