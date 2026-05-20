@@ -222,7 +222,7 @@ function getDynamicTools(provider) {
             ];
 
             const response = await anthropic.messages.create({
-                model: "claude-sonnet-4-5-20250929",
+                model: "claude-3-5-sonnet-20241022",
                 system: systemPromptText,
                 messages: messages, // Claude expects pure user/assistant messages here
                 max_tokens: 4000,
