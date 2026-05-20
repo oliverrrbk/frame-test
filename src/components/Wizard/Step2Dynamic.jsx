@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { ImagePlus, Info } from 'lucide-react';
 import { QUESTIONS } from './questionsConfig';
 import CustomSelect from './CustomSelect';
+import AudioPlayerButton from './AudioPlayerButton';
 
 const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, quickRecalculate }) => {
     const questions = QUESTIONS[category] || [];
@@ -140,14 +141,20 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
     const renderQuestion = (q) => {
         if (!isVisible(q.condition)) return null;
 
+        const getWordCount = (str) => str ? str.trim().split(/\s+/).length : 0;
+        const showLabelAudio = getWordCount(q.label) > 15 || q.speakable === true;
+
         return (
             <div key={q.id} className="form-group wizard-question-card" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                     <label style={{ fontWeight: '700', margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
                         {q.label}
                     </label>
+                    {showLabelAudio && (
+                        <AudioPlayerButton text={q.label} title="Læs spørgsmål op" style={{ width: '28px', height: '28px' }} />
+                    )}
                     {q.tooltip && (
-                        <div style={{ position: 'relative' }}>
+                        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                             <button 
                                 type="button"
                                 onClick={(e) => { e.preventDefault(); toggleTooltip(q.id); }}
@@ -196,7 +203,10 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                         lineHeight: '1.5',
                                         borderLeft: '4px solid var(--accent)'
                                     }}>
-                                        <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '4px' }}>Hvad betyder det?</div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>Hvad betyder det?</div>
+                                            <AudioPlayerButton text={q.tooltip} title="Læs forklaring op" style={{ width: '26px', height: '26px' }} />
+                                        </div>
                                         {q.tooltip}
                                     </div>
                                 </>
