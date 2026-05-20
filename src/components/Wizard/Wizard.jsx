@@ -167,13 +167,19 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             setBreakdownArr(res.breakdownArr);
 
             const categoryMap = {
-                roof: 'Nyt Tag',
-                floor: 'Nyt Gulv',
                 windows: 'Nye Vinduer',
                 doors: 'Nye Døre',
-                terrace: 'Ny Terrasse',
-                special: 'Specialopgave',
-                extensions: 'Tilbygning'
+                floor: 'Nyt Gulv',
+                terrace: 'Træterrasse',
+                roof: 'Tagprojekt',
+                kitchen: 'Nyt Køkken',
+                ceilings: 'Nye Lofter',
+                facades: 'Ny Facadebeklædning',
+                extensions: 'Tilbygning',
+                annex: 'Anneks',
+                carport: 'Carport',
+                fence: 'Hegn',
+                special: 'Specialopgave'
             };
             const categoryName = categoryMap[updatedProjectData.category] || updatedProjectData.category;
 

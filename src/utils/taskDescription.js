@@ -15,6 +15,9 @@ export const generateTaskDescription = (category, details) => {
         else if (category === 'doors') text += ' døre';
         else if (category === 'ceilings') text += ' loft';
         else if (category === 'facades') text += ' beklædning';
+        else if (category === 'fence') text = 'Nedtagning af eksisterende hegn';
+        else if (category === 'carport') text = 'Nedrivning af eksisterende carport';
+        else if (category === 'annex') text = 'Nedrivning af eksisterende skur/anneks';
         
         if (details.disposal.toLowerCase().includes('bortskaffe')) {
             text += ' inkl. miljøgebyr, bortskaffelse og kørsel til genbrugsplads';
@@ -59,6 +62,15 @@ export const generateTaskDescription = (category, details) => {
         } else {
             tasks.push('Klargøring af eksisterende underlag/forskalling');
         }
+    } else if (category === 'fence') {
+        tasks.push('Opmåling, afsætning af linjeføring og nivellering af terræn');
+        tasks.push('Nedgravning og støbning af stolper med stabiliserende tørbeton i korrekt frostfri dybde');
+    } else if (category === 'carport') {
+        tasks.push('Opmåling, afsætning og udgravning til punktfundamenter');
+        tasks.push('Etablering af punktfundamenter (støbning af stolper i frostfri dybde)');
+    } else if (category === 'annex') {
+        tasks.push('Udgravning, afretning af jord og etablering af punktfundamenter/skruefundamenter');
+        tasks.push('Opbygning af solidt, isoleret bjælkelag og stabil bundramme');
     }
     
     // 3. Montering / Levering
@@ -111,6 +123,36 @@ export const generateTaskDescription = (category, details) => {
         tasks.push(`Opsætning af ${qty}m² ${details.material || 'nyt loft'} inkl. tilpasninger`);
     } else if (category === 'facades') {
         tasks.push(`Montering af ${qty}m² ${details.material || 'ny facadebeklædning'}`);
+    } else if (category === 'fence') {
+        let mat = details.material || 'nyt hegn';
+        tasks.push(`Levering og professionel opsætning af ${qty}løbende meter ${mat.toLowerCase()}`);
+        if (details.fenceHeight) {
+            tasks.push(`Opbygning af hegn i højde: ${details.fenceHeight.toLowerCase()}`);
+        }
+    } else if (category === 'carport') {
+        let typeStr = details.carportType ? details.carportType.split(' (')[0] : 'carport';
+        let mat = details.material || 'træ';
+        let count = details.amount && !isNaN(details.amount) ? details.amount : 1;
+        let countStr = count > 1 ? `${count}x ` : '';
+        tasks.push(`Levering og professionel tømreropbygning af ${countStr}${typeStr.toLowerCase()} i premium ${mat.toLowerCase()}`);
+        
+        if (details.roofType) {
+            let roof = details.roofType.split(' (')[0];
+            tasks.push(`Etablering af solid tagkonstruktion: ${roof}`);
+        }
+        
+        if (details.shedType && details.shedType !== 'Nej') {
+            tasks.push(`Opbygning af integreret redskabsskur (${details.shedType.toLowerCase()})`);
+        }
+    } else if (category === 'annex') {
+        let typeStr = details.annexType ? details.annexType.toLowerCase() : 'skur/anneks';
+        let mat = details.material || 'træ';
+        tasks.push(`Levering og professionel opbygning af ${qty}m² ${typeStr} med facadebeklædning i ${mat.toLowerCase()}`);
+        
+        if (details.roofType) {
+            let roof = details.roofType.split(' (')[0];
+            tasks.push(`Etablering af tagkonstruktion med ${roof.toLowerCase()}`);
+        }
     }
     
     // 4. Finish
@@ -151,6 +193,24 @@ export const generateTaskDescription = (category, details) => {
             tasks.push('Finjustering og montering af træfronter på integrerede hvidevarer');
         }
         tasks.push('Montering af paneler, greb og finish-lister (bemærk: ekskl. VVS/EL-tilslutning)');
+    } else if (category === 'fence') {
+        tasks.push('Komplet finish med montering af stolpehatte og evt. afsluttende dækskinner');
+        if (details.material && details.material.includes('Træ')) {
+            tasks.push('Afsluttende tilpasning og finpudsning af trækonstruktionen');
+        }
+    } else if (category === 'carport') {
+        tasks.push('Montering af vindskeder, sternbrædder samt tagrender/afløb jf. aftale');
+        if (details.shedType && details.shedType.includes('isoleret')) {
+            tasks.push('Montering af isolering, dampspærre og indvendig beklædning i skurdel');
+        }
+        tasks.push('Afsluttende dæklister og komplet tømrerfinish');
+    } else if (category === 'annex') {
+        if (details.annexType && details.annexType.includes('Isoleret')) {
+            tasks.push('Etablering af 100-150mm isolering i gulv, vægge og loft samt dampspærre');
+        } else if (details.annexType && details.annexType.includes('beboeligt')) {
+            tasks.push('Komplet isolering efter BR18 (vinterisoleret), dampspærre samt indvendig beklædning (gips/træ)');
+        }
+        tasks.push('Montering af sternbrædder, vindskeder, døre, vinduer og afsluttende dæklister');
     }
     
     // 5. Kørsel og Oprydning
