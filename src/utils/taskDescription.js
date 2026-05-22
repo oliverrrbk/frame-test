@@ -157,23 +157,21 @@ export const generateTaskDescription = (category, details) => {
     
     // 4. Finish
     if (category === 'floor') {
-        if (details.skirting && details.skirting.startsWith('Ja')) {
-            tasks.push('Indvendig finish med levering, tilpasning og montering af nye fodlister samt fugearbejde');
+        const hasSkirting = (details.skirting && details.skirting.startsWith('Ja')) || 
+                            (details.finish === 'yes' || details.finish === 'Ja' || details.finish === true);
+        if (hasSkirting) {
+            tasks.push('Komplet indvendig kvalitetsfinish med levering, præcis tilpasning og montering af nye fodlister samt professionelt fugearbejde');
         } else {
-            tasks.push('Grov finish (uden montering af fodlister)');
+            tasks.push('Kvalitetsfinish af gulvfladen med nøjagtig tilpasning (ekskl. montering af fodlister jf. valg)');
         }
     } else if (category === 'windows') {
-        if (details.finish && details.finish.startsWith('Ja')) {
-            tasks.push('Indvendig og udvendig finish inkl. isolering, fugning og montering af indvendige lister/gerigter');
+        if (details.finish && (details.finish.startsWith('Ja') || details.finish === 'yes' || details.finish === 'true' || details.finish === true)) {
+            tasks.push('Komplet kvalitetsfinish (professionel ind- og udvendig fugning, grundig isolering samt præcis montering af indvendige lister/gerigter for et fejlfrit resultat)');
         } else {
-            tasks.push('Udvendig finish inkl. isolering og fugning (Kunden står selv for den indvendige finish)');
+            tasks.push('Professionel udvendig finish (komplet isolering, elastisk fugearbejde og vejrbestandig tætning — ekskl. indvendige lister og fuge)');
         }
     } else if (category === 'doors') {
-        if (details.finish && details.finish.startsWith('Ja')) {
-            tasks.push('Finish inkl. isolering, fugning og montering af indvendige gerigter/lister');
-        } else {
-            tasks.push('Grov finish (kun montering af selve dør og karm)');
-        }
+        tasks.push('Komplet kvalitetsfinish (professionel montering af indvendige gerigter/lister, grundig isolering samt præcis ind- og udvendig fugning for et perfekt resultat)');
     } else if (category === 'roof') {
         if (details.eaves && details.eaves.startsWith('Ja')) {
             tasks.push('Udskiftning af træværk og montering af ny stern og udhæng');
@@ -214,7 +212,7 @@ export const generateTaskDescription = (category, details) => {
     }
     
     // 5. Kørsel og Oprydning
-    tasks.push('Kørsel til og fra adressen, brug af værktøj samt grov-oprydning af arbejdsområdet');
+    tasks.push('Kørsel til og fra adressen, anvendelse af professionelt tømrerværktøj samt komplet oprydning og pæn aflevering af arbejdsområdet');
     
     return tasks;
 };

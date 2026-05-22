@@ -70,8 +70,8 @@ const Step2Details = ({ category, details, updateDetails, nextStep, prevStep }) 
             <div className="form-group">
                 <label>3. Afslutning ved karmen</label>
                 <select value={details.finish || 'yes'} onChange={(e) => updateDetails('finish', e.target.value)}>
-                    <option value="yes">Lav finish (indvendige lister/fuger)</option>
-                    <option value="no">Vi ordner selv det indvendige</option>
+                    <option value="yes">Komplet kvalitetsfinish (indvendige gerigter/lister samt fugearbejde)</option>
+                    <option value="no">Fravælg indvendig finish (vi ordner selv lister og fuger)</option>
                 </select>
             </div>
         </>

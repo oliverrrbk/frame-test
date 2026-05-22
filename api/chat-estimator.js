@@ -208,7 +208,7 @@ Du må ALDRIG gætte dig til svarene på tjeklisten – spørg altid kunden!${go
                     items: {
                         type: "object",
                         properties: {
-                            item: { type: "string", description: "Beskrivende tekst af arbejdsfasen (fx 'Opbygning af bærende konstruktion', 'Montering af 30m2 hårdttræ' eller 'Kørsel, brug af værktøj samt grov-oprydning'). Gør dem detaljerede!" },
+                            item: { type: "string", description: "Beskrivende tekst af arbejdsfasen (fx 'Opbygning af bærende konstruktion', 'Montering af 30m2 hårdttræ' eller 'Kørsel, professionelt værktøj samt komplet oprydning'). Gør dem detaljerede!" },
                             hours: { type: "number", description: "Timer afsat til denne del" },
                             materials: { type: "number", description: "Materialepris i DKK afsat til denne del" }
                         },
