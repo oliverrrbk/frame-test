@@ -31,6 +31,115 @@ const mapContainerStyle = {
 };
 const defaultCenter = { lat: 56.2639, lng: 9.5018 }; // Midten af Danmark
 
+const WindowsChecklist = ({ leadId }) => {
+    const [checkedItems, setCheckedItems] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`lead_checklist_${leadId}`);
+            return saved ? JSON.parse(saved) : {
+                notgang: false,
+                greb: false,
+                farver: false,
+                vinduesplade: false
+            };
+        } catch (e) {
+            return {
+                notgang: false,
+                greb: false,
+                farver: false,
+                vinduesplade: false
+            };
+        }
+    });
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(`lead_checklist_${leadId}`);
+            if (saved) {
+                setCheckedItems(JSON.parse(saved));
+            } else {
+                setCheckedItems({
+                    notgang: false,
+                    greb: false,
+                    farver: false,
+                    vinduesplade: false
+                });
+            }
+        } catch (e) {
+            // fallback
+        }
+    }, [leadId]);
+
+    const handleCheckboxChange = (key) => {
+        const updated = { ...checkedItems, [key]: !checkedItems[key] };
+        setCheckedItems(updated);
+        localStorage.setItem(`lead_checklist_${leadId}`, JSON.stringify(updated));
+    };
+
+    return (
+        <div style={{ 
+            marginTop: '24px', 
+            padding: '20px', 
+            backgroundColor: '#f0f9ff', 
+            border: '1px solid #bae6fd', 
+            borderRadius: '14px', 
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)' 
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '1.2rem' }}>🛠️</span>
+                <strong style={{ color: '#0369a1', fontSize: '1.1rem' }}>Tømrerens Huskepunkter (Vinduer)</strong>
+            </div>
+            <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: '#0284c7', fontStyle: 'italic' }}>
+                Intern huskeliste under opmåling/besigtigelse – kun synlig for dig på dashboardet.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.95rem', color: '#0f172a', cursor: 'pointer', userSelect: 'none' }}>
+                    <input 
+                        type="checkbox" 
+                        checked={checkedItems.notgang} 
+                        onChange={() => handleCheckboxChange('notgang')} 
+                        style={{ marginTop: '3px', width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0284c7' }}
+                    />
+                    <div>
+                        <strong>Notgang:</strong> Husk at afklare om der skal fræses notgang i karmene til lysning.
+                    </div>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.95rem', color: '#0f172a', cursor: 'pointer', userSelect: 'none' }}>
+                    <input 
+                        type="checkbox" 
+                        checked={checkedItems.greb} 
+                        onChange={() => handleCheckboxChange('greb')} 
+                        style={{ marginTop: '3px', width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0284c7' }}
+                    />
+                    <div>
+                        <strong>Håndtag / Greb:</strong> Noter model, farve og eventuel børnesikring.
+                    </div>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.95rem', color: '#0f172a', cursor: 'pointer', userSelect: 'none' }}>
+                    <input 
+                        type="checkbox" 
+                        checked={checkedItems.farver} 
+                        onChange={() => handleCheckboxChange('farver')} 
+                        style={{ marginTop: '3px', width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0284c7' }}
+                    />
+                    <div>
+                        <strong>Farve (Ude/Inde):</strong> Bekræft RAL-koderne for de 2-farvede profiler.
+                    </div>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.95rem', color: '#0f172a', cursor: 'pointer', userSelect: 'none' }}>
+                    <input 
+                        type="checkbox" 
+                        checked={checkedItems.vinduesplade} 
+                        onChange={() => handleCheckboxChange('vinduesplade')} 
+                        style={{ marginTop: '3px', width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0284c7' }}
+                    />
+                    <div>
+                        <strong>Indvendig vinduesplade:</strong> Tjek om kunden ønsker nye vinduesplader (merpris).
+                    </div>
+                </label>
+            </div>
+        </div>
+    );
+};
 
 const Dashboard = () => {
     const [activeTab, setActiveTab] = useState(() => {
@@ -2573,6 +2682,10 @@ const Dashboard = () => {
                                                 return renderElements;
                                             })()}
                                         </div>
+
+                                        {selectedLead.project_category === 'windows' && (
+                                            <WindowsChecklist leadId={selectedLead.id} />
+                                        )}
 
                                         {/* QUOTE BUILDER SEKTION */}
                                         {selectedLead.status !== 'Bekræftet opgave' && (quoteBuilder ? (

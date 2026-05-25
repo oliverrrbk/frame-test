@@ -322,7 +322,7 @@ const EstimateAcceptPage = () => {
 
                                 let displayValue = value;
                                 if (question.type === 'window_configurator' && Array.isArray(value)) {
-                                    displayValue = value.map(v => `${v.type || 'Standard'} (${v.width}x${v.height} cm)`).join(', ');
+                                    displayValue = value.map(v => `${v.count || 1}x ${v.type || 'Standard'} (${v.width}x${v.height} cm)${v.isOpenable === false ? ' (fastkarm)' : ''}${v.safetyGlass ? ' (sikkerhedsglas)' : ''}${v.hasSlidingDoor ? ' (m. skydedør)' : ''}`).join(', ');
                                 } else if (typeof value === 'boolean') {
                                     displayValue = value ? 'Ja' : 'Nej';
                                 }

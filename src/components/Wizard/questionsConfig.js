@@ -78,28 +78,74 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Er der eventuelt andre bemærkninger til taget (fx nye tagvinduer)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     windows: [
-        { id: 'housingType', type: 'select', label: 'Hvilken type bygning gælder det?', tooltip: 'Bygningsreglementet (BR18) kræver typisk 3-lags energiruder i helårsboliger.', options: ['Helårsbolig', 'Sommerhus', 'Andet (Udestue/Fredet)'] },
+        { 
+            id: 'housingType', 
+            type: 'visual_select', 
+            label: 'Hvilken slags bygning drejer opgaven sig om?', 
+            tooltip: 'Bygningsreglementet (BR18) kræver typisk 3-lags energiruder i helårsboliger for at opfylde isoleringskrav.',
+            options: [
+                { label: 'Helårsbolig', img: '/images/building_house.png' },
+                { label: 'Sommerhus', img: '/images/building_cabin.png' },
+                { label: 'Udestue / Anneks / Skur', img: '/images/building_annex.png' }
+            ] 
+        },
         { 
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilket materiale skal de nye vinduer primært være i?', 
             options: [
                 { label: 'Træ/alu (kombination)', img: '/images/window_wood_alu_1776261163640.png' },
-                { label: 'Træ', img: '/images/window_wood_1776261054616.png' },
+                { label: 'Massivt træ', img: '/images/window_wood_1776261054616.png' },
                 { label: 'PVC / plast', img: '/images/window_pvc_1776261086057.png' },
                 { label: 'Aluminium', img: '/images/window_aluminum_1776261099669.png' },
                 { label: 'Stål', img: '/images/window_steel_1776261189808.png' }
             ] 
         },
-        { id: 'floors', type: 'select', label: 'På hvilken etage skal vinduerne primært monteres?', tooltip: 'Høje etager tager længere tid pga. bæring af tunge vinduer og mulig udvendig fugearbejde.', options: ['Stueplan (Jordniveau)', '1. sal (Kræver evt. rullestillads/ekstra bæring)', '2. sal eller højere (Kræver lift/stillads)'] },
-        { id: 'disposal', type: 'select', label: 'Skal de nuværende vinduer afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe dem', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi har selv afmonteret dem'] },
-        { id: 'pcbCheck', type: 'select', label: 'Er huset (eller de eksisterende vinduer) fra før 1977?', tooltip: 'Fuger og materialer fra før 1977 kan indeholde PCB eller bly, hvilket kræver særlig miljøsanering og lovpligtig special-bortskaffelse.', condition: (d) => d.disposal && d.disposal.startsWith('Ja'), options: ['Ja, det er fra før 1977 (Risiko for miljøsanering)', 'Nej, bygget/skiftet efter 1977'] },
-        { id: 'twoTone', type: 'select', label: 'Skal vinduerne have to farver (fx sort udvendig / hvid indvendig)?', tooltip: '2-farvede vinduer koster typisk 10-15% ekstra fra producentens side.', options: ['Nej, samme farve ude og inde', 'Ja, 2-farvede vinduer'] },
-        { id: 'amount', type: 'number', label: 'Hvor mange vinduer drejer opgaven sig om i alt?', placeholder: 'F.eks. 4' },
-        { id: 'windowsConfig', type: 'window_configurator', label: 'Specifikation af hvert vindue:', condition: (d) => d.amount > 0 },
-        { id: 'waiveMeasurement', type: 'checkbox', label: 'Jeg vil gerne spare opmålingsbesøget. Jeg indtaster de præcise karm-mål og hæfter selv for, at de passer.', tooltip: 'OBS: Bliver vinduerne bestilt efter dine mål, dækker du selv omkostningen, hvis de ikke passer i hullet. Tømreren sparer dog turen, og du sparer ca. 1.500 kr.' },
-        { id: 'finish', type: 'select', label: 'Skal indvendig finish (fuge og lister) inkluderes?', tooltip: 'Indvendig finish betyder, at tømreren monterer gerigter og fuger.', options: ['Ja', 'Nej, vi gør det selv'] },
-        { id: 'notes', type: 'textarea', label: 'Felt til kommentarer/eventuelle bemærkninger til projektet? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
+        {
+            id: 'qualityLevel',
+            type: 'select',
+            label: 'Hvilket kvalitetsniveau ønsker du på vinduerne?',
+            tooltip: 'Robust standardkvalitet (Træ/Alu) er yderst holdbare og populære. Premiumkvalitet (Mahogni) er eksklusive high-end elementer med uforlignelig holdbarhed og glød.',
+            options: ['Robust standardkvalitet (Træ/Alu)', 'Eksklusiv Premiumkvalitet (Mahogni)']
+        },
+        {
+            id: 'scope',
+            type: 'select',
+            label: 'Hvor stort er projektets omfang?',
+            options: ['Hele huset (Alle vinduer skal skiftes)', 'Kun udvalgte vinduer skal skiftes']
+        },
+        { 
+            id: 'floors', 
+            type: 'select', 
+            label: 'Hvor mange etager har huset?', 
+            tooltip: 'Høje etager tager længere tid pga. bæring af tunge ruder samt muligt behov for stillads eller lift.', 
+            options: ['1 etage (Kun stueplan)', '2 etager (Stueplan + 1. sal)', '3 etager eller mere'] 
+        },
+        {
+            id: 'obstacles',
+            type: 'select',
+            label: 'Er der forhindringer foran vinduerne udefra?',
+            tooltip: 'Vælg ja, hvis der er kraftig beplantning, buske, tæt hegn, eller en tæt tagterrasse, der forhindrer fri adgang for tømreren udefra.',
+            options: ['Nej, der er fri adgang til alle vinduer', 'Ja, der er hindringer (beplantning, hegn el.lign.)']
+        },
+        {
+            id: 'includeTerraceDoor',
+            type: 'select',
+            label: 'Ønsker du også at få skiftet terrassedøren i samme ombæring?',
+            tooltip: 'Det er meget normalt og billigere at udskifte terrassedøren samtidigt med et større vinduesprojekt.',
+            options: ['Nej, kun vinduer', 'Ja, inkluder 1 stk. enkelt terrassedør', 'Ja, inkluder 1 stk. dobbelt terrassedør']
+        },
+        { 
+            id: 'windowsConfig', 
+            type: 'window_configurator', 
+            label: 'Specifikation af vinduer:', 
+            condition: (d) => true 
+        },
+        { 
+            id: 'notes', 
+            type: 'textarea', 
+            label: 'Felt til kommentarer/eventuelle bemærkninger til projektet? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' 
+        }
     ],
     floor: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven cirka?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise areal måles op senere af tømreren.' },

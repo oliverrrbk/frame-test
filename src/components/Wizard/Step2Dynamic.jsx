@@ -11,6 +11,16 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
     const [openTooltips, setOpenTooltips] = React.useState({});
     const [zoomedImage, setZoomedImage] = React.useState(null);
 
+    React.useEffect(() => {
+        if (category === 'windows') {
+            const list = details['windowsConfig'] || [];
+            if (list.length === 0) {
+                updateDetails('windowsConfig', [{ count: 1, type: 'Standard', isOpenable: true, width: '', height: '' }]);
+                updateDetails('amount', 1);
+            }
+        }
+    }, [category]);
+
     const toggleTooltip = (id) => {
         setOpenTooltips(prev => ({ ...prev, [id]: !prev[id] }));
     };
@@ -102,11 +112,10 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
             const value = details[q.id];
 
             if (q.type === 'window_configurator') {
-                if (!value || value.length < details.amount) return true;
-                // Check that each window has photos
-                for (let i = 0; i < details.amount; i++) {
+                if (!value || value.length === 0) return true;
+                for (let i = 0; i < value.length; i++) {
                     const w = value[i];
-                    if (!w || !w.photoInside || !w.photoOutside || !w.width || !w.height) {
+                    if (!w || !w.photoInside || !w.photoOutside || !w.width || !w.height || !w.count || w.count < 1) {
                         return true;
                     }
                 }
@@ -408,22 +417,94 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
 
                 {q.type === 'window_configurator' && (
                     <div style={{ marginTop: '16px' }}>
-                        {Array.from({ length: details.amount || 0 }).map((_, idx) => {
-                            const wConf = (details[q.id] || [])[idx] || {};
+                        {(details[q.id] || [{ count: 1, type: 'Standard', isOpenable: true, width: '', height: '' }]).map((wConf, idx) => {
+                            const list = details[q.id] || [{ count: 1, type: 'Standard', isOpenable: true, width: '', height: '' }];
+                            
+                            // Handlers
+                            const updateGroup = (field, val) => {
+                                const newArr = [...list];
+                                newArr[idx] = { ...wConf, [field]: val };
+                                handleInputChange(q.id, newArr);
+                                
+                                // Recalculate and update totalsum
+                                const totalCount = newArr.reduce((acc, item) => acc + (parseInt(item.count) || 1), 0);
+                                handleInputChange('amount', totalCount);
+                            };
+                            
+                            const duplicateGroup = () => {
+                                const newArr = [...list];
+                                const copy = { 
+                                    ...wConf, 
+                                    // Copy base fields but exclude photos so they can upload separate pictures
+                                    photoInside: null,
+                                    photoOutside: null
+                                };
+                                newArr.splice(idx + 1, 0, copy);
+                                handleInputChange(q.id, newArr);
+                                
+                                const totalCount = newArr.reduce((acc, item) => acc + (parseInt(item.count) || 1), 0);
+                                handleInputChange('amount', totalCount);
+                                toast.success("Vinduesgruppe duplikeret!");
+                            };
+                            
+                            const deleteGroup = () => {
+                                if (list.length <= 1) return;
+                                const newArr = list.filter((_, i) => i !== idx);
+                                handleInputChange(q.id, newArr);
+                                
+                                const totalCount = newArr.reduce((acc, item) => acc + (parseInt(item.count) || 1), 0);
+                                handleInputChange('amount', totalCount);
+                                toast.success("Vinduesgruppe slettet!");
+                            };
+
                             return (
-                                <div key={idx} style={{ padding: '20px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', marginBottom: '20px' }}>
-                                    <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#0f172a' }}>Vindue {idx + 1}</h4>
+                                <div key={idx} style={{ padding: '24px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '14px', marginBottom: '24px', boxShadow: 'var(--shadow-sm)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                                        <h4 style={{ margin: 0, fontSize: '1.2rem', color: '#1e293b', fontWeight: 'bold' }}>
+                                            Vinduesgruppe {idx + 1}
+                                        </h4>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button 
+                                                onClick={(e) => { e.preventDefault(); duplicateGroup(); }}
+                                                style={{ padding: '6px 12px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                            >
+                                                📂 Dupliker
+                                            </button>
+                                            {list.length > 1 && (
+                                                <button 
+                                                    onClick={(e) => { e.preventDefault(); deleteGroup(); }}
+                                                    style={{ padding: '6px 12px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                >
+                                                    🗑️ Slet
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                     
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                                        {/* Antal */}
                                         <div>
-                                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>Type</label>
+                                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: '700', color: '#334155' }}>
+                                                Antal identiske elementer i denne gruppe
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                min="1"
+                                                value={wConf.count || 1}
+                                                onChange={(e) => {
+                                                    const val = Math.max(1, parseInt(e.target.value) || 1);
+                                                    updateGroup('count', val);
+                                                }}
+                                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                                            />
+                                        </div>
+
+                                        {/* Type */}
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: '700', color: '#334155' }}>Type</label>
                                             <CustomSelect 
                                                 value={wConf.type || 'Standard'}
-                                                onChange={(val) => {
-                                                    const newArr = [...(details[q.id] || [])];
-                                                    newArr[idx] = { ...wConf, type: val };
-                                                    handleInputChange(q.id, newArr);
-                                                }}
+                                                onChange={(val) => updateGroup('type', val)}
                                                 options={[
                                                     { value: 'Standard', label: 'Standard facadevindue' },
                                                     { value: 'Tagvindue', label: 'Tagvindue (Ovenlys/Velux)' },
@@ -434,32 +515,24 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                             />
                                         </div>
 
-                                        <div style={{ display: 'flex', alignItems: 'center', marginTop: '28px', flexWrap: 'wrap', gap: '16px' }}>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginTop: '4px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>
                                                 <input 
                                                     type="checkbox" 
-                                                    checked={wConf.isOpenable !== false} // default to true
-                                                    onChange={(e) => {
-                                                        const newArr = [...(details[q.id] || [])];
-                                                        newArr[idx] = { ...wConf, isOpenable: e.target.checked };
-                                                        handleInputChange(q.id, newArr);
-                                                    }}
-                                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                    checked={wConf.isOpenable !== false}
+                                                    onChange={(e) => updateGroup('isOpenable', e.target.checked)}
+                                                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--accent)' }}
                                                 />
                                                 Dette element skal kunne åbnes
                                             </label>
 
                                             {wConf.type === 'Standard' && (
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#475569', fontWeight: '600', cursor: 'pointer' }}>
                                                     <input 
                                                         type="checkbox" 
                                                         checked={!!wConf.safetyGlass}
-                                                        onChange={(e) => {
-                                                            const newArr = [...(details[q.id] || [])];
-                                                            newArr[idx] = { ...wConf, safetyGlass: e.target.checked };
-                                                            handleInputChange(q.id, newArr);
-                                                        }}
-                                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                        onChange={(e) => updateGroup('safetyGlass', e.target.checked)}
+                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--accent)' }}
                                                     />
                                                     Går glasset ned til gulvet? (Sikkerhedsglas)
                                                 </label>
@@ -467,17 +540,13 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                         </div>
 
                                         {wConf.type === 'Panorama' && (
-                                            <div>
-                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>Kombination</label>
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
+                                            <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#1e40af', fontWeight: '600' }}>
                                                     <input 
                                                         type="checkbox" 
                                                         checked={!!wConf.hasSlidingDoor}
-                                                        onChange={(e) => {
-                                                            const newArr = [...(details[q.id] || [])];
-                                                            newArr[idx] = { ...wConf, hasSlidingDoor: e.target.checked };
-                                                            handleInputChange(q.id, newArr);
-                                                        }}
+                                                        onChange={(e) => updateGroup('hasSlidingDoor', e.target.checked)}
+                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#2563eb' }}
                                                     />
                                                     Integrer en skydedør/terrassedør i dette parti
                                                 </label>
@@ -486,40 +555,32 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
 
                                         <div style={{ display: 'flex', gap: '16px' }}>
                                             <div style={{ flex: 1 }}>
-                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>Bredde (cm)</label>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: '700', color: '#334155' }}>Bredde (cm)</label>
                                                 <input 
                                                     type="number" 
                                                     value={wConf.width || ''}
                                                     placeholder="f.eks. 120"
-                                                    onChange={(e) => {
-                                                        const newArr = [...(details[q.id] || [])];
-                                                        newArr[idx] = { ...wConf, width: parseFloat(e.target.value) };
-                                                        handleInputChange(q.id, newArr);
-                                                    }}
-                                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                                    onChange={(e) => updateGroup('width', parseFloat(e.target.value) || '')}
+                                                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
                                                 />
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>Højde (cm)</label>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: '700', color: '#334155' }}>Højde (cm)</label>
                                                 <input 
                                                     type="number" 
                                                     value={wConf.height || ''}
                                                     placeholder="f.eks. 140"
-                                                    onChange={(e) => {
-                                                        const newArr = [...(details[q.id] || [])];
-                                                        newArr[idx] = { ...wConf, height: parseFloat(e.target.value) };
-                                                        handleInputChange(q.id, newArr);
-                                                    }}
-                                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                                    onChange={(e) => updateGroup('height', parseFloat(e.target.value) || '')}
+                                                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
                                                 />
                                             </div>
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '16px' }}>
                                             <div style={{ flex: 1 }}>
-                                                <label className="upload-area" style={{ display: 'block', padding: '16px', border: '2px dashed var(--border)', textAlign: 'center', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer' }}>
+                                                <label className="upload-area" style={{ display: 'block', padding: '16px', border: '2px dashed #cbd5e1', textAlign: 'center', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer' }}>
                                                     <div style={{ color: 'var(--text-secondary)' }}><ImagePlus size={24} style={{ margin: '0 auto' }} /></div>
-                                                    <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Billede indefra</p>
+                                                    <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Billede indefra</p>
                                                     <input 
                                                         type="file" 
                                                         accept="image/*"
@@ -527,23 +588,21 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                                         onChange={async (e) => {
                                                             if (e.target.files && e.target.files[0]) {
                                                                 const fileObj = await compressImageToBase64(e.target.files[0]);
-                                                                const newArr = [...(details[q.id] || [])];
-                                                                newArr[idx] = { ...wConf, photoInside: fileObj };
-                                                                handleInputChange(q.id, newArr);
+                                                                updateGroup('photoInside', fileObj);
                                                             }
                                                         }}
                                                     />
                                                 </label>
                                                 {wConf.photoInside && (
-                                                    <div style={{ position: 'relative', width: '60px', height: '60px', marginTop: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                                                    <div style={{ position: 'relative', width: '80px', height: '80px', marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
                                                         <img src={wConf.photoInside.preview} alt="Indefra" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     </div>
                                                 )}
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                                <label className="upload-area" style={{ display: 'block', padding: '16px', border: '2px dashed var(--border)', textAlign: 'center', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer' }}>
+                                                <label className="upload-area" style={{ display: 'block', padding: '16px', border: '2px dashed #cbd5e1', textAlign: 'center', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer' }}>
                                                     <div style={{ color: 'var(--text-secondary)' }}><ImagePlus size={24} style={{ margin: '0 auto' }} /></div>
-                                                    <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Billede udefra</p>
+                                                    <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Billede udefra</p>
                                                     <input 
                                                         type="file" 
                                                         accept="image/*"
@@ -551,15 +610,13 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                                         onChange={async (e) => {
                                                             if (e.target.files && e.target.files[0]) {
                                                                 const fileObj = await compressImageToBase64(e.target.files[0]);
-                                                                const newArr = [...(details[q.id] || [])];
-                                                                newArr[idx] = { ...wConf, photoOutside: fileObj };
-                                                                handleInputChange(q.id, newArr);
+                                                                updateGroup('photoOutside', fileObj);
                                                             }
                                                         }}
                                                     />
                                                 </label>
                                                 {wConf.photoOutside && (
-                                                    <div style={{ position: 'relative', width: '60px', height: '60px', marginTop: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                                                    <div style={{ position: 'relative', width: '80px', height: '80px', marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
                                                         <img src={wConf.photoOutside.preview} alt="Udefra" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     </div>
                                                 )}
@@ -569,6 +626,25 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                 </div>
                             );
                         })}
+                        
+                        {/* Tilføj ny gruppe knap */}
+                        <button 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                const list = details[q.id] || [];
+                                const newArr = [...list, { count: 1, type: 'Standard', isOpenable: true, width: '', height: '' }];
+                                handleInputChange(q.id, newArr);
+                                
+                                const totalCount = newArr.reduce((acc, item) => acc + (parseInt(item.count) || 1), 0);
+                                handleInputChange('amount', totalCount);
+                                toast.success("Ny vinduesgruppe tilføjet!");
+                            }}
+                            style={{ width: '100%', padding: '16px', border: '2px dashed #2563eb', background: '#eff6ff', color: '#2563eb', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', marginTop: '12px', marginBottom: '24px' }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#dbeafe'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#eff6ff'}
+                        >
+                            ➕ Tilføj endnu et vindue / anden størrelse
+                        </button>
                     </div>
                 )}
             </div>

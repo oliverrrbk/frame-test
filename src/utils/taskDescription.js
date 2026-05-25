@@ -1,4 +1,4 @@
-import { QUESTIONS } from '../components/Wizard/questionsConfig';
+import { QUESTIONS } from '../components/Wizard/questionsConfig.js';
 
 export const generateTaskDescription = (category, details) => {
     if (!details || ['special', 'extensions'].includes(category)) return [];
@@ -91,8 +91,11 @@ export const generateTaskDescription = (category, details) => {
         tasks.push(`Levering og professionel montering af ${qty}m² ${details.material || 'nyt gulv'}${patternStr}`);
     } else if (category === 'windows') {
         let typeStr = details.material || 'nye';
-        if (details.twoTone && details.twoTone.includes('2-farvede')) typeStr += ' 2-farvede';
-        tasks.push(`Levering og isætning af ${details.amount || 'nye'} elementer (${typeStr}) efter gældende standarder`);
+        let groupsStr = '';
+        if (details.windowsConfig && Array.isArray(details.windowsConfig) && details.windowsConfig.length > 0) {
+            groupsStr = ' fordelt på: ' + details.windowsConfig.map(v => `${v.count || 1}x ${v.type || 'Standard'} (${v.width}x${v.height} cm)`).join(', ');
+        }
+        tasks.push(`Levering og isætning af ${details.amount || 'nye'} elementer (${typeStr}) efter gældende standarder${groupsStr}`);
     } else if (category === 'roof') {
         tasks.push(`Levering og montering af ${qty}m² ${details.material || 'nyt tag'}`);
     } else if (category === 'doors') {
@@ -354,7 +357,7 @@ export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter 
             
             let displayValue = value;
             if (question.type === 'window_configurator' && Array.isArray(value)) {
-                displayValue = value.map(v => `${v.type || 'Standard'} (${v.width}x${v.height} cm)`).join(', ');
+                displayValue = value.map(v => `${v.count || 1}x ${v.type || 'Standard'} (${v.width}x${v.height} cm)${v.isOpenable === false ? ' (fastkarm)' : ''}${v.safetyGlass ? ' (sikkerhedsglas)' : ''}${v.hasSlidingDoor ? ' (m. skydedør)' : ''}`).join(', ');
             } else if (typeof value === 'boolean') {
                 displayValue = value ? 'Ja' : 'Nej';
             }
