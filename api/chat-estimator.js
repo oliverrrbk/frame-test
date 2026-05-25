@@ -159,8 +159,8 @@ GUARDRAILS & REGLER FOR SAMTALEN:
 5. KOM IGENNEM HELE TJEKLISTEN: Stil gerne 2-3 spørgsmål ad gangen for at holde fremdrift i samtalen. DU SKAL indsamle svar på ALLE de punkter, der findes i tjeklisten for den pågældende kategori, der er LOGISK RELEVANTE baseret på kundens valg (fx spring affaldscontainer og pcbCheck over, hvis der ikke skal bortskaffes noget). Ignorer aldrig et relevant punkt fra tjeklisten, da hvert svar påvirker prisen præcist.
 6. BRUG ALDRIG MARKDOWN ELLER STJERNER (** eller *): Din tekst bliver vist råt i et system der ikke forstår markdown. Skriv ren tekst uden formatering.
 7. VIS ALDRIG UDTÄNKTE PRISER ELLER TIMER TIL KUNDEN: Hold alle udregninger 100% hemmelige i chatten. 
-8. KOMPLEKSE VS. STANDARD OPGAVER: Standardopgaver og kombinationer (fx Nyt Tag, Gulv og 3 Vinduer) SKAL udregnes med estimerede timer og materialer i det endelige JSON output. Hvis et projekt (eller kombinationen af projekter) is så avanceret, at det kræver vurdering af bærende konstruktioner (fx fjerne vægge), byggetilladelser, dybdegående el/vvs arbejde, eller kunden ønsker en totalrenovering uden at kende omfanget, SKAL du stoppe. Du skal straks kalde `submit_estimate` med laborHours = 0 og materialCost = 0. I dit resumé (summaryBullets) skal du skrive: 'Komplekst projekt: Kræver fysisk besigtigelse'.
-9. KOMBI-PROJEKTER (Flere opgaver på én gang): Hvis kunden vil have lavet flere ting (fx både tag, vinduer og et nyt gulv), så er det den perfekte specialopgave! Afklar dem én ad gangen. Når du udregner det endelige tilbud, skal du splitte dem op som separate linjer i dit `breakdown` array, så kunden kan se, hvad der koster hvad.
+8. KOMPLEKSE VS. STANDARD OPGAVER: Standardopgaver og kombinationer (fx Nyt Tag, Gulv og 3 Vinduer) SKAL udregnes med estimerede timer og materialer i het endelige JSON output. Hvis et projekt (eller kombinationen af projekter) is så avanceret, at det kræver vurdering af bærende konstruktioner (fx fjerne vægge), byggetilladelser, dybdegående el/vvs arbejde, eller kunden ønsker en totalrenovering uden at kende omfanget, SKAL du stoppe. Du skal straks kalde \`submit_estimate\` med laborHours = 0 og materialCost = 0. I dit resumé (summaryBullets) skal du skrive: 'Komplekst projekt: Kræver fysisk besigtigelse'.
+9. KOMBI-PROJEKTER (Flere opgaver på én gang): Hvis kunden vil have lavet flere ting (fx både tag, vinduer og et nyt gulv), så er det den perfekte specialopgave! Afklar dem én ad gangen. Når du udregner det endelige tilbud, skal du splitte dem op som separate linjer i dit \`breakdown\` array, så kunden kan se, hvad der koster hvad.
 10. LOGISKE AFHÆNGIGHEDER & BETINGELSER (VIGTIGT!): Du må ALDRIG stille irrelevante eller modstridende spørgsmål. Du skal tænke logisk som en rigtig tømrermester:
 - Ingen nedrivning/bortskaffelse = Ingen container eller underlagstype-spørgsmål: Hvis kunden fravælger bortskaffelse/nedrivning (fx svarer nej til at fjerne gammelt tag/gulv/terrasse/hegn/vinduer), skal du overhovedet ikke spørge om, hvilken type det gamle tag/gulv/beklædning var, om der skal foretages PCB-tjek, eller om der er plads til en affaldscontainer (trailerAccess). Det er ulogisk og virker unødvendigt og uprofessionelt at spørge om en affaldscontainer, når der ikke skal bortskaffes noget affald.
 - Ingen ny tagterrasse = Ingen justerbare terrassefødder: Spørg kun om terrassefødder (roofTerraceFeet), hvis kunden har valgt en tagterrasse (Tagterrasse) som højde/type.
@@ -247,7 +247,7 @@ function getDynamicTools(provider) {
                 prop.type = 'boolean';
             } else {
                 prop.type = 'string';
-                if (q.options && q.options.length > 0) {
+                if (q.options && Array.isArray(q.options) && q.options.length > 0) {
                     prop.enum = q.options.map(opt => typeof opt === 'string' ? opt : opt.label);
                 }
             }
@@ -296,60 +296,65 @@ function getDynamicTools(provider) {
         let returnMessage = null;
 
         if (isClaude) {
-            const anthropic = new Anthropic({
-                apiKey: process.env.ANTHROPIC_API_KEY
-            });
+            try {
+                const anthropic = new Anthropic({
+                    apiKey: process.env.ANTHROPIC_API_KEY
+                });
 
-            const claudeTools = [
-                ...getDynamicTools('claude'),
-                {
-                    name: "submit_estimate",
-                    description: "KALD KUN DENNE NÅR DET ER EN ÆGTE SPECIALOPGAVE SOM IKKE FINDES I TJEKLISTEN. Du udregner selv pris.",
-                    input_schema: submitEstimateSchema
+                const claudeTools = [
+                    ...getDynamicTools('claude'),
+                    {
+                        name: "submit_estimate",
+                        description: "KALD KUN DENNE NÅR DET ER EN ÆGTE SPECIALOPGAVE SOM IKKE FINDES I TJEKLISTEN. Du udregner selv pris.",
+                        input_schema: submitEstimateSchema
+                    }
+                ];
+
+                const response = await anthropic.messages.create({
+                    model: "claude-3-5-sonnet-20241022",
+                    system: systemPromptText,
+                    messages: messages, // Claude expects pure user/assistant messages here
+                    max_tokens: 4000,
+                    tools: claudeTools,
+                    tool_choice: { type: "auto" }
+                }, { signal: controller.signal });
+
+                clearTimeout(timeoutId);
+
+                // Format Claude response to perfectly match what React frontend expects from OpenAI
+                const toolUseBlock = response.content.find(block => block.type === 'tool_use');
+                const textBlock = response.content.find(block => block.type === 'text');
+
+                if (toolUseBlock) {
+                    let toolName = toolUseBlock.name;
+                    let args = toolUseBlock.input;
+                    if (toolName.startsWith('calculate_')) {
+                        args.category = toolName.split('_')[1];
+                        toolName = 'calculate_standard_project';
+                    }
+                    returnMessage = {
+                        role: "assistant",
+                        content: textBlock ? textBlock.text : null,
+                        tool_calls: [{
+                            function: {
+                                name: toolName,
+                                arguments: JSON.stringify(args)
+                            }
+                        }]
+                    };
+                } else {
+                    returnMessage = {
+                        role: "assistant",
+                        content: textBlock ? textBlock.text : ""
+                    };
                 }
-            ];
-
-            const response = await anthropic.messages.create({
-                model: "claude-sonnet-4-6",
-                system: systemPromptText,
-                messages: messages, // Claude expects pure user/assistant messages here
-                max_tokens: 4000,
-                tools: claudeTools,
-                tool_choice: { type: "auto" }
-            }, { signal: controller.signal });
-
-            clearTimeout(timeoutId);
-
-            // Format Claude response to perfectly match what React frontend expects from OpenAI
-            const toolUseBlock = response.content.find(block => block.type === 'tool_use');
-            const textBlock = response.content.find(block => block.type === 'text');
-
-            if (toolUseBlock) {
-                let toolName = toolUseBlock.name;
-                let args = toolUseBlock.input;
-                if (toolName.startsWith('calculate_')) {
-                    args.category = toolName.split('_')[1];
-                    toolName = 'calculate_standard_project';
-                }
-                returnMessage = {
-                    role: "assistant",
-                    content: textBlock ? textBlock.text : null,
-                    tool_calls: [{
-                        function: {
-                            name: toolName,
-                            arguments: JSON.stringify(args)
-                        }
-                    }]
-                };
-            } else {
-                returnMessage = {
-                    role: "assistant",
-                    content: textBlock ? textBlock.text : ""
-                };
+            } catch (claudeError) {
+                console.error("Claude API failed, falling back to OpenAI:", claudeError);
             }
+        }
 
-        } else {
-            // OpenAI Provider (Default)
+        if (!returnMessage) {
+            // OpenAI Provider (Default / Fallback)
             const openai = new OpenAI({
                 apiKey: process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY,
             });
@@ -370,7 +375,7 @@ function getDynamicTools(provider) {
             const fullMessages = [{ role: 'system', content: systemPromptText }, ...messages];
 
             const completion = await openai.chat.completions.create({
-                model: "gpt-5.5",
+                model: "gpt-4o-mini",
                 messages: fullMessages,
                 tools: openaiTools,
                 tool_choice: "auto",
