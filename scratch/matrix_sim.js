@@ -27,7 +27,7 @@ const main = async () => {
             amount: 80,
             material: 'Trykimprægneret',
             oldFacadeMaterial: 'Ingen (Nybyg / Råt træskelet)',
-            mountingStyle: 'Vandret (fx Klinkbeklædning)',
+            mountingStyle: 'Lodret (fx Listebeklædning - tager lidt længere tid)',
             openings: 0,
             floors: '1½-plan / 2-plan / Mere'
         }
@@ -41,7 +41,7 @@ const main = async () => {
 
     const res = await performCalculation(facadeProject, customerDetails, dbSettings, dbMaterials, null);
     
-    console.log("=== BEREGNING FOR TRÆFACADE PROJEKT MED STAGE/STILLADS ===");
+    console.log("=== BEREGNING FOR TRÆFACADE PROJEKT MED LODRET MONTERING ===");
     console.log(`Prisklasse: ${res.priceRange}`);
     console.log("Rå beregningsdata (calcData):", JSON.stringify(res.calcData, null, 2));
     console.log("\nLogiske steps i beregningen (breakdownArr):");
