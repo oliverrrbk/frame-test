@@ -1,6 +1,6 @@
 import React from 'react';
 import toast from 'react-hot-toast';
-import { ImagePlus, Info } from 'lucide-react';
+import { ImagePlus, Info, ZoomIn } from 'lucide-react';
 import { QUESTIONS } from './questionsConfig';
 import CustomSelect from './CustomSelect';
 import AudioPlayerButton from './AudioPlayerButton';
@@ -8,6 +8,7 @@ import AudioPlayerButton from './AudioPlayerButton';
 const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, quickRecalculate }) => {
     const questions = QUESTIONS[category] || [];
     const [openTooltips, setOpenTooltips] = React.useState({});
+    const [zoomedImage, setZoomedImage] = React.useState(null);
 
     const toggleTooltip = (id) => {
         setOpenTooltips(prev => ({ ...prev, [id]: !prev[id] }));
@@ -240,8 +241,43 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                 key={idx} 
                                 className={`material-card ${details[q.id] === opt.label ? 'selected' : ''}`}
                                 onClick={() => handleInputChange(q.id, opt.label)}
+                                style={{ position: 'relative' }}
                             >
-                                {opt.img && <img src={opt.img} alt={opt.label} className="material-img" />}
+                                {opt.img && (
+                                    <>
+                                        <img src={opt.img} alt={opt.label} className="material-img" />
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setZoomedImage({ url: opt.img, title: opt.label });
+                                            }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '8px',
+                                                right: '8px',
+                                                background: 'rgba(255, 255, 255, 0.95)',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '50%',
+                                                width: '32px',
+                                                height: '32px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                                                zIndex: 5,
+                                                transition: 'all 0.2s ease',
+                                                color: '#475569'
+                                            }}
+                                            onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.color = '#0f172a'; }}
+                                            onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.color = '#475569'; }}
+                                            title="Forstør billede"
+                                        >
+                                            <ZoomIn size={16} />
+                                        </button>
+                                    </>
+                                )}
                                 <div className="material-label">
                                     <h3 style={{ fontSize: '1rem', margin: 0 }}>{opt.label}</h3>
                                 </div>
@@ -589,6 +625,107 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                     </button>
                 </div>
             </div>
+            {zoomedImage && (
+                <div 
+                    onClick={() => setZoomedImage(null)}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(15, 23, 42, 0.65)',
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 10000,
+                        cursor: 'zoom-out',
+                        animation: 'fadeIn 0.2s ease-out'
+                    }}
+                >
+                    <style dangerouslySetInnerHTML={{__html: `
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        @keyframes scaleIn {
+                            from { transform: scale(0.95); opacity: 0; }
+                            to { transform: scale(1); opacity: 1; }
+                        }
+                    `}} />
+                    
+                    <div 
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            position: 'relative',
+                            maxWidth: '90%',
+                            maxHeight: '85vh',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            cursor: 'default',
+                            animation: 'scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                        }}
+                    >
+                        <img 
+                            src={zoomedImage.url} 
+                            alt={zoomedImage.title}
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '75vh',
+                                borderRadius: '16px',
+                                objectFit: 'contain',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)'
+                            }}
+                        />
+                        <div style={{ 
+                            marginTop: '16px', 
+                            color: '#fff', 
+                            fontSize: '1.25rem', 
+                            fontWeight: '700', 
+                            textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            padding: '8px 20px',
+                            borderRadius: '99px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            backdropFilter: 'blur(4px)'
+                        }}>
+                            {zoomedImage.title}
+                        </div>
+                        
+                        <button
+                            onClick={() => setZoomedImage(null)}
+                            style={{
+                                position: 'absolute',
+                                top: '-48px',
+                                right: '0',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                borderRadius: '50%',
+                                width: '36px',
+                                height: '36px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#fff',
+                                fontSize: '18px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                backdropFilter: 'blur(4px)'
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
+                            title="Luk"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            )}
         </section>
     );
 };
