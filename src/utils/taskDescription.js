@@ -195,7 +195,7 @@ export const generateTaskDescription = (category, details) => {
         if (details.skylights && details.skylights.startsWith('Ja')) {
             tasks.push(`Montering af ${details.skylightAmount || 1} nye ovenlysvinduer`);
         }
-        tasks.push('Færdiggørelse med rygning, vindskeder og nødvendige inddækninger');
+        tasks.push('Professionel aflevering med tæt rygning, korrekte vindskeder, vejrbestandige inddækninger samt komplet tømrerfinish');
     } else if (category === 'kitchen') {
         if (details.worktop && details.worktop.startsWith('Ja')) {
             tasks.push('Tilpasning, udskæring og montering af træ/laminat bordplade');
@@ -203,30 +203,37 @@ export const generateTaskDescription = (category, details) => {
         if (details.integratedAppliances && details.integratedAppliances.startsWith('Ja')) {
             tasks.push('Finjustering og montering af træfronter på integrerede hvidevarer');
         }
-        tasks.push('Montering af paneler, greb og finish-lister (bemærk: ekskl. VVS/EL-tilslutning)');
+        tasks.push('Professionel tømrerfinish inkl. præcis montering af tilpasninger, tilsætninger, greb og fejelister for et fejlfrit visuelt udtryk (bemærk: ekskl. autoriseret VVS/EL-tilslutning)');
     } else if (category === 'fence') {
-        tasks.push('Komplet finish med montering af stolpehatte og evt. afsluttende dækskinner');
+        tasks.push('Komplet kvalitetsfinish med montering af stolpehatte, vejrbestandig afdækning og eventuelle afsluttende dækskinner for maksimal levetid');
         if (details.material && details.material.includes('Træ')) {
-            tasks.push('Afsluttende tilpasning og finpudsning af trækonstruktionen');
+            tasks.push('Professionel afsluttende tilpasning, slibning og flot finpudsning af trækonstruktionen');
         }
     } else if (category === 'carport') {
-        tasks.push('Montering af vindskeder, sternbrædder samt tagrender/afløb jf. aftale');
+        tasks.push('Levering og montering af vindskeder, sternbrædder samt vejrbestandige tagrender og afløb jf. aftale');
         if (details.shedType && details.shedType.includes('isoleret')) {
             tasks.push('Montering af isolering, dampspærre og indvendig beklædning i skurdel');
         }
-        tasks.push('Afsluttende dæklister og komplet tømrerfinish');
+        tasks.push('Komplet kvalitetsfinish med pæne afsluttende dæklister, gerigter og omhyggelig tømrerfærdiggørelse');
     } else if (category === 'annex') {
         if (details.annexType && details.annexType.includes('Isoleret')) {
             tasks.push('Etablering af 100-150mm isolering i gulv, vægge og loft samt dampspærre');
         } else if (details.annexType && details.annexType.includes('beboeligt')) {
             tasks.push('Komplet isolering efter BR18 (vinterisoleret), dampspærre samt indvendig beklædning (gips/træ)');
         }
-        tasks.push('Montering af sternbrædder, vindskeder, døre, vinduer og afsluttende dæklister');
+        tasks.push('Komplet kvalitetsfinish med professionel montering af sternbrædder, vindskeder, dæklister, fodlister samt indvendige gerigter omkring døre og vinduer for et nøjagtigt og flot resultat');
     } else if (category === 'facades') {
-        tasks.push('Afsluttende premium tømrerfinish med montering af hjørnelister, drypnæser samt præcise overgange for optimal tætning');
+        tasks.push('Afsluttende premium tømrerfinish med montering af dækkende hjørnelister, drypnæser samt ultra-præcise overgange for optimal ventilation og tætning');
         if (details.floors && details.floors.includes('1½-plan')) {
             tasks.push('Opsætning, leje og nedtagning af professionelt facadestillads eller lift til arbejde i højden');
         }
+    } else if (category === 'ceilings') {
+        tasks.push('Komplet kvalitetsfinish med levering, præcis tilpasning og opsætning af pæne skyggelister eller dæklister langs kanterne for et fejlfrit resultat');
+        if (details.plastering && details.plastering.includes('Ja')) {
+            tasks.push('Professionelt malerarbejde med fuldspartling (armeringstape i samlinger), filt/væv og to gange slutfarve');
+        }
+    } else if (category === 'terrace') {
+        tasks.push('Professionel tømrerfinish med flot kantskæring, montering af dækbrædder (frisegran) og pæne hjørnesamlinger');
     }
     
     // 5. Kørsel og Oprydning
