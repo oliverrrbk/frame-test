@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Step1Category from './Step1Category';
 import Step2Dynamic from './Step2Dynamic';
 import Step3Photos from './Step3Photos';
@@ -6,6 +7,7 @@ import Step4Contact from './Step4Contact';
 import StepResult from './StepResult';
 import Step5Success from './Step5Success';
 import ChatEstimator from './ChatEstimator';
+import { QUESTIONS } from './questionsConfig';
 import { performCalculation } from '../../utils/calculator';
 import { fetchCalibrationFactor } from '../../utils/calibration';
 import { supabase } from '../../supabaseClient';
@@ -13,6 +15,109 @@ import toast from 'react-hot-toast';
 
 const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     const [currentStep, setCurrentStep] = useState(1);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const stepToParam = {
+        1: 'opgave',
+        2: 'detaljer',
+        3: 'billeder',
+        4: 'kontakt',
+        'special_chat': 'chat',
+        5: 'result',
+        6: 'success'
+    };
+
+    const paramToStep = {
+        'opgave': 1,
+        'detaljer': 2,
+        'billeder': 3,
+        'kontakt': 4,
+        'chat': 'special_chat',
+        'result': 5,
+        'success': 6
+    };
+
+    const isStep2Valid = () => {
+        const category = projectData.category;
+        if (!category) return false;
+        if (category === 'special') return true;
+        
+        const questionsForCategory = QUESTIONS[category] || [];
+        const details = projectData.details || {};
+        
+        const isVisible = (condition) => {
+            if (!condition) return true;
+            if (typeof condition === 'function') {
+                return condition(details);
+            }
+            let visible = true;
+            if (condition.field) {
+                visible = visible && details[condition.field] === condition.value;
+            }
+            if (condition.field2) {
+                visible = visible && details[condition.field2] === condition.value2;
+            }
+            if (condition.notField2) {
+                 visible = visible && details[condition.notField2] !== condition.notValue2;
+            }
+            return visible;
+        };
+
+        const visibleQuestions = questionsForCategory.filter(q => isVisible(q.condition));
+        
+        const missingField = visibleQuestions.find(q => {
+            if (q.type === 'textarea' || q.type === 'file' || q.type === 'checkbox') return false;
+            
+            const value = details[q.id];
+
+            if (q.type === 'window_configurator') {
+                if (!value || value.length < details.amount) return true;
+                for (let i = 0; i < details.amount; i++) {
+                    const w = value[i];
+                    if (!w || !w.photoInside || !w.photoOutside || !w.width || !w.height) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            return value === undefined || value === null || value === '';
+        });
+
+        return !missingField;
+    };
+
+    const canAccessStepNumber = (stepNum) => {
+        if (stepNum === 1) return true;
+        if (stepNum === 2) return !!projectData.category;
+        if (stepNum === 3 || stepNum === 4) return !!projectData.category && isStep2Valid();
+        return false;
+    };
+
+    const goToStep = (step) => {
+        const param = stepToParam[step] || 'opgave';
+        setSearchParams({ step: param });
+    };
+
+    const handleStepClick = (stepNum) => {
+        if (stepNum === 1) {
+            goToStep(1);
+        } else if (stepNum === 2) {
+            if (projectData.category) {
+                goToStep(2);
+            } else {
+                toast.error('Du skal vælge et byggeprojekt først.');
+            }
+        } else if (stepNum === 3 || stepNum === 4) {
+            if (!projectData.category) {
+                toast.error('Du skal vælge et byggeprojekt først.');
+            } else if (!isStep2Valid()) {
+                toast.error('Udfyld venligst alle obligatoriske felter under detaljer først.');
+            } else {
+                goToStep(stepNum);
+            }
+        }
+    };
     
     // Database State
     const [dbSettings, setDbSettings] = useState(null);
@@ -24,6 +129,30 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     React.useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [currentStep]);
+
+    React.useEffect(() => {
+        const stepParam = searchParams.get('step');
+        if (!stepParam) {
+            if (currentStep !== 1) setCurrentStep(1);
+            return;
+        }
+        
+        const mappedStep = paramToStep[stepParam] || 1;
+        
+        if (mappedStep !== 1 && !projectData.category) {
+            setSearchParams({ step: 'opgave' }, { replace: true });
+            return;
+        }
+
+        if ((mappedStep === 3 || mappedStep === 4) && !isStep2Valid()) {
+            setSearchParams({ step: 'detaljer' }, { replace: true });
+            return;
+        }
+
+        if (currentStep !== mappedStep) {
+            setCurrentStep(mappedStep);
+        }
+    }, [searchParams, projectData.category, projectData.details]);
 
     React.useEffect(() => {
         const fetchDb = async () => {
@@ -90,7 +219,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
         if (category === 'special') {
             setProjectData({ category, details: { isAiEstimate: true } });
             setTimeout(() => {
-                setCurrentStep('special_chat');
+                goToStep('special_chat');
             }, 300);
             return;
         }
@@ -109,9 +238,8 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             details: defaultDetails
         });
         
-        // Timeout to mimic the smooth auto-transition from old app
         setTimeout(() => {
-            setCurrentStep(2);
+            goToStep(2);
         }, 300);
     };
 
@@ -130,14 +258,16 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             toast.error('Vejledning: Vælg et overordnet byggeprojekt først for at fortsætte.');
             return;
         }
-        setCurrentStep(prev => prev + 1);
+        const next = typeof currentStep === 'number' ? currentStep + 1 : 1;
+        goToStep(next);
     };
 
     const prevStep = () => {
         if (currentStep === 'special_chat') {
-            setCurrentStep(1);
+            goToStep(1);
         } else {
-            setCurrentStep(prev => prev - 1);
+            const prev = typeof currentStep === 'number' ? currentStep - 1 : 1;
+            goToStep(prev);
         }
     };
 
@@ -339,7 +469,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             }));
 
             setIsCalculating(false);
-            setCurrentStep(projectData.category === 'extensions' ? 6 : 5);
+            goToStep(projectData.category === 'extensions' ? 6 : 5);
         } catch (error) {
             console.error(error);
             import('react-hot-toast').then(toast => {
@@ -350,9 +480,9 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     };
 
     const resetWizard = () => {
-        setCurrentStep(1);
         setProjectData({ category: null, details: {} });
         setNotes("");
+        goToStep(1);
     };
 
     const handleQuickRecalculate = () => {
@@ -394,18 +524,39 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                             const activeStepIndex = currentStep === 'special_chat' ? 2 : currentStep;
                             const isCompleted = activeStepIndex > stepNum;
                             const isActive = activeStepIndex === stepNum;
+                            const isClickable = canAccessStepNumber(stepNum);
                             return (
-                                <div key={name} className="progress-step-item" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, position: 'relative', background: 'transparent' }}>
-                                    <div className="progress-step-circle" style={{ 
-                                        width: '34px', height: '34px', borderRadius: '50%', 
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                        background: isCompleted ? '#10b981' : (isActive ? '#2563eb' : '#f1f5f9'),
-                                        color: isCompleted || isActive ? 'white' : '#94a3b8',
-                                        fontWeight: 'bold', fontSize: '0.95rem',
-                                        border: `3px solid ${isCompleted ? '#10b981' : (isActive ? '#eff6ff' : '#f1f5f9')}`,
-                                        boxShadow: isActive ? '0 0 0 3px #bfdbfe' : 'none',
-                                        transition: 'all 0.3s ease'
-                                    }}>
+                                <div 
+                                    key={name} 
+                                    className="progress-step-item" 
+                                    onClick={() => handleStepClick(stepNum)}
+                                    style={{ 
+                                        display: 'flex', 
+                                        flexDirection: 'column', 
+                                        alignItems: 'center', 
+                                        zIndex: 1, 
+                                        position: 'relative', 
+                                        background: 'transparent',
+                                        cursor: isClickable ? 'pointer' : 'not-allowed',
+                                        opacity: isClickable ? 1 : 0.65,
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                >
+                                    <div 
+                                        className="progress-step-circle" 
+                                        style={{ 
+                                            width: '34px', height: '34px', borderRadius: '50%', 
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                            background: isCompleted ? '#10b981' : (isActive ? '#2563eb' : '#f1f5f9'),
+                                            color: isCompleted || isActive ? 'white' : '#94a3b8',
+                                            fontWeight: 'bold', fontSize: '0.95rem',
+                                            border: `3px solid ${isCompleted ? '#10b981' : (isActive ? '#eff6ff' : '#f1f5f9')}`,
+                                            boxShadow: isActive ? '0 0 0 3px #bfdbfe' : 'none',
+                                            transition: 'all 0.3s ease'
+                                        }}
+                                        onMouseOver={(e) => { if (isClickable) e.currentTarget.style.transform = 'scale(1.1)'; }}
+                                        onMouseOut={(e) => { if (isClickable) e.currentTarget.style.transform = 'scale(1)'; }}
+                                    >
                                         {isCompleted ? '✓' : stepNum}
                                     </div>
                                     <span className="progress-step-label" style={{ fontSize: '0.85rem', marginTop: '8px', color: isActive ? '#1e293b' : '#64748b', fontWeight: isActive ? '700' : '500' }}>{name}</span>
@@ -451,17 +602,17 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         }
                         if (aiData.isStandardCategory) {
                             toast.success("Jeg har udfyldt formularen baseret på vores snak. Tjek venligst om alt stemmer, og tryk 'Videre'!", { duration: 6000 });
-                            setCurrentStep(2); // Rescue Guard: Vis kunden dataen i visual form for implicit godkendelse
+                            goToStep(2); // Rescue Guard: Vis kunden dataen i visual form for implicit godkendelse
                         } else {
-                            setCurrentStep(3); // Gå til foto-upload for specialopgaver
+                            goToStep(3); // Gå til foto-upload for specialopgaver
                         }
                     }} 
                 />
             )}
             {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} />}
-            {currentStep === 3 && <Step3Photos category={projectData.category} photos={projectData.details.photos || []} setPhotos={(photos) => updateDetails('photos', photos)} notes={projectData.details.notes || ''} setNotes={(notes) => updateDetails('notes', notes)} nextStep={nextStep} prevStep={() => projectData.category === 'special' ? setCurrentStep('special_chat') : prevStep()} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} />}
+            {currentStep === 3 && <Step3Photos category={projectData.category} photos={projectData.details.photos || []} setPhotos={(photos) => updateDetails('photos', photos)} notes={projectData.details.notes || ''} setNotes={(notes) => updateDetails('notes', notes)} nextStep={nextStep} prevStep={() => projectData.category === 'special' ? goToStep('special_chat') : prevStep()} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} />}
             {currentStep === 4 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} />}
-            {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details.notes} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => setCurrentStep(projectData.category === 'special' ? 'special_chat' : 2)} />}
+            {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details.notes} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} />}
             {currentStep === 6 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
 
             <div style={{ position: 'absolute', bottom: '16px', left: '0', right: '0', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
