@@ -202,7 +202,7 @@ export const QUESTIONS = {
             id: 'doorModel',
             type: 'select',
             label: 'Hvilken dør-model / kvalitetsniveau ønsker du?',
-            tooltip: 'Modellen bestemmer udgangspunktet for prisestimatet. Tømreren gennemgår alle detaljer med dig inden bestilling.',
+            tooltip: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et vejledende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Tømreren gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
             options: (d) => {
                 if (d.doorStyle === 'Indvendig dør') {
                     return ['Standard indvendig dør', 'Special indvendig dør'];
