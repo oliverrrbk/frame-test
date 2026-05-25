@@ -48,9 +48,66 @@ export const fetchGoogleDistance = async (origin, destination) => {
     });
 };
 
+export const mapMaterialName = (cat, material) => {
+    if (!material) return '';
+    const mat = material.trim();
+    
+    if (cat === 'carport') {
+        if (mat === 'Trykimprægneret' || mat === 'Superwood' || mat === 'Thermowood') {
+            return 'Standard træ (Trykimprægneret)';
+        }
+        if (mat === 'Cedertræ / Hardwood' || mat === 'Komposit') {
+            return 'Eksklusivt træ (Cedertræ/Hardwood)';
+        }
+        if (mat === 'Stål/Alu') {
+            return 'Vedligeholdelsesfrit (Stål/Alu)';
+        }
+    }
+    
+    if (cat === 'annex') {
+        if (mat === 'Trykimprægneret' || mat === 'Superwood' || mat === 'Thermowood') {
+            return 'Trykimprægneret fyr';
+        }
+        if (mat === 'Cedertræ / Hardwood') {
+            return 'Eksklusivt træ (Cedertræ/Hardwood)';
+        }
+        if (mat === 'Komposit') {
+            return 'Vedligeholdelsesfrit (Komposit)';
+        }
+    }
+    
+    if (cat === 'fence') {
+        if (mat === 'Raftehegn (Træ)') {
+            return 'Raftehegn';
+        }
+        if (mat === 'Komposithegn') {
+            return 'Komposit (Vedligeholdelsesfrit)';
+        }
+    }
+    
+    if (cat === 'terrace') {
+        if (mat === 'Trykimprægneret' || mat === 'Thermowood') {
+            return 'Trykimprægneret fyr';
+        }
+        if (mat === 'Cedertræ / Hardwood') {
+            return 'Hardwood / Hårdttræ';
+        }
+        if (mat === 'Komposit') {
+            return 'Komposit (vedligeholdelsesfrit biomateriale)';
+        }
+    }
+    
+    return material;
+};
+
 export const performCalculation = async (projectData, customerDetails, dbSettings, dbMaterials, carpenter, calibration = null) => {
     const cat = projectData.category;
-    const d = projectData.details;
+    
+    // Copy details and map material to match database keys
+    const d = { ...projectData.details };
+    if (d.material) {
+        d.material = mapMaterialName(cat, d.material);
+    }
 
     // Sanity defaults så manglende DB-værdier ikke producerer NaN gennem hele pris-beregningen.
     // Vigtigt: vi må IKKE bruge spread direkte, fordi en NULL-værdi i DB ellers overskriver fallback'en
