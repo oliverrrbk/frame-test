@@ -14,6 +14,10 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
 const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
+    const [projectData, setProjectData] = useState({
+        category: null,
+        details: {},
+    });
     const [currentStep, setCurrentStep] = useState(1);
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -201,12 +205,6 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
         };
         fetchDb();
     }, [carpenter?.id]);
-    
-    // Extracted state corresponding to old `projectData`
-    const [projectData, setProjectData] = useState({
-        category: null,
-        details: {},
-    });
     
     const [notes, setNotes] = useState("");
     const [priceRange, setPriceRange] = useState("-- kr.");
