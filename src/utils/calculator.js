@@ -411,6 +411,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                         matAdj = 3500 * (baseGlass / 9000);
                     } else if (d.material === 'Finér') {
                         matAdj = -1500 * (baseVeneer / 2500);
+                    } else if (d.material === 'PVC') {
+                        matAdj = -2000 * (basePvc / 4000);
                     } else if (d.material === 'PVC og glas') {
                         matAdj = -1000 * (basePvc / 4000);
                     } else if (d.material === 'Aluminium') {

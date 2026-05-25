@@ -202,6 +202,7 @@ export const QUESTIONS = {
             id: 'doorModel',
             type: 'select',
             label: 'Hvilken dør-model / kvalitetsniveau ønsker du?',
+            subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Tømreren gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
             tooltip: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et vejledende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Tømreren gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
             options: (d) => {
                 if (d.doorStyle === 'Indvendig dør') {
@@ -223,9 +224,10 @@ export const QUESTIONS = {
                 { label: 'Massivt træ', img: '/images/door_solid_wood_1776258727433.png' },
                 { label: 'Massivt træ og glas', img: '/images/door_solid_wood_glass.png' },
                 { label: 'Finér', img: '/images/door_veneer_1776258742752.png' },
-                { label: 'PVC og glas', img: '/images/door_pvc_1776258757167.png' },
+                { label: 'PVC', img: '/images/door_pvc_solid.png' },
+                { label: 'PVC og glas', img: '/images/door_pvc_glass.png' },
                 { label: 'Aluminium', img: '/images/door_aluminum_1776258935245.png' },
-                { label: 'Træ / Alu (Kombination)', img: '/images/door_wood_1776258921142.png' }
+                { label: 'Træ / Alu (Kombination)', img: '/images/door_wood_alu.png' }
             ] 
         },
         {

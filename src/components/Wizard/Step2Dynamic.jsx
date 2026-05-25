@@ -148,7 +148,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
 
         return (
             <div key={q.id} className="form-group wizard-question-card" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: q.subLabel ? '4px' : '12px' }}>
                     <label style={{ fontWeight: '700', margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
                         {q.label}
                     </label>
@@ -216,7 +216,12 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         </div>
                     )}
                 </div>
-                        {q.type === 'select' && (
+                {q.subLabel && (
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.4' }}>
+                        {q.subLabel}
+                    </div>
+                )}
+                {q.type === 'select' && (
                     <div style={{ position: 'relative' }}>
                         <CustomSelect 
                             value={details[q.id] || ''} 
