@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { ImagePlus, Info, ZoomIn } from 'lucide-react';
 import { QUESTIONS } from './questionsConfig';
@@ -625,7 +626,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                     </button>
                 </div>
             </div>
-            {zoomedImage && (
+            {zoomedImage && createPortal(
                 <div 
                     onClick={() => setZoomedImage(null)}
                     style={{
@@ -641,7 +642,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        zIndex: 10000,
+                        zIndex: 100000,
                         cursor: 'zoom-out',
                         animation: 'fadeIn 0.2s ease-out'
                     }}
@@ -724,7 +725,8 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             ✕
                         </button>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </section>
     );
