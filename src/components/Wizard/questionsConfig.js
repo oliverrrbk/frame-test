@@ -200,14 +200,24 @@ export const QUESTIONS = {
         },
         {
             id: 'doorModel',
+            type: 'visual_select',
+            label: 'Hvilken dør-model / kvalitetsniveau ønsker du?',
+            condition: (d) => d.doorStyle === 'Indvendig dør',
+            tooltip: 'Vælg mellem en standard glat celledør eller en specialdør (fx med fyldninger/paneler eller New Yorker-stil).',
+            options: [
+                { label: 'Standard indvendig dør', img: '/images/door_interior_standard.png' },
+                { label: 'Special indvendig dør', img: '/images/door_interior_special.png' }
+            ]
+        },
+        {
+            id: 'doorModel',
             type: 'select',
             label: 'Hvilken dør-model / kvalitetsniveau ønsker du?',
+            condition: (d) => d.doorStyle && d.doorStyle !== 'Indvendig dør',
             subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Tømreren gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
             tooltip: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et vejledende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Tømreren gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
             options: (d) => {
-                if (d.doorStyle === 'Indvendig dør') {
-                    return ['Standard indvendig dør', 'Special indvendig dør'];
-                } else if (d.doorStyle === 'Terrassedør') {
+                if (d.doorStyle === 'Terrassedør') {
                     return ['Standard terrassedør', 'Special/Dobbelt terrassedør'];
                 } else {
                     return ['Robust standard hoveddør', 'Premium/High-End hoveddør'];
@@ -217,9 +227,9 @@ export const QUESTIONS = {
         { 
             id: 'material', 
             type: 'visual_select', 
-            label: 'Hvilket materiale skal døren være i?', 
-            condition: (d) => d.doorStyle === 'Terrassedør' || d.doorStyle === 'Hoveddør (Udvendig)',
-            tooltip: 'Vælg det ønskede dør-materiale. Træ/Alu er meget populært pga. minimal vedligeholdelse udvendigt.',
+            label: 'Hvilket materiale skal hoveddøren være i?', 
+            condition: (d) => d.doorStyle === 'Hoveddør (Udvendig)',
+            tooltip: 'Vælg det ønskede materiale til din hoveddør. Træ/Alu er meget populært pga. minimal vedligeholdelse udvendigt.',
             options: [
                 { label: 'Massivt træ', img: '/images/door_solid_wood_1776258727433.png' },
                 { label: 'Massivt træ og glas', img: '/images/door_solid_wood_glass.png' },
@@ -227,7 +237,22 @@ export const QUESTIONS = {
                 { label: 'PVC', img: '/images/door_pvc_solid.png' },
                 { label: 'PVC og glas', img: '/images/door_pvc_glass.png' },
                 { label: 'Aluminium', img: '/images/door_aluminum_1776258935245.png' },
-                { label: 'Træ / Alu (Kombination)', img: '/images/door_wood_alu.png' }
+                { label: 'Træ / Alu (Kombination)', img: '/images/door_wood_alu.png' },
+                { label: 'Træ / Alu med glas', img: '/images/door_wood_alu_glass.png' }
+            ] 
+        },
+        { 
+            id: 'material', 
+            type: 'visual_select', 
+            label: 'Hvilket materiale skal terrassedøren være i?', 
+            condition: (d) => d.doorStyle === 'Terrassedør',
+            tooltip: 'Terrassedøre er næsten altid glasdøre. Vælg mellem forskellige holdbare karmmaterialer.',
+            options: [
+                { label: 'Træ (med glas)', img: '/images/door_terrace_wood.png' },
+                { label: 'PVC / Plast (med glas)', img: '/images/door_terrace_pvc.png' },
+                { label: 'Træ / Alu (Kombination, med glas)', img: '/images/door_terrace_wood_alu.png' },
+                { label: 'Aluminium (med glas)', img: '/images/door_terrace_alu.png' },
+                { label: 'Fuldglas (skydedør)', img: '/images/door_terrace_fullglass.png' }
             ] 
         },
         {

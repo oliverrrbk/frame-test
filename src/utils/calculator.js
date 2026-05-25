@@ -404,7 +404,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     const baseVeneer = indexCat['Finér'] || 2500;
                     const baseGlass = indexCat['Glas'] || 9000;
 
-                    if (d.material === 'Massivt træ') {
+                    if (d.material === 'Massivt træ' || d.material === 'Træ (med glas)') {
                         matAdj = 0; // Baseline
                     } else if (d.material === 'Massivt træ og glas') {
                         // Tillæg for termoglas og udskæring (skalerer med glassets db-pris)
@@ -413,15 +413,20 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                         matAdj = -1500 * (baseVeneer / 2500);
                     } else if (d.material === 'PVC') {
                         matAdj = -2000 * (basePvc / 4000);
-                    } else if (d.material === 'PVC og glas') {
+                    } else if (d.material === 'PVC og glas' || d.material === 'PVC / Plast (med glas)') {
                         matAdj = -1000 * (basePvc / 4000);
-                    } else if (d.material === 'Aluminium') {
+                    } else if (d.material === 'Aluminium' || d.material === 'Aluminium (med glas)') {
                         matAdj = 4500 * (baseAlu / 8500);
-                    } else if (d.material === 'Træ / Alu (Kombination)') {
-                        // Dynamisk tillæg for Træ/Alu baseret på differencen mellem Træ/Alu og standard trædør i databasen
+                    } else if (d.material === 'Træ / Alu (Kombination)' || d.material === 'Træ / Alu (Kombination, med glas)') {
                         const dbTræAlu = indexCat['Yderdør (Træ/Alu)'] || 10500;
                         const dbTræ = indexCat['Yderdør (Træ)'] || 8500;
                         matAdj = dbTræAlu - dbTræ; // Typisk 2.000 kr.
+                    } else if (d.material === 'Træ / Alu med glas') {
+                        const dbTræAlu = indexCat['Yderdør (Træ/Alu)'] || 10500;
+                        const dbTræ = indexCat['Yderdør (Træ)'] || 8500;
+                        matAdj = (dbTræAlu - dbTræ) + 3500 * (baseGlass / 9000);
+                    } else if (d.material === 'Fuldglas (skydedør)') {
+                        matAdj = 6500 * (baseGlass / 9000);
                     }
 
                     modelPrice += matAdj;
