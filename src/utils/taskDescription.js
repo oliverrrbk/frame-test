@@ -35,6 +35,10 @@ export const generateTaskDescription = (category, details) => {
          tasks.push(text);
     }
     
+    if (category === 'facades' && details.oldFacadeMaterial && details.oldFacadeMaterial.includes('rives ned')) {
+        tasks.push('Nedtagning og miljøvenlig afmontering af eksisterende facadebeklædning inkl. sortering og bortskaffelse');
+    }
+    
     // 2. Klargøring / Underlag
     if (category === 'floor') {
         if (details.underfloorHeating && details.underfloorHeating.includes('tømreren skal opbygge nyt gulvvarme')) {
@@ -71,6 +75,11 @@ export const generateTaskDescription = (category, details) => {
     } else if (category === 'annex') {
         tasks.push('Udgravning, afretning af jord og etablering af punktfundamenter/skruefundamenter');
         tasks.push('Opbygning af solidt, isoleret bjælkelag og stabil bundramme');
+    } else if (category === 'facades') {
+        tasks.push('Etablering af professionel vindspærre samt opbygning af ventileret underkonstruktion (trykimprægnerede klemlister og afstandslister)');
+        if (details.oldFacadeMaterial && details.oldFacadeMaterial.includes('Mursten')) {
+            tasks.push('Nødvendig forboring, plugs og mekanisk fastgørelse af underkonstruktion i eksisterende murer- eller betonværk');
+        }
     }
     
     // 3. Montering / Levering
@@ -122,7 +131,11 @@ export const generateTaskDescription = (category, details) => {
     } else if (category === 'ceilings') {
         tasks.push(`Opsætning af ${qty}m² ${details.material || 'nyt loft'} inkl. tilpasninger`);
     } else if (category === 'facades') {
-        tasks.push(`Montering af ${qty}m² ${details.material || 'ny facadebeklædning'}`);
+        let styleStr = details.mountingStyle ? ` (${details.mountingStyle.toLowerCase()})` : '';
+        tasks.push(`Levering og professionel montering af ${qty}m² ${details.material || 'ny facadebeklædning'}${styleStr} med præcise samlinger og korrekt afvanding`);
+        if (details.openings && parseInt(details.openings) > 0) {
+            tasks.push(`Etablering af professionelle lysninger, inddækninger og pæne trælister omkring ${details.openings} dør- og vinduesåbninger`);
+        }
     } else if (category === 'fence') {
         let mat = details.material || 'nyt hegn';
         tasks.push(`Levering og professionel opsætning af ${qty}løbende meter ${mat.toLowerCase()}`);
@@ -209,6 +222,11 @@ export const generateTaskDescription = (category, details) => {
             tasks.push('Komplet isolering efter BR18 (vinterisoleret), dampspærre samt indvendig beklædning (gips/træ)');
         }
         tasks.push('Montering af sternbrædder, vindskeder, døre, vinduer og afsluttende dæklister');
+    } else if (category === 'facades') {
+        tasks.push('Afsluttende premium tømrerfinish med montering af hjørnelister, drypnæser samt præcise overgange for optimal tætning');
+        if (details.floors && details.floors.includes('1½-plan')) {
+            tasks.push('Opsætning, leje og nedtagning af professionelt facadestillads eller lift til arbejde i højden');
+        }
     }
     
     // 5. Kørsel og Oprydning

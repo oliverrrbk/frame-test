@@ -1,108 +1,55 @@
 import { performCalculation } from '../src/utils/calculator.js';
 import { generateTaskDescription } from '../src/utils/taskDescription.js';
 
-// Definerer standard indstillinger svarende til Supabase DB settings
 const dbSettings = {
+    hourly_rate: 550,
     material_markup: 1.15,
-    hourly_rate: 450,
-    risk_margin: 1.25,
-    vehicle_cost_per_km: 3.8
+    risk_margin: 1.20,
+    vehicle_cost_per_km: 3.8,
+    crew_size: 2,
+    driving_calc_method: 'fast',
+    container_disposal_fee: 2500,
+    trailer_disposal_fee: 800
 };
 
-// Henter standardmaterialer til test
 const dbMaterials = {
-    floor: {
-        'Massivt træ': 1200,
-        'Fodlister (pr. m2 gulvareal proxy)': 50,
-        'Limning (Fuldlimning af mønstergulv)': 60,
-        'Bærende undergulv (Spånplader)': 120,
-        'Gulvvarme (Sporplader)': 450
-    },
-    doors: {
-        'Massivt træ og glas': 15500,
-        'Gerigter (sæt)': 300
-    },
-    windows: {
-        'Indvendig finish (Gerigter/Fuge) proxy': 200
+    facades: {
+        'Trykimprægneret': 280,
+        'Vindspærre og Klemlister': 150,
+        'Tillæg: Facadestilladsleje': 15000
     }
 };
 
 const main = async () => {
-    console.log("=== EKSTREM MATRIX SIMULERING & VERIFICERING ===");
-
-    // 1. Simulerer den dummeste/mest komplekse kombination for gulv:
-    // Massivt træ + Strøer + Sildebensmønster + Gulvvarme (Sporplader) + Faste forhindringer + Dørtilpasning
-    const floorProject = {
-        category: 'floor',
+    const facadeProject = {
+        category: 'facades',
         details: {
-            amount: 50,
-            disposal: 'Nej, vi har selv afmonteret det / der er tomt',
-            floorFoundation: 'Strøer / Trækonstruktion',
-            underfloorHeating: 'Ja, tømreren skal opbygge nyt gulvvarme (sporplader/varmefordeling)',
-            material: 'Massivt træ',
-            floorPattern: 'Ja, i mønster (fx Sildeben / Chevron)',
-            floorObstacles: 'Ja, det er der (køkkenø, søjler, skorsten eller rør)',
-            floorDoorsNear: 'Ja',
-            floorDoorsCount: 3,
-            finish: 'yes' // Skirting / finish valgt i wizarden
+            amount: 80,
+            material: 'Trykimprægneret',
+            oldFacadeMaterial: 'Ingen (Nybyg / Råt træskelet)',
+            mountingStyle: 'Vandret (fx Klinkbeklædning)',
+            openings: 0,
+            floors: '1½-plan / 2-plan / Mere'
         }
     };
 
-    const floorResult = await performCalculation(floorProject, {}, dbSettings, dbMaterials, null);
-    const floorTasks = generateTaskDescription(floorProject.category, floorProject.details);
-
-    console.log("\n[TESTCASE A: EKSTREM GULVSIMULERING (Sildeben + Strøer + Gulvvarme)]");
-    console.log(`- Samlet pris: ${floorResult.calcData.finalEstimateIncVat.toLocaleString('da-DK')} kr. (netto timer: ${floorResult.calcData.laborHours} t, materialer: ${floorResult.calcData.materialCost.toLocaleString('da-DK')} kr)`);
-    console.log("- Overslaget inkluderer:");
-    floorTasks.forEach(task => console.log(`  ✓ ${task}`));
-
-    // 2. Simulerer Døre med og uden finish for at sikre, at 'Komplet kvalitetsfinish' altid fremgår
-    const doorProjectWithFinish = {
-        category: 'doors',
-        details: {
-            amount: 2,
-            doorStyle: 'Hoveddør (Udvendig)',
-            doorModel: 'Premium/High-End hoveddør',
-            material: 'Massivt træ og glas',
-            electricLock: 'Ja, tømreren skal levere og montere elektrisk lås',
-            doorHinge: 'Højrehængt indadgående',
-            finish: 'yes'
-        }
+    const customerDetails = {
+        street: 'Testvej 1',
+        zip: '8000',
+        city: 'Aarhus C'
     };
 
-    const doorProjectNoFinish = {
-        category: 'doors',
-        details: {
-            amount: 2,
-            doorStyle: 'Hoveddør (Udvendig)',
-            doorModel: 'Premium/High-End hoveddør',
-            material: 'Massivt træ og glas',
-            electricLock: 'Ja, tømreren skal levere og montere elektrisk lås',
-            doorHinge: 'Højrehængt indadgående',
-            finish: 'no'
-        }
-    };
-
-    const doorWithFinishTasks = generateTaskDescription(doorProjectWithFinish.category, doorProjectWithFinish.details);
-    const doorNoFinishTasks = generateTaskDescription(doorProjectNoFinish.category, doorProjectNoFinish.details);
-
-    console.log("\n[TESTCASE B: DØRE MED FINISH VS UDEN FINISH]");
-    console.log("- Dør med finish 'yes' (Overslaget inkluderer):");
-    doorWithFinishTasks.forEach(task => console.log(`  ✓ ${task}`));
-    console.log("- Dør med finish 'no' (Overslaget inkluderer):");
-    doorNoFinishTasks.forEach(task => console.log(`  ✓ ${task}`));
-
-    // 3. Simulerer Vinduer med 'Ja' (Ja) og 'yes' (wizard) og 'Nej' (no)
-    const winProjectJa = { category: 'windows', details: { amount: 4, finish: 'Ja' } };
-    const winProjectYes = { category: 'windows', details: { amount: 4, finish: 'yes' } };
-    const winProjectNo = { category: 'windows', details: { amount: 4, finish: 'no' } };
-
-    console.log("\n[TESTCASE C: VINDUER MED BÅDE JA/YES OG NO]");
-    console.log("- Finish: 'Ja':", generateTaskDescription(winProjectJa.category, winProjectJa.details).filter(t => t.includes('finish')));
-    console.log("- Finish: 'yes':", generateTaskDescription(winProjectYes.category, winProjectYes.details).filter(t => t.includes('finish')));
-    console.log("- Finish: 'no':", generateTaskDescription(winProjectNo.category, winProjectNo.details).filter(t => t.includes('finish')));
-
-    console.log("\n=== MATRIX SIMULERING SLUT ===");
+    const res = await performCalculation(facadeProject, customerDetails, dbSettings, dbMaterials, null);
+    
+    console.log("=== BEREGNING FOR TRÆFACADE PROJEKT MED STAGE/STILLADS ===");
+    console.log(`Prisklasse: ${res.priceRange}`);
+    console.log("Rå beregningsdata (calcData):", JSON.stringify(res.calcData, null, 2));
+    console.log("\nLogiske steps i beregningen (breakdownArr):");
+    res.breakdownArr.forEach(line => console.log(`- ${line}`));
+    
+    console.log("\nOpgavebeskrivelse-punkter:");
+    const tasks = generateTaskDescription(facadeProject.category, facadeProject.details);
+    tasks.forEach(t => console.log(`✓ ${t}`));
 };
 
 main().catch(console.error);
