@@ -489,28 +489,7 @@ export const QUESTIONS = {
         }
     ],
     kitchen: [
-        { id: 'disposal', type: 'select', label: 'Skal det gamle køkken afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi gør det selv / der er allerede tomt'] },
-        { id: 'oldKitchenPhotos', type: 'file', label: 'Upload evt. et billede af det gamle køkken/rummet:', condition: { field: 'disposal', value: 'Ja, tømreren skal afmontere OG bortskaffe det' } },
-        { id: 'kitchenBrand', type: 'text', label: 'Hvilket mærke/leverandør er det nye køkken fra (fx IKEA, HTH, Kvik)?' },
-        { id: 'ownMaterials', type: 'select', label: 'Står du selv for indkøb af selve køkkenet?', options: ['Ja, jeg har allerede købt det (kun pris på montering)', 'Nej, tømreren skal stå for indkøb'] },
-        { id: 'materialLink', type: 'text', label: 'Indsæt evt. et link til det køkken du har købt:', condition: { field: 'ownMaterials', value: 'Ja, jeg har allerede købt det (kun pris på montering)' } },
-        { id: 'assembly', type: 'select', label: 'Samling af skabe: Leveres elementerne samlet fra fabrik, eller er det i flade kasser (flat-pack)?', options: ['Flat-pack: Tømreren skal samle alle skabe og skuffer (fx IKEA/Kvik)', 'Samlet: Elementerne kommer samlet fra fabrikken (fx HTH/Svane)'] },
-        { 
-            id: 'kitchenShape', 
-            type: 'visual_select', 
-            label: 'Hvilken af disse opstillinger minder mest om dit nye køkken?', 
-            options: [
-                { label: 'Vinkelkøkken (L-formet)', img: '/images/kitchen_l_1776270471428.png' },
-                { label: 'U-køkken', img: '/images/kitchen_u_1776270486856.png' },
-                { label: 'Enkeltsidet (Lige) køkken', img: '/images/kitchen_straight_1776270501809.png' },
-                { label: 'Parallelkøkken (To rækker overfor hinanden)', img: '/images/kitchen_parallel_1777277831456.png' },
-                { label: 'Køkken med kogeø', img: '/images/kitchen_island_1776270517874.png' }
-            ] 
-        },
-        { id: 'amount', type: 'number', label: 'Anslået/cirka antal skabe og skuffer (elementer) i alt:', placeholder: 'Fx 15' },
-        { id: 'worktop', type: 'select', label: 'Bordplade: Skal tømreren tilpasse og montere en bordplade i træ/laminat (inkl. udskæring til vask/kogeplade)?', tooltip: 'Nogle specialbordplader (fx sten, marmor eller Corian) bliver ofte opmålt og monteret direkte af leverandøren (stenhuggeren). Tømreren skærer typisk kun standard træ- og laminatbordplader til på stedet.', options: ['Ja, træ/laminat som skal tilpasses på stedet', 'Nej, vi får leveret sten/corian (typisk montør) / Gør det selv'] },
-        { id: 'integratedAppliances', type: 'select', label: 'Hvidevarer: Er der fuldt integrerede hvidevarer (hvor tømreren skal finjustere træfronter på køleskab/opvaskemaskine)?', options: ['Ja, der er integrerede træfronter', 'Nej, fritstående hvidevarer / standard'] },
-        { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til projektet (fx særlige paneler, emhætte)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
+        { id: 'notes', type: 'textarea', label: 'Beskriv jeres drømme og tanker om det nye køkken:', placeholder: 'Hvilket mærke skal køkkenet være fra? Skal der f.eks. rives vægge ned, laves VVS, nye lofter eller gulve i forbindelse med montagen? (Beskriv jeres tanker her)' }
     ],
     ceilings: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 loft skal der laves (cirka mål)?' },
@@ -672,54 +651,7 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Er der specielle ønsker (f.eks. ekstra store døre, indlagt strøm, osv.)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     carport: [
-        { id: 'amount', type: 'select', label: 'Hvor mange carporte ønsker du tilbud på?', options: ['1', '2', '3', 'Flere (Beskrives i noter)'] },
-        { id: 'disposal', type: 'select', label: 'Skal der rives en eksisterende carport ned?', options: ['Nej, der er frit', 'Ja, tømreren skal rive ned OG bortskaffe den', 'Ja, tømreren skal kun rive ned (vi kører det selv væk)'] },
-        { 
-            id: 'oldMaterial', 
-            type: 'visual_select', 
-            label: 'Hvilket materiale er den eksisterende bygget af?', 
-            condition: (d) => d.disposal && d.disposal.startsWith('Ja'),
-            options: [
-                { label: 'Træ', img: '/images/old_facade_wood_1777278987653.png' },
-                { label: 'Stål/Alu', img: '/images/old_material_steel_1777285347500.png' },
-                { label: 'Mursten/Beton', img: '/images/old_facade_brick_1777279017419.png' },
-                { label: 'Eternit (mulig asbest tag)', img: '/images/old_facade_eternit_1777279001289.png' },
-                { label: 'Andet' }
-            ] 
-        },
-        { 
-            id: 'carportType', 
-            type: 'visual_select', 
-            label: 'Skal det være en enkelt eller dobbelt carport?', 
-            options: [
-                { label: 'Enkelt carport (Oftest 1 bil)', img: '/images/carport_single_1777284973728.png' },
-                { label: 'Dobbelt carport (Plads til 2 biler)', img: '/images/carport_double_1777284988645.png' }
-            ] 
-        },
-        { id: 'shedType', type: 'select', label: 'Ønsker du et integreret redskabsskur?', options: ['Nej', 'Ja - uisoleret', 'Ja - isoleret'] },
-        { 
-            id: 'material', 
-            type: 'visual_select', 
-            label: 'Hvilket hovedmateriale skal carporten bygges i?', 
-            options: [
-                { label: 'Trykimprægneret', img: '/images/facade_pine_1776270383566.png' },
-                { label: 'Superwood', img: '/images/facade_superwood_1776270423784.png' },
-                { label: 'Thermowood', img: '/images/facade_thermowood_1776270455644.png' },
-                { label: 'Cedertræ / Hardwood', img: '/images/facade_cedar_1776270440422.png' },
-                { label: 'Komposit', img: '/images/terrace_composite_1776267690895.png' },
-                { label: 'Stål/Alu', img: '/images/door_aluminum_1776258935245.png' }
-            ] 
-        },
-        { 
-            id: 'roofType', 
-            type: 'visual_select', 
-            label: 'Hvilken tagtype ønsker du på carporten?', 
-            options: [
-                { label: 'Fladt tag / ensidig hældning (Tagpap)', img: '/images/annex_roof_flat_1777280796177.png' },
-                { label: 'Sadel tag (Høj rejsning m. tegl/stål)', img: '/images/annex_roof_pitched_1777280812965.png' }
-            ] 
-        },
-        { id: 'notes', type: 'textarea', label: 'Skriv gerne hvis du har andre detaljer (f.eks. oplader til elbil, cykelskur, osv.): (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
+        { id: 'notes', type: 'textarea', label: 'Beskriv jeres drømme og tanker om carporten:', placeholder: 'Hvor stor skal den være? Skal der være indbygget skur, isolering, ladestander til elbil eller specielle materialer? (Beskriv jeres tanker her)' }
     ],
     fence: [
         { id: 'amount', type: 'number', label: 'Hvor mange løbende meter hegn skal der sættes op (cirka mål)?' },

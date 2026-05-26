@@ -1,7 +1,7 @@
 import { QUESTIONS } from '../components/Wizard/questionsConfig.js';
 
 export const generateTaskDescription = (category, details) => {
-    if (!details || ['special', 'extensions'].includes(category)) return [];
+    if (!details || ['special', 'extensions', 'carport', 'kitchen'].includes(category)) return [];
     let tasks = [];
     
     let qty = details.amount || details.kvm || '';
@@ -358,7 +358,7 @@ export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter 
     if (!projectData) return '';
     const { category, details } = projectData;
     
-    if (category === 'special' || category === 'extensions') {
+    if (category === 'special' || category === 'extensions' || category === 'carport' || category === 'kitchen') {
         let aiHtml = '';
 
         if (details?.aiBreakdown && details.aiBreakdown.length > 0) {

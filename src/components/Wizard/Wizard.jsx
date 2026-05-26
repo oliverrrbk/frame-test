@@ -356,10 +356,10 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         customer_address: `${customerDetails?.street || ''}, ${customerDetails?.zip || ''} ${customerDetails?.city || ''}`,
                         project_category: categoryName,
                         price_estimate: res.priceRange,
-                        contact_preference: projectData.category === 'extensions' ? 'Hurtigst muligt' : 'Afventer accept',
+                        contact_preference: ['extensions', 'carport', 'kitchen'].includes(projectData.category) ? 'Hurtigst muligt' : 'Afventer accept',
                         raw_data: { ...updatedProjectData, calc_data: res.calcData },
                         carpenter_id: carpenter?.id || null,
-                        status: projectData.category === 'extensions' ? 'Ny forespørgsel' : 'Overslag (Afventer)'
+                        status: ['extensions', 'carport', 'kitchen'].includes(projectData.category) ? 'Ny forespørgsel' : 'Overslag (Afventer)'
                     }]);
                 
                 if (error) throw error;
@@ -379,8 +379,8 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         const overslagUrl = `${window.location.origin}/${carpenter?.slug || 'demo'}/overslag/${leadId}`;
                         
                         if (res.priceRange === 'Besigtigelse kræves') {
-                            if (projectData.category === 'extensions') {
-                                // Fast-track flow for extensions
+                            if (['extensions', 'carport', 'kitchen'].includes(projectData.category)) {
+                                // Fast-track flow for extensions, carport and kitchen
                                 import('../../utils/emailTemplates').then(({ getCustomerFastTrackTemplate, getCarpenterNewRequestTemplate }) => {
                                     const notesText = updatedProjectData.details?.notes || '';
                                     const projectDetailsHtml = `
@@ -467,7 +467,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             }));
 
             setIsCalculating(false);
-            goToStep(projectData.category === 'extensions' ? 6 : 5);
+            goToStep(['extensions', 'carport', 'kitchen'].includes(projectData.category) ? 6 : 5);
         } catch (error) {
             console.error(error);
             import('react-hot-toast').then(toast => {

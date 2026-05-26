@@ -921,10 +921,10 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
         <section className="wizard-step active dynamic-form-section">
             <div className="step-header">
                 <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>
-                    {['special', 'extensions'].includes(category) ? 'Projektbeskrivelse' : 'Specifikation af projekt'}
+                    {['special', 'extensions', 'carport', 'kitchen'].includes(category) ? 'Projektbeskrivelse' : 'Specifikation af projekt'}
                 </h2>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>
-                    {['special', 'extensions'].includes(category) 
+                    {['special', 'extensions', 'carport', 'kitchen'].includes(category) 
                         ? 'For at vi kan yde den bedste rådgivning, bedes du beskrive projektet nedenfor. Da denne type opgaver er komplekse, udarbejdes der ikke en automatisk prisberegning på forhånd.' 
                         : 'For at jeg bedst muligt kan give dig det rigtige estimat og forstå opgaven, bedes du svare på følgende spørgsmål om projektet.'}
                 </p>
@@ -935,7 +935,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             <Info size={20} color="#10b981" />
                         </span>
                         <div>
-                            {['special', 'extensions'].includes(category) ? (
+                            {['special', 'extensions', 'carport', 'kitchen'].includes(category) ? (
                                 <>
                                     <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Fysisk besigtigelse og rådgivning</strong>
                                     Dette trin fungerer som forberedelse til vores indledende dialog. Din beskrivelse sendes direkte til tømreren, som herefter vil kontakte dig for at aftale en uforpligtende besigtigelse af opgaven. Først efter besigtigelsen udarbejdes der et præcist og retvisende prisestimat.

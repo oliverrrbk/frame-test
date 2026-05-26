@@ -307,17 +307,11 @@ const testCases = [
 
     // 6. CARPORT & ANNEX & FENCE
     {
-        name: "Dobbelt carport med saddeltag, asbest-nedrivning og isoleret skur",
+        name: "Dobbelt carport med saddeltag, asbest-nedrivning og isoleret skur (Besigtigelse)",
         data: {
             category: 'carport',
             details: {
-                amount: 1,
-                material: 'Thermowood',
-                carportType: 'Dobbelt carport',
-                roofType: 'Sadel tag (Høj rejsning)',
-                disposal: 'Ja, tømreren skal afmontere OG bortskaffe det',
-                oldMaterial: 'Eternit',
-                shedType: 'Ja - isoleret'
+                notes: 'Dobbelt carport i Thermowood med saddeltag og integreret isoleret skur.'
             }
         }
     },

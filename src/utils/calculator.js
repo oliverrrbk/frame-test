@@ -226,8 +226,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         bArr.push(`Opgaven er estimeret automatisk via den digitale assistent.`);
         bArr.push(`Systemets vurdering: ${laborHours} arbejdstimer`);
         bArr.push(`Systemets vurdering af materialer: ${rawMat} kr.`);
-    } else if (cat === 'extensions') {
-        bArr.push(`Tilbygning/Kompleks opgave: Der foretages ingen automatisk prisudregning.`);
+    } else if (cat === 'extensions' || cat === 'carport' || cat === 'kitchen') {
+        const catLabel = cat === 'extensions' ? 'Tilbygning' : cat === 'carport' ? 'Carport' : 'Køkkenmontage';
+        bArr.push(`${catLabel}/Kompleks opgave: Der foretages ingen automatisk prisudregning.`);
         bArr.push(`Kunden har indsendt en beskrivelse, og afventer kontakt for besigtigelse.`);
         return {
             priceRange: "Besigtigelse kræves",

@@ -187,7 +187,7 @@ const EstimateAcceptPage = () => {
     }
 
     const projectData = lead.raw_data || {};
-    const needsPhysicalInspection = projectData.category === 'extensions' || (projectData.category === 'special' && (!projectData.details?.aiLaborHours && !projectData.details?.aiMaterialCost));
+    const needsPhysicalInspection = ['extensions', 'carport', 'kitchen'].includes(projectData.category) || (projectData.category === 'special' && (!projectData.details?.aiLaborHours && !projectData.details?.aiMaterialCost));
 
     return (
         <div className="accept-page-wrapper" style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' }}>
@@ -242,7 +242,7 @@ const EstimateAcceptPage = () => {
                     }}>
                         <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Komplekst Projekt</span>
                         <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: '#0f172a' }}>Besigtigelse kræves</h1>
-                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}>At bygge en tilbygning eller en stor specialopgave afhænger stærkt af de præcise forhold på din adresse. Vi vil rigtig gerne besigtige projektet, så vi kan give dig et skarpt og uforpligtende tilbud.</p>
+                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}>At bygge en tilbygning, carport eller et nyt køkken (eller en stor specialopgave) afhænger stærkt af de præcise forhold på din adresse. Vi vil rigtig gerne besigtige projektet, så vi kan give dig et skarpt og uforpligtende tilbud.</p>
                     </div>
                 ) : (
                     <div style={{ 
@@ -384,16 +384,16 @@ const EstimateAcceptPage = () => {
                                 }, 100);
                             }}
                         >
-                            {['special', 'extensions'].includes(projectData?.category) ? `Anmod om besigtigelse af ${carpenter?.company_name || 'os'}` : `Vælg ${carpenter?.company_name || 'os'} til at udføre opgaven`}
+                            {['special', 'extensions', 'carport', 'kitchen'].includes(projectData?.category) ? `Anmod om besigtigelse af ${carpenter?.company_name || 'os'}` : `Vælg ${carpenter?.company_name || 'os'} til at udføre opgaven`}
                         </button>
                     </div>
                 ) : (
                     <div ref={bookingRef} className="visit-booking" style={{ marginTop: '40px', padding: '32px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
                         <h3 style={{ marginBottom: '12px', fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
-                            {['special', 'extensions'].includes(projectData?.category) ? 'Hvornår passer det at vi ringer?' : 'Lad os få aftalt det sidste'}
+                            {['special', 'extensions', 'carport', 'kitchen'].includes(projectData?.category) ? 'Hvornår passer det at vi ringer?' : 'Lad os få aftalt det sidste'}
                         </h3>
                         <p style={{ marginBottom: '24px', color: '#64748b', fontSize: '1.05rem', lineHeight: '1.5' }}>
-                            {['special', 'extensions'].includes(projectData?.category) 
+                            {['special', 'extensions', 'carport', 'kitchen'].includes(projectData?.category) 
                                 ? 'Vælg hvordan du foretrækker at blive kontaktet, så vi kan aftale et tidspunkt for besigtigelse.' 
                                 : 'Vælg hvordan du foretrækker at blive kontaktet for at få et eksakt og bindende tilbud.'}
                         </p>
@@ -508,7 +508,7 @@ const EstimateAcceptPage = () => {
                             }}
                         >
                             {isSaving ? 'Arbejder...' : (
-                                ['special', 'extensions'].includes(projectData?.category) 
+                                ['special', 'extensions', 'carport', 'kitchen'].includes(projectData?.category) 
                                 ? `Anmod om besigtigelse` 
                                 : `Bekræft valget af ${carpenter?.company_name || 'os'}`
                             )}
