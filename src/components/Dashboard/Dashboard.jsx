@@ -1053,8 +1053,7 @@ const Dashboard = () => {
         try {
             const leadToUpdate = leadsData.find(l => l.id === leadId);
             const currentStatus = leadToUpdate?.status || 'Ny forespørgsel';
-            const isNewStatus = currentStatus === 'Ny forespørgsel' || currentStatus === 'Overslag (Afventer)';
-            const isFirstResponse = isNewStatus && newStatus !== 'Ny forespørgsel' && newStatus !== 'Overslag (Afventer)';
+            const isFirstResponse = currentStatus === 'Ny forespørgsel' && newStatus !== 'Ny forespørgsel';
             const updates = { status: newStatus };
             if (isFirstResponse && !leadToUpdate?.first_responded_at) {
                 updates.first_responded_at = new Date().toISOString();
@@ -1443,9 +1442,7 @@ const Dashboard = () => {
     // --- SØGEFUNKTION & FILTRERING ---
     const filteredLeads = leadsData.filter(l => {
         const currentStatus = l.status || 'Ny forespørgsel';
-        const matchesStatus = leadFilter === 'Ny forespørgsel'
-            ? (currentStatus === 'Ny forespørgsel' || currentStatus === 'Overslag (Afventer)')
-            : currentStatus === leadFilter;
+        const matchesStatus = currentStatus === leadFilter;
         if (!searchQuery) return matchesStatus;
         
         const query = searchQuery.toLowerCase();
@@ -1571,7 +1568,7 @@ const Dashboard = () => {
                     <button className={activeTab === 'leads' ? 'active' : ''} onClick={() => setActiveTab('leads')} style={{ position: 'relative' }}>
                         <Users size={20} /> Kunder & Leads
                         {(() => {
-                            const unreadCount = leadsData.filter(l => (l.status === 'Ny forespørgsel' || l.status === 'Overslag (Afventer)') && l.is_read === false).length;
+                            const unreadCount = leadsData.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel' && l.is_read === false).length;
                             if (unreadCount > 0) {
                                 return (
                                     <span style={{
@@ -2103,13 +2100,7 @@ const Dashboard = () => {
                                             >
                                                 {status}
                                                 <span style={{ marginLeft: '8px', background: leadFilter === status ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Historik' ? '#6b7280' : '#ef4444') : 'rgba(255,255,255,0.2)', color: leadFilter === status ? '#fff' : 'var(--text-secondary)', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem' }}>
-                                                    {leadsData.filter(l => {
-                                                        const currentStatus = l.status || 'Ny forespørgsel';
-                                                        if (status === 'Ny forespørgsel') {
-                                                            return currentStatus === 'Ny forespørgsel' || currentStatus === 'Overslag (Afventer)';
-                                                        }
-                                                        return currentStatus === status;
-                                                    }).length}
+                                                    {leadsData.filter(l => (l.status || 'Ny forespørgsel') === status).length}
                                                 </span>
                                             </button>
                                         ))}
@@ -2182,10 +2173,10 @@ const Dashboard = () => {
                                                     {lead.customer_name} 
                                                     <span style={{ 
                                                         fontSize: '0.75rem', padding: '4px 8px', borderRadius: '14px', fontWeight: 'bold',
-                                                        backgroundColor: (lead.status === 'Ny forespørgsel' || lead.status === 'Overslag (Afventer)') ? '#eff6ff' : ((lead.status || '') === 'Sendt tilbud' ? '#fefce8' : (lead.status || '') === 'Bekræftet opgave' ? '#ecfdf5' : '#fef2f2'),
-                                                        color: (lead.status === 'Ny forespørgsel' || lead.status === 'Overslag (Afventer)') ? '#2563eb' : ((lead.status || '') === 'Sendt tilbud' ? '#ca8a04' : (lead.status || '') === 'Bekræftet opgave' ? '#059669' : '#dc2626')
-                                                    }}>{(lead.status === 'Overslag (Afventer)' ? 'Ny forespørgsel' : (lead.status || 'Ny forespørgsel'))}</span>
-                                                    {(lead.status === 'Ny forespørgsel' || lead.status === 'Overslag (Afventer)') && lead.is_read === false && (
+                                                        backgroundColor: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#eff6ff' : ((lead.status || '') === 'Sendt tilbud' ? '#fefce8' : (lead.status || '') === 'Bekræftet opgave' ? '#ecfdf5' : '#fef2f2'),
+                                                        color: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#2563eb' : ((lead.status || '') === 'Sendt tilbud' ? '#ca8a04' : (lead.status || '') === 'Bekræftet opgave' ? '#059669' : '#dc2626')
+                                                    }}>{lead.status || 'Ny forespørgsel'}</span>
+                                                    {(lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' && lead.is_read === false && (
                                                         <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', letterSpacing: '0.05em' }}>
                                                             NY
                                                         </span>
@@ -2224,7 +2215,7 @@ const Dashboard = () => {
                                             <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                                 <div className="input-group">
                                                     <select 
-                                                        value={lead.status === 'Overslag (Afventer)' ? 'Ny forespørgsel' : (lead.status || 'Ny forespørgsel')}
+                                                        value={lead.status || 'Ny forespørgsel'}
                                                         onClick={(e) => e.stopPropagation()}
                                                         onChange={(e) => { e.stopPropagation(); updateLeadStatus(lead.id, e.target.value); }}
                                                     >
@@ -3261,7 +3252,7 @@ const Dashboard = () => {
                                     >
                                         {leadsData.filter(l => {
                                             if (l.status === 'Udgået opgave' || l.status === 'Historik') return false;
-                                            if ((l.status === 'Ny forespørgsel' || l.status === 'Overslag (Afventer)') && !mapFilters.showNew) return false;
+                                            if (l.status === 'Ny forespørgsel' && !mapFilters.showNew) return false;
                                             if (l.status === 'Sendt tilbud' && !mapFilters.showSent) return false;
                                             if (l.status === 'Bekræftet opgave' && !mapFilters.showConfirmed) return false;
                                             return true;
