@@ -917,14 +917,22 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
         );
     };
 
+    const isAnnexComplex = category === 'annex' && (
+        details?.annexType === 'Isoleret skur/værksted' || 
+        details?.annexType === 'Fuldt beboeligt anneks' || 
+        parseFloat(details?.amount) > 12
+    );
+
+    const isInspectionRequired = ['special', 'extensions', 'carport', 'kitchen'].includes(category) || isAnnexComplex;
+
     return (
         <section className="wizard-step active dynamic-form-section">
             <div className="step-header">
                 <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>
-                    {['special', 'extensions', 'carport', 'kitchen'].includes(category) ? 'Projektbeskrivelse' : 'Specifikation af projekt'}
+                    {isInspectionRequired ? 'Projektbeskrivelse' : 'Specifikation af projekt'}
                 </h2>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>
-                    {['special', 'extensions', 'carport', 'kitchen'].includes(category) 
+                    {isInspectionRequired 
                         ? 'For at vi kan yde den bedste rådgivning, bedes du beskrive projektet nedenfor. Da denne type opgaver er komplekse, udarbejdes der ikke en automatisk prisberegning på forhånd.' 
                         : 'For at jeg bedst muligt kan give dig det rigtige estimat og forstå opgaven, bedes du svare på følgende spørgsmål om projektet.'}
                 </p>
@@ -935,7 +943,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             <Info size={20} color="#10b981" />
                         </span>
                         <div>
-                            {['special', 'extensions', 'carport', 'kitchen'].includes(category) ? (
+                            {isInspectionRequired ? (
                                 <>
                                     <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Fysisk besigtigelse og rådgivning</strong>
                                     Dette trin fungerer som forberedelse til vores indledende dialog. Din beskrivelse sendes direkte til tømreren, som herefter vil kontakte dig for at aftale en uforpligtende besigtigelse af opgaven. Først efter besigtigelsen udarbejdes der et præcist og retvisende prisestimat.
@@ -952,7 +960,48 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
             </div>
             
             <div className="form-grid" style={{ display: 'block' }}>
-                {questions.map(q => renderQuestion(q))}
+                {questions.map(q => {
+                    const qRender = renderQuestion(q);
+                    
+                    if (q.id === 'notes' && category === 'annex' && isAnnexComplex) {
+                        let warningText = "";
+                        if (details.annexType === 'Fuldt beboeligt anneks') {
+                            warningText = `Da du har valgt 'Fuldt beboeligt anneks', er der tale om et komplekst, helårsisoleret byggeri (BR18) med skrappe krav til ventilation, isoleringstykkelser, el og eventuel VVS. Derfor er det desværre ikke muligt at give et retvisende og automatisk prisestimat her. Tømreren kontakter dig i stedet for en gratis og uforpligtende fysisk besigtigelse, hvorefter du får et skræddersyet tilbud.`;
+                        } else if (details.annexType === 'Isoleret skur/værksted') {
+                            warningText = `Da du har valgt 'Isoleret skur/værksted', kræver byggeriet komplet isolering, dampspærre samt indvendig beklædning (gips/træpaneler). Da arbejdsbyrden og materialerne varierer kraftigt afhængig af dine specifikke rammer, kan der ikke gives et automatisk prisestimat. Tømreren kontakter dig i stedet for en gratis og uforpligtende fysisk besigtigelse.`;
+                        } else {
+                            warningText = `Da det ønskede skur/anneks er over 12 m² (i alt ${details.amount} m²), vil byggeriet lovmæssigt kræve byggetilladelse og præcise konstruktionstegninger. Derfor kan vi desværre ikke give et automatisk prisestimat her. Tømreren kontakter dig i stedet for en gratis og uforpligtende fysisk besigtigelse, så I sammen kan gennemgå rammerne og ansøgningen.`;
+                        }
+
+                        return (
+                            <React.Fragment key="annex-warning">
+                                <div style={{ 
+                                    background: '#fffbeb', 
+                                    border: '1px solid #fef3c7',
+                                    borderLeft: '4px solid #d97706', 
+                                    padding: '24px', 
+                                    borderRadius: '12px', 
+                                    marginBottom: '32px', 
+                                    fontSize: '0.95rem', 
+                                    color: '#92400e', 
+                                    lineHeight: '1.6',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                }}>
+                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                                        <span style={{ fontSize: '1.3rem', marginTop: '-2px' }}>⚠️</span>
+                                        <div>
+                                            <strong style={{ display: 'block', color: '#78350f', marginBottom: '6px', fontSize: '1.05rem', fontWeight: '800' }}>OBS: Dette bliver et komplekst projekt</strong>
+                                            {warningText}
+                                        </div>
+                                    </div>
+                                </div>
+                                {qRender}
+                            </React.Fragment>
+                        );
+                    }
+                    
+                    return qRender;
+                })}
             </div>
 
             <div className="actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
