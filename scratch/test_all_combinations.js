@@ -124,8 +124,10 @@ const testCases = [
                 insulation: 'Ja',
                 extensions: 'Ja',
                 extensionsAmount: 2,
-                skylights: 'Ja',
-                skylightAmount: 3,
+                skylightReplace: 'Ja',
+                skylightReplaceAmount: 2,
+                skylightNew: 'Ja',
+                skylightNewAmount: 1,
                 trailerAccess: 'Nej, den skal stå langt væk'
             }
         }

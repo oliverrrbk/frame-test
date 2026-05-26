@@ -48,7 +48,16 @@ export const MATERIAL_INDEX = {
         'Efterisolering af tag (pr m2)': 120,
         'Gavlbeklædning i træ (pr m2 gavl)': 500,
         'Montagematerialer (Skruer, fugleklodser, rygning) pr m2': 75,
-        'Kvist (Inddækning og montering pr stk)': 12000
+        'Kvist (Inddækning og montering pr stk)': 12000,
+        'Ovenlysvindue / Velux (pr. stk)': 8000,
+        'Nyt ovenlysvindue / Velux (pr. stk)': 9500,
+        'Nyt ovenlysvindue fladt tag (pr. stk)': 16000,
+        'Skotrende zink (pr løbende meter)': 350,
+        'Grat/Kip zink (pr løbende meter)': 250,
+        'Stern/Vindskede i Zink (tillæg pr meter)': 180,
+        'Stern/Vindskede i Eternit (tillæg pr meter)': 120,
+        'Stern/Vindskede i Kobber (tillæg pr meter)': 450,
+        'Stern/Vindskede i Træ': 0
     },
     windows: {
         'Træ': 5000,                                  // Standard træ-vindue 1,2x1,2m 4-6,5k
@@ -61,7 +70,7 @@ export const MATERIAL_INDEX = {
         // Specialvinduer — basispriser før areal-skalering i calculator
         'Panorama/Specialmål': 22000,                 // ca 4 m² panorama før skalering
         'Skydedør': 65000,                            // Hævet til high-end worst-case (før 55000)
-        'Ovenlysvindue / Velux (pr. stk)': 8500,
+        'Ovenlysvindue / Velux (pr. stk)': 8000,
         'Tillæg: Stillads/Lift leje': 8000,
         'Leje af rullestillads (lille opgave)': 1500,
         'Leje af glasløfter/sugekop (pr. tungt vindue)': 750,
@@ -265,7 +274,8 @@ export const WORK_FORMULAS = {
         extensionHours: 15.0, // Timer pr kvist/tilbygning
         insulationHours: 0.4, // Timer pr m2 efterisolering
         trailerAccessHours: 0.15, // Ekstra bæretid pr m2 ved utilgængelig container
-        containerThreshold: 150 // M2 pr container (var 0, hvilket udløste Infinity og altid gav max 5 containere!)
+        containerThreshold: 150, // M2 pr container (var 0, hvilket udløste Infinity og altid gav max 5 containere!)
+        roofWindowNewHours: 14.0 // Timer pr. nyt etableret tagvindue (inkl. spærudveksling)
     },
     windows: {
         hoursPerUnit: 3.5, // Timer pr. facadevindue (inkl. standard isolering og montering)

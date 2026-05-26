@@ -114,34 +114,44 @@ export const generateTaskDescription = (category, details) => {
 
     else if (category === 'roof') {
         // 1. Nedrivning / Bortskaffelse
-        if (details.disposal && details.disposal.startsWith('Ja')) {
-            let oldRoofStr = details.oldRoofType ? details.oldRoofType.toLowerCase() : 'tag';
-            let asbText = '';
-            if (oldRoofStr.includes('asbest')) {
-                asbText = ' (inkl. asbestsanering og deponering efter gældende regler)';
-            }
-            tasks.push(`Forsvarlig nedtagning og bortskaffelse af eksisterende ${oldRoofStr}, lægter og tagrender${asbText}`);
+        let oldRoofStr = details.oldRoofType ? details.oldRoofType.toLowerCase() : 'tag';
+        let asbText = '';
+        if (oldRoofStr.includes('asbest') || oldRoofStr.includes('vides ikke')) {
+            asbText = ' (inkl. asbestsanering og deponering efter gældende regler)';
         }
+        tasks.push(`Forsvarlig nedtagning og bortskaffelse af eksisterende ${oldRoofStr}, lægter og tagrender${asbText}`);
         
         // 2. Klargøring / Underlag
-        if (details.insulation && details.insulation.includes('200mm')) {
-            tasks.push('Gennemgang af spær, påforing samt efterisolering (200 mm)');
-        } else {
-            tasks.push('Gennemgang og klargøring af den eksisterende tagkonstruktion/spær');
-        }
+        tasks.push('Gennemgang af spær, påforing samt efterisolering (200 mm)');
         tasks.push('Montering af undertag (diffusionsåbent eller fast) med klemlister');
 
         // 3. Montering / Levering
         tasks.push(`Levering og professionel oplægning af ${qty}m² nyt tag i ${details.material || 'tagmateriale'}`);
         
-        if (details.eaves && details.eaves.startsWith('Ja')) {
-            tasks.push('Udskiftning af stern og underbeklædning');
+        const eavesMatStr = details.eavesMaterial ? ` i ${details.eavesMaterial.toLowerCase()}` : '';
+        tasks.push(`Udskiftning af stern og underbeklædning${eavesMatStr}`);
+
+        if (details.skotrender === 'Ja') {
+            tasks.push(`Etablering og montering af ${details.skotrenderMeters || 0} meter zink-skotrender`);
         }
+        if (details.roofType === 'Valmtag (Tag med fald på alle 4 sider - ingen gavle)' && details.grater === 'Ja') {
+            tasks.push(`Etablering og montering af ${details.graterMeters || 0} meter zink-grater`);
+        }
+        
         if (details.chimney && details.chimney.startsWith('Ja')) {
             tasks.push(`Etablering af bly- eller zinkinddækninger omkring ${details.chimneyAmount || 1} skorsten(e)`);
         }
-        if (details.skylights && details.skylights.startsWith('Ja')) {
-            tasks.push(`Montering af ${details.skylightAmount || 1} ovenlysvinduer (Velux)`);
+        if (details.skylightReplace === 'Ja') {
+            const replCount = parseInt(details.skylightReplaceAmount) || 0;
+            if (replCount > 0) {
+                tasks.push(`Udskiftning af ${replCount} eksisterende ovenlysvindue(r) (Velux) inkl. ny inddækning og undertagskrave`);
+            }
+        }
+        if (details.skylightNew === 'Ja') {
+            const newCount = parseInt(details.skylightNewAmount) || 0;
+            if (newCount > 0) {
+                tasks.push(`Nyetablering af ${newCount} ovenlysvindue(r) (Velux) inkl. tømrer-konstruktionsændring af spærlag (spærudveksling), undertagstilkobling og dampspærrekrave`);
+            }
         }
 
         // 4. Finish
@@ -402,6 +412,17 @@ export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter 
     }
 
     let finalHtml = '';
+
+    if (category === 'roof' && includeBreakdownForCarpenter) {
+        finalHtml += `
+            <div style="background: #fffbeb; border-radius: 8px; border-left: 4px solid #f59e0b; padding: 16px; margin-bottom: 24px;">
+                <strong style="display: block; color: #b45309; margin-bottom: 8px; font-size: 16px;">OBS TIL MESTER (Stilladsovervejelser):</strong>
+                <span style="color: #92400e; line-height: 1.6; font-size: 14px; display: block;">
+                    Overvej om opgaven kræver stillads med totaloverdækning (tag over tag) for at beskytte mod vejrliget under nedrivningen og genopbygningen.
+                </span>
+            </div>
+        `;
+    }
 
     // Task List Section
     const taskList = generateTaskDescription(category, details);

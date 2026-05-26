@@ -592,7 +592,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         let needsDisposalLabor = false;
         let needsDisposalFee = false;
 
-        if (d.disposal && d.disposal.startsWith('Ja')) {
+        if (cat === 'roof') {
+            needsDisposalLabor = true;
+            needsDisposalFee = true;
+        } else if (d.disposal && d.disposal.startsWith('Ja')) {
             needsDisposalLabor = true;
             if (d.disposal.toLowerCase().includes('bortskaffe')) {
                 needsDisposalFee = true;
@@ -930,7 +933,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Omfattende stillads/materiel-leje (skaleret efter m2, min. 10.000 kr ved tag > 40 m²): ${Math.round(scaffoldCost)} kr. (Uden avance) og forøget arbejdstid pga. husets plan/hældning`);
             }
 
-            if (d.disposal && d.disposal.startsWith('Ja') && d.oldRoofType) {
+            if (d.oldRoofType) {
                 // Bemærk: Arbejdstiden (disposalHoursByOldType) er allerede lagt til ovenfor i linje 300-307!
                 // Så vi skal KUN håndtere de materielle miljø-udgifter (deponi/container) her, UDEN markup.
                 if ((d.oldRoofType.includes('asbest') || d.oldRoofType.includes('vides ikke')) && !d.oldRoofType.includes('fri')) {
@@ -961,22 +964,36 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Standard: Påforing/opretning af eksisterende spærlag samt montering af nyt undertag er obligatorisk inkluderet.`);
             }
 
-            if (d.eaves && d.eaves.startsWith('Ja')) {
-                // Stern måles i løbende meter (hele tagomkredsen), ikke m² roof
-                laborHours += estimatedSternMeters * (formula.eavesHoursPerMeter || 0.4);
-                if (!userSuppliesMaterials) materialCost += estimatedSternMeters * (indexCat['Stern træværk (pr løbende meter)'] || 150) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Udskiftning af stern/udhæng (estimeret ${estimatedSternMeters} løbende meter omkreds)`);
+            // Obligatorisk udskiftning af stern og udhæng (SOP)
+            laborHours += estimatedSternMeters * (formula.eavesHoursPerMeter || 0.4);
+            if (!userSuppliesMaterials) {
+                materialCost += estimatedSternMeters * (indexCat['Stern træværk (pr løbende meter)'] || 150) * dbSettings.material_markup;
+                
+                // Materialevalg for stern
+                const eavesMat = d.eavesMaterial || 'Træ';
+                if (eavesMat !== 'Træ') {
+                    const extraEavesPriceKey = `Stern/Vindskede i ${eavesMat} (tillæg pr meter)`;
+                    const extraEavesPrice = indexCat[extraEavesPriceKey] || 0;
+                    if (extraEavesPrice > 0) {
+                        materialCost += estimatedSternMeters * extraEavesPrice * dbSettings.material_markup;
+                        bArr.push(`Tillæg: Stern og vindskede udført i premium ${eavesMat.toLowerCase()} (+${extraEavesPrice} kr/m, estimeret ${estimatedSternMeters} m)`);
+                    }
+                } else {
+                    bArr.push(`Standard: Udskiftning af stern/udhæng i standard fyrretræ (estimeret ${estimatedSternMeters} løbende meter omkreds)`);
+                }
+            } else {
+                bArr.push(`Standard: Udskiftning af stern/udhæng (estimeret ${estimatedSternMeters} løbende meter omkreds)`);
             }
 
-            // Gavlsider (Træbeklædning)
-            if (d.roofType === 'Saddeltag (Almindeligt tag med 2 gavle)' && d.gables && d.gables.startsWith('Ja')) {
+            // Gavlsider (Træbeklædning) er nu altid inkluderet som standard ved saddeltag (SOP)
+            if (d.roofType === 'Saddeltag (Almindeligt tag med 2 gavle)') {
                 // Et skønnet gavlareal. En simpel tommelfingerregel: gavltrekant areal = ca. 15% af grundplanet samlet for 2 gavle.
                 const estimatedGableArea = roofGrundplanM2 * 0.15; 
                 laborHours += estimatedGableArea * (formula.gableHours || 0.8);
                 if (!userSuppliesMaterials) {
                     materialCost += estimatedGableArea * (indexCat['Gavlbeklædning i træ (pr m2 gavl)'] || 500) * dbSettings.material_markup;
                 }
-                bArr.push(`Tillæg: Udskiftning af træ-/facadebeklædning på 2 gavltrekanter (estimeret ${estimatedGableArea.toFixed(1)} m2).`);
+                bArr.push(`Standard: Udskiftning af gavltræbeklædning på 2 gavltrekanter er inkluderet (estimeret ${estimatedGableArea.toFixed(1)} m2).`);
             }
 
             // Obligatoriske tagrender for alle tagudskiftninger
@@ -990,6 +1007,31 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 materialCost += actualGutterMeters * (indexCat['Tagrender og nedløb (pr løbende meter)'] || 250) * dbSettings.material_markup;
             }
             bArr.push(`Standard: Udskiftning til nye tagrender og nedløbsrør er inkluderet (estimeret ${actualGutterMeters} løbende meter).`);
+
+            // Etablering af zink-skotrender hvis valgt
+            if (d.skotrender === 'Ja') {
+                const skotMeters = parseFloat(d.skotrenderMeters) || 0;
+                if (skotMeters > 0) {
+                    laborHours += skotMeters * (formula.skotrenderHoursPerMeter || 1.2);
+                    if (!userSuppliesMaterials) {
+                        materialCost += skotMeters * (indexCat['Skotrende zink (pr løbende meter)'] || 350) * dbSettings.material_markup;
+                    }
+                    bArr.push(`Tillæg: Montering af ${skotMeters} m zink-skotrender (+1.2 timer/m)`);
+                }
+            }
+
+            // Etablering af zink-grater hvis valgt (kun relevant på valmtag)
+            if (d.roofType === 'Valmtag (Tag med fald på alle 4 sider - ingen gavle)' && d.grater === 'Ja') {
+                const gratMeters = parseFloat(d.graterMeters) || 0;
+                if (gratMeters > 0) {
+                    laborHours += gratMeters * (formula.graterHoursPerMeter || 0.8);
+                    if (!userSuppliesMaterials) {
+                        materialCost += gratMeters * (indexCat['Grat/Kip zink (pr løbende meter)'] || 250) * dbSettings.material_markup;
+                    }
+                    bArr.push(`Tillæg: Etablering af ${gratMeters} m zink-grater/kip på valmtag (+0.8 timer/m)`);
+                }
+            }
+
             if (d.chimney && d.chimney.startsWith('Ja')) {
                 const chimneyCount = parseInt(d.chimneyAmount) || 1;
                 laborHours += chimneyCount * (formula.chimneyHours || 6.0);
@@ -997,11 +1039,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Special-inddækning af ${chimneyCount} skorsten(e)/hætte(r) (kræver bly/zink-arbejde)`);
             }
 
-            if (d.insulation && d.insulation.startsWith('Ja')) {
-                laborHours += numericAmount * (formula.insulationHours || 0.4);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Efterisolering af tag (pr m2)'] || 120) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Arbejdstid og eventuelle materialer til 200mm efterisolering af taget`);
-            }
+            // Obligatorisk efterisolering (SOP)
+            laborHours += numericAmount * (formula.insulationHours || 0.4);
+            if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Efterisolering af tag (pr m2)'] || 120) * dbSettings.material_markup;
+            bArr.push(`Standard: 200mm efterisolering af tagfladen er obligatorisk inkluderet.`);
+
             if (d.extensions === 'Ja') {
                 const extAmount = parseInt(d.extensionsAmount) || 1;
                 // SOP #7: Skalér timer og udgifter baseret på antal kviste, i stedet for en flad sats!
@@ -1010,23 +1052,35 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Arbejdstid og inddæknings-materialer afsat til ${extAmount} kvist(e)/tilbygning(er) på taget`);
             }
 
-            // Tillæg for utilgængelig container-placering (Bæretillæg)
-            if (d.trailerAccess && d.trailerAccess.includes('langt væk')) {
-                laborHours += numericAmount * (formula.trailerAccessHours || 0.15); // Ekstra bæretid pr m2
-                bArr.push(`Tillæg: Containeren kan ikke stå ved huset – ekstra bæretid for affaldssortering og trillebør`);
+            if (d.skylightReplace === 'Ja') {
+                const skyReplaceAmount = parseInt(d.skylightReplaceAmount) || 0;
+                if (skyReplaceAmount > 0) {
+                    laborHours += skyReplaceAmount * (formula.roofWindowHours || 8.0);
+                    
+                    let skylightPrice = indexCat['Ovenlysvindue / Velux (pr. stk)'] || 8000;
+                    if (d.roofPitch && d.roofPitch.includes('Fladt tag')) {
+                        skylightPrice = indexCat['Ovenlysvindue fladt tag (pr. stk)'] || 14000;
+                    }
+                    
+                    if (!userSuppliesMaterials) materialCost += skyReplaceAmount * skylightPrice * dbSettings.material_markup;
+                    bArr.push(`Tillæg: Udskiftning af ${skyReplaceAmount} eksisterende ovenlysvindue(r) (8 timer + ${skylightPrice} kr/stk)`);
+                }
             }
 
-            if (d.skylights === 'Ja') {
-                const skyAmount = parseInt(d.skylightAmount) || 1;
-                laborHours += skyAmount * (formula.roofWindowHours || 8.0);
-                
-                let skylightPrice = indexCat['Ovenlysvindue / Velux (pr. stk)'] || 8500;
-                if (d.roofPitch && d.roofPitch.includes('Fladt tag')) {
-                    skylightPrice = indexCat['Ovenlysvindue fladt tag (pr. stk)'] || 14000;
+            if (d.skylightNew === 'Ja') {
+                const skyNewAmount = parseInt(d.skylightNewAmount) || 0;
+                if (skyNewAmount > 0) {
+                    const newSkyHours = formula.roofWindowNewHours || 14.0;
+                    laborHours += skyNewAmount * newSkyHours;
+                    
+                    let skylightPrice = indexCat['Nyt ovenlysvindue / Velux (pr. stk)'] || 9500;
+                    if (d.roofPitch && d.roofPitch.includes('Fladt tag')) {
+                        skylightPrice = indexCat['Nyt ovenlysvindue fladt tag (pr. stk)'] || 16000;
+                    }
+                    
+                    if (!userSuppliesMaterials) materialCost += skyNewAmount * skylightPrice * dbSettings.material_markup;
+                    bArr.push(`Tillæg: Nyetablering af ${skyNewAmount} ovenlysvindue(r) inkl. tømrer-spærudveksling (${newSkyHours} timer + ${skylightPrice} kr/stk)`);
                 }
-                
-                if (!userSuppliesMaterials) materialCost += skyAmount * skylightPrice * dbSettings.material_markup;
-                bArr.push(`Tillæg: ${skyAmount} ovenlysvindue(r) inkl. inddækning og montering`);
             }
         }
 

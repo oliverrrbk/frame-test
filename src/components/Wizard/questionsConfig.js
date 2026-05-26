@@ -18,17 +18,11 @@ export const QUESTIONS = {
     roof: [
         { id: 'amount', type: 'number', label: 'Hvor stort er grundplanet af huset (cirka mål i m2)?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl. Tømreren dobbelttjekker altid de faktiske forhold ved en besigtigelse.' },
         { id: 'floors', type: 'select', label: 'Hvor mange plan/etager er huset?', options: ['1-plan (Stueplan)', '1½-plan / 2-plan / Mere'] },
-        { id: 'roofPitch', type: 'select', label: 'Hvordan er hældningen på taget?', tooltip: 'Høj rejsning betyder at taget har en stejl vinkel, ofte over 15 grader (typisk huse med loftrum). Fladt tag har kun en svag hældning for at lede vandet væk.', options: ['Fladt tag / Meget lav hældning', 'Høj rejsning / Normal hældning'] },
-        { id: 'houseAge', type: 'number', label: 'Hvilket år er huset bygget (årstal)?', tooltip: 'Indtast byggeåret, fx 1970. Det hjælper tømreren med at forudsige byggestil og konstruktion.' },
-        { id: 'roofType', type: 'select', label: 'Hvilken type tag er det?', condition: { field: 'roofPitch', value: 'Høj rejsning / Normal hældning' }, options: ['Saddeltag (Almindeligt tag med 2 gavle)', 'Valmtag (Tag med fald på alle 4 sider - ingen gavle)'] },
-        { id: 'gables', type: 'select', label: 'Skal gavlene beklædes med nyt træ/facadebeklædning?', condition: { field: 'roofType', value: 'Saddeltag (Almindeligt tag med 2 gavle)' }, options: ['Ja, skift beklædningen på begge gavle', 'Nej, de er murede / skal ikke skiftes'] },
-        
-        { id: 'disposal', type: 'select', label: 'Skal det gamle tag afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, lægges ovenpå / ikke relevant'] },
+        { id: 'houseAge', type: 'number', label: 'Hvilket år er huset bygget (årstal)?', tooltip: 'Indtast byggeåret, fx 1970. Det hjælper tømreren med at forudsige bygningsstil.' },
         { 
             id: 'oldRoofType', 
             type: 'visual_select', 
-            label: 'Hvilket slags tag har du nu?', 
-            condition: (d) => d.disposal && d.disposal.startsWith('Ja'),
+            label: 'Hvilken type tag er der på nu? (Dette afmonteres og afskaffes altid)', 
             options: [
                 { label: 'Paptag', img: '/images/roof_felt_1776270223442.png' },
                 { label: 'Tagplader (eternit asbest fri)', img: '/images/roof_eternit_1777277162521.png' },
@@ -44,20 +38,105 @@ export const QUESTIONS = {
                 { label: 'Metal-tag (zink, stål, kobber)', img: '/images/roof_zinc_1777277255328.png' }
             ] 
         },
-        
-        { id: 'insulation', type: 'select', label: 'Skal der efterisoleres udefra, mens taget er af?', tooltip: 'Som standard regner vi med ca. 200mm ekstra isolering for at leve op til moderne varmekrav.', options: ['Ja (200mm efterisolering)', 'Nej'] },
-        
-        { id: 'eaves', type: 'select', label: 'Træværk: Skal stern og udhæng (underbeklædning) skiftes ud med nyt?', options: ['Ja, alt træværk langs kanten skiftes', 'Nej, vi beholder det gamle'] },
-        { id: 'chimney', type: 'select', label: 'Inddækning: Er der en eller flere skorstene, der kræver ny inddækning (bly/zink)?', options: ['Ja', 'Nej'] },
-        { id: 'chimneyAmount', type: 'number', label: 'Hvor mange skorstene drejer det sig om?', condition: { field: 'chimney', value: 'Ja' } },
-
-        { id: 'extensions', type: 'select', label: 'Er der nogen kviste (fremspring på taget) eller specielle tilbygninger?', options: ['Ja', 'Nej'] },
-        { id: 'extensionsAmount', type: 'number', label: 'Hvor mange kviste/tilbygninger er der på taget?', condition: { field: 'extensions', value: 'Ja' } },
-        
-        { id: 'skylights', type: 'select', label: 'Skal der monteres nye ovenlysvinduer (fx Velux)?', options: ['Ja', 'Nej'] },
-        { id: 'skylightAmount', type: 'number', label: 'Hvor mange ovenlysvinduer skal der monteres?', condition: { field: 'skylights', value: 'Ja' } },
-        
-        { id: 'trailerAccess', type: 'select', label: 'Afskaffelse af affald: Er der mulighed for at stille stor affaldscontainer helt op til huset?', condition: (d) => d.disposal && d.disposal.startsWith('Ja'), options: ['Ja', 'Nej, den skal stå langt væk'] },
+        { 
+            id: 'roofPitch', 
+            type: 'visual_select', 
+            label: 'Hvordan er hældningen på taget?', 
+            tooltip: 'Høj rejsning betyder at taget har en stejl vinkel, ofte over 15 grader. Fladt tag har kun en svag hældning.', 
+            options: [
+                { label: 'Fladt tag / Meget lav hældning', img: '/images/roof_pitch_flat.png' },
+                { label: 'Høj rejsning / Normal hældning', img: '/images/roof_pitch_pitched.png' }
+            ] 
+        },
+        { 
+            id: 'roofType', 
+            type: 'visual_select', 
+            label: 'Hvilken tagtype er der tale om?', 
+            condition: { field: 'roofPitch', value: 'Høj rejsning / Normal hældning' }, 
+            options: [
+                { label: 'Saddeltag (Almindeligt tag med 2 gavle)', img: '/images/roof_type_saddle.png' },
+                { label: 'Valmtag (Tag med fald på alle 4 sider - ingen gavle)', img: '/images/roof_type_valm.png' }
+            ] 
+        },
+        {
+            id: 'eavesMaterial',
+            type: 'visual_select',
+            label: 'Hvilket materiale ønsker du til stern og vindskede?',
+            tooltip: 'Zink, eternit og kobber beskytter kanterne ekstra mod vind og vejr og kræver minimalt vedligehold.',
+            options: [
+                { label: 'Træ', img: '/images/eaves_wood.png' },
+                { label: 'Zink', img: '/images/eaves_zinc.png' },
+                { label: 'Eternit', img: '/images/eaves_eternit.png' },
+                { label: 'Kobber', img: '/images/eaves_copper.png' }
+            ]
+        },
+        { 
+            id: 'skotrender', 
+            type: 'visual_select', 
+            label: 'Er der skotrender (skrå vanger, hvor to tagflader mødes)?', 
+            options: [
+                { label: 'Nej', img: '/images/skotrender_no.png' },
+                { label: 'Ja', img: '/images/skotrender_yes.png' }
+            ] 
+        },
+        { 
+            id: 'skotrenderMeters', 
+            type: 'number', 
+            label: 'Hvor mange meter skotrende er der cirka i alt?', 
+            condition: { field: 'skotrender', value: 'Ja' } 
+        },
+        { 
+            id: 'grater', 
+            type: 'select', 
+            label: 'Er der grater (de skrå kanter, hvor tagfladerne mødes på et valmtag)?', 
+            condition: { field: 'roofType', value: 'Valmtag (Tag med fald på alle 4 sider - ingen gavle)' },
+            options: ['Nej', 'Ja'] 
+        },
+        { 
+            id: 'graterMeters', 
+            type: 'number', 
+            label: 'Hvor mange meter grat er der cirka i alt?', 
+            condition: { field: 'grater', value: 'Ja' } 
+        },
+        { id: 'chimney', type: 'select', label: 'Er der en eller flere skorstene, der skal inddækkes?', options: ['Nej', 'Ja'] },
+        { id: 'chimneyAmount', type: 'number', label: 'Hvor mange skorstene er der?', condition: { field: 'chimney', value: 'Ja' } },
+        { 
+            id: 'extensions', 
+            type: 'select', 
+            label: 'Er der kviste på taget (eller skal der monteres kviste)?', 
+            condition: (d) => d.roofPitch === 'Høj rejsning / Normal hældning' && d.floors === '1½-plan / 2-plan / Mere',
+            options: ['Nej', 'Ja'] 
+        },
+        { 
+            id: 'extensionsAmount', 
+            type: 'number', 
+            label: 'Hvor mange kviste skal der monteres / er der på taget?', 
+            condition: { field: 'extensions', value: 'Ja' } 
+        },
+        { 
+            id: 'skylightReplace', 
+            type: 'select', 
+            label: 'Er der eksisterende ovenlysvinduer, der skal udskiftes?', 
+            options: ['Nej', 'Ja'] 
+        },
+        { 
+            id: 'skylightReplaceAmount', 
+            type: 'number', 
+            label: 'Hvor mange eksisterende ovenlysvinduer skal udskiftes?', 
+            condition: { field: 'skylightReplace', value: 'Ja' } 
+        },
+        { 
+            id: 'skylightNew', 
+            type: 'select', 
+            label: 'Skal der etableres helt nye/ekstra ovenlysvinduer (hvor der ikke er vindue i dag)?', 
+            options: ['Nej', 'Ja'] 
+        },
+        { 
+            id: 'skylightNewAmount', 
+            type: 'number', 
+            label: 'Hvor mange helt nye ovenlysvinduer ønsker du etableret? (Kræver udskæring af spær/spærudveksling)', 
+            condition: { field: 'skylightNew', value: 'Ja' } 
+        },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -75,7 +154,8 @@ export const QUESTIONS = {
                 { label: 'Metal-tag (zink, stål, kobber)', img: '/images/roof_zinc_1777277255328.png' }
             ] 
         },
-        { id: 'notes', type: 'textarea', label: 'Er der eventuelt andre bemærkninger til taget (fx nye tagvinduer)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
+        { id: 'roofPhotos', type: 'file', label: 'Upload billeder af dit hus og tag (valgfrit):', tooltip: 'Tag gerne billeder på afstand, så tømreren kan se adgangsforhold og tagfladen.' },
+        { id: 'notes', type: 'textarea', label: 'Er der eventuelt andre bemærkninger til taget?' }
     ],
     windows: [
         { 
