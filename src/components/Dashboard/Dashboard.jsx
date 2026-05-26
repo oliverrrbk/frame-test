@@ -163,9 +163,19 @@ const Dashboard = () => {
         const params = new URLSearchParams(window.location.search);
         const urlLeadId = params.get('leadId');
         if (urlLeadId && leadsData.length > 0 && !selectedLead) {
-            const leadToSelect = leadsData.find(l => String(l.id) === urlLeadId);
+            const leadToSelect = leadsData.find(l => String(l.id) === urlLeadId || String(l.quote_token) === urlLeadId);
             if (leadToSelect) {
                 setSelectedLead(leadToSelect);
+                
+                // Marker med det samme som læst hvis den ikke er læst endnu
+                if (leadToSelect.is_read === false) {
+                    setLeadsData(prev => prev.map(l => l.id === leadToSelect.id ? { ...l, is_read: true } : l));
+                    supabase.from('leads')
+                        .update({ is_read: true })
+                        .eq('id', leadToSelect.id)
+                        .catch(err => console.error('Kunne ikke markere deep-linked lead som læst:', err));
+                }
+                
                 // Fjern parameteren fra URL'en, så den ikke bliver ved med at poppe op ved refresh
                 const newUrl = new URL(window.location);
                 newUrl.searchParams.delete('leadId');
