@@ -575,13 +575,13 @@ export const QUESTIONS = {
         { id: 'amount', type: 'number', label: 'Hvor mange m2 træfacade drejer projektet sig om (cirka mål)?' },
         { 
             id: 'oldFacadeMaterial', 
-            type: 'select', 
+            type: 'visual_select', 
             label: 'Hvad består den nuværende facade/yderbeklædning af?', 
             options: [
-                'Mursten / Pudset væg (Beholdes som underlag, ny facade monteres udenpå)',
-                'Gammel træbeklædning (Skal rives ned og fjernes)',
-                'Stålplader / Plademateriale (Skal rives ned og fjernes)',
-                'Ingen (Nybyg / Råt træskelet)'
+                { label: 'Mursten / Pudset væg (Beholdes som underlag, ny facade monteres udenpå)', img: '/images/old_facade_brick_new.png' },
+                { label: 'Gammel træbeklædning (Skal rives ned og fjernes)', img: '/images/old_facade_wood_worn.png' },
+                { label: 'Stålplader / Plademateriale (Skal rives ned og fjernes)', img: '/images/old_facade_steel.png' },
+                { label: 'Ingen (Nybyg / Råt træskelet)', img: '/images/old_facade_skeleton.png' }
             ] 
         },
         { 
@@ -590,16 +590,44 @@ export const QUESTIONS = {
             label: 'Hvilken type facadebeklædning ønsker du?',
             options: [
                 { label: 'Trykimprægneret', img: '/images/facade_pine_1776270383566.png' },
+                { label: 'Almindeligt træ (Malet)', img: '/images/facade_painted_wood.png' },
                 { label: 'Superwood', img: '/images/facade_superwood_1776270423784.png' },
                 { label: 'Thermowood', img: '/images/facade_thermowood_1776270455644.png' },
                 { label: 'Cedertræ / Hardwood', img: '/images/facade_cedar_1776270440422.png' },
+                { label: 'HardiePlank', img: '/images/facade_hardieplank.png' },
+                { label: 'Cembrit / Cedral', img: '/images/facade_cembrit.png' },
                 { label: 'Komposit', img: '/images/terrace_composite_1776267690895.png' }
             ] 
         },
-        { id: 'mountingStyle', type: 'select', label: 'Hvordan skal beklædningen monteres?', options: ['Vandret (fx Klinkbeklædning)', 'Lodret (fx Listebeklædning - tager lidt længere tid)'] },
-        { id: 'openings', type: 'number', label: 'Hvor mange vinduer/døre er der cirka i facaden, som skal have skåret nye trælister/inddækning?', placeholder: 'Fx 2' },
+        { 
+            id: 'mountingStyle', 
+            type: 'visual_select', 
+            label: 'Hvordan skal beklædningen monteres?', 
+            options: [
+                { label: 'Vandret (fx Klinkbeklædning)', img: '/images/facade_horizontal.png' },
+                { label: 'Lodret (fx Listebeklædning - tager lidt længere tid)', img: '/images/facade_vertical.png' }
+            ]
+        },
+        {
+            id: 'insulation',
+            type: 'select',
+            label: 'Ønsker du efterisolering i forbindelse med den nye facade?',
+            options: [
+                'Nej tak (Behold nuværende isolering)',
+                'Ja, 50 mm efterisolering (Anbefalet ved sund substans)',
+                'Ja, 100 mm efterisolering (God energiforbedring)',
+                'Ja, 150 mm efterisolering (Maksimal energibesparelse)'
+            ]
+        },
+        { 
+            id: 'openings', 
+            type: 'number', 
+            label: 'Hvor mange vinduer og yderdøre skal der laves nye trælister og inddækninger omkring?', 
+            desc: 'Inddækning og lysninger omkring åbninger kræver præcisionsarbejde, montage af inddækningslister, fugning og evt. zink-/alukapsler for at sikre tætheden mod slagregn.',
+            placeholder: 'Fx 2' 
+        },
         { id: 'floors', type: 'select', label: 'Hvor mange plan/etager er huset/facaden, der skal beklædes?', options: ['1-plan (Stueplan)', '1½-plan / 2-plan / Mere'] },
-        { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til facaden (fx malerarbejde)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
+        { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til facaden (fx malerarbejde)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreloubige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     extensions: [
         { id: 'notes', type: 'textarea', label: 'Beskriv jeres drømme og tanker om tilbygningen:', placeholder: 'Hvad skal tilbygningen bruges til, og hvor stor tænker I, den skal være? (Har I f.eks. allerede tegninger eller idéer til badeværelse/stue?)' }

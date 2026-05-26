@@ -168,13 +168,20 @@ export const MATERIAL_INDEX = {
     },
     facades: {
         'Trykimprægneret': 280,
+        'Almindeligt træ (Malet)': 290,
         'Superwood': 500,                             // Superwood 400-600
         'Thermowood': 600,
         'Cedertræ / Hardwood': 900,
+        'HardiePlank': 650,
+        'Cembrit / Cedral': 700,
         'Komposit': 800,
         'Default': 450,
         // Tillæg facader
+        'Krydsforskalling (tillæg til lodret)': 40,
         'Efterisolering (50-100mm)': 100,
+        'Efterisolering 50mm': 100,
+        'Efterisolering 100mm': 150,
+        'Efterisolering 150mm': 220,
         'Vindspærre og Klemlister': 130, // Vindgips/dug + trykimprægnerede lægter
         'Inddækning/Lister (pr åbning)': 500,         // Inddækning af én åbning 400-700
         'Tillæg: Facadestilladsleje': 15000           // Facadestillads pr uge 12-20k
@@ -347,8 +354,23 @@ export const WORK_FORMULAS = {
     },
     facades: {
         hoursPerUnit: 1.2, // Basis montering af klinkbeklædning pr m2
+        hoursPerUnitByMaterial: {
+            'Trykimprægneret': 1.2,
+            'Almindeligt træ (Malet)': 1.2,
+            'Superwood': 1.2,
+            'Thermowood': 1.2,
+            'Cedertræ / Hardwood': 1.3,
+            'HardiePlank': 1.4,
+            'Cembrit / Cedral': 1.4,
+            'Komposit': 1.3
+        },
         disposalHours: 0.4,
         insulationHours: 0.3, // Opsætning af isolering pr m2
+        insulationHoursByThickness: {
+            '50 mm': 0.2,
+            '100 mm': 0.3,
+            '150 mm': 0.4
+        },
         windBarrierHours: 0.4, // Montering af vindspærre og klemlister pr m2
         openingHours: 1.5, // Ekstra tid til inddækning/lysning pr vindue eller dør
         verticalMultiplier: 1.4, // Lodret listebeklædning tager længere tid at skrue og line op

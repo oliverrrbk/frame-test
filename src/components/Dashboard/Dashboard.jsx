@@ -682,7 +682,8 @@ const Dashboard = () => {
 
                 // Lofter
                 { category: 'ceilings', name: 'Træloft (listeloft/paneler/rustikloft)', price: 300, carpenter_id: targetId },
-                { category: 'ceilings', name: 'Gipsloft', price: 250, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Gipsloft (standard 2-lag)', price: 250, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Lydgipsloft (lyddæmpende gips)', price: 290, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Fibergipsloft (Fermacel)', price: 350, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Troldtekt (akustikloft)', price: 380, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Nedhængt loft (systemloft)', price: 450, carpenter_id: targetId },
@@ -692,17 +693,26 @@ const Dashboard = () => {
                 { category: 'ceilings', name: 'Isolering (50-100mm)', price: 85, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Spartelmasse og tape', price: 30, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Skyggelister / Fuge', price: 45, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Maler: Spartel, filt og maling (pr m2)', price: 250, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Maler: Koordineringsgebyr (Fast pris)', price: 5000, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Elektriker: Etablering af spot/lampested (pr. stk)', price: 950, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Sikkerhed (Buffer-pris)', price: 350, carpenter_id: targetId },
 
                 // Facader
                 { category: 'facades', name: 'Trykimprægneret', price: 300, carpenter_id: targetId },
+                { category: 'facades', name: 'Almindeligt træ (Malet)', price: 310, carpenter_id: targetId },
                 { category: 'facades', name: 'Superwood', price: 550, carpenter_id: targetId },
                 { category: 'facades', name: 'Cedertræ / Hardwood', price: 950, carpenter_id: targetId },
                 { category: 'facades', name: 'Thermowood', price: 650, carpenter_id: targetId },
-                { category: 'facades', name: 'HardiePlank / Ivarsson (Fibergips)', price: 750, carpenter_id: targetId },
+                { category: 'facades', name: 'HardiePlank', price: 720, carpenter_id: targetId },
+                { category: 'facades', name: 'Cembrit / Cedral', price: 780, carpenter_id: targetId },
+                { category: 'facades', name: 'Krydsforskalling (tillæg til lodret)', price: 45, carpenter_id: targetId },
                 { category: 'facades', name: 'Efterisolering (50-100mm)', price: 120, carpenter_id: targetId },
+                { category: 'facades', name: 'Efterisolering 50mm', price: 120, carpenter_id: targetId },
+                { category: 'facades', name: 'Efterisolering 100mm', price: 175, carpenter_id: targetId },
+                { category: 'facades', name: 'Efterisolering 150mm', price: 250, carpenter_id: targetId },
                 { category: 'facades', name: 'Vindspærre og Klemlister', price: 150, carpenter_id: targetId },
-                { category: 'facades', name: 'Inddækning/Lister (pr åbning)', price: 400, carpenter_id: targetId },
+                { category: 'facades', name: 'Inddækning/Lister (pr åbning)', price: 500, carpenter_id: targetId },
                 { category: 'facades', name: 'Tillæg: Facadestilladsleje', price: 12000, carpenter_id: targetId },
                 { category: 'facades', name: 'Sikkerhed (Buffer-pris)', price: 450, carpenter_id: targetId },
                 

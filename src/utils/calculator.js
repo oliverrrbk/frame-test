@@ -1142,7 +1142,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     materialCost += spotCost; // Ekstern elektriker - Ingen tømrermarkup (SOP #4)
                     externalLeaseCost += spotCost;
                 }
-                bArr.push(`Elektriker-tillæg: Etablering af ${spotCount} stk spots/lampesteder udføres af ekstern elektriker (+ ${spotCount * 0.4} tømrertimer til opmåling/udskæring + ${spotCount * 950} DKK til elektriker uden avance)`);
+                bArr.push(`Elektriker-tillæg: Etablering af ${spotCount} stk spots/lampesteder udføres af ekstern elektriker (+ ${(spotCount * 0.4).toFixed(1)} tømrertimer til opmåling/udskæring + ${spotCount * (indexCat['Elektriker: Etablering af spot/lampested (pr. stk)'] || 950)} DKK til elektriker uden avance)`);
             }
 
             // SOP: Automatiseret finish baseret på loftstype
@@ -1170,14 +1170,42 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Forøget tidsforbrug til forboring og fastgørelse af underkonstruktion i eksisterende murværk/puds`);
             }
 
-            if (d.mountingStyle && d.mountingStyle.startsWith('Lodret')) {
+            if (d.mountingStyle && d.mountingStyle.includes('Lodret')) {
                 laborHours += initialInstallHours * 0.4; // 40% ekstra af basis-montage tid
-                bArr.push(`Tillæg: Lodret montering (fx listebeklædning) kræver øget præcision og mere tidsforbrug`);
+                if (!userSuppliesMaterials) {
+                    materialCost += numericAmount * (indexCat['Krydsforskalling (tillæg til lodret)'] || 40) * dbSettings.material_markup;
+                }
+                bArr.push(`Tillæg: Lodret montering (listebeklædning/1-på-2) kræver krydsforskalling for ventilation samt øget præcision og mere tidsforbrug (+40% monteringstid)`);
             }
+
+            if (d.insulation && d.insulation !== 'Nej tak (Behold nuværende isolering)') {
+                let thickness = '';
+                if (d.insulation.includes('150 mm')) thickness = '150mm';
+                else if (d.insulation.includes('100 mm')) thickness = '100mm';
+                else if (d.insulation.includes('50 mm')) thickness = '50mm';
+
+                if (thickness) {
+                    let key = `Efterisolering ${thickness}`;
+                    let isoPrice = indexCat[key] || (thickness === '50mm' ? 100 : thickness === '100mm' ? 150 : 220);
+                    let thicknessLabel = thickness === '50mm' ? '50 mm' : thickness === '100mm' ? '100 mm' : '150 mm';
+                    
+                    let isoHoursPerSqM = thickness === '50mm' ? 0.2 : thickness === '100mm' ? 0.3 : 0.4;
+                    if (formula.insulationHoursByThickness && formula.insulationHoursByThickness[thicknessLabel]) {
+                        isoHoursPerSqM = formula.insulationHoursByThickness[thicknessLabel];
+                    }
+                    
+                    laborHours += numericAmount * isoHoursPerSqM;
+                    if (!userSuppliesMaterials) {
+                        materialCost += numericAmount * isoPrice * dbSettings.material_markup;
+                    }
+                    bArr.push(`Tillæg: Etablering af ${thicknessLabel} efterisolering inkl. isoleringsholdere, lægter og tætning (+${(numericAmount * isoHoursPerSqM).toFixed(1)} timer)`);
+                }
+            }
+
             if (d.openings && parseInt(d.openings) > 0) {
                 let count = parseInt(d.openings);
                 laborHours += count * (formula.openingHours || 1.5);
-                if (!userSuppliesMaterials) materialCost += count * (indexCat['Inddækning/Lister (pr åbning)'] || 400) * dbSettings.material_markup;
+                if (!userSuppliesMaterials) materialCost += count * (indexCat['Inddækning/Lister (pr åbning)'] || 500) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Udskæring og inddækning/lister omkring ${count} vinduer/døre`);
             }
             
