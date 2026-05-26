@@ -83,12 +83,7 @@ export const mapMaterialName = (cat, material) => {
     }
     
     if (cat === 'fence') {
-        if (mat === 'Raftehegn (Træ)') {
-            return 'Raftehegn';
-        }
-        if (mat === 'Komposithegn') {
-            return 'Komposit (Vedligeholdelsesfrit)';
-        }
+        return mat;
     }
     
     if (cat === 'terrace') {
@@ -156,7 +151,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     let externalLeaseCost = 0;
     let bArr = [];
 
-    const indexCat = (dbMaterials && dbMaterials[cat]) || {};
+    const indexCat = { ...(MATERIAL_INDEX[cat] || {}), ...((dbMaterials && dbMaterials[cat]) || {}) };
     const formula = WORK_FORMULAS[cat] || { hoursPerUnit: 1.0, disposalHours: 0 };
 
     // Robust parsing af d.amount: tager midten af et range (fx "5-10" => 7) i stedet for upper bound,
@@ -1435,7 +1430,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
         if (cat === 'fence') {
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldMaterial) {
-                if (d.oldMaterial.includes('Hæk') || d.oldMaterial.includes('Levende')) {
+                if (d.oldMaterial.includes('Hæk') || d.oldMaterial.includes('Levende') || d.oldMaterial.includes('Buske')) {
                     laborHours += numericAmount * 0.5;
                     let rodPris = indexCat['Miljøtillæg: Rodfræsning/deponi af hæk (pr m)'] || 50;
                     if (!userSuppliesMaterials) {
@@ -1443,10 +1438,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                         materialCost += dispCost; // INGEN MARKUP på miljødeponi/maskinleje
                         externalLeaseCost += dispCost;
                     }
-                    bArr.push(`Tillæg: Fældning, rodfræsning/opgravning af hæk inkl. deponi og maskinleje (Uden avance)`);
-                } else if (d.oldMaterial.includes('raftehegn') || d.oldMaterial.includes('Stammer')) {
+                    bArr.push(`Tillæg: Fældning, rodfræsning/opgravning af hæk/buske inkl. deponi og maskinleje (Uden avance)`);
+                } else if (d.oldMaterial.includes('raftehegn') || d.oldMaterial.includes('Stammer') || d.oldMaterial.includes('Træhegn')) {
                     laborHours += numericAmount * 0.2;
-                    bArr.push(`Tillæg: Tung opgravning af gl. raftehegn/stammer`);
+                    bArr.push(`Tillæg: Tung opgravning af gl. hegn/stolper/rødder`);
                 }
             }
 
@@ -1468,6 +1463,41 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 } else if (d.material.includes('Raftehegn')) {
                     laborHours += numericAmount * 0.2; // 1.0 timer/m total
                     bArr.push(`Tillæg: Øget tidsforbrug pga. tung og mere omstændig håndtering af rafter`);
+                }
+            }
+
+            // Stolpe- & Jordforankring (SOP #1 / SOP #2 / SOP #5)
+            if (d.postMaterial) {
+                let postPrice = indexCat[d.postMaterial];
+                if (postPrice === undefined) {
+                    // Fallbacks
+                    if (d.postMaterial.includes('Træstolper')) postPrice = 120;
+                    else if (d.postMaterial.includes('Betonstolper')) postPrice = 280;
+                    else if (d.postMaterial.includes('Metal')) postPrice = 350;
+                    else postPrice = 120;
+                }
+                
+                if (!userSuppliesMaterials) {
+                    materialCost += (numericAmount * postPrice) * dbSettings.material_markup;
+                }
+                
+                let extraHours = 0;
+                let postTypeLabel = '';
+                if (d.postMaterial.includes('Betonstolper')) {
+                    extraHours = numericAmount * 0.15;
+                    postTypeLabel = 'tunge betonstolper/plader og støbning';
+                } else if (d.postMaterial.includes('Metal/Stålstolper') || d.postMaterial.includes('Metal')) {
+                    extraHours = numericAmount * 0.10;
+                    postTypeLabel = 'præcisionsmontering af slanke stålstolper';
+                } else {
+                    postTypeLabel = 'standard træstolper støbt i beton';
+                }
+                
+                if (extraHours > 0) {
+                    laborHours += extraHours;
+                    bArr.push(`Tillæg: Jordforankring med ${d.postMaterial.toLowerCase()} (+${extraHours.toFixed(1)} timer pga. ${postTypeLabel})`);
+                } else {
+                    bArr.push(`Standard: Jordforankring med ${d.postMaterial.toLowerCase()} inkluderet`);
                 }
             }
             

@@ -757,11 +757,16 @@ const Dashboard = () => {
                 { category: 'carport', name: 'Sikkerhed (Buffer-pris)', price: 25000, carpenter_id: targetId },
 
                 // Hegn
-                { category: 'fence', name: 'Klinkehegn (Træ)', price: 600, carpenter_id: targetId },
+                { category: 'fence', name: 'Klinkehegn (Træ)', price: 550, carpenter_id: targetId },
+                { category: 'fence', name: 'Listehegn (Træ)', price: 800, carpenter_id: targetId },
                 { category: 'fence', name: 'Lamelhegn (Træ)', price: 450, carpenter_id: targetId },
-                { category: 'fence', name: 'Raftehegn', price: 800, carpenter_id: targetId },
-                { category: 'fence', name: 'Komposit (Vedligeholdelsesfrit)', price: 1100, carpenter_id: targetId },
+                { category: 'fence', name: 'Raftehegn (Træ)', price: 700, carpenter_id: targetId },
+                { category: 'fence', name: 'Komposithegn', price: 1000, carpenter_id: targetId },
+                { category: 'fence', name: 'Træstolper (støbt i beton)', price: 120, carpenter_id: targetId },
+                { category: 'fence', name: 'Betonstolper (mest robuste løsning)', price: 280, carpenter_id: targetId },
+                { category: 'fence', name: 'Metal/Stålstolper (slankt og moderne)', price: 350, carpenter_id: targetId },
                 { category: 'fence', name: 'Tillæg: Ekstra højde >1,8m (pr m)', price: 200, carpenter_id: targetId },
+                { category: 'fence', name: 'Miljøtillæg: Rodfræsning/deponi af hæk (pr m)', price: 50, carpenter_id: targetId },
                 { category: 'fence', name: 'Sikkerhed (Buffer-pris)', price: 700, carpenter_id: targetId }
             ];
 

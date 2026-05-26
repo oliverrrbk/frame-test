@@ -229,6 +229,9 @@ export const MATERIAL_INDEX = {
         'Lamelhegn (Træ)': 450,
         'Raftehegn (Træ)': 700,
         'Komposithegn': 1000,
+        'Træstolper (støbt i beton)': 120,
+        'Betonstolper (mest robuste løsning)': 280,
+        'Metal/Stålstolper (slankt og moderne)': 350,
         'Tillæg: Ekstra højde >1,8m (pr m)': 200,
         'Miljøtillæg: Rodfræsning/deponi af hæk (pr m)': 50,
         'Default': 700

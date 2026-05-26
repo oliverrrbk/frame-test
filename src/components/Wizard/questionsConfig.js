@@ -723,20 +723,26 @@ export const QUESTIONS = {
     ],
     fence: [
         { id: 'amount', type: 'number', label: 'Hvor mange løbende meter hegn skal der sættes op (cirka mål)?' },
-        { id: 'disposal', type: 'select', label: 'Skal et eksisterende hegn fjernes?', options: ['Nej, der er frit', 'Ja, tømreren skal fjerne det OG bortskaffe det', 'Ja, tømreren skal kun fjerne det (vi kører det selv væk)'] },
+        { id: 'disposal', type: 'select', label: 'Skal et eksisterende hegn, hæk eller buske fjernes?', options: ['Nej, der er frit', 'Ja, tømreren skal fjerne det OG bortskaffe det', 'Ja, tømreren skal kun fjerne det (vi kører det selv væk)'] },
         { 
             id: 'oldMaterial', 
             type: 'visual_select', 
-            label: 'Hvilken type hegn er det eksisterende?', 
+            label: 'Hvilken type hegn/beplantning er det eksisterende?', 
             condition: (d) => d.disposal && d.disposal.startsWith('Ja'),
             options: [
-                { label: 'Træhegn (alm. brædder/lameller)', img: '/images/old_facade_wood_1777278987653.png' },
-                { label: 'Kraftigt raftehegn / Stammer', img: '/images/facade_thermowood_1776270455644.png' },
-                { label: 'Hæk / Levende hegn (Rødder skal fjernes)', img: '/images/old_material_hedge_1777285672558.png' },
-                { label: 'Metal / Ståltråd / Andet', img: '/images/old_material_steel_1777285347500.png' }
+                { label: 'Træhegn (alm. brædder/lameller)', img: '/images/old_fence_wood.png' },
+                { label: 'Kraftigt raftehegn / Stammer', img: '/images/old_fence_rafte.png' },
+                { label: 'Hæk / Buske / Levende hegn (Rødder opgraves)', img: '/images/old_fence_hedge.png' },
+                { label: 'Metalhegn / Trådhegn / Stolper', img: '/images/old_fence_steel.png' }
             ] 
         },
-        { id: 'fenceHeight', type: 'select', label: 'Hvor højt skal hegnet være?', options: ['Under 1,8 meter', 'Op til 2,0 meter'] },
+        { 
+            id: 'fenceHeight', 
+            type: 'select', 
+            label: 'Hvor højt skal hegnet være?', 
+            desc: 'Ifølge Hegnsloven må fælleshegn i skellet som udgangspunkt være op til 1,8 meter højt. Hegn over 1,8 meter (op til 2,0 meter) kan kræve naboens accept eller nabooverenskomst, og kræver dybere stolpeforankring pga. øget vindbelastning.',
+            options: ['Under 1,8 meter', 'Op til 2,0 meter'] 
+        },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -747,6 +753,16 @@ export const QUESTIONS = {
                 { label: 'Lamelhegn (Træ)', img: '/images/fence_lamel_1778675189539.png' },
                 { label: 'Raftehegn (Træ)', img: '/images/fence_rafte_1778675204391.png' },
                 { label: 'Komposithegn', img: '/images/fence_komposit_1778675219569.png' }
+            ] 
+        },
+        { 
+            id: 'postMaterial', 
+            type: 'visual_select', 
+            label: 'Hvilken type stolper og jordforankring ønsker du?', 
+            options: [
+                { label: 'Træstolper (støbt i beton)', img: '/images/post_wood_concrete.png' },
+                { label: 'Betonstolper (mest robuste løsning)', img: '/images/post_concrete.png' },
+                { label: 'Metal/Stålstolper (slankt og moderne)', img: '/images/post_metal_concrete.png' }
             ] 
         },
         { id: 'notes', type: 'textarea', label: 'Er der specielle udfordringer (f.eks. meget skrå grund, træer i vejen)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
