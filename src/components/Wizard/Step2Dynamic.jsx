@@ -23,7 +23,8 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                     url: nextOpt.img,
                     title: nextOpt.label,
                     options: prev.options,
-                    currentIndex: nextIdx
+                    currentIndex: nextIdx,
+                    questionId: prev.questionId
                 };
             }
             return prev;
@@ -40,7 +41,8 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                     url: prevOpt.img,
                     title: prevOpt.label,
                     options: prev.options,
-                    currentIndex: prevIdx
+                    currentIndex: prevIdx,
+                    questionId: prev.questionId
                 };
             }
             return prev;
@@ -331,7 +333,8 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                                     url: opt.img,
                                                     title: opt.label,
                                                     options: imageOptions,
-                                                    currentIndex: currentImageIndex >= 0 ? currentImageIndex : 0
+                                                    currentIndex: currentImageIndex >= 0 ? currentImageIndex : 0,
+                                                    questionId: q.id
                                                 });
                                             }}
                                             style={{
@@ -1019,7 +1022,18 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                 borderRadius: '16px',
                                 objectFit: 'contain',
                                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)'
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                cursor: 'pointer'
+                            }}
+                            onClick={() => {
+                                if (zoomedImage.questionId) {
+                                    const currentOpt = zoomedImage.options[zoomedImage.currentIndex];
+                                    if (currentOpt) {
+                                        handleInputChange(zoomedImage.questionId, currentOpt.label);
+                                        toast.success(`Valgt: ${currentOpt.label}`, { duration: 1500 });
+                                    }
+                                }
+                                setZoomedImage(null);
                             }}
                         />
                         <div style={{ 
