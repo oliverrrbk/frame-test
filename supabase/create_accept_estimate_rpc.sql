@@ -23,8 +23,7 @@ BEGIN
     UPDATE leads
     SET 
         status = 'Ny forespørgsel',
-        contact_preference = preference_val,
-        updated_at = NOW()
+        contact_preference = preference_val
     WHERE quote_token = token_val
       AND (status = 'Overslag (Afventer)' OR status = 'Ny forespørgsel');
       
