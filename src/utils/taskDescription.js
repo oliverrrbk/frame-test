@@ -357,6 +357,74 @@ export const generateTaskDescription = (category, details) => {
 export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter = false) => {
     if (!projectData) return '';
     const { category, details } = projectData;
+
+    const categoryNames = {
+        windows: 'Nye Vinduer',
+        doors: 'Nye Døre',
+        floor: 'Nyt Gulv',
+        terrace: 'Træterrasse',
+        roof: 'Tagprojekt',
+        kitchen: 'Nyt Køkken',
+        ceilings: 'Nye Lofter',
+        facades: 'Ny Facadebeklædning',
+        extensions: 'Tilbygning',
+        annex: 'Anneks',
+        carport: 'Carport',
+        fence: 'Hegn',
+        special: 'Specialopgave'
+    };
+
+    if (category === 'Kombi-projekt' && projectData.projects && projectData.projects.length > 0) {
+        let kombiHtml = '';
+        kombiHtml += `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">`;
+        
+        for (let i = 0; i < projectData.projects.length; i += 2) {
+            const p1 = projectData.projects[i];
+            const p2 = projectData.projects[i + 1];
+            
+            const catName1 = categoryNames[p1.category] || p1.category;
+            const p1Html = generateTaskAndQaHtml(p1, includeBreakdownForCarpenter);
+            
+            kombiHtml += `<tr>`;
+            
+            // Første kolonne
+            kombiHtml += `
+                <td width="${p2 ? '48%' : '100%'}" valign="top" style="width: ${p2 ? '48%' : '100%'}; padding: 0 ${p2 ? '15px' : '0'} 24px 0;">
+                    <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); background: #ffffff; min-height: 250px;">
+                        <div style="background: #0f172a; color: #ffffff; padding: 14px 20px; font-weight: bold; font-size: 15px;">
+                            Del ${i + 1}: ${catName1}
+                        </div>
+                        <div style="padding: 20px; background: #ffffff;">
+                            ${p1Html}
+                        </div>
+                    </div>
+                </td>
+            `;
+            
+            if (p2) {
+                const catName2 = categoryNames[p2.category] || p2.category;
+                const p2Html = generateTaskAndQaHtml(p2, includeBreakdownForCarpenter);
+                
+                kombiHtml += `
+                    <td width="48%" valign="top" style="width: 48%; padding: 0 0 24px 15px;">
+                        <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); background: #ffffff; min-height: 250px;">
+                            <div style="background: #0f172a; color: #ffffff; padding: 14px 20px; font-weight: bold; font-size: 15px;">
+                                Del ${i + 2}: ${catName2}
+                            </div>
+                            <div style="padding: 20px; background: #ffffff;">
+                                ${p2Html}
+                            </div>
+                        </div>
+                    </td>
+                `;
+            }
+            
+            kombiHtml += `</tr>`;
+        }
+        
+        kombiHtml += `</table>`;
+        return kombiHtml;
+    }
     
     if (category === 'special' || category === 'extensions' || category === 'carport' || category === 'kitchen') {
         let aiHtml = '';
@@ -498,6 +566,22 @@ export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter 
                 <ul style="margin: 0; padding: 0; list-style: none;">
                     ${qaItemsHtml}
                 </ul>
+            </div>
+        `;
+    }
+
+    // Photo thumbnails section
+    if (details && details.photos && Array.isArray(details.photos) && details.photos.length > 0) {
+        finalHtml += `
+            <div style="background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 24px; margin-bottom: 24px;">
+                <strong style="display: block; color: #0f172a; font-size: 16px; margin-bottom: 12px;">Vedhæftede billeder (${details.photos.length} stk.):</strong>
+                <div style="margin: 0; padding: 0;">
+                    ${details.photos.map((pUrl, pIdx) => `
+                        <a href="${pUrl}" target="_blank" style="display: inline-block; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; width: 90px; height: 90px; margin-right: 10px; margin-bottom: 10px; text-decoration: none; vertical-align: top;">
+                            <img src="${pUrl}" alt="Billede ${pIdx + 1}" style="width: 90px; height: 90px; object-fit: cover;" width="90" height="90" />
+                        </a>
+                    `).join('')}
+                </div>
             </div>
         `;
     }

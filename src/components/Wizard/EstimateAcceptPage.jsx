@@ -5,9 +5,27 @@ import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { QUESTIONS } from './questionsConfig';
 import { generateTaskDescription, generateTaskAndQaHtml } from '../../utils/taskDescription';
+import AiSupportWidget from './AiSupportWidget';
+
 const EstimateAcceptPage = () => {
     const { slug, lead_id } = useParams();
     const navigate = useNavigate();
+
+    const categoryMap = {
+        windows: 'Nye Vinduer',
+        doors: 'Nye Døre',
+        floor: 'Nyt Gulv',
+        terrace: 'Træterrasse',
+        roof: 'Tagprojekt',
+        kitchen: 'Nyt Køkken',
+        ceilings: 'Nye Lofter',
+        facades: 'Ny Facadebeklædning',
+        extensions: 'Tilbygning',
+        annex: 'Anneks',
+        carport: 'Carport',
+        fence: 'Hegn',
+        special: 'Specialopgave'
+    };
     
     const [lead, setLead] = useState(null);
     const [carpenter, setCarpenter] = useState(null);
@@ -181,20 +199,14 @@ const EstimateAcceptPage = () => {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f8fafc' }}>
                 <h2>Denne opgave er allerede i proces.</h2>
-                <p>Tømreren kigger på den.</p>
+                <p>Vi behandler sagen i vores system.</p>
             </div>
         );
     }
 
     const projectData = lead.raw_data || {};
-    const isAnnexComplex = projectData.category === 'annex' && (
-        projectData.details?.annexType === 'Isoleret skur/værksted' || 
-        projectData.details?.annexType === 'Fuldt beboeligt anneks' || 
-        parseFloat(projectData.details?.amount) > 12
-    );
-    const needsPhysicalInspection = ['extensions', 'carport', 'kitchen'].includes(projectData.category) || 
-        isAnnexComplex ||
-        (projectData.category === 'special' && (!projectData.details?.aiLaborHours && !projectData.details?.aiMaterialCost));
+    const isKombi = projectData.category === 'Kombi-projekt';
+    const needsPhysicalInspection = lead.price_estimate === 'Besigtigelse kræves';
 
     return (
         <div className="accept-page-wrapper" style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' }}>
@@ -221,7 +233,7 @@ const EstimateAcceptPage = () => {
                             </h2>
                             <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
                                 For at sikre dig det mest præcise tilbud, kræver dette projekt en fysisk besigtigelse. <br/><br/>
-                                <strong style={{ color: '#0f172a' }}>Rul ned og bekræft i bunden</strong> for at sende din forespørgsel direkte afsted til {carpenter?.company_name || 'tømreren'}.
+                                <strong style={{ color: '#0f172a' }}>Rul ned og bekræft i bunden</strong> for at sende din forespørgsel direkte afsted til os.
                             </p>
                         </>
                     ) : (
@@ -231,7 +243,7 @@ const EstimateAcceptPage = () => {
                             </h2>
                             <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
                                 Vi tager dit projekt meget seriøst og glæder os til at gå detaljerne igennem. <br/><br/>
-                                <strong style={{ color: '#0f172a' }}>Rul ned og bekræft i bunden</strong> for at sende din forespørgsel afsted til {carpenter?.company_name || 'tømreren'}. Din forventede prisramme kan ses herunder.
+                                <strong style={{ color: '#0f172a' }}>Rul ned og bekræft i bunden</strong> for at sende din forespørgsel afsted til os. Din forventede prisramme kan ses herunder.
                             </p>
                         </>
                     )}
@@ -262,14 +274,45 @@ const EstimateAcceptPage = () => {
                         marginBottom: '32px'
                     }}>
                         <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Opgavens Prisramme</span>
-                        <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: '#0f172a' }}>{lead.price_estimate}</h1>
+                        <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 8px 0', color: '#0f172a' }}>{lead.price_estimate}</h1>
                         <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Vejledende pris inkl. moms, materialer og arbejdsløn.</p>
                     </div>
                 )}
 
-                {(() => {
+                {isKombi && projectData.calc_data?.kombiDiscount && (
+                    <div style={{
+                        marginTop: '0px',
+                        marginBottom: '24px',
+                        background: '#f0fdf4',
+                        border: '2px dashed #10b981',
+                        borderRadius: '16px',
+                        padding: '20px 24px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '12px'
+                    }}>
+                        <div style={{ textAlign: 'left' }}>
+                            <span style={{ display: 'block', fontSize: '0.85rem', color: '#047857', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Mængderabat aktiveret</span>
+                            <span style={{ display: 'block', fontSize: '1.2rem', color: '#065f46', fontWeight: '800' }}>Kombi-rabat &amp; delt kørsel er fratrukket</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ display: 'inline-block', background: '#d1fae5', border: '1px solid #10b981', color: '#065f46', fontFamily: 'monospace', fontWeight: 'bold', fontSize: '0.9rem', padding: '4px 10px', borderRadius: '6px' }}>KOMBI-PROJEKT</span>
+                            <span style={{ color: '#059669', fontWeight: '800', fontSize: '1.05rem', background: '#d1fae5', padding: '6px 14px', borderRadius: '20px', border: '1px solid #10b981', whiteSpace: 'nowrap' }}>Indregnet i prisen</span>
+                        </div>
+                    </div>
+                )}
+
+                {!needsPhysicalInspection && (() => {
                     let taskList = [];
-                    if (projectData?.category === 'special' && Array.isArray(projectData?.details?.aiBreakdown)) {
+                    if (isKombi && Array.isArray(projectData.projects)) {
+                        projectData.projects.forEach(p => {
+                            const subTasks = generateTaskDescription(p.category, p.details);
+                            taskList.push(...subTasks);
+                        });
+                        taskList = Array.from(new Set(taskList)); // Deduplicate task items!
+                    } else if (projectData?.category === 'special' && Array.isArray(projectData?.details?.aiBreakdown)) {
                         taskList = projectData.details.aiBreakdown.map(itemObj => itemObj.item);
                     } else {
                         taskList = generateTaskDescription(projectData?.category, projectData?.details);
@@ -316,7 +359,44 @@ const EstimateAcceptPage = () => {
                         Dine indtastede valg:
                     </h3>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '16px' }}>
-                        {projectData.category === 'special' ? (
+                        {isKombi && Array.isArray(projectData.projects) ? (
+                            projectData.projects.map((p, pIdx) => {
+                                const catName = categoryMap[p.category] || p.category;
+                                return (
+                                    <div key={p.id || pIdx} style={{ marginBottom: '24px', padding: '24px', background: 'rgba(0,0,0,0.02)', border: '1px solid #e2e8f0', borderRadius: '12px', width: '100%' }}>
+                                        <h4 style={{ fontSize: '1.2rem', fontWeight: '800', marginBottom: '16px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ background: '#0f172a', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{pIdx + 1}</span>
+                                            {catName}
+                                        </h4>
+                                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '12px' }}>
+                                            {Object.entries(p.details || {}).map(([key, value]) => {
+                                                const categoryQuestions = QUESTIONS[p.category] || [];
+                                                const question = categoryQuestions.find(q => q.id === key);
+                                                if (!question || value === undefined || value === null || value === '') return null;
+                                                if (question.type === 'file') return null;
+
+                                                let displayValue = value;
+                                                if (question.type === 'window_configurator' && Array.isArray(value)) {
+                                                    displayValue = value.map(v => `${v.count || 1}x ${v.type || 'Standard'} (${v.width}x${v.height} cm)${v.isOpenable === false ? ' (fastkarm)' : ''}${v.safetyGlass ? ' (sikkerhedsglas)' : ''}${v.hasSlidingDoor ? ' (m. skydedør)' : ''}`).join(', ');
+                                                } else if (typeof value === 'boolean') {
+                                                    displayValue = value ? 'Ja' : 'Nej';
+                                                }
+
+                                                return (
+                                                    <li key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.95rem', color: '#475569', lineHeight: '1.4' }}>
+                                                        <span style={{ color: '#10b981', marginRight: '4px', fontWeight: 'bold' }}>✓</span>
+                                                        <div>
+                                                            <strong style={{ color: '#0f172a' }}>{question.label}</strong>
+                                                            <span style={{ display: 'block', whiteSpace: 'pre-wrap', marginTop: '2px', color: '#64748b' }}>{displayValue}</span>
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </div>
+                                );
+                            })
+                        ) : projectData.category === 'special' ? (
                             <>
                                 <li style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.05rem', color: '#64748b', lineHeight: '1.5' }}>
                                     <span style={{ color: 'var(--accent)', marginTop: '2px' }}>✓</span>
@@ -348,7 +428,7 @@ const EstimateAcceptPage = () => {
                                     <li key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.0rem', color: '#64748b', lineHeight: '1.5', background: 'rgba(0,0,0,0.02)', padding: '12px 16px', borderRadius: '8px' }}>
                                         <span style={{ color: '#10b981', marginTop: '2px' }}>✓</span>
                                         <div>
-                                            <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>{question.label}</strong>
+                                            <strong style={{ display: 'block', color: 'var(--text-primary)', marginBottom: '4px' }}>{question.label}</strong>
                                             <span style={{ whiteSpace: 'pre-wrap' }}>{displayValue}</span>
                                         </div>
                                     </li>
@@ -528,6 +608,13 @@ const EstimateAcceptPage = () => {
                 <span style={{ fontSize: '1rem' }}>🔒</span>
                 <span style={{ fontSize: '0.85rem' }}>Dette er et fortroligt dokument udsendt sikkert via <strong>Bison Frame</strong> for {carpenter?.company_name || 'Tømrer'}</span>
             </div>
+
+            <AiSupportWidget 
+                carpenter={carpenter} 
+                currentStep={5} 
+                projectData={projectData} 
+                projects={projectData.projects || []} 
+            />
         </div>
     );
 };

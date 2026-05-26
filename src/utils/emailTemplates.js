@@ -111,9 +111,9 @@ export const getCustomerRequestReceivedTemplate = (customerName, categoryName, c
     const content = `
         <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Kære ${customerName},</h2>
         <p style="color: #334155;">Mange tak for din henvendelse vedrørende dit byggeprojekt: <strong>${categoryName}</strong>.</p>
-        <p style="color: #334155;">Jeg har modtaget dine oplysninger her hos <strong>${carpenterCompanyName}</strong>, og jeg glæder mig til at kigge dit materiale igennem.</p>
-        <p style="color: #334155;">Såfremt jeg har brug for at få uddybet nogle detaljer for at kunne give dig det bedst mulige tilbud, vil jeg kontakte dig inden for de dage, du har valgt i formularen. Jeg vil tage dig trygt i hånden, og måske aftaler vi at jeg kommer ud og kigger fysisk på dit projekt, så vi kan få en rigtig god og personlig snak om dine drømme og muligheder.</p>
-        <p style="color: #334155;">Jeg ser frem til et rigtig godt samarbejde!</p>
+        <p style="color: #334155;">Vi har modtaget dine oplysninger her hos <strong>${carpenterCompanyName}</strong>, og vi glæder os til at kigge dit materiale igennem.</p>
+        <p style="color: #334155;">Såfremt vi har brug for at få uddybet nogle detaljer for at kunne give dig det bedst mulige tilbud, vil vi kontakte dig inden for de dage, du har valgt i formularen. Vi vil tage dig trygt i hånden, og måske aftaler vi at vi kommer ud og kigger fysisk på dit projekt, så vi kan få en rigtig god og personlig snak om dine drømme og muligheder.</p>
+        <p style="color: #334155;">Vi ser frem til et rigtig godt samarbejde!</p>
         <br/>
         
         ${projectDetailsHtml ? `
@@ -131,7 +131,7 @@ export const getCustomerRequestReceivedTemplate = (customerName, categoryName, c
         <p style="color: #334155; margin-bottom: 0;">De bedste hilsner,</p>
         <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
     `;
-    return getBaseTemplate("Tak for din forespørgsel", content, "Jeg glæder mig til at kigge på dit projekt.", carpenter);
+    return getBaseTemplate("Tak for din forespørgsel", content, "Vi glæder os til at kigge på dit projekt.", carpenter);
 };
 
 export const getCustomerEstimateTemplate = (customerName, categoryName, priceEstimate, carpenter, quoteUrl, projectDetailsHtml = '') => {
@@ -363,7 +363,7 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
 
     const title = isUpdate ? "Dit opdaterede tilbud er klar!" : "Dit tilbud er klar!";
     const headerTitle = isUpdate ? "Opdateret tilbud" : "Dit tilbud er klar";
-    const subtext = isUpdate ? "Jeg har opdateret dit tilbud med de seneste ændringer." : "Jeg har sendt et tilbud til dig.";
+    const subtext = isUpdate ? "Vi har opdateret dit tilbud med de seneste ændringer." : "Vi har sendt et tilbud til dig.";
 
     const content = `
         <div style="text-align: center; margin-bottom: 32px;">
@@ -377,14 +377,14 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
         </div>` : ''}
 
         <p style="color: #334155;">Hej ${customerName},</p>
-        <p style="color: #334155;">Jeg har nu gennemgået dine ønsker vedrørende dit projekt (<strong>${categoryName}</strong>) og har udarbejdet et officielt tilbud til dig.</p>
+        <p style="color: #334155;">Vi har nu gennemgået dine ønsker vedrørende dit projekt (<strong>${categoryName}</strong>) og har udarbejdet et officielt tilbud til dig.</p>
         
         <div style="text-align: center; margin: 32px 0;">
             ${pdfUrl ? `<div style="margin-bottom: 16px;"><a href="${pdfUrl}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #f1f5f9; color: #334155; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; border: 1px solid #cbd5e1;">Se som PDF</a></div>` : ''}
             <div><a href="${quoteUrl}" style="${buttonStyle}; padding: 18px 36px; font-size: 18px;">Bekræft tilbud her</a></div>
         </div>
         
-        <p style="color: #334155; font-size: 14px;"><em>Linket fører dig til en sikker portal, hvor du kan læse hele tilbuddet og bekræfte opgaven direkte til mig, når du er klar.</em></p>
+        <p style="color: #334155; font-size: 14px;"><em>Linket fører dig til en sikker portal, hvor du kan læse hele tilbuddet og bekræfte opgaven direkte til os, når du er klar.</em></p>
         
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
         
@@ -402,9 +402,9 @@ export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, car
     const email = carpenter?.email || '';
 
     const contactHtml = (phone || email) ? `
-        <p style="color: #64748b; margin: 0; font-size: 14px;">Har du spørgsmål i mellemtiden, kan du kontakte mig direkte på:<br/>
+        <p style="color: #64748b; margin: 0; font-size: 14px;">Har du spørgsmål i mellemtiden, kan du kontakte os direkte på:<br/>
         <strong>${phone}</strong> | <strong>${email}</strong></p>
-    ` : `<p style="color: #64748b; margin: 0; font-size: 14px;">Har du spørgsmål i mellemtiden, er du altid velkommen til at kontakte mig direkte.</p>`;
+    ` : `<p style="color: #64748b; margin: 0; font-size: 14px;">Har du spørgsmål i mellemtiden, er du altid velkommen til at kontakte os direkte.</p>`;
 
     const quoteButtonHtml = quoteUrl ? `
         <div style="text-align: center; margin: 32px 0;">
@@ -420,7 +420,7 @@ export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, car
         
         <p style="color: #334155;">Hej ${customerName},</p>
         <p style="color: #334155;">Fantastisk! Du har nu formelt accepteret tilbuddet på dit projekt (<strong>${categoryName}</strong>).</p>
-        <p style="color: #334155;">Jeg har fået direkte besked i mit system her hos <strong>${carpenterCompanyName}</strong>. Jeg vil nu planlægge det videre forløb og kontakte dig snarest for at aftale de nærmere detaljer, såsom opstartsdato og bestilling af materialer.</p>
+        <p style="color: #334155;">Vi har fået direkte besked i vores system her hos <strong>${carpenterCompanyName}</strong>. Vi vil nu planlægge det videre forløb og kontakte dig snarest for at aftale de nærmere detaljer, såsom opstartsdato og bestilling af materialer.</p>
         
         ${quoteButtonHtml}
 
@@ -428,7 +428,7 @@ export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, car
             ${contactHtml}
         </div>
         
-        <p style="color: #334155; margin-bottom: 0;">Tak for tilliden. Jeg glæder mig til samarbejdet!</p>
+        <p style="color: #334155; margin-bottom: 0;">Tak for tilliden. Vi glæder os til samarbejdet!</p>
         <br/>
         <p style="color: #334155; margin-bottom: 0;">Med venlig hilsen,</p>
         <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>

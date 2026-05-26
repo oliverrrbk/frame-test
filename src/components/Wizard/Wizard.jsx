@@ -7,6 +7,7 @@ import Step4Contact from './Step4Contact';
 import StepResult from './StepResult';
 import Step5Success from './Step5Success';
 import ChatEstimator from './ChatEstimator';
+import AiSupportWidget from './AiSupportWidget';
 import { QUESTIONS } from './questionsConfig';
 import { performCalculation } from '../../utils/calculator';
 import { fetchCalibrationFactor } from '../../utils/calibration';
@@ -18,8 +19,53 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
         category: null,
         details: {},
     });
+    const [projects, setProjects] = useState([]);
     const [currentStep, setCurrentStep] = useState(1);
     const [searchParams, setSearchParams] = useSearchParams();
+
+    const handleAddAnotherProject = () => {
+        if (!isStep2Valid()) {
+            toast.error('Udfyld venligst alle obligatoriske felter under detaljer først.');
+            return;
+        }
+        
+        const newProject = {
+            id: crypto.randomUUID(),
+            category: projectData.category,
+            details: { ...projectData.details }
+        };
+        
+        setProjects(prev => [...prev, newProject]);
+        setProjectData({
+            category: null,
+            details: {}
+        });
+        
+        toast.success('Opgaven er tilføjet til dit Kombi-projekt. Vælg nu den næste opgave!');
+        goToStep(1);
+    };
+
+    const handleUpdateProjectPhotosAndNotes = (id, updatedData) => {
+        if (id === 'active') {
+            setProjectData(prev => ({
+                ...prev,
+                details: {
+                    ...prev.details,
+                    photos: updatedData.photos,
+                    notes: updatedData.notes
+                }
+            }));
+        } else {
+            setProjects(prev => prev.map(p => p.id === id ? {
+                ...p,
+                details: {
+                    ...p.details,
+                    photos: updatedData.photos,
+                    notes: updatedData.notes
+                }
+            } : p));
+        }
+    };
 
     const stepToParam = {
         1: 'opgave',
@@ -272,8 +318,15 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     const calculateEstimate = async (customerDetails, isUpdateContext = false) => {
         setIsCalculating(true);
         
+        const isKombi = projects.length > 0;
+        
         // Sørg for at latest data er i projectData objektet inden det sendes afsted
-        const updatedProjectData = {
+        const updatedProjectData = isKombi ? {
+            category: 'Kombi-projekt',
+            projects: [...projects, { id: 'active', category: projectData.category, details: projectData.details }],
+            customerDetails,
+            leadId: projectData.leadId
+        } : {
             ...projectData,
             customerDetails
         };
@@ -313,14 +366,44 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                 fence: 'Hegn',
                 special: 'Specialopgave'
             };
-            const categoryName = categoryMap[updatedProjectData.category] || updatedProjectData.category;
 
-            const isFastTrack = ['extensions', 'carport', 'kitchen'].includes(updatedProjectData.category) || 
-                (updatedProjectData.category === 'annex' && (
-                    updatedProjectData.details?.annexType === 'Isoleret skur/værksted' || 
-                    updatedProjectData.details?.annexType === 'Fuldt beboeligt anneks' || 
-                    parseFloat(updatedProjectData.details?.amount) > 12
-                ));
+            const getKombiTitle = (kombiProjects) => {
+                if (!kombiProjects || kombiProjects.length === 0) return 'Kombi-projekt';
+                const categoryShortNames = {
+                    windows: 'Vinduer',
+                    doors: 'Døre',
+                    floor: 'Gulv',
+                    terrace: 'Terrasse',
+                    roof: 'Tag',
+                    kitchen: 'Køkken',
+                    ceilings: 'Lofter',
+                    facades: 'Facade',
+                    extensions: 'Tilbygning',
+                    annex: 'Anneks',
+                    carport: 'Carport',
+                    fence: 'Hegn',
+                    special: 'Specialopgave'
+                };
+                const names = kombiProjects.map(p => categoryShortNames[p.category] || p.category);
+                const uniqueNames = Array.from(new Set(names));
+                if (uniqueNames.length === 1) return `Kombi-projekt (${uniqueNames[0]})`;
+                if (uniqueNames.length === 2) return `Kombi-projekt (${uniqueNames[0]} & ${uniqueNames[1]})`;
+                const last = uniqueNames.pop();
+                return `Kombi-projekt (${uniqueNames.join(', ')} & ${last})`;
+            };
+
+            const categoryName = isKombi 
+                ? getKombiTitle(updatedProjectData.projects)
+                : (categoryMap[updatedProjectData.category] || updatedProjectData.category);
+
+            const isFastTrack = isKombi 
+                ? res.priceRange === 'Besigtigelse kræves'
+                : ['extensions', 'carport', 'kitchen'].includes(updatedProjectData.category) || 
+                    (updatedProjectData.category === 'annex' && (
+                        updatedProjectData.details?.annexType === 'Isoleret skur/værksted' || 
+                        updatedProjectData.details?.annexType === 'Fuldt beboeligt anneks' || 
+                        parseFloat(updatedProjectData.details?.amount) > 12
+                    ));
 
             let leadId = updatedProjectData.leadId;
             let isUpdate = !!leadId;
@@ -415,12 +498,12 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                                         }
                                     };
 
-                                    if (updatedProjectData.category === 'annex') {
-                                        import('../../utils/taskDescription').then(({ generateTaskAndQaHtml }) => {
-                                            const detailsHtml = generateTaskAndQaHtml(updatedProjectData, true);
-                                            sendCarpenterNotification(detailsHtml);
-                                        });
-                                    } else {
+                                     if (updatedProjectData.category === 'annex' || updatedProjectData.category === 'Kombi-projekt') {
+                                         import('../../utils/taskDescription').then(({ generateTaskAndQaHtml }) => {
+                                             const detailsHtml = generateTaskAndQaHtml(updatedProjectData, true);
+                                             sendCarpenterNotification(detailsHtml);
+                                         });
+                                     } else {
                                         const detailsHtml = `
                                             <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
                                                 <strong style="display: block; color: #0f172a; margin-bottom: 4px;">Kundens beskrivelse:</strong>
@@ -593,7 +676,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                 </div>
             )}
 
-            {currentStep === 1 && <Step1Category projectData={projectData} updateCategory={updateCategory} disabledCategories={disabledCategories} carpenter={carpenter} />}
+            {currentStep === 1 && <Step1Category projectData={projectData} updateCategory={updateCategory} disabledCategories={disabledCategories} carpenter={carpenter} projects={projects} />}
             {currentStep === 'special_chat' && (
                 <ChatEstimator 
                     carpenter={carpenter} 
@@ -616,7 +699,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                             setProjectData(prev => ({ ...prev, details: { ...prev.details, ...aiData } }));
                         }
                         if (aiData.isStandardCategory) {
-                            toast.success("Jeg har udfyldt formularen baseret på vores snak. Tjek venligst om alt stemmer, og tryk 'Videre'!", { duration: 6000 });
+                            toast.success("Vi har udfyldt formularen baseret på vores snak. Tjek venligst om alt stemmer, og tryk 'Videre'!", { duration: 6000 });
                             goToStep(2); // Rescue Guard: Vis kunden dataen i visual form for implicit godkendelse
                         } else {
                             goToStep(3); // Gå til foto-upload for specialopgaver
@@ -624,11 +707,18 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                     }} 
                 />
             )}
-            {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} />}
-            {currentStep === 3 && <Step3Photos category={projectData.category} photos={projectData.details.photos || []} setPhotos={(photos) => updateDetails('photos', photos)} notes={projectData.details.notes || ''} setNotes={(notes) => updateDetails('notes', notes)} nextStep={nextStep} prevStep={() => projectData.category === 'special' ? goToStep('special_chat') : prevStep()} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} />}
+            {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} onAddAnotherProject={projectData.category !== 'special' ? handleAddAnotherProject : null} />}
+            {currentStep === 3 && <Step3Photos category={projectData.category} photos={projectData.details.photos || []} setPhotos={(photos) => updateDetails('photos', photos)} notes={projectData.details.notes || ''} setNotes={(notes) => updateDetails('notes', notes)} nextStep={nextStep} prevStep={() => projectData.category === 'special' ? goToStep('special_chat') : prevStep()} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} allProjects={projects.length > 0 ? [...projects, { id: 'active', category: projectData.category, details: projectData.details }] : null} onUpdateProject={handleUpdateProjectPhotosAndNotes} />}
             {currentStep === 4 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} />}
-            {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details.notes} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} />}
+            {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details?.notes || ''} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} />}
             {currentStep === 6 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
+
+            <AiSupportWidget 
+                carpenter={carpenter} 
+                currentStep={currentStep} 
+                projectData={projectData} 
+                projects={projects} 
+            />
 
             <div style={{ position: 'absolute', bottom: '16px', left: '0', right: '0', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
                 Overslaget er sikkert udarbejdet med platformen Bison Frame

@@ -5,6 +5,22 @@ import { QUESTIONS } from './questionsConfig';
 import { generateTaskDescription } from '../../utils/taskDescription';
 
 const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard, nextStep, carpenter, isManualCreation = false, onComplete = null, editProject }) => {
+    const categoryMap = {
+        windows: 'Nye Vinduer',
+        doors: 'Nye Døre',
+        floor: 'Nyt Gulv',
+        terrace: 'Træterrasse',
+        roof: 'Tagprojekt',
+        kitchen: 'Nyt Køkken',
+        ceilings: 'Nye Lofter',
+        facades: 'Ny Facadebeklædning',
+        extensions: 'Tilbygning',
+        annex: 'Anneks',
+        carport: 'Carport',
+        fence: 'Hegn',
+        special: projectData.details?.aiProjectTitle || 'Specialopgave'
+    };
+
     const [wantsQuote, setWantsQuote] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [selectedDays, setSelectedDays] = useState([]);
@@ -22,25 +38,34 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
         if (isSaving) return;
         setIsSaving(true);
         try {
-            const customerEmail = projectData.customerDetails?.email || 'Ukendt';
-            const customerName = projectData.customerDetails?.fullName || 'Ukendt';
-            const customerPhone = projectData.customerDetails?.phone || '';
-            const categoryMap = {
-                windows: 'Nye Vinduer',
-                doors: 'Nye Døre',
-                floor: 'Nyt Gulv',
-                terrace: 'Træterrasse',
-                roof: 'Tagprojekt',
-                kitchen: 'Nyt Køkken',
-                ceilings: 'Nye Lofter',
-                facades: 'Ny Facadebeklædning',
-                extensions: 'Tilbygning',
-                annex: 'Anneks',
-                carport: 'Carport',
-                fence: 'Hegn',
-                special: projectData.details?.aiProjectTitle || 'Specialopgave'
+            const getKombiTitle = (kombiProjects) => {
+                if (!kombiProjects || kombiProjects.length === 0) return 'Kombi-projekt';
+                const categoryShortNames = {
+                    windows: 'Vinduer',
+                    doors: 'Døre',
+                    floor: 'Gulv',
+                    terrace: 'Terrasse',
+                    roof: 'Tag',
+                    kitchen: 'Køkken',
+                    ceilings: 'Lofter',
+                    facades: 'Facade',
+                    extensions: 'Tilbygning',
+                    annex: 'Anneks',
+                    carport: 'Carport',
+                    fence: 'Hegn',
+                    special: 'Specialopgave'
+                };
+                const names = kombiProjects.map(p => categoryShortNames[p.category] || p.category);
+                const uniqueNames = Array.from(new Set(names));
+                if (uniqueNames.length === 1) return `Kombi-projekt (${uniqueNames[0]})`;
+                if (uniqueNames.length === 2) return `Kombi-projekt (${uniqueNames[0]} & ${uniqueNames[1]})`;
+                const last = uniqueNames.pop();
+                return `Kombi-projekt (${uniqueNames.join(', ')} & ${last})`;
             };
-            const categoryName = categoryMap[projectData.category] || projectData.category;
+
+            const categoryName = isKombi 
+                ? getKombiTitle(projectData.projects)
+                : (categoryMap[projectData.category] || projectData.category);
             const carpenterName = carpenter?.owner_name || carpenter?.company_name || 'Bison Frame Tømrer';
             const carpenterEmail = carpenter?.email;
 
@@ -137,15 +162,9 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
 
     const daysOfWeek = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 
-    const isAnnexComplex = projectData.category === 'annex' && (
-        projectData.details?.annexType === 'Isoleret skur/værksted' || 
-        projectData.details?.annexType === 'Fuldt beboeligt anneks' || 
-        parseFloat(projectData.details?.amount) > 12
-    );
+    const isKombi = projectData.category === 'Kombi-projekt';
 
-    const needsPhysicalInspection = ['extensions', 'carport', 'kitchen'].includes(projectData.category) || 
-        isAnnexComplex ||
-        (projectData.category === 'special' && (!projectData.details?.aiLaborHours && !projectData.details?.aiMaterialCost));
+    const needsPhysicalInspection = priceRange === 'Besigtigelse kræves';
 
     return (
         <section className="wizard-step active result-step-section" style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -154,7 +173,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     {needsPhysicalInspection ? (
                         <>
                             <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '16px' }}>
-                                Vi have forstået din opgave!
+                                Vi har forstået din opgave!
                             </h2>
                             <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
                                 Du har nu givet os et utrolig stærkt udgangspunkt for at hjælpe dig videre med projektet.
@@ -185,7 +204,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                         <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Komplekst Projekt</span>
                         <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: 'var(--text-primary)' }}>Kræver fysisk besigtigelse</h1>
                         <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}>At bygge en tilbygning, carport, køkkenmontage eller et isoleret/større anneks er et fantastisk projekt. Fordi den endelige pris afhænger stærkt af de specifikke forhold, eksisterende konstruktioner og eventuelle byggetilladelser, er det ikke muligt at give et retvisende overslag gennem en beregner.</p>
-                        <p style={{ fontSize: '1.05rem', marginTop: '16px', color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}><strong>Men dit forarbejde er guld værd!</strong> We have nu de helt rigtige forudsætninger for at forstå din drøm. Send opgaven ind til os nedenfor, så ringer vi dig op og aftaler et møde.</p>
+                        <p style={{ fontSize: '1.05rem', marginTop: '16px', color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}><strong>Men dit forarbejde er guld værd!</strong> Vi har nu de helt rigtige forudsætninger for at forstå din drøm. Send opgaven ind til os nedenfor, så ringer vi dig op og aftaler et møde.</p>
                     </div>
                 ) : (
                     <div className="price-box-card" style={{ 
@@ -198,14 +217,45 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                         marginBottom: '32px'
                     }}>
                         <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Forventet prisramme</span>
-                        <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: 'var(--text-primary)' }}>{priceRange}</h1>
-                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Dette er et stærkt vejledende overslag inkl. moms. Vores erfaring er, at det endelige, bindende tilbud fra tømreren oftest lander lidt lavere – men med denne pris har du et realistisk udgangspunkt.</p>
+                        <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>{priceRange}</h1>
+                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Dette er et stærkt vejledende overslag inkl. moms. Vores erfaring er, at det endelige, bindende tilbud fra os oftest lander lidt lavere – men med denne pris har du et realistisk udgangspunkt.</p>
+                    </div>
+                )}
+
+                {isKombi && projectData.calc_data?.kombiDiscount && (
+                    <div style={{
+                        marginTop: '0px',
+                        marginBottom: '24px',
+                        background: '#f0fdf4',
+                        border: '2px dashed #10b981',
+                        borderRadius: '16px',
+                        padding: '20px 24px',
+                        boxShadow: 'var(--shadow-sm)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '12px'
+                    }}>
+                        <div style={{ textAlign: 'left' }}>
+                            <span style={{ display: 'block', fontSize: '0.85rem', color: '#047857', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Mængderabat aktiveret</span>
+                            <span style={{ display: 'block', fontSize: '1.2rem', color: '#065f46', fontWeight: '800' }}>Kombi-rabat &amp; delt kørsel er fratrukket</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ display: 'inline-block', background: '#d1fae5', border: '1px solid #10b981', color: '#065f46', fontFamily: 'monospace', fontWeight: 'bold', fontSize: '0.9rem', padding: '4px 10px', borderRadius: '6px' }}>KOMBI-PROJEKT</span>
+                            <span style={{ color: '#059669', fontWeight: '800', fontSize: '1.05rem', background: '#d1fae5', padding: '6px 14px', borderRadius: '20px', border: '1px solid #10b981', whiteSpace: 'nowrap' }}>Indregnet i prisen</span>
+                        </div>
                     </div>
                 )}
 
                 {(() => {
                     let taskList = [];
-                    if (projectData.category === 'special' && Array.isArray(projectData.details?.aiBreakdown)) {
+                    if (isKombi && Array.isArray(projectData.projects)) {
+                        projectData.projects.forEach(p => {
+                            const subTasks = generateTaskDescription(p.category, p.details);
+                            taskList.push(...subTasks);
+                        });
+                        taskList = Array.from(new Set(taskList)); // Deduplicate task items!
+                    } else if (projectData.category === 'special' && Array.isArray(projectData.details?.aiBreakdown)) {
                         taskList = projectData.details.aiBreakdown.map(itemObj => itemObj.item);
                     } else {
                         taskList = generateTaskDescription(projectData.category, projectData.details);
@@ -253,7 +303,44 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                         Dine indtastede valg:
                     </h3>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '16px' }}>
-                        {projectData.category === 'special' ? (
+                        {isKombi && Array.isArray(projectData.projects) ? (
+                            projectData.projects.map((p, pIdx) => {
+                                const catName = categoryMap[p.category] || p.category;
+                                return (
+                                    <div key={p.id || pIdx} style={{ marginBottom: '24px', padding: '24px', background: 'rgba(255,255,255,0.3)', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-xs)', width: '100%' }}>
+                                        <h4 style={{ fontSize: '1.2rem', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ background: 'var(--accent)', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{pIdx + 1}</span>
+                                            {catName}
+                                        </h4>
+                                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '12px' }}>
+                                            {Object.entries(p.details || {}).map(([key, value]) => {
+                                                const categoryQuestions = QUESTIONS[p.category] || [];
+                                                const question = categoryQuestions.find(q => q.id === key);
+                                                if (!question || value === undefined || value === null || value === '') return null;
+                                                if (question.type === 'file') return null;
+
+                                                let displayValue = value;
+                                                if (question.type === 'window_configurator' && Array.isArray(value)) {
+                                                    displayValue = value.map(v => `${v.count || 1}x ${v.type || 'Standard'} (${v.width}x${v.height} cm)${v.isOpenable === false ? ' (fastkarm)' : ''}${v.safetyGlass ? ' (sikkerhedsglas)' : ''}${v.hasSlidingDoor ? ' (m. skydedør)' : ''}`).join(', ');
+                                                } else if (typeof value === 'boolean') {
+                                                    displayValue = value ? 'Ja' : 'Nej';
+                                                }
+
+                                                return (
+                                                    <li key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                                                        <span style={{ color: '#10b981', marginRight: '4px', fontWeight: 'bold' }}>✓</span>
+                                                        <div>
+                                                            <strong style={{ color: 'var(--text-primary)' }}>{question.label}</strong>
+                                                            <span style={{ display: 'block', whiteSpace: 'pre-wrap', marginTop: '2px', color: 'var(--text-secondary)' }}>{displayValue}</span>
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </div>
+                                );
+                            })
+                        ) : projectData.category === 'special' ? (
                             <>
                                 <li style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '1.05rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
                                     <span style={{ color: 'var(--accent)', marginTop: '2px' }}>✓</span>
@@ -483,7 +570,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     
                     {!isManualCreation && (
                         <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.9rem', color: '#64748b', lineHeight: '1.5' }}>
-                            Når du trykker send, lander opgaven direkte hos {carpenter?.owner_name ? carpenter.owner_name.split(' ')[0] : 'tømreren'}. Han tager fat i dig for at planlægge en besigtigelse.
+                            Når du trykker send, lander opgaven direkte i vores system. Vi tager hurtigt fat i dig for at planlægge en besigtigelse.
                         </p>
                     )}
                 </div>

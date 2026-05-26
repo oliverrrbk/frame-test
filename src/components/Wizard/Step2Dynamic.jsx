@@ -6,7 +6,7 @@ import { QUESTIONS } from './questionsConfig';
 import CustomSelect from './CustomSelect';
 import AudioPlayerButton from './AudioPlayerButton';
 
-const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, quickRecalculate }) => {
+const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, quickRecalculate, onAddAnotherProject }) => {
     const questions = QUESTIONS[category] || [];
     const [openTooltips, setOpenTooltips] = React.useState({});
     const [zoomedImage, setZoomedImage] = React.useState(null);
@@ -1004,15 +1004,67 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 })}
             </div>
 
-            <div className="actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
-                <button className="wizard-btn wizard-btn-secondary" onClick={prevStep}>← Tilbage</button>
-                <div style={{ display: 'flex', gap: '12px' }}>
+            {onAddAnotherProject && (
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    margin: '32px 0 8px 0',
+                    width: '100%'
+                }}>
+                    <button 
+                        type="button" 
+                        className="wizard-btn" 
+                        onClick={onAddAnotherProject} 
+                        style={{ 
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: '#ffffff',
+                            color: '#10b981',
+                            border: '2px solid #10b981',
+                            borderRadius: '30px',
+                            padding: '12px 24px',
+                            fontWeight: '700',
+                            fontSize: '0.95rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.05)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#ecfdf5';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.15)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#ffffff';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.05)';
+                        }}
+                    >
+                        <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>+</span> Tilføj endnu en opgave
+                    </button>
+                </div>
+            )}
+
+            <div className="actions" style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginTop: '40px', 
+                paddingTop: '24px', 
+                borderTop: '1px solid var(--border)',
+                width: '100%'
+            }}>
+                <button type="button" className="wizard-btn wizard-btn-secondary" onClick={prevStep}>← Tilbage</button>
+                
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     {quickRecalculate && (
-                        <button className="wizard-btn wizard-btn-primary" onClick={quickRecalculate} style={{ boxShadow: '0 10px 25px rgba(59,130,246,0.3)' }}>
+                        <button type="button" className="wizard-btn wizard-btn-primary" onClick={quickRecalculate} style={{ boxShadow: '0 10px 25px rgba(59,130,246,0.3)' }}>
                             Gem & Vis Overslag →
                         </button>
                     )}
-                    <button className={`wizard-btn ${quickRecalculate ? 'wizard-btn-secondary' : 'wizard-btn-primary'}`} onClick={handleNextStep}>
+                    <button type="button" className={`wizard-btn ${quickRecalculate ? 'wizard-btn-secondary' : 'wizard-btn-primary'}`} onClick={handleNextStep}>
                         {quickRecalculate ? 'Tilføj Billeder →' : 'Bekræft & Fortsæt →'}
                     </button>
                 </div>

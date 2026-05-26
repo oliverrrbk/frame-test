@@ -450,6 +450,18 @@ const Dashboard = () => {
                 }
             }
 
+            const isKombi = calc.isKombi || cat === 'Kombi-projekt';
+            let initialSubprojects = [];
+            if (isKombi && Array.isArray(calc.projects)) {
+                initialSubprojects = calc.projects.map(p => ({
+                    id: p.id,
+                    category: p.category,
+                    title: categoryNames[p.category] || p.category,
+                    laborHours: p.result?.calcData?.laborHours || 0,
+                    materialCost: p.result?.calcData?.materialCost || 0
+                }));
+            }
+
             setQuoteBuilder({
                 laborHours: activeLaborHours,
                 hourlyRate: activeHourlyRate,
@@ -459,7 +471,9 @@ const Dashboard = () => {
                 showPreview: false,
                 isGeneratingPdf: false,
                 showDetailedBreakdown: false, // Nu skjult som standard
-                customMessage: defaultMessage
+                customMessage: defaultMessage,
+                isKombi: isKombi,
+                subprojects: initialSubprojects
             });
         } else {
             setQuoteBuilder(null);
@@ -2525,14 +2539,8 @@ const Dashboard = () => {
 
                                         <h3 style={{ color: '#374151', marginBottom: '16px' }}>Kundens Valg i Beregneren</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            {selectedLead.raw_data && selectedLead.raw_data.details && (() => {
-                                                const categoryQuestions = QUESTIONS[selectedLead.raw_data.category] || [];
-                                                
-                                                // 1. Vi looper KUN over de faktiske spørgsmål i den rækkefølge de ligger i `questionsConfig.js`
-                                                // 2. Vi inkluderer også 'amount' helt i toppen manuelt!
-                                                const details = selectedLead.raw_data.details;
-                                                
-                                                const renderElements = [];
+                                            {selectedLead.raw_data && (() => {
+                                                const details = selectedLead.raw_data.details || {};
                                                 
                                                 const renderRow = (label, rawValue, keyInput, type) => {
                                                     if (rawValue === undefined || rawValue === null || rawValue === '') return null;
@@ -2542,7 +2550,7 @@ const Dashboard = () => {
                                                         const isFileArray = rawValue.length > 0 && typeof rawValue[0] === 'object' && rawValue[0].preview;
                                                         if (isFileArray) {
                                                             return (
-                                                                <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                                <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
                                                                     <strong style={{ color: '#6b7280' }}>{label}</strong>
                                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                                                                         {rawValue.map((file, idx) => (
@@ -2575,7 +2583,7 @@ const Dashboard = () => {
                                                     
                                                     if (type === 'textarea') {
                                                         return (
-                                                            <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#fcfcfc' }}>
+                                                            <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#fcfcfc', width: '100%' }}>
                                                                 <strong style={{ color: '#6b7280' }}>{label}</strong>
                                                                 <div style={{ color: '#1a1a1a', fontWeight: '500', wordBreak: 'break-word', whiteSpace: 'pre-wrap', backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', lineHeight: '1.6' }}>
                                                                     {displayVal}
@@ -2600,14 +2608,75 @@ const Dashboard = () => {
                                                     }
                                                     
                                                     return (
-                                                        <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                        <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
                                                             <strong style={{ color: '#6b7280', maxWidth: '40%' }}>{label}</strong>
                                                             {finalValElement}
                                                         </div>
                                                     );
                                                 };
+
+                                                const isKombi = selectedLead.raw_data.category === 'Kombi-projekt' || selectedLead.raw_data.calc_data?.isKombi;
                                                 
-                                                // Gennemløb alle spørgsmålene præcis som i konfigurationen!
+                                                if (isKombi && Array.isArray(selectedLead.raw_data.projects)) {
+                                                    return selectedLead.raw_data.projects.map((p, pIdx) => {
+                                                        const pCatName = categoryNames[p.category] || p.category;
+                                                        const pQuestions = QUESTIONS[p.category] || [];
+                                                        const pDetails = p.details || {};
+                                                        
+                                                        const pRenderRows = [];
+                                                        
+                                                        if (pDetails.amount !== undefined) {
+                                                            const qtyLabel = p.category === 'floor' || p.category === 'roof' || p.category === 'terrace' || p.category === 'ceilings' || p.category === 'facades' ? 'Areal i kvm' : p.category === 'fence' ? 'Længde i meter' : 'Antal enheder';
+                                                            const qtyEl = renderRow(qtyLabel, pDetails.amount, 'amount_' + p.id, 'number');
+                                                            if (qtyEl) pRenderRows.push(qtyEl);
+                                                        }
+                                                        
+                                                        pQuestions.forEach(q => {
+                                                            const rowEl = renderRow(q.label, pDetails[q.id], q.id + '_' + p.id, q.type);
+                                                            if (rowEl) pRenderRows.push(rowEl);
+                                                        });
+                                                        
+                                                        if (pDetails.notes) {
+                                                            const noteEl = renderRow('Særlige forhold / Bemærkninger', pDetails.notes, 'notes_' + p.id, 'textarea');
+                                                            if (noteEl) pRenderRows.push(noteEl);
+                                                        }
+                                                        
+                                                        if (pDetails.photos && pDetails.photos.length > 0) {
+                                                            pRenderRows.push(
+                                                                <div key={"photos_" + p.id} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+                                                                    <strong style={{ color: '#6b7280' }}>Billeder til denne del</strong>
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
+                                                                        {pDetails.photos.map((url, idx) => (
+                                                                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer" style={{ position: 'relative', paddingTop: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e8e6e1', display: 'block' }}>
+                                                                                <img 
+                                                                                    src={url} 
+                                                                                    alt={`Billede ${idx + 1}`} 
+                                                                                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                                                />
+                                                                            </a>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        
+                                                        return (
+                                                            <details key={p.id} style={{ border: '1px solid #cbd5e1', borderRadius: '12px', backgroundColor: '#ffffff', overflow: 'hidden', marginBottom: '16px', width: '100%' }} open={pIdx === 0}>
+                                                                <summary style={{ padding: '16px 20px', background: '#0f172a', color: '#ffffff', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none' }}>
+                                                                    <span>Del {pIdx + 1}: {pCatName}</span>
+                                                                    <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Vis/skjul</span>
+                                                                </summary>
+                                                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#fafafa' }}>
+                                                                    {pRenderRows.length > 0 ? pRenderRows : <p style={{ color: '#6b7280', fontStyle: 'italic', margin: 0 }}>Ingen specifikke valg indtastet.</p>}
+                                                                </div>
+                                                            </details>
+                                                        );
+                                                    });
+                                                }
+
+                                                const categoryQuestions = QUESTIONS[selectedLead.raw_data.category] || [];
+                                                const renderElements = [];
+                                                
                                                 categoryQuestions.forEach(q => {
                                                     const rowEl = renderRow(q.label, details[q.id], q.id, q.type);
                                                     if (rowEl) renderElements.push(rowEl);
@@ -2617,7 +2686,7 @@ const Dashboard = () => {
                                                     const hasSummary = details.summaryBullets && details.summaryBullets.length > 0;
                                                     
                                                     renderElements.push(
-                                                        <div key="ai_chat" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: 'white' }}>
+                                                        <div key="ai_chat" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: 'white', width: '100%' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                 <span style={{ fontSize: '1.2rem' }}>🤖</span>
                                                                 <strong style={{ color: '#1a1a1a', fontSize: '1.05rem' }}>Digital Opsummering af Kundens Ønsker</strong>
@@ -2670,7 +2739,7 @@ const Dashboard = () => {
                                                                 </div>
                                                             </details>
                                                             <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', color: '#065f46' }}>
-                                                                <strong>Systemets skjulte estimat:</strong><br/>
+                                                                <strong>Systemets hemmelige estimat:</strong><br/>
                                                                 Arbejdstid: {details.aiLaborHours} timer<br/>
                                                                 Materialer: {details.aiMaterialCost} kr. (før din avance)
                                                                 
@@ -2692,12 +2761,12 @@ const Dashboard = () => {
                                                 }
                                                 
                                                 if (details.notes) {
-                                                    renderElements.push(renderRow('Særlige forhold / Bemærkninger', details.notes, 'notes'));
+                                                    renderElements.push(renderRow('Særlige forhold / Bemærkninger', details.notes, 'notes', 'textarea'));
                                                 }
 
                                                 if (details.photos && details.photos.length > 0) {
                                                     renderElements.push(
-                                                        <div key="photos" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        <div key="photos" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
                                                             <strong style={{ color: '#6b7280' }}>Kundens Billeder</strong>
                                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
                                                                 {details.photos.map((url, idx) => (
@@ -2756,18 +2825,78 @@ const Dashboard = () => {
                                                 </p>
                                                 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
-                                                    <div className="input-group">
-                                                        <label>Arbejdstimer (antal)</label>
-                                                        <input type="number" value={quoteBuilder.laborHours} onChange={(e) => setQuoteBuilder({...quoteBuilder, laborHours: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                    </div>
-                                                    <div className="input-group">
-                                                        <label>Timepris (kr)</label>
-                                                        <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                    </div>
-                                                    <div className="input-group">
-                                                        <label>Materialer eks. moms (kr)</label>
-                                                        <input type="number" value={quoteBuilder.materialCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, materialCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                    </div>
+                                                    {quoteBuilder.isKombi && quoteBuilder.subprojects && quoteBuilder.subprojects.length > 0 ? (
+                                                        <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '8px' }}>
+                                                            <strong style={{ color: '#1a1a1a', fontSize: '0.95rem' }}>Individuel tilpasning pr. underprojekt:</strong>
+                                                            {quoteBuilder.subprojects.map((sub, sIdx) => (
+                                                                <details key={sub.id} style={{ border: '1px solid #e8e6e1', borderRadius: '8px', backgroundColor: '#ffffff', overflow: 'hidden' }} open={sIdx === 0}>
+                                                                    <summary style={{ padding: '10px 14px', background: '#fafafa', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none' }}>
+                                                                        <span>Del {sIdx + 1}: {sub.title}</span>
+                                                                        <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'normal' }}>
+                                                                            ({sub.laborHours} t / {sub.materialCost.toLocaleString('da-DK')} kr.)
+                                                                        </span>
+                                                                    </summary>
+                                                                    <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', borderTop: '1px solid #e8e6e1' }}>
+                                                                        <div className="input-group">
+                                                                            <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Arbejdstimer (antal)</label>
+                                                                            <input 
+                                                                                type="number" 
+                                                                                value={sub.laborHours} 
+                                                                                onChange={(e) => {
+                                                                                    const val = Number(e.target.value);
+                                                                                    const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, laborHours: val } : item);
+                                                                                    const newTotalHours = updatedSubs.reduce((sum, item) => sum + item.laborHours, 0);
+                                                                                    setQuoteBuilder({
+                                                                                        ...quoteBuilder,
+                                                                                        subprojects: updatedSubs,
+                                                                                        laborHours: newTotalHours
+                                                                                    });
+                                                                                }} 
+                                                                                style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
+                                                                            />
+                                                                        </div>
+                                                                        <div className="input-group">
+                                                                            <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Materialer eks. moms (kr)</label>
+                                                                            <input 
+                                                                                type="number" 
+                                                                                value={sub.materialCost} 
+                                                                                onChange={(e) => {
+                                                                                    const val = Number(e.target.value);
+                                                                                    const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, materialCost: val } : item);
+                                                                                    const newTotalMaterials = updatedSubs.reduce((sum, item) => sum + item.materialCost, 0);
+                                                                                    setQuoteBuilder({
+                                                                                        ...quoteBuilder,
+                                                                                        subprojects: updatedSubs,
+                                                                                        materialCost: newTotalMaterials
+                                                                                    });
+                                                                                }} 
+                                                                                style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </details>
+                                                            ))}
+                                                            <div className="input-group" style={{ marginTop: '8px' }}>
+                                                                <label style={{ fontWeight: 'bold' }}>Timepris (kr) - Gælder alle underprojekter</label>
+                                                                <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className="input-group">
+                                                                <label>Arbejdstimer (antal)</label>
+                                                                <input type="number" value={quoteBuilder.laborHours} onChange={(e) => setQuoteBuilder({...quoteBuilder, laborHours: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                            </div>
+                                                            <div className="input-group">
+                                                                <label>Timepris (kr)</label>
+                                                                <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                            </div>
+                                                            <div className="input-group">
+                                                                <label>Materialer eks. moms (kr)</label>
+                                                                <input type="number" value={quoteBuilder.materialCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, materialCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                            </div>
+                                                        </>
+                                                    )}
                                                     <div className="input-group">
                                                         <label>Kørsel/Øvrigt eks. moms (kr)</label>
                                                         <input type="number" value={quoteBuilder.drivingCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, drivingCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />

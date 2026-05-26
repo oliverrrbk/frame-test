@@ -102,6 +102,184 @@ export const mapMaterialName = (cat, material) => {
 };
 
 export const performCalculation = async (projectData, customerDetails, dbSettings, dbMaterials, carpenter, calibration = null) => {
+    const categoryNames = {
+        windows: 'Nye Vinduer',
+        doors: 'Nye Døre',
+        floor: 'Nyt Gulv',
+        terrace: 'Træterrasse',
+        roof: 'Tagprojekt',
+        kitchen: 'Nyt Køkken',
+        ceilings: 'Nye Lofter',
+        facades: 'Ny Facadebeklædning',
+        extensions: 'Tilbygning',
+        annex: 'Anneks',
+        carport: 'Carport',
+        fence: 'Hegn',
+        special: 'Specialopgave'
+    };
+
+    if (projectData.category === 'Kombi-projekt' && projectData.projects && projectData.projects.length > 0) {
+        const subResults = [];
+        let totalLaborHours = 0;
+        let totalMaterialCost = 0;
+        let totalExternalLeaseCost = 0;
+        let combinedBreakdown = [];
+        let isAnyFastTrack = false;
+
+        for (const p of projectData.projects) {
+            const isComplex = ['extensions', 'carport', 'kitchen'].includes(p.category) || 
+                (p.category === 'annex' && (
+                    p.details?.annexType === 'Isoleret skur/værksted' || 
+                    p.details?.annexType === 'Fuldt beboeligt anneks' || 
+                    parseFloat(p.details?.amount) > 12
+                ));
+            if (isComplex) {
+                isAnyFastTrack = true;
+            }
+
+            const subRes = await performCalculation({ category: p.category, details: p.details }, customerDetails, dbSettings, dbMaterials, carpenter, calibration);
+            if (subRes.priceRange === 'Besigtigelse kræves') {
+                isAnyFastTrack = true;
+            }
+            subResults.push({
+                id: p.id,
+                category: p.category,
+                details: p.details,
+                result: subRes
+            });
+
+            if (subRes.priceRange !== 'Besigtigelse kræves') {
+                totalLaborHours += subRes.calcData.laborHours;
+                totalMaterialCost += subRes.calcData.materialCost;
+                totalExternalLeaseCost += subRes.calcData.externalLeaseCost;
+                
+                const catLabel = categoryNames[p.category] || p.category;
+                combinedBreakdown.push(`--- ${catLabel} ---`);
+                subRes.breakdownArr.forEach(line => {
+                    if (!line.includes('Kørsel') && !line.includes('Sikkerhed') && !line.includes('Minimumsfakturering') && !line.includes('Tillæg: 10% forbrugsstoffer') && !line.includes('vejledende overslag')) {
+                        combinedBreakdown.push(`  • ${line}`);
+                    }
+                });
+            } else {
+                const catLabel = categoryNames[p.category] || p.category;
+                combinedBreakdown.push(`--- ${catLabel} (Kræver besigtigelse) ---`);
+            }
+        }
+
+        if (isAnyFastTrack) {
+            combinedBreakdown.push(``);
+            combinedBreakdown.push(`[OBS] Kombi-projektet indeholder mindst ét komplekst underprojekt (f.eks. tilbygning, carport, køkken eller stort anneks).`);
+            combinedBreakdown.push(`Derfor omlægges hele forespørgslen til en samlet besigtigelse, og der gives intet automatisk prisestimat.`);
+            return {
+                priceRange: "Besigtigelse kræves",
+                breakdownArr: combinedBreakdown,
+                calcData: {
+                    isKombi: true,
+                    projects: subResults,
+                    laborHours: 0,
+                    drivingHours: 0,
+                    hourlyRate: dbSettings?.hourly_rate || 550,
+                    totalLaborCost: 0,
+                    materialCost: 0,
+                    externalLeaseCost: 0,
+                    drivingCost: 0,
+                    hiddenBuffer: 0,
+                    strictPrice: 0,
+                    calibrationFactor: 1.0,
+                    finalEstimateIncVat: 0,
+                    finalEstimateExVat: 0
+                }
+            };
+        }
+
+        const baseCrew = Math.max(1, (dbSettings && dbSettings.crew_size) || 2);
+        const effectiveCrew = totalLaborHours < 20 ? 1 : baseCrew;
+        const effectiveCapacityPerDay = 7.5 * effectiveCrew;
+        const estimatedDays = Math.max(1, Math.ceil((totalLaborHours - 1.5) / effectiveCapacityPerDay));
+        const companyFullAddress = carpenter?.address || '';
+        const customerFullAddress = customerDetails
+            ? `${customerDetails.street || ''}, ${customerDetails.zip || ''} ${customerDetails.city || ''}`
+            : '';
+        
+        const { km, hours } = await fetchGoogleDistance(companyFullAddress, customerFullAddress);
+        
+        let totalDriving = 0;
+        let drivingHoursBilled = 0;
+        let drivingLaborCost = 0;
+        let drivingMaterialCost = 0;
+        const hourlyRateVal = (dbSettings && dbSettings.hourly_rate) || 550;
+        
+        if (dbSettings && dbSettings.driving_calc_method === 'timer') {
+            const exactHoursRoundTrip = (hours * 2) * estimatedDays;
+            drivingHoursBilled = Math.max(1, Math.ceil(exactHoursRoundTrip));
+            drivingLaborCost = drivingHoursBilled * hourlyRateVal;
+            totalDriving = 0;
+        } else {
+            const costPerKmVal = (dbSettings && dbSettings.vehicle_cost_per_km) || 3.8;
+            drivingMaterialCost = (km * 2) * estimatedDays * costPerKmVal;
+            drivingLaborCost = (hours * 2) * estimatedDays * hourlyRateVal;
+            totalDriving = drivingMaterialCost + drivingLaborCost;
+        }
+
+        combinedBreakdown.push(``);
+        combinedBreakdown.push(`--- Fælles Kørsel & Logistik ---`);
+        combinedBreakdown.push(`  • Afstand: ${km.toFixed(1)} km hver vej. Estimeret ${estimatedDays} arbejdsdag(e) i alt.`);
+        if (dbSettings && dbSettings.driving_calc_method === 'timer') {
+            combinedBreakdown.push(`  • Transport (faktureres som timepris): i alt ${drivingLaborCost.toFixed(0)} kr.`);
+        } else {
+            combinedBreakdown.push(`  • Transport (slitage + transporttid): i alt ${totalDriving.toFixed(0)} kr.`);
+        }
+
+        const totalLaborCost = totalLaborHours * hourlyRateVal + drivingLaborCost;
+        const hiddenBuffer = Math.round((totalLaborCost + totalDriving) * 0.20);
+        const rawTotalPrice = totalLaborCost + totalMaterialCost + totalDriving + hiddenBuffer;
+
+        // KOMBI-RABAT!
+        const materialDiscount = Math.round(totalMaterialCost * 0.10);
+        const laborDiscount = Math.round((totalLaborHours * hourlyRateVal) * 0.05);
+        const totalDiscount = materialDiscount + laborDiscount;
+
+        combinedBreakdown.push(``);
+        combinedBreakdown.push(`--- Kombi-rabat (Mængderabat & delt kørsel) ---`);
+        combinedBreakdown.push(`  • 10% mængderabat på materialer: -${materialDiscount} kr.`);
+        combinedBreakdown.push(`  • 5% rabat på koordineret arbejdstid: -${laborDiscount} kr.`);
+        combinedBreakdown.push(`  • Samlet fratrukket rabat: -${totalDiscount} kr.`);
+
+        const finalStrictPrice = rawTotalPrice - totalDiscount;
+        const calibFactor = (calibration && Number.isFinite(calibration.factor)) ? calibration.factor : 1.0;
+        const nonMaterialRaw = totalLaborCost + totalDriving + hiddenBuffer - laborDiscount;
+        const nonMaterialCalibrated = nonMaterialRaw * calibFactor;
+
+        let priceTop = (totalMaterialCost - materialDiscount) + nonMaterialCalibrated;
+        if (priceTop < 0) priceTop = 0;
+
+        let maxPriceExVat = Math.ceil(priceTop / 1000) * 1000;
+        let maxPrice = Math.round(maxPriceExVat * 1.25);
+        const fmtMax = new Intl.NumberFormat('da-DK').format(maxPrice);
+
+        return {
+            priceRange: `${fmtMax} kr. inkl. moms`,
+            breakdownArr: combinedBreakdown,
+            calcData: {
+                isKombi: true,
+                projects: subResults,
+                laborHours: Math.ceil(totalLaborHours),
+                drivingHours: Math.ceil(drivingHoursBilled),
+                hourlyRate: hourlyRateVal,
+                totalLaborCost: Math.ceil(totalLaborCost - laborDiscount),
+                materialCost: Math.ceil(totalMaterialCost - materialDiscount),
+                externalLeaseCost: Math.ceil(totalExternalLeaseCost),
+                drivingCost: Math.ceil(totalDriving),
+                hiddenBuffer: hiddenBuffer,
+                strictPrice: Math.ceil(finalStrictPrice),
+                calibrationFactor: calibFactor,
+                finalEstimateIncVat: maxPrice,
+                finalEstimateExVat: maxPriceExVat,
+                kombiDiscount: totalDiscount
+            }
+        };
+    }
+
     const cat = projectData.category;
     
     // Copy details and map material to match database keys
@@ -1611,7 +1789,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     let totalLaborCost = workHours * dbSettings.hourly_rate;
 
     const companyFullAddress = carpenter?.address || '';
-    const customerFullAddress = `${customerDetails.street || ''}, ${customerDetails.zip || ''} ${customerDetails.city || ''}`;
+    const customerFullAddress = customerDetails
+        ? `${customerDetails.street || ''}, ${customerDetails.zip || ''} ${customerDetails.city || ''}`
+        : '';
 
     const { km, hours } = await fetchGoogleDistance(companyFullAddress, customerFullAddress);
 

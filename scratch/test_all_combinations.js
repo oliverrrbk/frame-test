@@ -433,6 +433,67 @@ const testCases = [
                 floorFoundation: undefined
             }
         }
+    },
+
+    // 9. KOMBI-PROJEKT CASES
+    {
+        name: "Standard Kombi-projekt (Terrasse + Vinduer med mængderabat & delt kørsel)",
+        data: {
+            category: 'Kombi-projekt',
+            projects: [
+                {
+                    id: 'proj-1',
+                    category: 'terrace',
+                    details: {
+                        amount: 30,
+                        material: 'Trykimprægneret',
+                        disposal: 'Nej',
+                        elevation: 'Jordniveau',
+                        fastening: 'Synlige skruer (standard)',
+                        railing: 'Nej'
+                    }
+                },
+                {
+                    id: 'proj-2',
+                    category: 'windows',
+                    details: {
+                        amount: 8,
+                        material: 'Træ/alu (kombination)',
+                        disposal: 'Ja, tømreren skal afmontere OG bortskaffe dem',
+                        housingType: 'Helårsbolig',
+                        pcbCheck: 'Nej, bygget/skiftet efter 1977',
+                        finish: 'Ja',
+                        floors: 'Stueplan (Jordniveau)'
+                    }
+                }
+            ]
+        }
+    },
+    {
+        name: "Kompleks Kombi-projekt med AI Specialopgave (Skal ende som 'Besigtigelse kræves')",
+        data: {
+            category: 'Kombi-projekt',
+            projects: [
+                {
+                    id: 'proj-3',
+                    category: 'terrace',
+                    details: {
+                        amount: 30,
+                        material: 'Trykimprægneret',
+                        disposal: 'Nej',
+                        elevation: 'Jordniveau'
+                    }
+                },
+                {
+                    id: 'proj-4',
+                    category: 'special',
+                    details: {
+                        aiLaborHours: 0,
+                        aiMaterialCost: 0
+                    }
+                }
+            ]
+        }
     }
 ];
 

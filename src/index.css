@@ -366,6 +366,28 @@ p {
   background: var(--bg-active);
 }
 
+.card.added {
+  opacity: 0.85;
+  border-color: #10b981;
+  background: rgba(209, 250, 229, 0.5);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  cursor: not-allowed;
+}
+
+.card.added::after {
+  content: '✓ Tilføjet';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #10b981;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
 .card-image {
   width: 100%;
   height: 140px;

@@ -10,15 +10,14 @@ export const initialCategories = [
     { id: 'extensions', label: 'Tilbygning', desc: 'Ny etage, udvidelse', img: '/images/extensions_ai.png' },
     { id: 'annex', label: 'Annekser & Skure', desc: 'Værksted, beboelse', img: '/images/annex_ai.png' },
     { id: 'carport', label: 'Carport', desc: 'Enkelt, dobbelt, med skur', img: '/images/carport_ai.png' },
-    { id: 'fence', label: 'Hegn', desc: 'Træ, lamel, komposit', img: '/images/fence_ai.png' },
-    { id: 'special', label: 'Special- & Kombiprojekter', desc: 'Sammensæt flere opgaver / Få digital hjælp', img: '/images/special_carpenter.png' }
+    { id: 'fence', label: 'Hegn', desc: 'Træ, lamel, komposit', img: '/images/fence_ai.png' }
 ];
 
 export const QUESTIONS = {
     roof: [
-        { id: 'amount', type: 'number', label: 'Hvor stort er grundplanet af huset (cirka mål i m2)?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl. Tømreren dobbelttjekker altid de faktiske forhold ved en besigtigelse.' },
+        { id: 'amount', type: 'number', label: 'Hvor stort er grundplanet af huset (cirka mål i m2)?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl. Vi dobbelttjekker altid de faktiske forhold ved en besigtigelse.' },
         { id: 'floors', type: 'select', label: 'Hvor mange plan/etager er huset?', options: ['1-plan (Stueplan)', '1½-plan / 2-plan / Mere'] },
-        { id: 'houseAge', type: 'number', label: 'Hvilket år er huset bygget (årstal)?', tooltip: 'Indtast byggeåret, fx 1970. Det hjælper tømreren med at forudsige bygningsstil.' },
+        { id: 'houseAge', type: 'number', label: 'Hvilket år er huset bygget (årstal)?', tooltip: 'Indtast byggeåret, fx 1970. Det hjælper os med at forudsige bygningsstil.' },
         { 
             id: 'oldRoofType', 
             type: 'visual_select', 
@@ -154,7 +153,7 @@ export const QUESTIONS = {
                 { label: 'Metal-tag (zink, stål, kobber)', img: '/images/roof_zinc_1777277255328.png' }
             ] 
         },
-        { id: 'roofPhotos', type: 'file', label: 'Upload billeder af dit hus og tag (valgfrit):', tooltip: 'Tag gerne billeder på afstand, så tømreren kan se adgangsforhold og tagfladen.' },
+        { id: 'roofPhotos', type: 'file', label: 'Upload billeder af dit hus og tag (valgfrit):', tooltip: 'Tag gerne billeder på afstand, så vi kan se adgangsforhold og tagfladen.' },
         { id: 'notes', type: 'textarea', label: 'Er der eventuelt andre bemærkninger til taget?' }
     ],
     windows: [
@@ -173,7 +172,7 @@ export const QUESTIONS = {
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilket materiale skal de nye vinduer primært være i?', 
-            subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af vindue. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde, så du har en god idé om, hvad prisen ligger på. Tømreren gennemgår naturligvis alle detaljemål og specifikke designløsninger med dig inden bestilling.',
+            subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af vindue. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde, så du har en god idé om, hvad prisen ligger på. Vi gennemgår naturligvis alle detaljemål og specifikke designløsninger med dig inden bestilling.',
             options: [
                 { label: 'Træ/alu (kombination)', img: '/images/window_wood_alu_1776261163640.png' },
                 { label: 'Massivt træ', img: '/images/window_wood_1776261054616.png' },
@@ -215,8 +214,8 @@ export const QUESTIONS = {
         }
     ],
     floor: [
-        { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven (cirka mål)?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise areal måles op senere af tømreren.' },
-        { id: 'disposal', type: 'select', label: 'Skal det gamle gulv afmonteres og fjernes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi har selv afmonteret det / der er tomt'] },
+        { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven (cirka mål)?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise areal måles op senere af os.' },
+        { id: 'disposal', type: 'select', label: 'Skal det gamle gulv afmonteres og fjernes?', options: ['Ja, vi skal afmontere OG bortskaffe det', 'Ja, vi skal kun afmontere (vi kører det selv væk)', 'Nej, vi har selv afmonteret det / der er tomt'] },
         { 
             id: 'oldFloorType', 
             type: 'visual_select', 
@@ -237,7 +236,7 @@ export const QUESTIONS = {
                 { label: 'Ved ikke / Andet', img: '/images/subfloor_unknown.png' }
             ] 
         },
-        { id: 'underfloorHeating', type: 'select', label: 'Er der (eller skal der etableres) varme i gulvet?', options: ['Nej', 'Ja, der er allerede støbt gulvvarme (kun specialunderlag kræves)', 'Ja, tømreren skal opbygge nyt gulvvarme (sporplader/varmefordeling)'] },
+        { id: 'underfloorHeating', type: 'select', label: 'Er der (eller skal der etableres) varme i gulvet?', options: ['Nej', 'Ja, der er allerede støbt gulvvarme (kun specialunderlag kræves)', 'Ja, vi skal opbygge nyt gulvvarme (sporplader/varmefordeling)'] },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -251,7 +250,7 @@ export const QUESTIONS = {
                 { label: 'Linoleum', img: '/images/floor_linoleum_1776266075430.png' }
             ] 
         },
-        { id: 'specificFloorWishes', type: 'select', label: 'Har du specifikke ønsker til gulvets mærke eller type (fx klikgulv)?', options: ['Nej, tømreren skal komme med en faglig vurdering', 'Ja, jeg har specifikke ønsker'] },
+        { id: 'specificFloorWishes', type: 'select', label: 'Har du specifikke ønsker til gulvets mærke eller type (fx klikgulv)?', options: ['Nej, vi kommer med en faglig vurdering', 'Ja, jeg har specifikke ønsker'] },
         { id: 'specificFloorDetails', type: 'textarea', label: 'Beskriv dine specifikke ønsker (f.eks. "Klikgulv", et bestemt mærke eller indsæt et link):', condition: { field: 'specificFloorWishes', value: 'Ja, jeg har specifikke ønsker' } },
         { 
             id: 'floorPattern', 
@@ -264,7 +263,7 @@ export const QUESTIONS = {
             id: 'floorObstacles', 
             type: 'select', 
             label: 'Er der faste elementer midt i rummet (f.eks. køkkenø, bærende søjler, skorsten eller mange rør)?', 
-            tooltip: 'Faste elementer midt på gulvarealet kræver præcisions-udskæring, ekstra dækningslister/fuger og tager længere tid for tømreren.',
+            tooltip: 'Faste elementer midt på gulvarealet kræver præcisions-udskæring, ekstra dækningslister/fuger og tager længere tid for os.',
             options: [
                 'Nej, rummet er regulært',
                 'Ja, det er der (køkkenø, søjler, skorsten eller rør)'
@@ -274,7 +273,7 @@ export const QUESTIONS = {
             id: 'floorDoorsNear', 
             type: 'select', 
             label: 'Er der indvendige døre i rummet (som grænser helt op til gulvet)?', 
-            tooltip: 'Nyt gulv (og evt. undergulv) ændrer ofte gulvhøjden. Det betyder, at indvendige døre, der støder op til det nye gulv, skal tilpasses i bunden eller udskiftes. Tømreren vil vurdere dette præcist ved besigtigelsen. Vi har medtaget en standard tilpasning af dørene i prisen, men hvis det ikke kan udføres pænt, kan det kræve udskiftning, hvilket afklares endeligt ved besigtigelsen.',
+            tooltip: 'Nyt gulv (og evt. undergulv) ændrer ofte gulvhøjden. Det betyder, at indvendige døre, der støder op til det nye gulv, skal tilpasses i bunden eller udskiftes. Vi vil vurdere dette præcist ved besigtigelsen. Vi har medtaget en standard tilpasning af dørene i prisen, men hvis det ikke kan udføres pænt, kan det kræve udskiftning, hvilket afklares endeligt ved besigtigelsen.',
             options: ['Nej', 'Ja'] 
         },
         { 
@@ -292,8 +291,8 @@ export const QUESTIONS = {
             type: 'select', 
             label: 'Skal de nuværende døre afmonteres og afskaffes?', 
             options: [
-                'Ja, tømreren skal afmontere OG bortskaffe dem', 
-                'Ja, tømreren skal kun afmontere (vi kører dem selv væk)', 
+                'Ja, vi skal afmontere OG bortskaffe dem', 
+                'Ja, vi skal kun afmontere (vi kører dem selv væk)', 
                 'Nej, vi har selv afmonteret'
             ] 
         },
@@ -301,7 +300,7 @@ export const QUESTIONS = {
             id: 'amount', 
             type: 'number', 
             label: 'Hvor mange døre drejer opgaven sig cirka om i alt?', 
-            tooltip: 'Giv dit eget kvalificerede bud. Det endelige antal og mål bekræftes af tømreren ved opmåling.', 
+            tooltip: 'Giv dit eget kvalificerede bud. Det endelige antal og mål bekræftes af os ved opmåling.', 
             default: 1
         },
         {
@@ -331,8 +330,8 @@ export const QUESTIONS = {
             type: 'select',
             label: 'Hvilken dør-model / kvalitetsniveau ønsker du?',
             condition: (d) => d.doorStyle && d.doorStyle !== 'Indvendig dør',
-            subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Tømreren gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
-            tooltip: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et vejledende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Tømreren gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
+            subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Vi gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
+            tooltip: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et vejledende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Vi gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
             options: (d) => {
                 if (d.doorStyle === 'Terrassedør') {
                     return ['Standard terrassedør', 'Special/Dobbelt terrassedør'];
@@ -376,8 +375,8 @@ export const QUESTIONS = {
             id: 'electricLock',
             type: 'select',
             label: 'Ønskes der monteret elektrisk lås (f.eks. Yale Doorman)?',
-            tooltip: 'En elektrisk lås giver øget sikkerhed og nøglefri adgang. Tømreren leverer og monterer låseenheden komplet inkl. fræsning i karm.',
-            options: ['Nej, vi ønsker standard lås/greb', 'Ja, tømreren skal levere og montere elektrisk lås']
+            tooltip: 'En elektrisk lås giver øget sikkerhed og nøglefri adgang. Vi leverer og monterer låseenheden komplet inkl. fræsning i karm.',
+            options: ['Nej, vi ønsker standard lås/greb', 'Ja, vi skal levere og montere elektrisk lås']
         },
         { 
             id: 'doorHinge', 
@@ -389,14 +388,14 @@ export const QUESTIONS = {
                 { label: 'Højrehængt udadgående', img: '/images/hinge_right_out.png' },
                 { label: 'Venstrehængt indadgående', img: '/images/hinge_left_in.png' },
                 { label: 'Venstrehængt udadgående', img: '/images/hinge_left_out.png' },
-                { label: 'Ved ikke (Tømreren vurderer)', img: '/images/door_hinge_unknown.png' }
+                { label: 'Ved ikke (Vi vurderer)', img: '/images/door_hinge_unknown.png' }
             ] 
         },
         { 
             id: 'doorPhotos', 
             type: 'file', 
             label: 'Upload evt. billeder af døråbningerne:',
-            tooltip: 'VIGTIGT: Tag gerne billeder på afstand, så man kan se eventuelle overliggende lamper, stikkontakter, rør eller andet, som tømreren skal tage højde for.'
+            tooltip: 'VIGTIGT: Tag gerne billeder på afstand, så man kan se eventuelle overliggende lamper, stikkontakter, rør eller andet, som vi skal tage højde for.'
         },
         { 
             id: 'notes', 
@@ -417,7 +416,7 @@ export const QUESTIONS = {
                 { label: 'Tagterrasse', img: '/images/terrace_roof.png' }
             ] 
         },
-        { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja, tømreren skal afmontere OG bortskaffe den', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej'] },
+        { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja, vi skal afmontere OG bortskaffe den', 'Ja, vi skal kun afmontere (vi kører det selv væk)', 'Nej'] },
         { id: 'roofTerraceFeet', type: 'select', label: 'Tagterrasse underlag: Skal terrassen opklodses på justerbare terrassefødder (skåner tagpappet)?', condition: { field: 'elevation', value: 'Tagterrasse' }, options: ['Ja, den skal klodses op på plastfødder', 'Nej'] },
         { 
             id: 'material', 
@@ -434,13 +433,13 @@ export const QUESTIONS = {
             id: 'railing', 
             type: 'select', 
             label: 'Rækværk/Gelænder: Skal der bygges et rækværk (fx på hævet terrasse eller tagterrasse)?', 
-            options: ['Ja, tømreren skal bygge rækværk', 'Nej, ikke relevant / klarer det selv'] 
+            options: ['Ja, vi skal bygge rækværk', 'Nej, ikke relevant / klarer det selv'] 
         },
         { 
             id: 'railingMaterial',
             type: 'visual_select',
             label: 'Hvilket materiale skal rækværket være i?',
-            condition: (d) => d.railing === 'Ja, tømreren skal bygge rækværk',
+            condition: (d) => d.railing === 'Ja, vi skal bygge rækværk',
             options: [
                 { label: 'Glas rækværk', img: '/images/railing_glass.png' },
                 { label: 'Træ rækværk', img: '/images/railing_wood.png' },
@@ -452,7 +451,7 @@ export const QUESTIONS = {
             id: 'railingMeters', 
             type: 'number', 
             label: 'Hvor mange løbende meter rækværk/gelænder skal der cirka laves?', 
-            condition: { field: 'railing', value: 'Ja, tømreren skal bygge rækværk' } 
+            condition: { field: 'railing', value: 'Ja, vi skal bygge rækværk' } 
         },
         { 
             id: 'terraceComplexity', 
@@ -464,13 +463,13 @@ export const QUESTIONS = {
             id: 'awning', 
             type: 'select', 
             label: 'Ønsker du montering af markise til overdækning af terrassen?', 
-            options: ['Ja, tømreren skal montere markise', 'Nej'] 
+            options: ['Ja, vi skal montere markise', 'Nej'] 
         },
         { 
             id: 'awningType', 
             type: 'visual_select', 
             label: 'Hvilken type markise ønsker du?', 
-            condition: { field: 'awning', value: 'Ja, tømreren skal montere markise' }, 
+            condition: { field: 'awning', value: 'Ja, vi skal montere markise' }, 
             options: [
                 { label: 'Manuel markise', img: '/images/awning_manual.png' },
                 { label: 'Elektrisk markise (med motor og fjernbetjening)', img: '/images/awning_electrical.png' }
@@ -480,7 +479,7 @@ export const QUESTIONS = {
             id: 'terracePhotos', 
             type: 'file', 
             label: 'Upload billeder af det nuværende areal (valgfrit):',
-            tooltip: 'Tag gerne billeder på afstand af huset og haven, hvor terrassen skal ligge. Det hjælper tømreren med at vurdere forholdene.' 
+            tooltip: 'Tag gerne billeder på afstand af huset og haven, hvor terrassen skal ligge. Det hjælper os med at vurdere forholdene.' 
         },
         { 
             id: 'notes', 
@@ -623,7 +622,7 @@ export const QUESTIONS = {
                 return d.annexType === 'Isoleret skur/værksted' || d.annexType === 'Fuldt beboeligt anneks' || (amount > 12);
             },
             options: [
-                'Tømreren skal søge byggetilladelsen for mig (vi klarer hele ansøgningen)',
+                'Vi skal søge byggetilladelsen for jer (vi klarer hele ansøgningen)',
                 'Vi søger selv / har allerede fået tilladelse',
                 'Nej, det er ikke nødvendigt (opfylder regler for sekundær bebyggelse under 50 m2 samlet)'
             ]
@@ -633,7 +632,7 @@ export const QUESTIONS = {
             type: 'select', 
             label: 'Skal der rives et eksisterende skur/anneks ned?', 
             condition: (d) => d.annexType === 'Uisoleret skur til opbevaring' && (!d.amount || parseFloat(d.amount) <= 12),
-            options: ['Nej, der er frit', 'Ja, tømreren skal rive ned OG bortskaffe det', 'Ja, tømreren skal kun rive ned (vi kører det selv væk)'] 
+            options: ['Nej, der er frit', 'Ja, vi skal rive ned OG bortskaffe det', 'Ja, vi skal kun rive ned (vi kører det selv væk)'] 
         },
         { 
             id: 'oldMaterial', 
@@ -688,7 +687,7 @@ export const QUESTIONS = {
     ],
     fence: [
         { id: 'amount', type: 'number', label: 'Hvor mange løbende meter hegn skal der sættes op (cirka mål)?' },
-        { id: 'disposal', type: 'select', label: 'Skal et eksisterende hegn, hæk eller buske fjernes?', options: ['Nej, der er frit', 'Ja, tømreren skal fjerne det OG bortskaffe det', 'Ja, tømreren skal kun fjerne det (vi kører det selv væk)'] },
+        { id: 'disposal', type: 'select', label: 'Skal et eksisterende hegn, hæk eller buske fjernes?', options: ['Nej, der er frit', 'Ja, vi skal fjerne det OG bortskaffe det', 'Ja, vi skal kun fjerne det (vi kører det selv væk)'] },
         { 
             id: 'oldMaterial', 
             type: 'visual_select', 
