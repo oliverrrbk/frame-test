@@ -16,7 +16,7 @@ export const initialCategories = [
 
 export const QUESTIONS = {
     roof: [
-        { id: 'amount', type: 'number', label: 'Hvor stort er grundplanet af huset cirka i m2?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl. Tømreren dobbelttjekker altid de faktiske forhold ved en besigtigelse.' },
+        { id: 'amount', type: 'number', label: 'Hvor stort er grundplanet af huset (cirka mål i m2)?', tooltip: 'Giv dit eget kvalificerede bud, hvis du er i tvivl. Tømreren dobbelttjekker altid de faktiske forhold ved en besigtigelse.' },
         { id: 'floors', type: 'select', label: 'Hvor mange plan/etager er huset?', options: ['1-plan (Stueplan)', '1½-plan / 2-plan / Mere'] },
         { id: 'roofPitch', type: 'select', label: 'Hvordan er hældningen på taget?', tooltip: 'Høj rejsning betyder at taget har en stejl vinkel, ofte over 15 grader (typisk huse med loftrum). Fladt tag har kun en svag hældning for at lede vandet væk.', options: ['Fladt tag / Meget lav hældning', 'Høj rejsning / Normal hældning'] },
         { id: 'houseAge', type: 'number', label: 'Hvilket år er huset bygget (årstal)?', tooltip: 'Indtast byggeåret, fx 1970. Det hjælper tømreren med at forudsige byggestil og konstruktion.' },
@@ -125,7 +125,7 @@ export const QUESTIONS = {
         { 
             id: 'windowsConfig', 
             type: 'window_configurator', 
-            label: 'Specifikation af vinduer:', 
+            label: 'Angiv cirka mål på dine vinduer:', 
             condition: (d) => true 
         },
         { 
@@ -135,7 +135,7 @@ export const QUESTIONS = {
         }
     ],
     floor: [
-        { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven cirka?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise areal måles op senere af tømreren.' },
+        { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven (cirka mål)?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise areal måles op senere af tømreren.' },
         { id: 'disposal', type: 'select', label: 'Skal det gamle gulv afmonteres og fjernes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi har selv afmonteret det / der er tomt'] },
         { 
             id: 'oldFloorType', 
@@ -200,7 +200,7 @@ export const QUESTIONS = {
         { 
             id: 'floorDoorsCount', 
             type: 'number', 
-            label: 'Hvor mange indvendige døre er der i rummet i alt?', 
+            label: 'Hvor mange indvendige døre er der cirka i rummet i alt?', 
             condition: { field: 'floorDoorsNear', value: 'Ja' },
             default: 1
         },
@@ -220,7 +220,7 @@ export const QUESTIONS = {
         { 
             id: 'amount', 
             type: 'number', 
-            label: 'Hvor mange døre drejer opgaven sig om i alt?', 
+            label: 'Hvor mange døre drejer opgaven sig cirka om i alt?', 
             tooltip: 'Giv dit eget kvalificerede bud. Det endelige antal og mål bekræftes af tømreren ved opmåling.', 
             default: 1
         },
@@ -326,7 +326,7 @@ export const QUESTIONS = {
         }
     ],
     terrace: [
-        { id: 'amount', type: 'number', label: 'Hvor mange m2 terrasse skal der bygges?', tooltip: 'Giv dit eget kvalificerede bud. Arealet dobbelttjekkes ved en fysisk besigtigelse.' },
+        { id: 'amount', type: 'number', label: 'Hvor mange m2 terrasse skal der bygges (cirka mål)?', tooltip: 'Giv dit eget kvalificerede bud. Arealet dobbelttjekkes ved en fysisk besigtigelse.' },
         { id: 'elevation', type: 'select', label: 'Hvilken type terrasse er der tale om?', options: ['Jordniveau (Almindelig træterrasse på jorden)', 'Hævet terrasse (Hævet mere end 0,5m fra jorden, fx på stolper)', 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)'] },
         { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja, tømreren skal afmontere OG bortskaffe den', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej'] },
         { id: 'roofTerraceFeet', type: 'select', label: 'Tagterrasse underlag: Skal terrassen opklodses på justerbare terrassefødder (skåner tagpappet)?', condition: { field: 'elevation', value: 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)' }, options: ['Ja, den skal klodses op på plastfødder', 'Nej'] },
@@ -343,7 +343,7 @@ export const QUESTIONS = {
         },
         { id: 'fastening', type: 'select', label: 'Montering: Ønsker du standard eller skjult montering af skruer?', options: ['Synlige skruer (Standard montering skruet fra toppen)', 'Skjult montering af skruer (Skrues fra siden/med beslag så der ikke er skruehuller i overfladen)'] },
         { id: 'railing', type: 'select', label: 'Rækværk/Gelænder: Skal der bygges et rækværk (fx på hævet terrasse eller tagterrasse)?', options: ['Ja, tømreren skal bygge rækværk', 'Nej, ikke relevant / klarer det selv'] },
-        { id: 'railingMeters', type: 'number', label: 'Hvor mange løbende meter rækværk/gelænder skal der laves?', condition: { field: 'railing', value: 'Ja, tømreren skal bygge rækværk' } },
+        { id: 'railingMeters', type: 'number', label: 'Hvor mange løbende meter rækværk/gelænder skal der cirka laves?', condition: { field: 'railing', value: 'Ja, tømreren skal bygge rækværk' } },
         { 
             id: 'terraceComplexity', 
             type: 'select', 
@@ -351,7 +351,7 @@ export const QUESTIONS = {
             options: ['Nej, primært standard firkantet (eller ikke relevant)', 'Ja, der er specialvinkler, bygning af trappe eller andre integrationer'] 
         },
         { id: 'roofing', type: 'select', label: 'Ønsker du overdækning (tag) over hele eller dele af terrassen?', options: ['Ja', 'Nej'] },
-        { id: 'roofingAmount', type: 'number', label: 'Hvor mange m2 skal overdækkes?', condition: { field: 'roofing', value: 'Ja' } },
+        { id: 'roofingAmount', type: 'number', label: 'Hvor mange m2 skal der cirka overdækkes?', condition: { field: 'roofing', value: 'Ja' } },
         { id: 'roofingType', type: 'select', label: 'Hvilken type tag på overdækningen?', options: ['Termoplader / Plastik', 'Fast tag (med tagpap)'], condition: { field: 'roofing', value: 'Ja' } },
         { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til byggeriet (fx hvis der skal laves fald på tagterrassen)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
@@ -374,13 +374,13 @@ export const QUESTIONS = {
                 { label: 'Køkken med kogeø', img: '/images/kitchen_island_1776270517874.png' }
             ] 
         },
-        { id: 'amount', type: 'number', label: 'Anslået antal skabe og skuffer (elementer) i alt:', placeholder: 'Fx 15' },
+        { id: 'amount', type: 'number', label: 'Anslået/cirka antal skabe og skuffer (elementer) i alt:', placeholder: 'Fx 15' },
         { id: 'worktop', type: 'select', label: 'Bordplade: Skal tømreren tilpasse og montere en bordplade i træ/laminat (inkl. udskæring til vask/kogeplade)?', tooltip: 'Nogle specialbordplader (fx sten, marmor eller Corian) bliver ofte opmålt og monteret direkte af leverandøren (stenhuggeren). Tømreren skærer typisk kun standard træ- og laminatbordplader til på stedet.', options: ['Ja, træ/laminat som skal tilpasses på stedet', 'Nej, vi får leveret sten/corian (typisk montør) / Gør det selv'] },
         { id: 'integratedAppliances', type: 'select', label: 'Hvidevarer: Er der fuldt integrerede hvidevarer (hvor tømreren skal finjustere træfronter på køleskab/opvaskemaskine)?', options: ['Ja, der er integrerede træfronter', 'Nej, fritstående hvidevarer / standard'] },
         { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til projektet (fx særlige paneler, emhætte)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     ceilings: [
-        { id: 'amount', type: 'number', label: 'Hvor mange m2 loft skal der laves cirka?' },
+        { id: 'amount', type: 'number', label: 'Hvor mange m2 loft skal der laves (cirka mål)?' },
         { id: 'disposal', type: 'select', label: 'Skal nuværende loft afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi monterer ovenpå / der er allerede tomt'] },
         { id: 'vaporAndInsulation', type: 'select', label: 'Hvad ligger der umiddelbart ovenover det nye loft?', tooltip: 'Hvis der er et koldt loftrum (f.eks. spidsloft), skal der lovmæssigt monteres en dampspærre (en plastdug) under loftet for at forhindre fugtskader i tagkonstruktionen.', options: ['Opvarmet etage (Ingen dampspærre nødvendig)', 'Koldt tagrum (Lovkrav om plast-dampspærre)', 'Koldt tagrum inkl. ny isolering (Dampspærre + Isolering)'] },
         { 
@@ -407,7 +407,7 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Er der eventuelle bemærkninger i forhold til montering af loftet? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     facades: [
-        { id: 'amount', type: 'number', label: 'Hvor mange m2 træfacade drejer projektet sig om cirka?' },
+        { id: 'amount', type: 'number', label: 'Hvor mange m2 træfacade drejer projektet sig om (cirka mål)?' },
         { 
             id: 'oldFacadeMaterial', 
             type: 'select', 
@@ -432,7 +432,7 @@ export const QUESTIONS = {
             ] 
         },
         { id: 'mountingStyle', type: 'select', label: 'Hvordan skal beklædningen monteres?', options: ['Vandret (fx Klinkbeklædning)', 'Lodret (fx Listebeklædning - tager lidt længere tid)'] },
-        { id: 'openings', type: 'number', label: 'Hvor mange vinduer/døre er der i facaden, som skal have skåret nye trælister/inddækning?', placeholder: 'Fx 2' },
+        { id: 'openings', type: 'number', label: 'Hvor mange vinduer/døre er der cirka i facaden, som skal have skåret nye trælister/inddækning?', placeholder: 'Fx 2' },
         { id: 'floors', type: 'select', label: 'Hvor mange plan/etager er huset/facaden, der skal beklædes?', options: ['1-plan (Stueplan)', '1½-plan / 2-plan / Mere'] },
         { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til facaden (fx malerarbejde)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
@@ -441,7 +441,7 @@ export const QUESTIONS = {
     ],
     annex: [
         { id: 'annexType', type: 'select', label: 'Hvad er det primære formål med byggeriet?', options: ['Uisoleret skur til opbevaring', 'Isoleret skur/værksted', 'Fuldt beboeligt anneks'] },
-        { id: 'amount', type: 'number', label: 'Hvor stort skal det være i m2?' },
+        { id: 'amount', type: 'number', label: 'Hvor stort skal det være i m2 (cirka mål)?' },
         { id: 'disposal', type: 'select', label: 'Skal der rives et eksisterende skur/anneks ned?', options: ['Nej, der er frit', 'Ja, tømreren skal rive ned OG bortskaffe det', 'Ja, tømreren skal kun rive ned (vi kører det selv væk)'] },
         { 
             id: 'oldMaterial', 
@@ -529,7 +529,7 @@ export const QUESTIONS = {
         { id: 'notes', type: 'textarea', label: 'Skriv gerne hvis du har andre detaljer (f.eks. oplader til elbil, cykelskur, osv.): (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
     ],
     fence: [
-        { id: 'amount', type: 'number', label: 'Hvor mange løbende meter hegn skal der cirka sættes op?' },
+        { id: 'amount', type: 'number', label: 'Hvor mange løbende meter hegn skal der sættes op (cirka mål)?' },
         { id: 'disposal', type: 'select', label: 'Skal et eksisterende hegn fjernes?', options: ['Nej, der er frit', 'Ja, tømreren skal fjerne det OG bortskaffe det', 'Ja, tømreren skal kun fjerne det (vi kører det selv væk)'] },
         { 
             id: 'oldMaterial', 

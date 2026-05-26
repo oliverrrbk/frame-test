@@ -569,21 +569,21 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
 
                                         <div style={{ display: 'flex', gap: '16px' }}>
                                             <div style={{ flex: 1 }}>
-                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: '700', color: '#334155' }}>Bredde (cm)</label>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: '700', color: '#334155' }}>Bredde (cirka cm)</label>
                                                 <input 
                                                     type="number" 
                                                     value={wConf.width || ''}
-                                                    placeholder="f.eks. 120"
+                                                    placeholder="cirka bredde (f.eks. 120)"
                                                     onChange={(e) => updateGroup('width', parseFloat(e.target.value) || '')}
                                                     style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
                                                 />
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: '700', color: '#334155' }}>Højde (cm)</label>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: '700', color: '#334155' }}>Højde (cirka cm)</label>
                                                 <input 
                                                     type="number" 
                                                     value={wConf.height || ''}
-                                                    placeholder="f.eks. 140"
+                                                    placeholder="cirka højde (f.eks. 140)"
                                                     onChange={(e) => updateGroup('height', parseFloat(e.target.value) || '')}
                                                     style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
                                                 />
