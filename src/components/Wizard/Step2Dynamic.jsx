@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
-import { ImagePlus, Info, ZoomIn, Copy, Trash2, Plus } from 'lucide-react';
+import { ImagePlus, Info, ZoomIn, Copy, Trash2, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { QUESTIONS } from './questionsConfig';
 import CustomSelect from './CustomSelect';
 import AudioPlayerButton from './AudioPlayerButton';
@@ -12,6 +12,59 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
     const [zoomedImage, setZoomedImage] = React.useState(null);
     const [showSketcher, setShowSketcher] = React.useState(false);
     const isMouseDown = React.useRef(false);
+
+    const handleNextImage = React.useCallback(() => {
+        setZoomedImage((prev) => {
+            if (!prev || !prev.options) return prev;
+            const nextIdx = prev.currentIndex + 1;
+            if (nextIdx < prev.options.length) {
+                const nextOpt = prev.options[nextIdx];
+                return {
+                    url: nextOpt.img,
+                    title: nextOpt.label,
+                    options: prev.options,
+                    currentIndex: nextIdx
+                };
+            }
+            return prev;
+        });
+    }, []);
+
+    const handlePrevImage = React.useCallback(() => {
+        setZoomedImage((prev) => {
+            if (!prev || !prev.options) return prev;
+            const prevIdx = prev.currentIndex - 1;
+            if (prevIdx >= 0) {
+                const prevOpt = prev.options[prevIdx];
+                return {
+                    url: prevOpt.img,
+                    title: prevOpt.label,
+                    options: prev.options,
+                    currentIndex: prevIdx
+                };
+            }
+            return prev;
+        });
+    }, []);
+
+    React.useEffect(() => {
+        if (!zoomedImage) return;
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'Right') {
+                handleNextImage();
+            } else if (e.key === 'ArrowLeft' || e.key === 'Left') {
+                handlePrevImage();
+            } else if (e.key === 'Escape') {
+                setZoomedImage(null);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [zoomedImage, handleNextImage, handlePrevImage]);
 
     React.useEffect(() => {
         const handleMouseUp = () => {
@@ -272,7 +325,14 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                setZoomedImage({ url: opt.img, title: opt.label });
+                                                const imageOptions = resolvedOptions.filter(o => o.img);
+                                                const currentImageIndex = imageOptions.findIndex(o => o.label === opt.label);
+                                                setZoomedImage({
+                                                    url: opt.img,
+                                                    title: opt.label,
+                                                    options: imageOptions,
+                                                    currentIndex: currentImageIndex >= 0 ? currentImageIndex : 0
+                                                });
                                             }}
                                             style={{
                                                 position: 'absolute',
@@ -1004,6 +1064,72 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             ✕
                         </button>
                     </div>
+
+                    {/* Venstre knap */}
+                    {zoomedImage.options && zoomedImage.currentIndex > 0 && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
+                            style={{
+                                position: 'absolute',
+                                left: '40px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'rgba(15, 23, 42, 0.65)',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '50%',
+                                width: '56px',
+                                height: '56px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+                                zIndex: 100001
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(15, 23, 42, 0.95)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(15, 23, 42, 0.65)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                            title="Forrige (Venstre piletast)"
+                        >
+                            <ChevronLeft size={32} />
+                        </button>
+                    )}
+
+                    {/* Højre knap */}
+                    {zoomedImage.options && zoomedImage.currentIndex < zoomedImage.options.length - 1 && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
+                            style={{
+                                position: 'absolute',
+                                right: '40px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'rgba(15, 23, 42, 0.65)',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '50%',
+                                width: '56px',
+                                height: '56px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+                                zIndex: 100001
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(15, 23, 42, 0.95)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(15, 23, 42, 0.65)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                            title="Næste (Højre piletast)"
+                        >
+                            <ChevronRight size={32} />
+                        </button>
+                    )}
                 </div>,
                 document.body
             )}
