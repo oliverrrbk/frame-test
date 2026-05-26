@@ -303,8 +303,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 else if (w.type === 'Skydedør') h += 4.0; // Skydedør is 7.5
                 else if (w.type === 'Tagvindue') h += 4.5; // Tagvindue is 8.0
                 
-                // Obstacles: +0.5 hour per window udefra
-                if (d.obstacles && d.obstacles.includes('Ja')) {
+                // Obstacles: +0.5 hour per window udefra hvis denne gruppe har hindringer
+                if (w.obstacles === true) {
                     h += 0.5;
                 }
 
@@ -323,8 +323,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             
             bArr.push(`Basis montering: ${totalCount} elementer (fordelt på ${d.windowsConfig.length} gruppe(r)) udregnet til ca. ${winHours.toFixed(1)} arbejdstimer`);
             
-            if (d.obstacles && d.obstacles.includes('Ja')) {
-                bArr.push(`Tillæg for hindringer: +0.5 arbejdstime pr. element indregnet pga. vanskelig adgang (beplantning, hegn el.lign.)`);
+            const obstacleWindowsCount = d.windowsConfig.reduce((acc, w) => acc + (w.obstacles ? (parseInt(w.count) || 1) : 0), 0);
+            if (obstacleWindowsCount > 0) {
+                bArr.push(`Tillæg for hindringer: +0.5 arbejdstime pr. element indregnet pga. vanskelig adgang for ${obstacleWindowsCount} element(er)`);
             }
 
             if (heavyWindowCount > 0) {
@@ -339,19 +340,6 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             // Fallback
             laborHours += numericAmount * (formula.hoursPerUnit || 3.5);
             bArr.push(`Basis montering: ${numericAmount} facadevinduer vurderet til ca. ${laborHours.toFixed(1)} arbejdstimer`);
-        }
-
-        // Integrering af terrassedør (SOP)
-        if (d.includeTerraceDoor && d.includeTerraceDoor !== 'Nej, kun vinduer') {
-            let doorHours = 0;
-            if (d.includeTerraceDoor.includes('enkelt')) {
-                doorHours = 7.0 + 1.5; // montering + finish
-                bArr.push(`Inkluderet terrassedør: 1 stk. enkelt terrassedør (+7.0 t montering & +1.5 t finish)`);
-            } else if (d.includeTerraceDoor.includes('dobbelt')) {
-                doorHours = 7.0 + 3.0 + 1.5; // montering + dobbeltdør tillæg + finish
-                bArr.push(`Inkluderet terrassedør: 1 stk. dobbelt terrassedør (+10.0 t montering & +1.5 t finish)`);
-            }
-            laborHours += doorHours;
         }
     } else {
         // For tag: brug materiale-specifik timer-sats (paptag er ~halvt så langsomt som tegl)
@@ -562,7 +550,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Standard: 2-farvede profiler (fx sort udvendig / hvid indvendig) er medregnet i prisen (+15%)`);
 
                 // Kvalitetstillæg for Mahogni
-                if (d.qualityLevel === 'Eksklusiv Premiumkvalitet (Mahogni)') {
+                if (d.qualityLevel === 'Eksklusiv Premiumkvalitet') {
                     winMatCost *= 1.70;
                     bArr.push(`Tillæg: Eksklusiv Premiumkvalitet i Mahogni (+70% på vindues-materialer)`);
                 }
@@ -571,25 +559,6 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 
                 const totalCount = d.windowsConfig.reduce((acc, w) => acc + (parseInt(w.count) || 1), 0);
                 bArr.push(`Materialer udregnet for ${totalCount} elementer (fordelt på ${d.windowsConfig.length} gruppe(r)): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
-                
-                // Integrering af terrassedør (materiale-del)
-                if (d.includeTerraceDoor && d.includeTerraceDoor !== 'Nej, kun vinduer') {
-                    const doorsIndex = (dbMaterials && dbMaterials['doors']) || {};
-                    let doorMatCost = 0;
-                    let doorLabel = "";
-                    if (d.includeTerraceDoor.includes('enkelt')) {
-                        doorMatCost = doorsIndex['Standard terrassedør'] || (MATERIAL_INDEX && MATERIAL_INDEX.doors ? MATERIAL_INDEX.doors['Standard terrassedør'] : 6500);
-                        doorLabel = "Standard terrassedør (enkelt)";
-                    } else if (d.includeTerraceDoor.includes('dobbelt')) {
-                        doorMatCost = doorsIndex['Special/Dobbelt terrassedør'] || (MATERIAL_INDEX && MATERIAL_INDEX.doors ? MATERIAL_INDEX.doors['Special/Dobbelt terrassedør'] : 14500);
-                        doorLabel = "Special/Dobbelt terrassedør";
-                    }
-                    
-                    if (doorMatCost > 0) {
-                        materialCost += doorMatCost * dbSettings.material_markup;
-                        bArr.push(`Terrassedør materialer: ${doorLabel} tilføjet: ${Math.round(doorMatCost * dbSettings.material_markup)} kr. inkl. avance`);
-                    }
-                }
             } else if (cat === 'windows' && d.windowType === 'Blanding') {
                 let roofCost = indexCat[d.roofMaterial] || 500;
                 let facadeCost = indexCat[d.facadeMaterial] || 500;

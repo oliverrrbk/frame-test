@@ -75,10 +75,10 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             const value = details[q.id];
 
             if (q.type === 'window_configurator') {
-                if (!value || value.length < details.amount) return true;
-                for (let i = 0; i < details.amount; i++) {
+                if (!value || value.length === 0) return true;
+                for (let i = 0; i < value.length; i++) {
                     const w = value[i];
-                    if (!w || !w.photoInside || !w.photoOutside || !w.width || !w.height) {
+                    if (!w || !w.photoInside || !w.photoOutside || !w.width || !w.height || !w.count || w.count < 1) {
                         return true;
                     }
                 }

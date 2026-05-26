@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
-import { ImagePlus, Info, ZoomIn } from 'lucide-react';
+import { ImagePlus, Info, ZoomIn, Copy, Trash2, Plus } from 'lucide-react';
 import { QUESTIONS } from './questionsConfig';
 import CustomSelect from './CustomSelect';
 import AudioPlayerButton from './AudioPlayerButton';
@@ -417,6 +417,10 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
 
                 {q.type === 'window_configurator' && (
                     <div style={{ marginTop: '16px' }}>
+                        <div style={{ background: '#eff6ff', borderLeft: '4px solid #3b82f6', padding: '16px', borderRadius: '10px', marginBottom: '20px', fontSize: '0.92rem', color: '#1e3a8a', display: 'flex', gap: '10px', alignItems: 'center', boxShadow: 'var(--shadow-sm)', lineHeight: '1.4' }}>
+                            <Info size={18} style={{ flexShrink: 0, color: '#3b82f6' }} />
+                            <span><strong>Tip:</strong> Skal du også have udskiftet en terrassedør eller skydedør? Du kan nemt tilføje dem direkte i oversigten nedenfor ved at vælge <strong>"Terrassedør / Skydedør"</strong> under type!</span>
+                        </div>
                         {(details[q.id] || [{ count: 1, type: 'Standard', isOpenable: true, width: '', height: '' }]).map((wConf, idx) => {
                             const list = details[q.id] || [{ count: 1, type: 'Standard', isOpenable: true, width: '', height: '' }];
                             
@@ -468,14 +472,14 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                                 onClick={(e) => { e.preventDefault(); duplicateGroup(); }}
                                                 style={{ padding: '6px 12px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                             >
-                                                📂 Dupliker
+                                                <Copy size={14} /> Dupliker
                                             </button>
                                             {list.length > 1 && (
                                                 <button 
                                                     onClick={(e) => { e.preventDefault(); deleteGroup(); }}
                                                     style={{ padding: '6px 12px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                                 >
-                                                    🗑️ Slet
+                                                    <Trash2 size={14} /> Slet
                                                 </button>
                                             )}
                                         </div>
@@ -537,6 +541,16 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                                     Går glasset ned til gulvet? (Sikkerhedsglas)
                                                 </label>
                                             )}
+
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#475569', fontWeight: '600', cursor: 'pointer' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={!!wConf.obstacles}
+                                                    onChange={(e) => updateGroup('obstacles', e.target.checked)}
+                                                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--accent)' }}
+                                                />
+                                                Hindringer udefra (beplantning/hegn)
+                                            </label>
                                         </div>
 
                                         {wConf.type === 'Panorama' && (
@@ -643,7 +657,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             onMouseOver={(e) => e.currentTarget.style.background = '#dbeafe'}
                             onMouseOut={(e) => e.currentTarget.style.background = '#eff6ff'}
                         >
-                            ➕ Tilføj endnu et vindue / anden størrelse
+                            <Plus size={18} /> Tilføj endnu et vindue / anden størrelse
                         </button>
                     </div>
                 )}

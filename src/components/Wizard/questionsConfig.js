@@ -93,6 +93,7 @@ export const QUESTIONS = {
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilket materiale skal de nye vinduer primært være i?', 
+            subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af vindue. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde, så du har en god idé om, hvad prisen ligger på. Tømreren gennemgår naturligvis alle detaljemål og specifikke designløsninger med dig inden bestilling.',
             options: [
                 { label: 'Træ/alu (kombination)', img: '/images/window_wood_alu_1776261163640.png' },
                 { label: 'Massivt træ', img: '/images/window_wood_1776261054616.png' },
@@ -105,8 +106,8 @@ export const QUESTIONS = {
             id: 'qualityLevel',
             type: 'select',
             label: 'Hvilket kvalitetsniveau ønsker du på vinduerne?',
-            tooltip: 'Robust standardkvalitet (Træ/Alu) er yderst holdbare og populære. Premiumkvalitet (Mahogni) er eksklusive high-end elementer med uforlignelig holdbarhed og glød.',
-            options: ['Robust standardkvalitet (Træ/Alu)', 'Eksklusiv Premiumkvalitet (Mahogni)']
+            tooltip: 'Robust standardkvalitet er yderst holdbare og populære elementer. Eksklusiv Premiumkvalitet er high-end elementer (fx Mahogni) med uforlignelig holdbarhed og glød.',
+            options: ['Robust standardkvalitet', 'Eksklusiv Premiumkvalitet']
         },
         {
             id: 'scope',
@@ -120,20 +121,6 @@ export const QUESTIONS = {
             label: 'Hvor mange etager har huset?', 
             tooltip: 'Høje etager tager længere tid pga. bæring af tunge ruder samt muligt behov for stillads eller lift.', 
             options: ['1 etage (Kun stueplan)', '2 etager (Stueplan + 1. sal)', '3 etager eller mere'] 
-        },
-        {
-            id: 'obstacles',
-            type: 'select',
-            label: 'Er der forhindringer foran vinduerne udefra?',
-            tooltip: 'Vælg ja, hvis der er kraftig beplantning, buske, tæt hegn, eller en tæt tagterrasse, der forhindrer fri adgang for tømreren udefra.',
-            options: ['Nej, der er fri adgang til alle vinduer', 'Ja, der er hindringer (beplantning, hegn el.lign.)']
-        },
-        {
-            id: 'includeTerraceDoor',
-            type: 'select',
-            label: 'Ønsker du også at få skiftet terrassedøren i samme ombæring?',
-            tooltip: 'Det er meget normalt og billigere at udskifte terrassedøren samtidigt med et større vinduesprojekt.',
-            options: ['Nej, kun vinduer', 'Ja, inkluder 1 stk. enkelt terrassedør', 'Ja, inkluder 1 stk. dobbelt terrassedør']
         },
         { 
             id: 'windowsConfig', 
@@ -239,10 +226,14 @@ export const QUESTIONS = {
         },
         {
             id: 'doorStyle',
-            type: 'select',
+            type: 'visual_select',
             label: 'Hvilken dørtype skal monteres?',
             tooltip: 'Vælg om der er tale om indvendige døre eller udvendige døre (terrasse/hoveddør). Bemærk at dette udelukkende er vejledende for at give et estimat - det endelige design og de præcise mål aftales ved besigtigelsen.',
-            options: ['Indvendig dør', 'Terrassedør', 'Hoveddør (Udvendig)']
+            options: [
+                { label: 'Indvendig dør', img: '/images/door_interior_standard.png' },
+                { label: 'Terrassedør', img: '/images/door_terrace_wood.png' },
+                { label: 'Hoveddør (Udvendig)', img: '/images/door_solid_wood.png' }
+            ]
         },
         {
             id: 'doorModel',
@@ -317,7 +308,8 @@ export const QUESTIONS = {
                 { label: 'Højrehængt indadgående', img: '/images/hinge_right_in.png' },
                 { label: 'Højrehængt udadgående', img: '/images/hinge_right_out.png' },
                 { label: 'Venstrehængt indadgående', img: '/images/hinge_left_in.png' },
-                { label: 'Venstrehængt udadgående', img: '/images/hinge_left_out.png' }
+                { label: 'Venstrehængt udadgående', img: '/images/hinge_left_out.png' },
+                { label: 'Ved ikke (Tømreren vurderer)', img: '/images/door_hinge_unknown.png' }
             ] 
         },
         { 
