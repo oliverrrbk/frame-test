@@ -758,11 +758,33 @@ export const QUESTIONS = {
         { 
             id: 'postMaterial', 
             type: 'visual_select', 
-            label: 'Hvilken type stolper og jordforankring ønsker du?', 
+            label: 'Hvilken type stolper ønsker du?', 
             options: [
-                { label: 'Træstolper (støbt i beton)', img: '/images/post_wood_concrete.png' },
-                { label: 'Betonstolper (mest robuste løsning)', img: '/images/post_concrete.png' },
-                { label: 'Metal/Stålstolper (slankt og moderne)', img: '/images/post_metal_concrete.png' }
+                { label: 'Træstolper', img: '/images/post_wood_concrete.png' },
+                { label: 'Betonstolper', img: '/images/post_concrete.png' },
+                { label: 'Metal/Stålstolper', img: '/images/post_metal_concrete.png' }
+            ] 
+        },
+        { 
+            id: 'postAnchoringWoodMetal', 
+            type: 'visual_select', 
+            label: 'Hvilken jordforankrings-metode ønsker du?', 
+            condition: (d) => d.postMaterial === 'Træstolper' || d.postMaterial === 'Metal/Stålstolper',
+            options: [
+                { label: 'Støbt direkte i jord/beton (Standard)', img: '/images/post_anchoring_concrete.png' },
+                { label: 'Stolpesko i støbt punktfundament (Træ fri af jord)', img: '/images/post_anchoring_shoe.png' },
+                { label: 'Direkte i jorden uden beton (Kun visse træsorter)', img: '/images/post_anchoring_soil.png' },
+                { label: 'Jordskruer / Skruefundament (Hurtig stålforankring)', img: '/images/post_anchoring_screw.png' }
+            ] 
+        },
+        { 
+            id: 'postAnchoringConcrete', 
+            type: 'visual_select', 
+            label: 'Hvilken jordforankrings-metode ønsker du?', 
+            condition: (d) => d.postMaterial === 'Betonstolper',
+            options: [
+                { label: 'Støbt direkte i jord/beton (Standard)', img: '/images/post_anchoring_concrete.png' },
+                { label: 'Betonstolpe med betonbundplade (H-stolpe med plade)', img: '/images/post_anchoring_baseplate.png' }
             ] 
         },
         { id: 'notes', type: 'textarea', label: 'Er der specielle udfordringer (f.eks. meget skrå grund, træer i vejen)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }

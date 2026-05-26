@@ -335,12 +335,14 @@ const testCases = [
         }
     },
     {
-        name: "Listehegn med ekstra højde og fældning af levende hæk",
+        name: "Listehegn med ekstra højde, stålstolper på stolpesko og fældning af levende hæk",
         data: {
             category: 'fence',
             details: {
                 amount: 40,
                 material: 'Listehegn (Træ)',
+                postMaterial: 'Metal/Stålstolper',
+                postAnchoringWoodMetal: 'Stolpesko i støbt punktfundament (Træ fri af jord)',
                 fenceHeight: 'Op til 2,0 meter',
                 disposal: 'Ja, tømreren skal afmontere OG bortskaffe det',
                 oldMaterial: 'Hæk / Levende planter'

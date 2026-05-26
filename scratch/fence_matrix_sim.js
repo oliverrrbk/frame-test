@@ -31,26 +31,28 @@ const defaultCarpenter = {
 
 const fenceTestCases = [
     {
-        name: "Standard raftehegn uden noget ekstra",
+        name: "Standard raftehegn med træstolper støbt i beton",
         data: {
             category: 'fence',
             details: {
                 amount: 25,
                 material: 'Raftehegn (Træ)',
-                postMaterial: 'Træstolper (støbt i beton)',
+                postMaterial: 'Træstolper',
+                postAnchoringWoodMetal: 'Støbt direkte i jord/beton (Standard)',
                 disposal: 'Nej, der er frit',
                 fenceHeight: 'Under 1,8 meter'
             }
         }
     },
     {
-        name: "Ekstremt modstridende valg: Komposithegn, betonstolper, fjerne gammel hæk, ekstra højde, 1 meter hegn",
+        name: "Ekstremt modstridende valg: Komposithegn, betonstolper på betonbundplade, fjerne gammel hæk, ekstra højde, 1 meter hegn",
         data: {
             category: 'fence',
             details: {
                 amount: 1,
                 material: 'Komposithegn',
-                postMaterial: 'Betonstolper (mest robuste løsning)',
+                postMaterial: 'Betonstolper',
+                postAnchoringConcrete: 'Betonstolpe med betonbundplade (H-stolpe med plade)',
                 disposal: 'Ja, tømreren skal fjerne det OG bortskaffe det',
                 oldMaterial: 'Hæk / Buske / Levende hegn (Rødder opgraves)',
                 fenceHeight: 'Op til 2,0 meter'
@@ -58,13 +60,14 @@ const fenceTestCases = [
         }
     },
     {
-        name: "Stort hegnsprojekt med listehegn, stålstolper, bortskaffelse af gammelt raftehegn, ekstra højde",
+        name: "Stort hegnsprojekt med listehegn, stålstolper på jordskruer (tidsbesparelse!), bortskaffelse af gammelt raftehegn, ekstra højde",
         data: {
             category: 'fence',
             details: {
                 amount: 80,
                 material: 'Listehegn (Træ)',
-                postMaterial: 'Metal/Stålstolper (slankt og moderne)',
+                postMaterial: 'Metal/Stålstolper',
+                postAnchoringWoodMetal: 'Jordskruer / Skruefundament (Hurtig stålforankring)',
                 disposal: 'Ja, tømreren skal fjerne det OG bortskaffe det',
                 oldMaterial: 'Kraftigt raftehegn / Stammer',
                 fenceHeight: 'Op til 2,0 meter'
@@ -72,13 +75,14 @@ const fenceTestCases = [
         }
     },
     {
-        name: "Lille opgave (Minimumsfaktureringstest): 3m lamelhegn, træstolper",
+        name: "Lille opgave (Minimumsfaktureringstest): 3m lamelhegn, træstolper i rå jord",
         data: {
             category: 'fence',
             details: {
                 amount: 3,
                 material: 'Lamelhegn (Træ)',
-                postMaterial: 'Træstolper (støbt i beton)',
+                postMaterial: 'Træstolper',
+                postAnchoringWoodMetal: 'Direkte i jorden uden beton (Kun visse træsorter)',
                 disposal: 'Nej, der er frit',
                 fenceHeight: 'Under 1,8 meter'
             }
@@ -130,7 +134,7 @@ async function runFenceMatrix() {
     }
     
     console.log("=========================================");
-    console.log("🎉 MATRIX-SIMULERING AFSLUTTET MED SUCESS!");
+    console.log("🎉 FENCE MATRIX-SIMULERING AFSLUTTET MED SUCESS!");
     console.log("=========================================");
 }
 

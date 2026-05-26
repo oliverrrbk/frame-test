@@ -1466,15 +1466,15 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 }
             }
 
-            // Stolpe- & Jordforankring (SOP #1 / SOP #2 / SOP #5)
+            // Stolper (SOP #1 / SOP #2 / SOP #5)
             if (d.postMaterial) {
                 let postPrice = indexCat[d.postMaterial];
                 if (postPrice === undefined) {
                     // Fallbacks
-                    if (d.postMaterial.includes('Træstolper')) postPrice = 120;
-                    else if (d.postMaterial.includes('Betonstolper')) postPrice = 280;
-                    else if (d.postMaterial.includes('Metal')) postPrice = 350;
-                    else postPrice = 120;
+                    if (d.postMaterial.includes('Træstolper')) postPrice = 100;
+                    else if (d.postMaterial.includes('Betonstolper')) postPrice = 240;
+                    else if (d.postMaterial.includes('Metal')) postPrice = 300;
+                    else postPrice = 100;
                 }
                 
                 if (!userSuppliesMaterials) {
@@ -1485,19 +1485,61 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 let postTypeLabel = '';
                 if (d.postMaterial.includes('Betonstolper')) {
                     extraHours = numericAmount * 0.15;
-                    postTypeLabel = 'tunge betonstolper/plader og støbning';
+                    postTypeLabel = 'tunge betonstolper';
                 } else if (d.postMaterial.includes('Metal/Stålstolper') || d.postMaterial.includes('Metal')) {
                     extraHours = numericAmount * 0.10;
-                    postTypeLabel = 'præcisionsmontering af slanke stålstolper';
+                    postTypeLabel = 'præcisionsindstilling af metalstolper';
                 } else {
-                    postTypeLabel = 'standard træstolper støbt i beton';
+                    postTypeLabel = 'træstolper';
                 }
                 
                 if (extraHours > 0) {
                     laborHours += extraHours;
-                    bArr.push(`Tillæg: Jordforankring med ${d.postMaterial.toLowerCase()} (+${extraHours.toFixed(1)} timer pga. ${postTypeLabel})`);
+                    bArr.push(`Stolpevalg: ${d.postMaterial} (+${extraHours.toFixed(1)} timer pga. ${postTypeLabel})`);
                 } else {
-                    bArr.push(`Standard: Jordforankring med ${d.postMaterial.toLowerCase()} inkluderet`);
+                    bArr.push(`Stolpevalg: ${d.postMaterial} inkluderet`);
+                }
+            }
+
+            // Jordforankrings-metode (SOP #1 / SOP #2 / SOP #5)
+            const anchor = d.postAnchoringWoodMetal || d.postAnchoringConcrete;
+            if (anchor) {
+                let anchorPrice = indexCat[anchor];
+                if (anchorPrice === undefined) {
+                    // Fallbacks
+                    if (anchor.includes('Støbt')) anchorPrice = 30;
+                    else if (anchor.includes('Stolpesko')) anchorPrice = 90;
+                    else if (anchor.includes('Direkte')) anchorPrice = 0;
+                    else if (anchor.includes('Jordskruer')) anchorPrice = 180;
+                    else if (anchor.includes('bundplade')) anchorPrice = 150;
+                    else anchorPrice = 30;
+                }
+
+                if (!userSuppliesMaterials) {
+                    materialCost += (numericAmount * anchorPrice) * dbSettings.material_markup;
+                }
+
+                let anchorHours = 0;
+                let anchorText = '';
+                if (anchor.includes('Stolpesko')) {
+                    anchorHours = numericAmount * 0.05;
+                    anchorText = `montering af stål-stolpesko (+${anchorHours.toFixed(1)} timer)`;
+                } else if (anchor.includes('Direkte')) {
+                    anchorHours = -numericAmount * 0.10;
+                    anchorText = `tidsbesparelse uden betonblanding/støbning (${anchorHours.toFixed(1)} timer)`;
+                } else if (anchor.includes('Jordskruer')) {
+                    anchorHours = -numericAmount * 0.15;
+                    anchorText = `tidsbesparelse pga. hurtig maskinel skrueforankring (${anchorHours.toFixed(1)} timer)`;
+                } else if (anchor.includes('bundplade')) {
+                    anchorHours = numericAmount * 0.10;
+                    anchorText = `ekstra tid til præcisionsmontering af betonbundplader (+${anchorHours.toFixed(1)} timer)`;
+                }
+
+                if (anchorHours !== 0) {
+                    laborHours += anchorHours;
+                    bArr.push(`Jordforankring: ${anchor} (${anchorText})`);
+                } else {
+                    bArr.push(`Jordforankring: ${anchor} (Standard støbning i beton)`);
                 }
             }
             
