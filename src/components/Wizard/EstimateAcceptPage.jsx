@@ -81,15 +81,25 @@ const EstimateAcceptPage = () => {
         try {
             const contactPreferenceStr = isAsap ? 'Hurtigst muligt' : `${selectedDays.join(', ')} (${selectedTime})`;
 
-            const { error } = await supabase
-                .from('leads')
-                .update({
-                    contact_preference: contactPreferenceStr,
-                    status: 'Ny forespørgsel'
-                })
-                .eq('id', lead.id);
-                
-            if (error) throw error;
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(lead_id);
+            
+            if (isUUID) {
+                // Brug den sikre RPC til at omgå RLS-opdateringsproblemer for anonyme brugere
+                const { data, error } = await supabase.rpc('accept_estimate_by_token', {
+                    token_val: lead_id,
+                    preference_val: contactPreferenceStr
+                });
+                if (error || !data) throw error || new Error("Kunne ikke acceptere overslag via RPC");
+            } else {
+                const { error } = await supabase
+                    .from('leads')
+                    .update({
+                        contact_preference: contactPreferenceStr,
+                        status: 'Ny forespørgsel'
+                    })
+                    .eq('id', lead.id);
+                if (error) throw error;
+            }
 
             // Send Email to Carpenter
             const customerEmail = lead.customer_email;

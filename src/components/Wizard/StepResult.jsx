@@ -49,18 +49,26 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
             // Vi opdaterer den eksisterende lead, der blev oprettet som kladde
             let newLeadId = projectData.leadId;
             if (newLeadId) {
-                let updateQuery = supabase
-                    .from('leads')
-                    .update({
-                        contact_preference: contactPreferenceStr,
-                        status: 'Ny forespørgsel', // Nu gøres den aktiv, så tømreren kan se den
-                        raw_data: projectData
-                    });
-                    
                 const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(newLeadId);
-                const { error } = await (isUUID ? updateQuery.eq('quote_token', newLeadId) : updateQuery.eq('id', newLeadId));
-                    
-                if (error) throw error;
+                
+                if (isUUID) {
+                    // Brug den sikre RPC til at omgå RLS-opdateringsproblemer for anonyme brugere
+                    const { data, error } = await supabase.rpc('accept_estimate_by_token', {
+                        token_val: newLeadId,
+                        preference_val: contactPreferenceStr
+                    });
+                    if (error || !data) throw error || new Error("Kunne ikke acceptere overslag via RPC");
+                } else {
+                    const { error } = await supabase
+                        .from('leads')
+                        .update({
+                            contact_preference: contactPreferenceStr,
+                            status: 'Ny forespørgsel',
+                            raw_data: projectData
+                        })
+                        .eq('id', newLeadId);
+                    if (error) throw error;
+                }
             } else {
                 // Faldback, hvis der mod forventning ikke var et leadId
                 const { data, error } = await supabase.from('leads').insert([{
