@@ -249,21 +249,39 @@ const testCases = [
             details: {
                 amount: 60,
                 material: 'Troldtekt (akustikloft)',
-                vaporAndInsulation: 'Koldt tagrum + Isolering',
-                plastering: 'Nej',
-                ceilingHeight: 'Ja, loft-til-kip eller højere end 2,5m'
+                oldCeilingType: 'Nedhængt loft (systemloft)',
+                vaporAndInsulation: 'Koldt tagrum inkl. ny isolering (Dampspærre + Isolering)',
+                ceilingHeight: 'Ja, loft-til-kip eller højere end 2,5m',
+                spots: 'Nej'
             }
         }
     },
     {
-        name: "Gipsloft med malerspartling",
+        name: "Standard Gipsloft med automatisk malerspartling og afmontering af træloft",
         data: {
             category: 'ceilings',
             details: {
                 amount: 50,
-                material: 'Gipsloft',
-                vaporAndInsulation: 'Eksisterende dampspærre bevares',
-                plastering: 'Ja'
+                material: 'Gipsloft (standard 2-lag)',
+                oldCeilingType: 'Træloft (listeloft/paneler/rustikloft)',
+                vaporAndInsulation: 'Opvarmet etage (Ingen dampspærre nødvendig)',
+                ceilingHeight: 'Nej, standard lofthøjde',
+                spots: 'Nej'
+            }
+        }
+    },
+    {
+        name: "Premium Lydgipsloft med spots, elektriker og 'Ved ikke' dampspærresikkerhed",
+        data: {
+            category: 'ceilings',
+            details: {
+                amount: 70,
+                material: 'Lydgipsloft (lyddæmpende gips)',
+                oldCeilingType: 'Gipsloft (standard 2-lag)',
+                vaporAndInsulation: 'Ved ikke / Uvist (Beregner dampspærre som sikkerhed)',
+                ceilingHeight: 'Nej, standard lofthøjde',
+                spots: 'Ja',
+                spotsAmount: 12
             }
         }
     },

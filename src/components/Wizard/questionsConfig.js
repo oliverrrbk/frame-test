@@ -514,27 +514,59 @@ export const QUESTIONS = {
     ],
     ceilings: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 loft skal der laves (cirka mål)?' },
-        { id: 'disposal', type: 'select', label: 'Skal nuværende loft afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi monterer ovenpå / der er allerede tomt'] },
-        { id: 'vaporAndInsulation', type: 'select', label: 'Hvad ligger der umiddelbart ovenover det nye loft?', tooltip: 'Hvis der er et koldt loftrum (f.eks. spidsloft), skal der lovmæssigt monteres en dampspærre (en plastdug) under loftet for at forhindre fugtskader i tagkonstruktionen.', options: ['Opvarmet etage (Ingen dampspærre nødvendig)', 'Koldt tagrum (Lovkrav om plast-dampspærre)', 'Koldt tagrum inkl. ny isolering (Dampspærre + Isolering)'] },
+        { 
+            id: 'oldCeilingType', 
+            type: 'visual_select', 
+            label: 'Hvilken type loft er der på nu? (Dette afmonteres og afskaffes altid)',
+            options: [
+                { label: 'Træloft (listeloft/paneler/rustikloft)', img: '/images/ceiling_wood_1776270268417.png' },
+                { label: 'Gipsloft (standard 2-lag)', img: '/images/ceiling_drywall_1776270282269.png' },
+                { label: 'Lydgipsloft (lyddæmpende gips)', img: '/images/ceiling_drywall_1776270282269.png' },
+                { label: 'Fibergipsloft (Fermacel)', img: '/images/ceiling_fermacell_1776270315915.png' },
+                { label: 'Troldtekt (akustikloft)', img: '/images/ceiling_troldtekt_1776270333057.png' },
+                { label: 'Nedhængt loft (systemloft)', img: '/images/ceiling_system_1776270352710.png' },
+                { label: 'Akustikpaneler (lameller)', img: '/images/ceiling_acoustic_1776270369087.png' },
+                { label: 'Ved ikke', img: '/images/subfloor_unknown.png' }
+            ]
+        },
+        { 
+            id: 'vaporAndInsulation', 
+            type: 'select', 
+            label: 'Hvad ligger der umiddelbart ovenover det nye loft?', 
+            tooltip: 'Hvis der er et koldt loftrum (f.eks. spidsloft), skal der lovmæssigt monteres en dampspærre (en plastdug) under loftet for at forhindre fugtskader i tagkonstruktionen.', 
+            options: [
+                'Opvarmet etage (Ingen dampspærre nødvendig)', 
+                'Koldt tagrum (Lovkrav om plast-dampspærre)', 
+                'Koldt tagrum inkl. ny isolering (Dampspærre + Isolering)',
+                'Ved ikke / Uvist (Beregner dampspærre som sikkerhed)'
+            ] 
+        },
         { 
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvad skal det nye loft laves af?',
             options: [
                 { label: 'Træloft (listeloft/paneler/rustikloft)', img: '/images/ceiling_wood_1776270268417.png' },
-                { label: 'Gipsloft', img: '/images/ceiling_drywall_1776270282269.png' },
+                { label: 'Gipsloft (standard 2-lag)', img: '/images/ceiling_drywall_1776270282269.png' },
+                { label: 'Lydgipsloft (lyddæmpende gips)', img: '/images/ceiling_drywall_1776270282269.png' },
                 { label: 'Fibergipsloft (Fermacel)', img: '/images/ceiling_fermacell_1776270315915.png' },
                 { label: 'Troldtekt (akustikloft)', img: '/images/ceiling_troldtekt_1776270333057.png' },
                 { label: 'Nedhængt loft (systemloft)', img: '/images/ceiling_system_1776270352710.png' },
                 { label: 'Akustikpaneler (lameller)', img: '/images/ceiling_acoustic_1776270369087.png' }
             ] 
         },
-        { 
-            id: 'plastering', 
-            type: 'select', 
-            label: 'Skal vi sørge for en professionel maler til at fuldspartle og male loftet?', 
-            condition: (d) => !d.material || ['Gipsloft', 'Fibergipsloft (Fermacel)'].includes(d.material),
-            options: ['Nej, jeg finder selv en maler / gør det selv', 'Ja, jeg vil gerne have en samlet pris inkl. malerarbejde'] 
+        {
+            id: 'spots',
+            type: 'select',
+            label: 'Skal der etableres spots eller nye lampesteder?',
+            options: ['Nej', 'Ja']
+        },
+        {
+            id: 'spotsAmount',
+            type: 'number',
+            label: 'Hvor mange spots/lampesteder skal der etableres i alt?',
+            condition: (d) => d.spots === 'Ja',
+            placeholder: 'Fx 6'
         },
         { id: 'ceilingHeight', type: 'select', label: 'Lofthøjde: Er der tale om loft-til-kip eller lofthøjde over 2,5 meter?', options: ['Nej, standard lofthøjde', 'Ja, loft-til-kip eller højere end 2,5m'] },
         { id: 'notes', type: 'textarea', label: 'Er der eventuelle bemærkninger i forhold til montering af loftet? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }

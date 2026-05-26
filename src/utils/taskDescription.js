@@ -212,25 +212,50 @@ export const generateTaskDescription = (category, details) => {
 
     else if (category === 'ceilings') {
         // 1. Nedrivning / Bortskaffelse
-        if (details.disposal && details.disposal.startsWith('Ja')) {
-            tasks.push('Afmontering og bortskaffelse af eksisterende loft og forskalling');
-        }
+        const oldType = details.oldCeilingType && details.oldCeilingType !== 'Ved ikke' 
+            ? `eksisterende ${details.oldCeilingType.toLowerCase()}` 
+            : 'eksisterende loft';
+        tasks.push(`Afmontering og bortskaffelse af ${oldType}`);
         
         // 2. Klargøring / Underlag
-        if (details.vaporAndInsulation && details.vaporAndInsulation.includes('Dampspærre + Isolering')) {
-            tasks.push('Etablering af dampspærre samt efterisolering af loftkonstruktionen');
-        } else if (details.vaporAndInsulation && details.vaporAndInsulation.includes('plast-dampspærre')) {
-            tasks.push('Opsætning og tætning af plast-dampspærre efter gældende regler');
+        const hasVapor = details.vaporAndInsulation && (
+            details.vaporAndInsulation.includes('Koldt tagrum') ||
+            details.vaporAndInsulation.includes('Ved ikke') ||
+            details.vaporAndInsulation.includes('Uvist')
+        );
+        const hasIso = details.vaporAndInsulation && details.vaporAndInsulation.includes('Isolering');
+
+        if (hasVapor) {
+            if (hasIso) {
+                tasks.push('Etablering af dampspærre samt efterisolering af loftkonstruktionen');
+            } else {
+                tasks.push('Opsætning og tætning af plast-dampspærre efter gældende regler');
+            }
         }
         tasks.push('Nivellering og montering af ny forskalling');
 
         // 3. Montering / Levering
         tasks.push(`Levering og montering af ${qty}m² ${details.material || 'nyt loft'}`);
 
-        // 4. Finish
-        tasks.push('Afsluttende finish: Montering af skygge- eller dæklister langs vægge');
-        if (details.plastering && details.plastering.includes('Ja')) {
-            tasks.push('Malerarbejde: Spartling med armeringstape, opsætning af filt og maling');
+        // 4. Finish / Elektriker & Maler
+        const plasterable = [
+            'Gipsloft (standard 2-lag)',
+            'Lydgipsloft (lyddæmpende gips)',
+            'Fibergipsloft (Fermacel)',
+            'Gipsloft'
+        ];
+        
+        if (plasterable.includes(details.material)) {
+            tasks.push('Malerarbejde: Komplet fuldspartling med armeringstape, filt og to gange maling (Maler altid inkluderet)');
+        }
+
+        const spotsAmount = parseInt(details.spotsAmount) || 0;
+        if (details.spots === 'Ja' && spotsAmount > 0) {
+            tasks.push(`Etablering af spots/lampesteder: Præcis opmåling og udskæring til ${spotsAmount} spots inkl. elektrikerforberedelse`);
+        }
+
+        if (details.material === 'Træloft (listeloft/paneler/rustikloft)' || details.material === 'Troldtekt (akustikloft)') {
+            tasks.push('Afsluttende finish: Montering af skygge- eller dæklister langs vægge');
         }
     }
 

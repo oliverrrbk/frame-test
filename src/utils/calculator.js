@@ -342,9 +342,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             bArr.push(`Basis montering: ${numericAmount} facadevinduer vurderet til ca. ${laborHours.toFixed(1)} arbejdstimer`);
         }
     } else {
-        // For tag: brug materiale-specifik timer-sats (paptag er ~halvt så langsomt som tegl)
+        // Brug materiale-specifik timer-sats hvis defineret (fx forskellig tid til paptag vs tegl, eller gips vs lydgips)
         let hpu = formula.hoursPerUnit;
-        if (cat === 'roof' && formula.hoursPerUnitByMaterial && formula.hoursPerUnitByMaterial[d.material]) {
+        if (formula.hoursPerUnitByMaterial && formula.hoursPerUnitByMaterial[d.material]) {
             hpu = formula.hoursPerUnitByMaterial[d.material];
         }
         laborHours += numericAmount * hpu;
@@ -603,6 +603,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
         
         if (cat === 'facades' && d.oldFacadeMaterial && d.oldFacadeMaterial.includes('rives ned')) {
+            needsDisposalLabor = true;
+            needsDisposalFee = true;
+        }
+
+        if (cat === 'ceilings') {
             needsDisposalLabor = true;
             needsDisposalFee = true;
         }
@@ -1085,19 +1090,21 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'ceilings') {
-            // SOP: Spots er nu automatisk inkluderet i standardprisen
-            laborHours += numericAmount * 0.1;
-            bArr.push(`Standard: Udskæring og tilpasning til spots og lampesteder er medregnet i tidsforbruget`);
-
             // SOP: Forskalling er nu altid obligatorisk (inkluderer standard opretning)
-            laborHours += numericAmount * (formula.battenHours || 0.3);
+            laborHours += numericAmount * (formula.battenHours || 0.2);
             if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Forskalling'] || 50) * dbSettings.material_markup;
             bArr.push(`Standard: Forskalling (træskelet) til underlag for det nye loft`);
 
-            if (d.vaporAndInsulation && d.vaporAndInsulation.includes('Koldt tagrum')) {
+            // Intelligent Dampspærre: Hvis det er koldt tagrum eller "ved ikke", medregner vi dampspærre
+            const needsVaporBarrier = d.vaporAndInsulation && (
+                d.vaporAndInsulation.includes('Koldt tagrum') || 
+                d.vaporAndInsulation.includes('Ved ikke') || 
+                d.vaporAndInsulation.includes('Uvist')
+            );
+            if (needsVaporBarrier) {
                 laborHours += numericAmount * (formula.vaporBarrierHours || 0.2);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Dampspærre inkl tape'] || 35) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Montering af plast-dampspærre mod koldt tagrum`);
+                bArr.push(`Tillæg: Montering af plast-dampspærre mod koldt tagrum / uvist overlag (Sikkerhed mod fugtskader)`);
 
                 if (d.vaporAndInsulation.includes('Isolering')) {
                     laborHours += numericAmount * (formula.insulationHours || 0.2);
@@ -1106,8 +1113,15 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 }
             }
 
-            // SOP: Maler håndteres eksternt, og William tildeles ikke arbejdstimer
-            if (d.plastering && d.plastering.includes('Ja')) {
+            // Maler er altid inkluderet automatisk for spartelbare lofter (gips, lydgips, Fermacel)
+            const plasterableMaterials = [
+                'Gipsloft (standard 2-lag)',
+                'Lydgipsloft (lyddæmpende gips)',
+                'Fibergipsloft (Fermacel)',
+                'Gipsloft' // Fallback for bagudkompatibilitet i testcases
+            ];
+            
+            if (plasterableMaterials.includes(d.material)) {
                 let malerKvmPris = indexCat['Maler: Spartel, filt og maling (pr m2)'] || 250;
                 let malerCoord = indexCat['Maler: Koordineringsgebyr (Fast pris)'] || 5000;
                 
@@ -1116,7 +1130,19 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     materialCost += malerCost; // Ingen tømrer-avance på malerens arbejdsløn/materialer
                     externalLeaseCost += malerCost;
                 }
-                bArr.push(`Håndværker-tillæg: Komplet spartling, fugning og maling af gipsloft (Udføres af professionel maler - Uden tømrer-avance). Inkl. koordinering (${malerCoord} kr)`);
+                bArr.push(`Håndværker-tillæg: Komplet spartling, filt og maling af gips-/fibergipsloft (Udføres af professionel maler - Uden tømrer-avance). Inkl. koordinering (${malerCoord} kr)`);
+            }
+
+            // Elektriker- & spot integration
+            const spotCount = d.spots === 'Ja' ? (parseInt(d.spotsAmount) || 0) : 0;
+            if (spotCount > 0) {
+                laborHours += spotCount * 0.4; // 0.4 timer pr spot til måling/udskæring
+                if (!userSuppliesMaterials) {
+                    const spotCost = spotCount * (indexCat['Elektriker: Etablering af spot/lampested (pr. stk)'] || 950);
+                    materialCost += spotCost; // Ekstern elektriker - Ingen tømrermarkup (SOP #4)
+                    externalLeaseCost += spotCost;
+                }
+                bArr.push(`Elektriker-tillæg: Etablering af ${spotCount} stk spots/lampesteder udføres af ekstern elektriker (+ ${spotCount * 0.4} tømrertimer til opmåling/udskæring + ${spotCount * 950} DKK til elektriker uden avance)`);
             }
 
             // SOP: Automatiseret finish baseret på loftstype
@@ -1551,6 +1577,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             hourlyRate: dbSettings.hourly_rate,
             totalLaborCost: Math.ceil(totalLaborCost),
             materialCost: Math.ceil(materialCost),
+            externalLeaseCost: Math.ceil(externalLeaseCost),
             drivingCost: Math.ceil(totalDriving),
             hiddenBuffer: hiddenBuffer,
             strictPrice: Math.ceil(strictPrice),

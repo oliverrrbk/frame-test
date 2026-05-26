@@ -150,9 +150,10 @@ export const MATERIAL_INDEX = {
     },
     ceilings: {
         'Træloft (listeloft/paneler/rustikloft)': 280,
-        'Gipsloft': 200,                              // 13mm gipsplader 50-90 + lægter
-        'Fibergipsloft (Fermacel)': 320,
-        'Troldtekt (akustikloft)': 400,               // 350-500 typisk
+        'Gipsloft (standard 2-lag)': 180,
+        'Lydgipsloft (lyddæmpende gips)': 290,
+        'Fibergipsloft (Fermacel)': 290,
+        'Troldtekt (akustikloft)': 340,               // 350-500 typisk
         'Nedhængt loft (systemloft)': 450,
         'Akustikpaneler (lameller)': 700,             // Eg-lameller 600-900
         'Default': 350,
@@ -162,7 +163,8 @@ export const MATERIAL_INDEX = {
         'Isolering (50-100mm)': 75,                   // Rockwool 50-90 kr/m²
         'Skyggelister / Fuge': 45,
         'Maler: Spartel, filt og maling (pr m2)': 250,
-        'Maler: Koordineringsgebyr (Fast pris)': 5000
+        'Maler: Koordineringsgebyr (Fast pris)': 5000,
+        'Elektriker: Etablering af spot/lampested (pr. stk)': 950
     },
     facades: {
         'Trykimprægneret': 280,
@@ -323,6 +325,15 @@ export const WORK_FORMULAS = {
     },
     ceilings: {
         hoursPerUnit: 0.8, // Timer pr. m2 loft (kun selve loftet)
+        hoursPerUnitByMaterial: {
+            'Gipsloft (standard 2-lag)': 0.8,
+            'Lydgipsloft (lyddæmpende gips)': 0.9,
+            'Fibergipsloft (Fermacel)': 0.9,
+            'Troldtekt (akustikloft)': 0.8,
+            'Nedhængt loft (systemloft)': 0.8,
+            'Træloft (listeloft/paneler/rustikloft)': 0.9,
+            'Akustikpaneler (lameller)': 0.9
+        },
         disposalHours: 0.3, // Nedtagning pr m2
         // Lofts-tillæg justeret efter at de tidligere compoundede til 2,4 t/m² på fuld pakke
         // (forskalling+damp+iso+gips+spartling+lister på samme overflade overlapper i tid)
