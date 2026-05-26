@@ -315,6 +315,13 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             };
             const categoryName = categoryMap[updatedProjectData.category] || updatedProjectData.category;
 
+            const isFastTrack = ['extensions', 'carport', 'kitchen'].includes(updatedProjectData.category) || 
+                (updatedProjectData.category === 'annex' && (
+                    updatedProjectData.details?.annexType === 'Isoleret skur/værksted' || 
+                    updatedProjectData.details?.annexType === 'Fuldt beboeligt anneks' || 
+                    parseFloat(updatedProjectData.details?.amount) > 12
+                ));
+
             let leadId = updatedProjectData.leadId;
             let isUpdate = !!leadId;
             let insertedData = null;
@@ -356,10 +363,10 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         customer_address: `${customerDetails?.street || ''}, ${customerDetails?.zip || ''} ${customerDetails?.city || ''}`,
                         project_category: categoryName,
                         price_estimate: res.priceRange,
-                        contact_preference: ['extensions', 'carport', 'kitchen'].includes(projectData.category) ? 'Hurtigst muligt' : 'Afventer accept',
+                        contact_preference: isFastTrack ? 'Hurtigst muligt' : 'Afventer accept',
                         raw_data: { ...updatedProjectData, calc_data: res.calcData },
                         carpenter_id: carpenter?.id || null,
-                        status: ['extensions', 'carport', 'kitchen'].includes(projectData.category) ? 'Ny forespørgsel' : 'Overslag (Afventer)'
+                        status: isFastTrack ? 'Ny forespørgsel' : 'Overslag (Afventer)'
                     }]);
                 
                 if (error) throw error;
@@ -379,16 +386,49 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         const overslagUrl = `${window.location.origin}/${carpenter?.slug || 'demo'}/overslag/${leadId}`;
                         
                         if (res.priceRange === 'Besigtigelse kræves') {
-                            if (['extensions', 'carport', 'kitchen'].includes(projectData.category)) {
-                                // Fast-track flow for extensions, carport and kitchen
+                            if (isFastTrack) {
+                                // Fast-track flow for extensions, carport, kitchen and complex annex
                                 import('../../utils/emailTemplates').then(({ getCustomerFastTrackTemplate, getCarpenterNewRequestTemplate }) => {
                                     const notesText = updatedProjectData.details?.notes || '';
-                                    const projectDetailsHtml = `
-                                        <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
-                                            <strong style="display: block; color: #0f172a; margin-bottom: 4px;">Kundens beskrivelse:</strong>
-                                            <span style="color: #334155; white-space: pre-wrap;">${notesText}</span>
-                                        </li>
-                                    `;
+                                    
+                                    const sendCarpenterNotification = (detailsHtml) => {
+                                        if (carpenter?.email) {
+                                            const appUrl = window.location.origin;
+                                            sendEmail({
+                                                to: carpenter.email,
+                                                subject: `Ny forespørgsel fra ${customerDetails.fullName} - ${categoryName}`,
+                                                html: getCarpenterNewRequestTemplate(
+                                                    carpenterCompanyName, 
+                                                    customerDetails.fullName, 
+                                                    categoryName, 
+                                                    customerDetails.email, 
+                                                    customerDetails.phone, 
+                                                    appUrl, 
+                                                    leadId, 
+                                                    detailsHtml, 
+                                                    '', 
+                                                    'Hurtigst muligt'
+                                                ),
+                                                fromName: customerDetails.fullName,
+                                                replyTo: customerDetails.email
+                                            });
+                                        }
+                                    };
+
+                                    if (updatedProjectData.category === 'annex') {
+                                        import('../../utils/taskDescription').then(({ generateTaskAndQaHtml }) => {
+                                            const detailsHtml = generateTaskAndQaHtml(updatedProjectData, true);
+                                            sendCarpenterNotification(detailsHtml);
+                                        });
+                                    } else {
+                                        const detailsHtml = `
+                                            <li style="margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981;">
+                                                <strong style="display: block; color: #0f172a; margin-bottom: 4px;">Kundens beskrivelse:</strong>
+                                                <span style="color: #334155; white-space: pre-wrap;">${notesText}</span>
+                                            </li>
+                                        `;
+                                        sendCarpenterNotification(detailsHtml);
+                                    }
                                     
                                     // Send to customer
                                     sendEmail({
@@ -398,29 +438,6 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                                         fromName: senderName,
                                         replyTo: carpenter?.email
                                     });
-                                    
-                                    // Send to carpenter immediately
-                                    if (carpenter?.email) {
-                                        const appUrl = window.location.origin;
-                                        sendEmail({
-                                            to: carpenter.email,
-                                            subject: `Ny forespørgsel fra ${customerDetails.fullName} - ${categoryName}`,
-                                            html: getCarpenterNewRequestTemplate(
-                                                carpenterCompanyName, 
-                                                customerDetails.fullName, 
-                                                categoryName, 
-                                                customerDetails.email, 
-                                                customerDetails.phone, 
-                                                appUrl, 
-                                                leadId, 
-                                                projectDetailsHtml, 
-                                                '', 
-                                                'Hurtigst muligt'
-                                            ),
-                                            fromName: customerDetails.fullName,
-                                            replyTo: customerDetails.email
-                                        });
-                                    }
                                 });
                             } else {
                                 // Standard flow for special tasks
@@ -467,7 +484,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             }));
 
             setIsCalculating(false);
-            goToStep(['extensions', 'carport', 'kitchen'].includes(projectData.category) ? 6 : 5);
+            goToStep(isFastTrack ? 6 : 5);
         } catch (error) {
             console.error(error);
             import('react-hot-toast').then(toast => {

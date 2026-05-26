@@ -316,7 +316,7 @@ const testCases = [
         }
     },
     {
-        name: "Fuldt beboeligt anneks på betonfundament",
+        name: "Fuldt beboeligt anneks på betonfundament (Kompleks - skal give Besigtigelse)",
         data: {
             category: 'annex',
             details: {
@@ -325,6 +325,34 @@ const testCases = [
                 annexType: 'Fuldt beboeligt anneks',
                 roofType: 'Sadel tag (Høj rejsning)',
                 disposal: 'Nej'
+            }
+        }
+    },
+    {
+        name: "Simpelt uisoleret skur med standard trækonstruktion",
+        data: {
+            category: 'annex',
+            details: {
+                amount: 10,
+                material: 'Trykimprægneret',
+                annexType: 'Uisoleret skur til opbevaring',
+                roofType: 'Fladt tag / ensidig hældning (Tagpap)',
+                disposal: 'Nej',
+                foundationType: 'Trækonstruktion / Punktfundament (standard robust underlag)'
+            }
+        }
+    },
+    {
+        name: "Simpelt uisoleret skur med HardiePlank og betonsokkel",
+        data: {
+            category: 'annex',
+            details: {
+                amount: 12,
+                material: 'HardiePlank',
+                annexType: 'Uisoleret skur til opbevaring',
+                roofType: 'Fladt tag / ensidig hældning (Tagpap)',
+                disposal: 'Nej',
+                foundationType: 'Støbt betondæk / sokkel (kræver jord-/betonarbejde)'
             }
         }
     },

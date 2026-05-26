@@ -226,8 +226,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         bArr.push(`Opgaven er estimeret automatisk via den digitale assistent.`);
         bArr.push(`Systemets vurdering: ${laborHours} arbejdstimer`);
         bArr.push(`Systemets vurdering af materialer: ${rawMat} kr.`);
-    } else if (cat === 'extensions' || cat === 'carport' || cat === 'kitchen') {
-        const catLabel = cat === 'extensions' ? 'Tilbygning' : cat === 'carport' ? 'Carport' : 'Køkkenmontage';
+    } else if (cat === 'extensions' || cat === 'carport' || cat === 'kitchen' || (cat === 'annex' && (d.annexType === 'Isoleret skur/værksted' || d.annexType === 'Fuldt beboeligt anneks' || numericAmount > 12))) {
+        const catLabel = cat === 'extensions' ? 'Tilbygning' : cat === 'carport' ? 'Carport' : cat === 'kitchen' ? 'Køkkenmontage' : 'Anneks & Skur';
         bArr.push(`${catLabel}/Kompleks opgave: Der foretages ingen automatisk prisudregning.`);
         bArr.push(`Kunden har indsendt en beskrivelse, og afventer kontakt for besigtigelse.`);
         return {
@@ -1353,6 +1353,16 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 let sadelPris = indexCat['Tillæg: Sadel tag (pr m2)'] || 500;
                 if (!userSuppliesMaterials) materialCost += (numericAmount * sadelPris) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Sadel tag med rejsning i stedet for simpelt fladt tag`);
+            }
+
+            if (d.foundationType && d.foundationType.includes('Støbt betondæk')) {
+                let foundationHours = formula.foundationBetonHours || 1.5;
+                laborHours += numericAmount * foundationHours;
+                let betonPris = indexCat['Tillæg: Støbt betondæk / sokkel (pr m2)'] || 1500;
+                if (!userSuppliesMaterials) materialCost += (numericAmount * betonPris) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Støbt betondæk / sokkel er valgt (+${foundationHours.toFixed(1)} arbejdstimer pr. m2 samt beton/armering)`);
+            } else {
+                bArr.push(`Fundament: Opbygget som solid trækonstruktion på punktfundament (standard)`);
             }
             
             // SOP #2: Spild (afskær) og Montagematerialer

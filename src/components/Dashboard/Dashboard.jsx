@@ -2500,7 +2500,7 @@ const Dashboard = () => {
                                                             {selectedLead.raw_data?.actual_quote_price ? Math.round(selectedLead.raw_data.actual_quote_price).toLocaleString('da-DK') : '?'} kr. inkl. moms
                                                         </p>
                                                     </>
-                                                ) : ['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) ? (
+                                                ) : (['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? (
                                                     <>
                                                         <span style={{ fontSize: '0.85rem', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overslag udeladt</span>
                                                         <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#d97706', fontSize: '1.1rem' }}>
@@ -2747,10 +2747,10 @@ const Dashboard = () => {
                                             ) : (
                                             <div style={{ marginTop: '24px', padding: '24px', backgroundColor: '#f3f1ed', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                                 <h3 style={{ margin: '0', color: '#1a1a1a' }}>
-                                                    {['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
+                                                    {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
                                                 </h3>
                                                 <p style={{ margin: '0', color: '#6b7280', fontSize: '0.95rem' }}>
-                                                    {['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) 
+                                                    {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') 
                                                         ? "Dette er et projekt uden auto-estimat. Opbyg tilbuddet fra bunden ved at indtaste dine beregnede timer og materialer, så bygger systemet en professionel PDF-kontrakt." 
                                                         : "Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig."}
                                                 </p>

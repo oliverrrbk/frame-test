@@ -201,6 +201,7 @@ export const MATERIAL_INDEX = {
         'Superwood': 3500,
         'Thermowood': 4000,
         'Cedertræ / Hardwood': 5000,
+        'HardiePlank': 3200,
         'Komposit': 4000,
         'Default': 4000,
         // Tillægspakker — base trykimprægneret indeholder ikke isolering eller fuld beboelig finish
@@ -208,7 +209,8 @@ export const MATERIAL_INDEX = {
         'Tillæg: Fuldt beboeligt/BR18 (pr m2)': 3500,
         'Tillæg: Sadel tag (pr m2)': 500,
         'Miljøtillæg: Eternit nedrivning (pr m2)': 100,
-        'Tillæg: Tung nedrivning Mursten/Beton (pr m2)': 200
+        'Tillæg: Tung nedrivning Mursten/Beton (pr m2)': 200,
+        'Tillæg: Støbt betondæk / sokkel (pr m2)': 1500
     },
     carport: {
         'Trykimprægneret': 18000,      // Trykimp. byggesæt 15-25k
@@ -397,7 +399,8 @@ export const WORK_FORMULAS = {
     annex: {
         hoursPerUnit: 6.0, // Timer pr. m2
         disposalHours: 0.5, // Nedrivning af gl. skur pr. m2
-        containerThreshold: 10 // Skure over 10m2 udløser en container
+        containerThreshold: 10, // Skure over 10m2 udløser en container
+        foundationBetonHours: 1.5
     },
     carport: {
         hoursPerUnit: 40.0, // Timer pr carport (base)

@@ -614,12 +614,32 @@ export const QUESTIONS = {
     annex: [
         { id: 'annexType', type: 'select', label: 'Hvad er det primære formål med byggeriet?', options: ['Uisoleret skur til opbevaring', 'Isoleret skur/værksted', 'Fuldt beboeligt anneks'] },
         { id: 'amount', type: 'number', label: 'Hvor stort skal det være i m2 (cirka mål)?' },
-        { id: 'disposal', type: 'select', label: 'Skal der rives et eksisterende skur/anneks ned?', options: ['Nej, der er frit', 'Ja, tømreren skal rive ned OG bortskaffe det', 'Ja, tømreren skal kun rive ned (vi kører det selv væk)'] },
+        { 
+            id: 'buildingPermit', 
+            type: 'select', 
+            label: 'Hvem skal søge om byggetilladelse til annekset/skuret?', 
+            condition: (d) => {
+                const amount = parseFloat(d.amount);
+                return d.annexType === 'Isoleret skur/værksted' || d.annexType === 'Fuldt beboeligt anneks' || (amount > 12);
+            },
+            options: [
+                'Tømreren skal søge byggetilladelsen for mig (vi klarer hele ansøgningen)',
+                'Vi søger selv / har allerede fået tilladelse',
+                'Nej, det er ikke nødvendigt (opfylder regler for sekundær bebyggelse under 50 m2 samlet)'
+            ]
+        },
+        { 
+            id: 'disposal', 
+            type: 'select', 
+            label: 'Skal der rives et eksisterende skur/anneks ned?', 
+            condition: (d) => d.annexType === 'Uisoleret skur til opbevaring' && (!d.amount || parseFloat(d.amount) <= 12),
+            options: ['Nej, der er frit', 'Ja, tømreren skal rive ned OG bortskaffe det', 'Ja, tømreren skal kun rive ned (vi kører det selv væk)'] 
+        },
         { 
             id: 'oldMaterial', 
             type: 'visual_select', 
             label: 'Hvilket materiale er det eksisterende bygget af?', 
-            condition: (d) => d.disposal && d.disposal.startsWith('Ja'),
+            condition: (d) => (d.disposal && d.disposal.startsWith('Ja')) && d.annexType === 'Uisoleret skur til opbevaring' && (!d.amount || parseFloat(d.amount) <= 12),
             options: [
                 { label: 'Træ', img: '/images/old_facade_wood_1777278987653.png' },
                 { label: 'Mursten/Beton', img: '/images/old_facade_brick_1777279017419.png' },
@@ -631,18 +651,31 @@ export const QUESTIONS = {
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilket materiale skal de udvendige facader være i?', 
+            condition: (d) => d.annexType === 'Uisoleret skur til opbevaring' && (!d.amount || parseFloat(d.amount) <= 12),
             options: [
                 { label: 'Trykimprægneret', img: '/images/facade_pine_1776270383566.png' },
                 { label: 'Superwood', img: '/images/facade_superwood_1776270423784.png' },
                 { label: 'Thermowood', img: '/images/facade_thermowood_1776270455644.png' },
                 { label: 'Cedertræ / Hardwood', img: '/images/facade_cedar_1776270440422.png' },
+                { label: 'HardiePlank', img: '/images/facade_hardieplank.png' },
                 { label: 'Komposit', img: '/images/terrace_composite_1776267690895.png' }
+            ] 
+        },
+        { 
+            id: 'foundationType', 
+            type: 'visual_select', 
+            label: 'Hvilken type fundament ønsker du til skuret?', 
+            condition: (d) => d.annexType === 'Uisoleret skur til opbevaring' && (!d.amount || parseFloat(d.amount) <= 12),
+            options: [
+                { label: 'Trækonstruktion / Punktfundament (standard robust underlag)', img: '/images/post_anchoring_shoe.png' },
+                { label: 'Støbt betondæk / sokkel (kræver jord-/betonarbejde)', img: '/images/concrete_subfloor.png' }
             ] 
         },
         { 
             id: 'roofType', 
             type: 'visual_select', 
             label: 'Hvilken tagtype ønsker du?', 
+            condition: (d) => d.annexType === 'Uisoleret skur til opbevaring' && (!d.amount || parseFloat(d.amount) <= 12),
             options: [
                 { label: 'Fladt tag / ensidig hældning (Tagpap)', img: '/images/annex_roof_flat_1777280796177.png' },
                 { label: 'Sadel tag (Høj rejsning)', img: '/images/annex_roof_pitched_1777280812965.png' }

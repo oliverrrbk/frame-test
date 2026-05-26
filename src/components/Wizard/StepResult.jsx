@@ -137,7 +137,15 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
 
     const daysOfWeek = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 
-    const needsPhysicalInspection = ['extensions', 'carport', 'kitchen'].includes(projectData.category) || (projectData.category === 'special' && (!projectData.details?.aiLaborHours && !projectData.details?.aiMaterialCost));
+    const isAnnexComplex = projectData.category === 'annex' && (
+        projectData.details?.annexType === 'Isoleret skur/værksted' || 
+        projectData.details?.annexType === 'Fuldt beboeligt anneks' || 
+        parseFloat(projectData.details?.amount) > 12
+    );
+
+    const needsPhysicalInspection = ['extensions', 'carport', 'kitchen'].includes(projectData.category) || 
+        isAnnexComplex ||
+        (projectData.category === 'special' && (!projectData.details?.aiLaborHours && !projectData.details?.aiMaterialCost));
 
     return (
         <section className="wizard-step active result-step-section" style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -146,7 +154,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     {needsPhysicalInspection ? (
                         <>
                             <h2 style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '16px' }}>
-                                Vi har forstået din opgave!
+                                Vi have forstået din opgave!
                             </h2>
                             <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
                                 Du har nu givet os et utrolig stærkt udgangspunkt for at hjælpe dig videre med projektet.
@@ -176,8 +184,8 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     }}>
                         <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Komplekst Projekt</span>
                         <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: 'var(--text-primary)' }}>Kræver fysisk besigtigelse</h1>
-                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}>At bygge en tilbygning, carport eller et nyt køkken (eller en stor specialopgave) er et fantastisk projekt. Fordi den endelige pris afhænger stærkt af de specifikke forhold, eksisterende konstruktioner og eventuelle byggetilladelser, er det ikke muligt at give et retvisende overslag gennem en beregner.</p>
-                        <p style={{ fontSize: '1.05rem', marginTop: '16px', color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}><strong>Men dit forarbejde er guld værd!</strong> Vi har nu de helt rigtige forudsætninger for at forstå din drøm. Send opgaven ind til os nedenfor, så ringer vi dig op og aftaler et møde.</p>
+                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}>At bygge en tilbygning, carport, køkkenmontage eller et isoleret/større anneks er et fantastisk projekt. Fordi den endelige pris afhænger stærkt af de specifikke forhold, eksisterende konstruktioner og eventuelle byggetilladelser, er det ikke muligt at give et retvisende overslag gennem en beregner.</p>
+                        <p style={{ fontSize: '1.05rem', marginTop: '16px', color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}><strong>Men dit forarbejde er guld værd!</strong> We have nu de helt rigtige forudsætninger for at forstå din drøm. Send opgaven ind til os nedenfor, så ringer vi dig op og aftaler et møde.</p>
                     </div>
                 ) : (
                     <div className="price-box-card" style={{ 
