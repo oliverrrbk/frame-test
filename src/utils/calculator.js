@@ -785,7 +785,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     externalLeaseCost += finalScaffoldPrice;
                     bArr.push(`Tillæg: 1. sal – ekstra tidsforbrug (+20% tid) samt ${scaffoldText} (min. 8.000 kr): ${finalScaffoldPrice} kr.`);
                 }
-            } else if (d.floors && d.floors.includes('2. sal')) {
+            } else if (d.floors && (d.floors.includes('2. sal') || d.floors.includes('3 etager'))) {
                 laborHours += initialInstallHours * 0.4;
                 if (!userSuppliesMaterials) {
                     let finalScaffoldPrice = scaffoldPrice * 1.5;
@@ -821,7 +821,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Standard tillæg: Forventet materialespild (+10%) samt montagematerialer (A4-skruer, beslag og kiler)`);
             }
 
-            if (d.elevation === 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)') {
+            if (d.elevation === 'Tagterrasse') {
                 laborHours += numericAmount * (formula.roofTerraceHours || 0.4);
                 if (d.roofTerraceFeet && d.roofTerraceFeet.startsWith('Ja')) {
                     if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Tagterrasse plastfødder (pr m2 overslag)'] || 90) * dbSettings.material_markup;
@@ -833,13 +833,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     externalLeaseCost += hejsPrice;
                 }
                 bArr.push(`Tillæg: Tagterrasse-montering (inkl. materialehejs og skånsom opklodsning)`);
-            } else if (d.elevation && d.elevation.startsWith('Hævet terrasse')) {
+            } else if (d.elevation === 'Hævet terrasse') {
                 laborHours += numericAmount * (formula.elevatedHours || 0.6);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Hævet terrasse materialer (pr m2)'] || 250) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Hævet terrasse (kræver forstærket underkonstruktion, kraftige stolper og evt. stillads)`);
             }
 
-            if (d.elevation !== 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)') {
+            if (d.elevation !== 'Tagterrasse') {
                 laborHours += numericAmount * (formula.groundFoundationHours || 0.8);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Punktfundament og støbemix (pr m2 overslag)'] || 150) * dbSettings.material_markup;
                 bArr.push(`Standard tillæg: Etablering af bærende underlag (Udgravning, dug, stabilisering og opklodsning/punktfundament)`);
@@ -857,9 +857,19 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             if (d.railing && d.railing.startsWith('Ja') && d.railingMeters) {
                 let meters = parseFloat(d.railingMeters);
+                let rType = d.railingMaterial || 'Træ rækværk';
+                let rPriceKey = 'Rækværk/Gelænder træ (pr løbende meter)';
+                if (rType === 'Glas rækværk') {
+                    rPriceKey = 'Rækværk/Gelænder glas (pr løbende meter)';
+                } else if (rType === 'Rustfrit stål rækværk') {
+                    rPriceKey = 'Rækværk/Gelænder stål (pr løbende meter)';
+                } else if (rType === 'Blanding af træ og rustfrit stål') {
+                    rPriceKey = 'Rækværk/Gelænder træ og stål (pr løbende meter)';
+                }
+
                 laborHours += meters * (formula.railingHoursPerMeter || 1.2);
-                if (!userSuppliesMaterials) materialCost += meters * (indexCat['Rækværk/Gelænder træ (pr løbende meter)'] || 400) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Bygning af ${meters} meter rækværk/gelænder`);
+                if (!userSuppliesMaterials) materialCost += meters * (indexCat[rPriceKey] || 600) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Bygning af ${meters} meter rækværk (${rType.toLowerCase()})`);
             }
 
             if (d.terraceComplexity && d.terraceComplexity.startsWith('Ja')) {
@@ -871,14 +881,16 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 bArr.push(`Tillæg: Forøget bygge-kompleksitet (trapper, rundinger, plantekasser) tager mere tid og giver mere spild`);
             }
             
-            if (d.roofing === 'Ja') {
-                let roofArea = parseInt(d.roofingAmount) || 10;
-                laborHours += roofArea * 1.5; 
+            if (d.awning && d.awning.startsWith('Ja')) {
+                laborHours += 6.0; // Fast tid til montering af markise (2 mand i 3 timer)
                 if (!userSuppliesMaterials) {
-                    let roofMatPrice = d.roofingType === 'Fast tag (med tagpap)' ? (indexCat['Fast tag (med tagpap)'] || 800) : (indexCat['Termotag / Plast'] || 400);
-                    materialCost += (roofArea * roofMatPrice) * dbSettings.material_markup;
+                    let awningPriceKey = d.awningType === 'Elektrisk markise (med motor og fjernbetjening)' 
+                        ? 'Elektrisk markise (materialer)' 
+                        : 'Manuel markise (materialer)';
+                    let awningPrice = indexCat[awningPriceKey] || 5000;
+                    materialCost += awningPrice * dbSettings.material_markup;
                 }
-                bArr.push(`Tillæg: Overdækning på ${roofArea} m2 (${d.roofingType || 'Termo'}) lagt til prisen`);
+                bArr.push(`Tillæg: Montering af ${d.awningType ? d.awningType.toLowerCase() : 'markise'} lagt til prisen`);
             }
         }
         

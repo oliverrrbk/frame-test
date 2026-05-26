@@ -40,7 +40,7 @@ const testCases = [
                 amount: 30,
                 material: 'Trykimprægneret',
                 disposal: 'Nej',
-                elevation: 'Standard højde / Jordniveau (op til 30 cm over terræn)',
+                elevation: 'Jordniveau',
                 fastening: 'Synlige skruer (standard)',
                 railing: 'Nej'
             }
@@ -54,7 +54,7 @@ const testCases = [
                 amount: 2,
                 material: 'Thermowood',
                 disposal: 'Nej',
-                elevation: 'Standard højde / Jordniveau (op til 30 cm over terræn)'
+                elevation: 'Jordniveau'
             }
         }
     },
@@ -66,7 +66,7 @@ const testCases = [
                 amount: 80,
                 material: 'Cedertræ / Hardwood',
                 disposal: 'Ja, tømreren skal afmontere OG bortskaffe det',
-                elevation: 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)',
+                elevation: 'Tagterrasse',
                 roofTerraceFeet: 'Ja',
                 fastening: 'Skjult montering (med specielle sidebeslag/propper)',
                 railing: 'Ja',
@@ -83,7 +83,7 @@ const testCases = [
                 amount: '40-60',
                 material: 'Komposit',
                 disposal: 'Nej',
-                elevation: 'Standard højde / Jordniveau (op til 30 cm over terræn)',
+                elevation: 'Jordniveau',
                 roofing: 'Ja',
                 roofingAmount: 15,
                 roofingType: 'Fast tag (med tagpap)'

@@ -10,6 +10,18 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
     const questions = QUESTIONS[category] || [];
     const [openTooltips, setOpenTooltips] = React.useState({});
     const [zoomedImage, setZoomedImage] = React.useState(null);
+    const [showSketcher, setShowSketcher] = React.useState(false);
+    const isMouseDown = React.useRef(false);
+
+    React.useEffect(() => {
+        const handleMouseUp = () => {
+            isMouseDown.current = false;
+        };
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, []);
 
     React.useEffect(() => {
         if (category === 'windows') {
@@ -297,28 +309,205 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 )}
 
                 {q.type === 'number' && (
-                    <input 
-                        type="number" 
-                        min="0"
-                        value={details[q.id] || ''} 
-                        onChange={(e) => handleInputChange(q.id, parseFloat(e.target.value))} 
-                        onKeyDown={handleKeyDown}
-                        placeholder={q.placeholder || 'Indtast tal her...'}
-                        style={{ 
-                            width: '100%', 
-                            padding: '14px 20px', 
-                            borderRadius: '12px', 
-                            border: '2px solid var(--border)', 
-                            fontSize: '1rem',
-                            color: 'var(--text-primary)',
-                            background: '#f8fafc',
-                            transition: 'all 0.2s ease',
-                            outline: 'none',
-                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
-                        }}
-                        onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)'; }}
-                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)'; }}
-                    />
+                    <>
+                        <input 
+                            type="number" 
+                            min="0"
+                            value={details[q.id] || ''} 
+                            onChange={(e) => handleInputChange(q.id, parseFloat(e.target.value))} 
+                            onKeyDown={handleKeyDown}
+                            placeholder={q.placeholder || 'Indtast tal her...'}
+                            style={{ 
+                                width: '100%', 
+                                padding: '14px 20px', 
+                                borderRadius: '12px', 
+                                border: '2px solid var(--border)', 
+                                fontSize: '1rem',
+                                color: 'var(--text-primary)',
+                                background: '#f8fafc',
+                                transition: 'all 0.2s ease',
+                                outline: 'none',
+                                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+                            }}
+                            onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)'; }}
+                            onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)'; }}
+                        />
+                        {category === 'terrace' && q.id === 'amount' && (
+                            <div style={{ marginTop: '16px' }}>
+                                {/* Collapsible trigger button */}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSketcher(!showSketcher)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '12px 16px',
+                                        background: '#f8fafc',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '8px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '600',
+                                        color: '#334155',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseOver={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f1f5f9'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Info size={16} style={{ color: '#2563eb' }} />
+                                        <span>Vil du tegne en skitse af din terrasse? (Valgfrit – klik for at åbne)</span>
+                                    </div>
+                                    <span style={{ fontSize: '1.2rem', transform: showSketcher ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', display: 'inline-block' }}>
+                                        ▾
+                                    </span>
+                                </button>
+                                 {/* Collapsible body */}
+                                 {showSketcher && (
+                                     <div style={{
+                                         marginTop: '12px',
+                                         padding: '20px',
+                                         background: '#fff',
+                                         border: '1px solid #e2e8f0',
+                                         borderRadius: '12px',
+                                         boxShadow: 'var(--shadow-sm)'
+                                     }}>
+                                         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                                             <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#1e293b', margin: '0 0 4px 0' }}>
+                                                 Tegn formen på din terrasse herunder (Valgfrit)
+                                             </h3>
+                                             <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0, lineHeight: '1.4' }}>
+                                                 Hver firkant svarer til ca. 1,5 x 1,5 meter. Det hjælper tømreren med at se dine ønsker.
+                                             </p>
+                                         </div>
+
+                                         {/* The Grid container */}
+                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', maxWidth: '100%', overflowX: 'auto', padding: '4px' }}>
+                                             {Array.from({ length: 7 }).map((_, rIdx) => (
+                                                 <div key={rIdx} style={{ display: 'flex', gap: '4px' }}>
+                                                     {Array.from({ length: 8 }).map((_, cIdx) => {
+                                                         const cellId = `${cIdx},${rIdx}`;
+                                                         const isSelected = (details.terraceGrid || []).includes(cellId);
+                                                         const toggleCell = () => {
+                                                             const currentGrid = details.terraceGrid || [];
+                                                             const newGrid = currentGrid.includes(cellId)
+                                                                 ? currentGrid.filter(id => id !== cellId)
+                                                                 : [...currentGrid, cellId];
+                                                             handleInputChange('terraceGrid', newGrid);
+                                                         };
+
+                                                         return (
+                                                             <div
+                                                                 key={cIdx}
+                                                                 onMouseDown={(e) => {
+                                                                     e.preventDefault();
+                                                                     isMouseDown.current = true;
+                                                                     toggleCell();
+                                                                 }}
+                                                                 onMouseEnter={() => {
+                                                                     if (isMouseDown.current) {
+                                                                         toggleCell();
+                                                                     }
+                                                                 }}
+                                                                 style={{
+                                                                     width: '32px',
+                                                                     height: '32px',
+                                                                     borderRadius: '4px',
+                                                                     cursor: 'pointer',
+                                                                     background: isSelected 
+                                                                         ? 'linear-gradient(135deg, #d97706, #b45309)' 
+                                                                         : '#f0fdf4',
+                                                                     border: isSelected 
+                                                                         ? '1px solid #92400e' 
+                                                                         : '1px solid #dcfce7',
+                                                                     transition: 'all 0.15s ease',
+                                                                     boxShadow: isSelected 
+                                                                         ? 'inset 0 1px 3px rgba(0,0,0,0.2)' 
+                                                                         : 'none',
+                                                                     display: 'flex',
+                                                                     alignItems: 'center',
+                                                                     justifyContent: 'center',
+                                                                     position: 'relative'
+                                                                 }}
+                                                                 title={`Koordinat: ${cIdx + 1}, ${7 - rIdx}`}
+                                                             >
+                                                                 {isSelected && (
+                                                                     <div style={{
+                                                                         position: 'absolute',
+                                                                         width: '100%',
+                                                                         height: '2px',
+                                                                         background: 'rgba(255,255,255,0.15)',
+                                                                         top: '50%',
+                                                                         transform: 'translateY(-50%)'
+                                                                     }} />
+                                                                 )}
+                                                             </div>
+                                                         );
+                                                     })}
+                                                 </div>
+                                             ))}
+
+                                             {/* House facade line representation */}
+                                             <div style={{ 
+                                                 width: '100%', 
+                                                 maxWidth: '284px', 
+                                                 display: 'flex', 
+                                                 flexDirection: 'column', 
+                                                 alignItems: 'center', 
+                                                 marginTop: '12px' 
+                                             }}>
+                                                 <div style={{ 
+                                                     width: '100%', 
+                                                     height: '6px', 
+                                                     background: '#64748b', 
+                                                     borderRadius: '3px',
+                                                     boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                 }} />
+                                                 <span style={{ 
+                                                     fontSize: '0.75rem', 
+                                                     fontWeight: '800', 
+                                                     color: '#64748b', 
+                                                     textTransform: 'uppercase', 
+                                                     letterSpacing: '0.15em',
+                                                     marginTop: '6px'
+                                                 }}>
+                                                     HUS
+                                                 </span>
+                                             </div>
+                                         </div>
+
+                                        {/* Actions & Summary */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                                            <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '500' }}>
+                                                Markerede felter: <strong>{(details.terraceGrid || []).length} stk.</strong>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleInputChange('terraceGrid', [])}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    background: 'transparent',
+                                                    border: '1px dashed #cbd5e1',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: '600',
+                                                    color: '#64748b',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                                onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = '#fca5a5'; e.currentTarget.style.background = '#fef2f2'; }}
+                                                onMouseOut={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = 'transparent'; }}
+                                            >
+                                                Ryd skitse
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </>
                 )}
 
                 {q.type === 'text' && (

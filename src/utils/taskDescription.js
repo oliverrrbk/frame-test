@@ -188,13 +188,12 @@ export const generateTaskDescription = (category, details) => {
         tasks.push('Udgravning og etablering af punktfundamenter i frostfri dybde');
 
         // 3. Montering / Levering
-        let hiddenStr = (details.fastening && details.fastening.includes('Skjult')) ? ' med skjult montering (uden synlige skruer)' : ' fastgjort med rustfrie terrasseskruer';
-        tasks.push(`Opbygning af bjælkelag i trykimprægneret træ og montering af ${qty}m² ${details.material || 'terrassebrædder'}${hiddenStr}`);
+        tasks.push(`Opbygning af bjælkelag i trykimprægneret træ og montering af ${qty}m² ${details.material || 'terrassebrædder'}`);
         if (details.railing && details.railing.startsWith('Ja')) {
-            tasks.push(`Opbygning af ${details.railingMeters || 'tilhørende'} meter hegn/gelænder`);
+            tasks.push(`Opbygning af ${details.railingMeters || 'tilhørende'} meter rækværk (${(details.railingMaterial || 'træ rækværk').toLowerCase()})`);
         }
-        if (details.roofing && details.roofing.startsWith('Ja')) {
-            tasks.push(`Etablering af overdækning over ${details.roofingAmount || ''}m² (${details.roofingType || 'trapeztag'})`);
+        if (details.awning && details.awning.startsWith('Ja')) {
+            tasks.push(`Montering af ${details.awningType ? details.awningType.toLowerCase() : 'markise'} til overdækning`);
         }
 
         // 4. Finish

@@ -125,6 +125,11 @@ export const MATERIAL_INDEX = {
         'Montagematerialer (Skruer, beslag, kiler/murpap) pr m2': 70,
         'Punktfundament og støbemix (pr m2 overslag)': 180,  // cement+strøer 150-250
         'Rækværk/Gelænder træ (pr løbende meter)': 600,      // komplet rækværk inkl. stolper 500-900
+        'Rækværk/Gelænder glas (pr løbende meter)': 1200,      // glaspaneler + stål/træstolper
+        'Rækværk/Gelænder stål (pr løbende meter)': 1000,      // stålwire eller stålrør
+        'Rækværk/Gelænder træ og stål (pr løbende meter)': 850, // kombination
+        'Manuel markise (materialer)': 5000,
+        'Elektrisk markise (materialer)': 12000,
         'Beslag til skjult montering (pr m2 overslag)': 120,
         'Fast tag (med tagpap)': 700,
         'Termotag / Plast': 350,

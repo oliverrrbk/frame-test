@@ -327,9 +327,18 @@ export const QUESTIONS = {
     ],
     terrace: [
         { id: 'amount', type: 'number', label: 'Hvor mange m2 terrasse skal der bygges (cirka mål)?', tooltip: 'Giv dit eget kvalificerede bud. Arealet dobbelttjekkes ved en fysisk besigtigelse.' },
-        { id: 'elevation', type: 'select', label: 'Hvilken type terrasse er der tale om?', options: ['Jordniveau (Almindelig træterrasse på jorden)', 'Hævet terrasse (Hævet mere end 0,5m fra jorden, fx på stolper)', 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)'] },
+        { 
+            id: 'elevation', 
+            type: 'visual_select', 
+            label: 'Hvilken type terrasse er der tale om?', 
+            options: [
+                { label: 'Jordniveau', img: '/images/terrace_ground.png' },
+                { label: 'Hævet terrasse', img: '/images/terrace_elevated.png' },
+                { label: 'Tagterrasse', img: '/images/terrace_roof.png' }
+            ] 
+        },
         { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja, tømreren skal afmontere OG bortskaffe den', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej'] },
-        { id: 'roofTerraceFeet', type: 'select', label: 'Tagterrasse underlag: Skal terrassen opklodses på justerbare terrassefødder (skåner tagpappet)?', condition: { field: 'elevation', value: 'Tagterrasse (Skal bygges ovenpå et eksisterende fladt tag)' }, options: ['Ja, den skal klodses op på plastfødder', 'Nej'] },
+        { id: 'roofTerraceFeet', type: 'select', label: 'Tagterrasse underlag: Skal terrassen opklodses på justerbare terrassefødder (skåner tagpappet)?', condition: { field: 'elevation', value: 'Tagterrasse' }, options: ['Ja, den skal klodses op på plastfødder', 'Nej'] },
         { 
             id: 'material', 
             type: 'visual_select', 
@@ -341,19 +350,63 @@ export const QUESTIONS = {
                 { label: 'Komposit', img: '/images/terrace_composite_1776267690895.png' }
             ] 
         },
-        { id: 'fastening', type: 'select', label: 'Montering: Ønsker du standard eller skjult montering af skruer?', options: ['Synlige skruer (Standard montering skruet fra toppen)', 'Skjult montering af skruer (Skrues fra siden/med beslag så der ikke er skruehuller i overfladen)'] },
-        { id: 'railing', type: 'select', label: 'Rækværk/Gelænder: Skal der bygges et rækværk (fx på hævet terrasse eller tagterrasse)?', options: ['Ja, tømreren skal bygge rækværk', 'Nej, ikke relevant / klarer det selv'] },
-        { id: 'railingMeters', type: 'number', label: 'Hvor mange løbende meter rækværk/gelænder skal der cirka laves?', condition: { field: 'railing', value: 'Ja, tømreren skal bygge rækværk' } },
+        { 
+            id: 'railing', 
+            type: 'select', 
+            label: 'Rækværk/Gelænder: Skal der bygges et rækværk (fx på hævet terrasse eller tagterrasse)?', 
+            options: ['Ja, tømreren skal bygge rækværk', 'Nej, ikke relevant / klarer det selv'] 
+        },
+        { 
+            id: 'railingMaterial',
+            type: 'visual_select',
+            label: 'Hvilket materiale skal rækværket være i?',
+            condition: (d) => d.railing === 'Ja, tømreren skal bygge rækværk',
+            options: [
+                { label: 'Glas rækværk', img: '/images/railing_glass.png' },
+                { label: 'Træ rækværk', img: '/images/railing_wood.png' },
+                { label: 'Rustfrit stål rækværk', img: '/images/railing_steel.png' },
+                { label: 'Blanding af træ og rustfrit stål', img: '/images/railing_wood_steel.png' }
+            ]
+        },
+        { 
+            id: 'railingMeters', 
+            type: 'number', 
+            label: 'Hvor mange løbende meter rækværk/gelænder skal der cirka laves?', 
+            condition: { field: 'railing', value: 'Ja, tømreren skal bygge rækværk' } 
+        },
         { 
             id: 'terraceComplexity', 
             type: 'select', 
             label: 'Skal terrassen bygges med specielle vinkler, trapper eller integration af plantekasser?', 
             options: ['Nej, primært standard firkantet (eller ikke relevant)', 'Ja, der er specialvinkler, bygning af trappe eller andre integrationer'] 
         },
-        { id: 'roofing', type: 'select', label: 'Ønsker du overdækning (tag) over hele eller dele af terrassen?', options: ['Ja', 'Nej'] },
-        { id: 'roofingAmount', type: 'number', label: 'Hvor mange m2 skal der cirka overdækkes?', condition: { field: 'roofing', value: 'Ja' } },
-        { id: 'roofingType', type: 'select', label: 'Hvilken type tag på overdækningen?', options: ['Termoplader / Plastik', 'Fast tag (med tagpap)'], condition: { field: 'roofing', value: 'Ja' } },
-        { id: 'notes', type: 'textarea', label: 'Andre bemærkninger til byggeriet (fx hvis der skal laves fald på tagterrassen)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' }
+        { 
+            id: 'awning', 
+            type: 'select', 
+            label: 'Ønsker du montering af markise til overdækning af terrassen?', 
+            options: ['Ja, tømreren skal montere markise', 'Nej'] 
+        },
+        { 
+            id: 'awningType', 
+            type: 'visual_select', 
+            label: 'Hvilken type markise ønsker du?', 
+            condition: { field: 'awning', value: 'Ja, tømreren skal montere markise' }, 
+            options: [
+                { label: 'Manuel markise', img: '/images/awning_manual.png' },
+                { label: 'Elektrisk markise (med motor og fjernbetjening)', img: '/images/awning_electrical.png' }
+            ] 
+        },
+        { 
+            id: 'terracePhotos', 
+            type: 'file', 
+            label: 'Upload billeder af det nuværende areal (valgfrit):',
+            tooltip: 'Tag gerne billeder på afstand af huset og haven, hvor terrassen skal ligge. Det hjælper tømreren med at vurdere forholdene.' 
+        },
+        { 
+            id: 'notes', 
+            type: 'textarea', 
+            label: 'Andre bemærkninger til byggeriet (fx hvis der skal laves fald på tagterrassen)? (VIGTIGT: Særlige ønsker beskrevet her påvirker ikke den foreløbige pris, men kan gøre det endelige tilbud dyrere, hvis de kræver specialløsninger)' 
+        }
     ],
     kitchen: [
         { id: 'disposal', type: 'select', label: 'Skal det gamle køkken afmonteres og afskaffes?', options: ['Ja, tømreren skal afmontere OG bortskaffe det', 'Ja, tømreren skal kun afmontere (vi kører det selv væk)', 'Nej, vi gør det selv / der er allerede tomt'] },
