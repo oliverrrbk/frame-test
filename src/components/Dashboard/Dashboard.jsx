@@ -3754,7 +3754,7 @@ const Dashboard = () => {
                                       }}
                                     >
                                         {leadsData.filter(l => {
-                                            if (l.status === 'Udgået opgave' || l.status === 'Historik') return false;
+                                            if (l.status === 'Udgået opgave' || l.status === 'Historik' || l.status === 'Slettet') return false;
                                             if (l.status === 'Ny forespørgsel' && !mapFilters.showNew) return false;
                                             if (l.status === 'Sendt tilbud' && !mapFilters.showSent) return false;
                                             if (l.status === 'Bekræftet opgave' && !mapFilters.showConfirmed) return false;
@@ -3786,7 +3786,7 @@ const Dashboard = () => {
                             </div>
                             
                             <div style={{ marginTop: '16px', display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                                <span><strong style={{color: '#10b981'}}>{leadsData.filter(l => l.status !== 'Udgået opgave' && l.status !== 'Historik' && geocodedLeads[l.id]).length}</strong> / {leadsData.filter(l => l.status !== 'Udgået opgave' && l.status !== 'Historik').length} aktive adresser fundet på kortet.</span>
+                                <span><strong style={{color: '#10b981'}}>{leadsData.filter(l => l.status !== 'Udgået opgave' && l.status !== 'Historik' && l.status !== 'Slettet' && geocodedLeads[l.id]).length}</strong> / {leadsData.filter(l => l.status !== 'Udgået opgave' && l.status !== 'Historik' && l.status !== 'Slettet').length} aktive adresser fundet på kortet.</span>
                             </div>
                                 </div> {/* Close card-body */}
                             </div> {/* Close settings-card */}
