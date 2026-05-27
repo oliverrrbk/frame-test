@@ -521,7 +521,7 @@ export default function PricingPage({ setSession }) {
                         >
 
                             <div style={{ position: 'relative', zIndex: 110, minHeight: '100%' }}>
-                                <Login setSession={setSession} />
+                                <Login setSession={setSession} onClose={() => setIsLoginOpen(false)} />
                             </div>
                         </motion.div>
                     </>

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
-import { Wrench, Lock } from 'lucide-react';
+import { Wrench, Lock, X, ArrowLeft } from 'lucide-react';
 
-const Login = ({ setSession }) => {
+const Login = ({ setSession, onClose }) => {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -67,9 +67,27 @@ const Login = ({ setSession }) => {
     };
 
     return (
-        <div className="login-container">
-            <div className="login-card">
-                <div className="login-header">
+        <div className="login-container relative">
+            <div className="login-card relative">
+                <div className="login-header relative">
+                    {onClose ? (
+                        <button 
+                            type="button"
+                            onClick={onClose}
+                            style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '8px', zIndex: 10 }}
+                            className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+                    ) : (
+                        <Link 
+                            to="/" 
+                            style={{ position: 'absolute', top: '24px', left: '24px', color: '#9ca3af', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500', zIndex: 10 }}
+                            className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                        >
+                            <ArrowLeft size={16} /> Forside
+                        </Link>
+                    )}
                     <div className="login-brand">
                         <Wrench size={32} color="#6b7280" style={{ opacity: 0.7 }} />
                     </div>

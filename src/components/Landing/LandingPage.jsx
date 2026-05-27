@@ -293,7 +293,7 @@ const LandingPage = ({ setSession }) => {
 
                 {/* Login Component inside Drawer */}
                 <div style={{ position: 'relative', zIndex: 110, minHeight: '100%' }}>
-                   <Login setSession={setSession} />
+                   <Login setSession={setSession} onClose={() => setIsLoginOpen(false)} />
                 </div>
             </motion.div>
             </>
