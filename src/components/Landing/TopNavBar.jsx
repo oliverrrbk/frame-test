@@ -91,60 +91,52 @@ export default function TopNavBar({ onLoginClick }) {
             </div>
             <div className="h-px w-full bg-slate-100 dark:bg-slate-900"></div>
 
-            {/* Mobile Dropdown Menu Container */}
+            {/* Mobile Dropdown Menu Container (Fullscreen Overlay) */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ 
-                            opacity: 1, 
-                            height: 'auto',
-                            transition: {
-                                height: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
-                                opacity: { duration: 0.2, delay: 0.1 }
-                            }
-                        }}
-                        exit={{ 
-                            opacity: 0, 
-                            height: 0,
-                            transition: {
-                                height: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
-                                opacity: { duration: 0.1 }
-                            }
-                        }}
-                        className="absolute top-full left-0 w-full md:hidden bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-900 shadow-2xl z-50 overflow-hidden"
-                        style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' } }}
+                        exit={{ opacity: 0, y: -20, transition: { duration: 0.2, ease: 'easeIn' } }}
+                        className="fixed inset-0 w-full h-[100dvh] bg-white dark:bg-slate-950 z-[100] flex flex-col"
                     >
-                        <div className="px-6 py-6 flex flex-col gap-4 font-body bg-white dark:bg-slate-950 w-full h-full relative z-50">
-                            {navLinks.map((link) => (
-                                <motion.div 
-                                    key={link.path}
-                                    initial={{ opacity: 0, y: -8 }}
-                                    animate={{ opacity: 1, y: 0, transition: { type: "spring", stiffness: 350, damping: 28 } }}
-                                    exit={{ opacity: 0, y: -8, transition: { duration: 0.1 } }}
-                                >
+                        {/* Overlay Header */}
+                        <div className="flex justify-between items-center px-6 md:px-8 py-4 border-b border-slate-100 dark:border-slate-900">
+                            <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3">
+                                <img src="/logo.png" alt="Bison Frame Logo" className="h-10 w-auto object-contain" />
+                                <div className="text-lg font-bold tracking-[-0.02em] uppercase text-slate-800 dark:text-slate-100">
+                                    Bison Frame
+                                </div>
+                            </Link>
+                            <button 
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+                        
+                        <div className="px-6 py-8 flex flex-col gap-6 font-body flex-1 overflow-y-auto">
+                            <div className="flex flex-col gap-4">
+                                {navLinks.map((link) => (
                                     <Link 
+                                        key={link.path}
                                         to={link.path}
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className="block text-lg font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white py-2 border-b border-slate-50 dark:border-slate-900 transition-colors"
+                                        className="block text-2xl font-bold text-slate-800 dark:text-slate-100 py-3 border-b border-slate-50 dark:border-slate-900"
                                     >
                                         {link.label}
                                     </Link>
-                                </motion.div>
-                            ))}
+                                ))}
+                            </div>
                             
-                                <motion.div 
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0, transition: { delay: 0.1, duration: 0.3, ease: "easeOut" } }}
-                                    exit={{ opacity: 0, transition: { duration: 0.1 } }}
-                                    className="flex flex-col gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-slate-900"
-                                >
+                            <div className="flex flex-col gap-4 mt-auto pt-8">
                                 <button 
                                     onClick={() => {
                                         setIsMobileMenuOpen(false);
                                         onLoginClick();
                                     }}
-                                    className="w-full py-3 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-center hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
+                                    className="w-full py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold text-lg text-center hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
                                 >
                                     Log ind
                                 </button>
@@ -153,11 +145,11 @@ export default function TopNavBar({ onLoginClick }) {
                                         setIsMobileMenuOpen(false);
                                         navigate('/register');
                                     }}
-                                    className="w-full py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-center hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors shadow-sm"
+                                    className="w-full py-4 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-lg text-center hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors shadow-lg"
                                 >
                                     Prøv gratis i en måned
                                 </button>
-                            </motion.div>
+                            </div>
                         </div>
                     </motion.div>
                 )}

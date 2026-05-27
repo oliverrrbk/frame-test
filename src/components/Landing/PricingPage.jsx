@@ -240,7 +240,7 @@ export default function PricingPage({ setSession }) {
                 <section className="block md:hidden w-full max-w-full mb-[clamp(4rem,8vw,6rem)] relative z-10">
                     <div 
                         ref={scrollContainerRef}
-                        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 px-[7.5vw] pb-8 pt-4"
+                        className="flex overflow-x-auto hide-scrollbar gap-4 px-[7.5vw] pb-8 pt-4"
                         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
                     >
                         {pricingTiers.map((tier, idx) => (
@@ -250,7 +250,7 @@ export default function PricingPage({ setSession }) {
                                 onClick={(e) => {
                                     e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                                 }}
-                                className={`pricing-card-mobile flex-shrink-0 w-[85vw] max-w-[320px] snap-center bg-white dark:bg-slate-900 rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden shadow-xl transition-all duration-300 border cursor-pointer ${
+                                className={`pricing-card-mobile flex-shrink-0 w-[85vw] max-w-[320px] bg-white dark:bg-slate-900 rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden shadow-xl transition-all duration-300 border cursor-pointer ${
                                     tier.highlight 
                                         ? 'border-2 border-blue-500 dark:border-blue-400 shadow-blue-500/10' 
                                         : 'border-slate-100 dark:border-slate-800'
