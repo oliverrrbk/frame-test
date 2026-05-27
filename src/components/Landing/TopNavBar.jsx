@@ -17,7 +17,11 @@ export default function TopNavBar({ onLoginClick }) {
     ];
 
     return (
-        <nav className="sticky top-0 w-full z-50 bg-slate-50/40 dark:bg-slate-950/40 backdrop-blur-md font-headline tracking-tight antialiased text-slate-600 dark:text-slate-300">
+        <nav className={`sticky top-0 w-full z-50 font-headline tracking-tight antialiased text-slate-600 dark:text-slate-300 transition-colors duration-300 ${
+            isMobileMenuOpen 
+                ? 'bg-white dark:bg-slate-950' 
+                : 'bg-white/80 dark:bg-slate-950/80 backdrop-blur-lg'
+        }`}>
             <div className="flex justify-between items-center max-w-[1440px] mx-auto px-6 md:px-8 py-4">
                 <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                     <img src="/logo.png" alt="Bison Frame Logo" className="h-10 w-auto object-contain" />
@@ -91,30 +95,27 @@ export default function TopNavBar({ onLoginClick }) {
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: -16 }}
+                        initial={{ opacity: 0, height: 0 }}
                         animate={{ 
                             opacity: 1, 
-                            y: 0,
+                            height: 'auto',
                             transition: {
-                                duration: 0.22,
-                                ease: [0.16, 1, 0.3, 1],
-                                staggerChildren: 0.04,
-                                delayChildren: 0.02
+                                height: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+                                opacity: { duration: 0.2, delay: 0.1 }
                             }
                         }}
                         exit={{ 
                             opacity: 0, 
-                            y: -16,
+                            height: 0,
                             transition: {
-                                duration: 0.16,
-                                ease: [0.16, 1, 0.3, 1],
-                                staggerChildren: 0.02,
-                                staggerDirection: -1
+                                height: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+                                opacity: { duration: 0.1 }
                             }
                         }}
-                        className="absolute top-full left-0 w-full md:hidden bg-white/98 dark:bg-slate-950/98 backdrop-blur-xl border-b border-slate-100 dark:border-slate-900 shadow-2xl z-50"
+                        className="absolute top-full left-0 w-full md:hidden bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-900 shadow-2xl z-50 overflow-hidden"
+                        style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
                     >
-                        <div className="px-6 py-6 flex flex-col gap-4 font-body">
+                        <div className="px-6 py-6 flex flex-col gap-4 font-body bg-white dark:bg-slate-950 w-full h-full relative z-50">
                             {navLinks.map((link) => (
                                 <motion.div 
                                     key={link.path}
@@ -132,12 +133,12 @@ export default function TopNavBar({ onLoginClick }) {
                                 </motion.div>
                             ))}
                             
-                            <motion.div 
-                                initial={{ opacity: 0, y: -8 }}
-                                animate={{ opacity: 1, y: 0, transition: { type: "spring", stiffness: 350, damping: 28 } }}
-                                exit={{ opacity: 0, y: -8, transition: { duration: 0.1 } }}
-                                className="flex flex-col gap-3 mt-4 pt-2"
-                            >
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0, transition: { delay: 0.1, duration: 0.3, ease: "easeOut" } }}
+                                    exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                                    className="flex flex-col gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-slate-900"
+                                >
                                 <button 
                                     onClick={() => {
                                         setIsMobileMenuOpen(false);

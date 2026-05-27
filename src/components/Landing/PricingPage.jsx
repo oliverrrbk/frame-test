@@ -11,67 +11,45 @@ export default function PricingPage({ setSession }) {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const navigate = useNavigate();
 
-    // Stater for den cirkulære swipe-karrusel på mobil
+    // Stater for den mobile scroll-karrusel
     const [activeIndex, setActiveIndex] = useState(1); // Standard 'Professionel' (index 1)
-    const [touchStart, setTouchStart] = useState(null);
-    const [touchEnd, setTouchEnd] = useState(null);
+    const scrollContainerRef = useRef(null);
 
-    const minSwipeDistance = 50;
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            // Centrer 'Professionel' kortet på mobil ved load
+            setTimeout(() => {
+                if (scrollContainerRef.current) {
+                    const centerPos = (container.scrollWidth - container.clientWidth) / 2;
+                    container.scrollTo({ left: centerPos, behavior: 'instant' });
+                }
+            }, 100);
 
-    const onTouchStart = (e) => {
-        setTouchEnd(null);
-        setTouchStart(e.targetTouches[0].clientX);
-    };
-
-    const onTouchMove = (e) => {
-        setTouchEnd(e.targetTouches[0].clientX);
-    };
-
-    const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return;
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-        if (isLeftSwipe) {
-            setActiveIndex((prev) => (prev + 1) % 3);
-        } else if (isRightSwipe) {
-            setActiveIndex((prev) => (prev - 1 + 3) % 3);
+            // IntersectionObserver sikrer lynhurtig performance uden JS-scroll-lag
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const index = Number(entry.target.dataset.index);
+                        setActiveIndex(index);
+                    }
+                });
+            }, {
+                root: container,
+                threshold: 0.6
+            });
+            
+            // Vi bruger setTimeout til at sikre, at dom-elementerne er renderet
+            setTimeout(() => {
+                if (scrollContainerRef.current) {
+                    const children = scrollContainerRef.current.querySelectorAll('.pricing-card-mobile');
+                    children.forEach(child => observer.observe(child));
+                }
+            }, 200);
+            
+            return () => observer.disconnect();
         }
-    };
-
-    const getCardStyle = (relIndex) => {
-        if (relIndex === 0) {
-            return {
-                zIndex: 30,
-                x: '0%',
-                scale: 1,
-                opacity: 1,
-                rotate: 0,
-                pointerEvents: 'auto'
-            };
-        }
-        if (relIndex === 1) {
-            return {
-                zIndex: 20,
-                x: '55%',
-                scale: 0.88,
-                opacity: 0.35,
-                rotate: 6,
-                pointerEvents: 'none'
-            };
-        }
-        if (relIndex === -1) {
-            return {
-                zIndex: 20,
-                x: '-55%',
-                scale: 0.88,
-                opacity: 0.35,
-                rotate: -6,
-                pointerEvents: 'none'
-            };
-        }
-        return { opacity: 0, zIndex: 0, scale: 0.5 };
-    };
+    }, []);
 
     const pricingTiers = [
         {
@@ -258,100 +236,90 @@ export default function PricingPage({ setSession }) {
                     ))}
                 </section>
 
-                {/* Mobile Pricing Circular Swipe Deck */}
-                <section className="block md:hidden w-full max-w-[450px] mx-auto px-4 mb-[clamp(4rem,8vw,6rem)] relative z-10">
+                {/* Mobile Pricing Horizontal Scroll Snap */}
+                <section className="block md:hidden w-full max-w-full mb-[clamp(4rem,8vw,6rem)] relative z-10">
                     <div 
-                        className="relative w-full h-[580px] flex items-center justify-center overflow-visible"
-                        onTouchStart={onTouchStart}
-                        onTouchMove={onTouchMove}
-                        onTouchEnd={onTouchEnd}
+                        ref={scrollContainerRef}
+                        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 px-[7.5vw] pb-8 pt-4"
+                        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
                     >
-                        {pricingTiers.map((tier, idx) => {
-                            let relIndex = idx - activeIndex;
-                            if (relIndex === -2) relIndex = 1;
-                            if (relIndex === 2) relIndex = -1;
-
-                            return (
-                                <motion.div
-                                    key={tier.id}
-                                    style={{
-                                        position: 'absolute',
-                                        width: '85%',
-                                        maxWidth: '320px',
-                                        height: '520px',
-                                        WebkitTransform: 'translateZ(0)',
-                                        willChange: 'transform, opacity',
-                                    }}
-                                    animate={getCardStyle(relIndex)}
-                                    transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                                    onClick={() => {
-                                        if (relIndex === 1) setActiveIndex((idx) % 3);
-                                        if (relIndex === -1) setActiveIndex((idx) % 3);
-                                    }}
-                                    className={`bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 flex flex-col gap-5 relative overflow-hidden shadow-2xl transition-all duration-300 border ${
-                                        tier.highlight 
-                                            ? 'border-2 border-blue-500 dark:border-blue-400 shadow-blue-500/10' 
-                                            : 'border-slate-100 dark:border-slate-800'
-                                    }`}
-                                >
-                                    {tier.highlight && (
-                                        <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-blue-600/5 dark:bg-blue-400/5 rounded-full blur-[40px] pointer-events-none z-0"></div>
-                                    )}
-                                    <div className="absolute top-0 right-0 p-5 opacity-5 dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100">
-                                        {tier.iconType === 'user' && <User size={60} strokeWidth={1} />}
-                                        {tier.iconType === 'users' && <Users size={60} strokeWidth={1} />}
-                                        {tier.iconType === 'building' && <Building2 size={60} strokeWidth={1} />}
+                        {pricingTiers.map((tier, idx) => (
+                            <div
+                                key={tier.id}
+                                data-index={idx}
+                                onClick={(e) => {
+                                    e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                                }}
+                                className={`pricing-card-mobile flex-shrink-0 w-[85vw] max-w-[320px] snap-center bg-white dark:bg-slate-900 rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden shadow-xl transition-all duration-300 border cursor-pointer ${
+                                    tier.highlight 
+                                        ? 'border-2 border-blue-500 dark:border-blue-400 shadow-blue-500/10' 
+                                        : 'border-slate-100 dark:border-slate-800'
+                                }`}
+                            >
+                                {tier.highlight && (
+                                    <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-blue-600/5 dark:bg-blue-400/5 rounded-full blur-[40px] pointer-events-none z-0"></div>
+                                )}
+                                <div className="absolute top-0 right-0 p-5 opacity-5 dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100">
+                                    {tier.iconType === 'user' && <User size={60} strokeWidth={1} />}
+                                    {tier.iconType === 'users' && <Users size={60} strokeWidth={1} />}
+                                    {tier.iconType === 'building' && <Building2 size={60} strokeWidth={1} />}
+                                </div>
+                                
+                                {tier.badge && (
+                                    <div className="absolute top-4 right-4 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[0.6rem] font-bold uppercase tracking-widest px-2 py-1 rounded z-10">
+                                        {tier.badge}
                                     </div>
-                                    
-                                    {tier.badge && (
-                                        <div className="absolute top-4 right-4 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[0.6rem] font-bold uppercase tracking-widest px-2 py-1 rounded z-10">
-                                            {tier.badge}
-                                        </div>
-                                    )}
+                                )}
 
-                                    <div className="flex flex-col gap-1 relative z-10">
-                                        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{tier.name}</h3>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">{tier.sub}</p>
-                                    </div>
+                                <div className="flex flex-col gap-1 relative z-10">
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{tier.name}</h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">{tier.sub}</p>
+                                </div>
 
-                                    <ul className="flex flex-col gap-3 text-xs text-slate-600 dark:text-slate-300 flex-grow relative z-10 pb-4 pt-2">
-                                        {tier.features.map((feature, fIdx) => (
-                                            <li key={fIdx} className="flex items-start gap-2.5">
-                                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={16} />
-                                                <span className={fIdx === 0 && tier.highlight ? "font-semibold text-slate-900 dark:text-slate-100" : ""}>{feature}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
+                                <ul className="flex flex-col gap-3 text-xs text-slate-600 dark:text-slate-300 flex-grow relative z-10 pb-4 pt-2">
+                                    {tier.features.map((feature, fIdx) => (
+                                        <li key={fIdx} className="flex items-start gap-2.5">
+                                            <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={16} />
+                                            <span className={fIdx === 0 && tier.highlight ? "font-semibold text-slate-900 dark:text-slate-100" : ""}>{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
 
-                                    <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 flex items-baseline gap-1 mt-2 relative z-10">
-                                        {tier.price} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">kr/md (eks. moms)</span>
-                                    </div>
+                                <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 flex items-baseline gap-1 mt-2 relative z-10">
+                                    {tier.price} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">kr/md (eks. moms)</span>
+                                </div>
 
-                                    <p className="text-slate-500 dark:text-slate-500 text-xs leading-relaxed line-clamp-3 mb-4">{tier.description}</p>
+                                <p className="text-slate-500 dark:text-slate-500 text-xs leading-relaxed line-clamp-3 mb-4">{tier.description}</p>
 
-                                    <div className="mt-auto flex flex-col items-center gap-1.5 z-10 w-full">
-                                        <button 
-                                            onClick={() => navigate('/register')} 
-                                            className={`w-full py-3 rounded-full font-semibold text-sm transition-colors ${
-                                                tier.highlight 
-                                                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100' 
-                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                            }`}
-                                        >
-                                            Start prøveperiode
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
+                                <div className="mt-auto flex flex-col items-center gap-1.5 z-10 w-full">
+                                    <button 
+                                        onClick={() => navigate('/register')} 
+                                        className={`w-full py-3 rounded-full font-semibold text-sm transition-colors ${
+                                            tier.highlight 
+                                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100' 
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                        }`}
+                                    >
+                                        Start prøveperiode
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
 
                     {/* Indicator dots for Mobile Swipe Deck */}
-                    <div className="flex justify-center gap-2.5 mt-6">
+                    <div className="flex justify-center gap-2.5 mt-2">
                         {pricingTiers.map((_, i) => (
                             <button
                                 key={i}
-                                onClick={() => setActiveIndex(i)}
+                                onClick={() => {
+                                    if (scrollContainerRef.current) {
+                                        const container = scrollContainerRef.current;
+                                        const maxScroll = container.scrollWidth - container.clientWidth;
+                                        const targetScroll = (i / 2) * maxScroll;
+                                        container.scrollTo({ left: targetScroll, behavior: 'smooth' });
+                                    }
+                                }}
                                 className={`h-2 rounded-full transition-all duration-300 ${
                                     activeIndex === i 
                                         ? 'bg-blue-600 dark:bg-blue-400 w-6' 
