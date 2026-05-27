@@ -183,12 +183,13 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                     value={inviteData.role}
                                     onChange={(e) => setInviteData({...inviteData, role: e.target.value})}
                                 >
-                                    <option value="sales">Sælger / Projektleder</option>
+                                    <option value="sales">Projektleder</option>
+                                    <option value="worker">Tømrersvend / Lærling</option>
                                     <option value="accountant">Bogholder / Sekretær</option>
-                                    <option value="admin">Admin (Lige rettigheder som dig)</option>
+                                    <option value="admin">Mester (Administrator)</option>
                                 </select>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '8px' }}>
-                                    Sælgere ser kun egne leads. Bogholdere ser kun bekræftede opgaver.
+                                    Projektledere ser kun egne leads. Bogholdere ser kun bekræftede opgaver. Svende og lærlinge kan registrere timer og se byggechecklister på sager.
                                 </p>
                             </div>
 
@@ -264,7 +265,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                             <h4 style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 4px' }}>
                                                                 {member.owner_name || 'Uden Navn'}
                                                                 <span style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '9999px', background: 'var(--surface-bg)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>
-                                                                    {member.role === 'admin' ? 'Admin' : member.role === 'accountant' ? 'Bogholder' : 'Sælger'}
+                                                                    {member.role === 'admin' ? 'Mester' : member.role === 'accountant' ? 'Bogholder' : member.role === 'worker' ? 'Svend / Lærling' : member.role === 'sales' ? 'Projektleder' : member.role}
                                                                 </span>
                                                             </h4>
                                                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
