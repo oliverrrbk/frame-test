@@ -13,6 +13,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
     const [zoomedImage, setZoomedImage] = React.useState(null);
     const [showSketcher, setShowSketcher] = React.useState(false);
     const isMouseDown = React.useRef(false);
+    const touchStartX = React.useRef(null);
 
     // Photos & Notes Integrated Upload States
     const [isUploading, setIsUploading] = React.useState(false);
@@ -886,11 +887,11 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
 
                             return (
                                 <div key={idx} style={{ padding: '24px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '14px', marginBottom: '24px', boxShadow: 'var(--shadow-sm)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-start sm:items-center mb-5 border-b border-slate-200 pb-3">
                                         <h4 style={{ margin: 0, fontSize: '1.2rem', color: '#1e293b', fontWeight: 'bold' }}>
                                             Vinduesgruppe {idx + 1}
                                         </h4>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                        <div className="flex gap-2 w-full sm:w-auto justify-start sm:justify-end">
                                             <button 
                                                 onClick={(e) => { e.preventDefault(); duplicateGroup(); }}
                                                 style={{ padding: '6px 12px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -1335,6 +1336,65 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 </div>
             </div>
 
+            {onAddAnotherProject && (
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    margin: '16px 0 32px 0',
+                    width: '100%'
+                }}>
+                    <button 
+                        type="button" 
+                        className="wizard-btn" 
+                        onClick={() => onAddAnotherProject(null)} 
+                        style={{ 
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: '#ffffff',
+                            color: '#10b981',
+                            border: '1.5px solid #10b981',
+                            borderRadius: '24px',
+                            padding: '8px 20px',
+                            fontWeight: '600',
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.05)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#ecfdf5';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.15)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#ffffff';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.05)';
+                        }}
+                    >
+                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>+</span>
+                        <span>Tilføj endnu en opgave</span>
+                        <span style={{ 
+                            background: '#10b981', 
+                            color: '#ffffff', 
+                            fontSize: '0.7rem', 
+                            fontWeight: '700', 
+                            padding: '3px 8px', 
+                            borderRadius: '10px', 
+                            marginLeft: '4px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            letterSpacing: '0.2px',
+                            textTransform: 'uppercase'
+                        }}>
+                            Spar kørsel
+                        </span>
+                    </button>
+                </div>
+            )}
+
             {/* Elegant Notes Card (Quiet and matching standard question cards) */}
             <div className="form-group wizard-question-card" style={{ 
                 marginBottom: '32px', 
@@ -1383,65 +1443,6 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 </div>
             </div>
 
-            {onAddAnotherProject && (
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    margin: '32px 0 8px 0',
-                    width: '100%'
-                }}>
-                    <button 
-                        type="button" 
-                        className="wizard-btn" 
-                        onClick={() => onAddAnotherProject(null)} 
-                        style={{ 
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            background: '#ffffff',
-                            color: '#10b981',
-                            border: '2px solid #10b981',
-                            borderRadius: '30px',
-                            padding: '12px 28px',
-                            fontWeight: '700',
-                            fontSize: '0.95rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.05)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#ecfdf5';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.15)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#ffffff';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.05)';
-                        }}
-                    >
-                        <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>+</span>
-                        <span>Tilføj endnu en opgave</span>
-                        <span style={{ 
-                            background: '#10b981', 
-                            color: '#ffffff', 
-                            fontSize: '0.75rem', 
-                            fontWeight: '800', 
-                            padding: '4px 10px', 
-                            borderRadius: '12px', 
-                            marginLeft: '8px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            letterSpacing: '0.3px',
-                            textTransform: 'uppercase'
-                        }}>
-                            Spar kørsel & opstart
-                        </span>
-                    </button>
-                </div>
-            )}
-
             <div className="actions" style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -1467,6 +1468,14 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
             {zoomedImage && createPortal(
                 <div 
                     onClick={() => setZoomedImage(null)}
+                    onTouchStart={(e) => { touchStartX.current = e.changedTouches[0].screenX; }}
+                    onTouchEnd={(e) => {
+                        if (touchStartX.current === null) return;
+                        const touchEndX = e.changedTouches[0].screenX;
+                        if (touchStartX.current - touchEndX > 50) handleNextImage();
+                        if (touchStartX.current - touchEndX < -50) handlePrevImage();
+                        touchStartX.current = null;
+                    }}
                     style={{
                         position: 'fixed',
                         top: 0,

@@ -208,6 +208,7 @@ Hvad kan vi hjælpe dig med i dag?`;
                         letterSpacing: '0.2px',
                         position: 'relative'
                     }}
+                    className="ai-chat-btn"
                     onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-4px) scale(1.03)';
                         e.currentTarget.style.boxShadow = '0 25px 45px -10px rgba(15, 23, 42, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
@@ -234,7 +235,7 @@ Hvad kan vi hjælpe dig med i dag?`;
                             border: '2px solid #0f172a'
                         }} />
                     </div>
-                    <span>Spørg byggerådgiveren</span>
+                    <span className="ai-chat-text">Spørg byggerådgiveren</span>
 
                     {/* Blinking notification badge */}
                     {hasNewMessageBadge && (
@@ -568,6 +569,16 @@ Hvad kan vi hjælpe dig med i dag?`;
                 .no-scrollbar {
                     -ms-overflow-style: none;
                     scrollbar-width: none;
+                }
+                @media (max-width: 640px) {
+                    .ai-chat-btn {
+                        padding: 12px 14px !important;
+                        border-radius: 30px !important;
+                        gap: 0 !important;
+                    }
+                    .ai-chat-text {
+                        display: none !important;
+                    }
                 }
             `}} />
         </div>,
