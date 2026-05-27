@@ -13,6 +13,8 @@ import { getFeedbackTemplate, getCustomerOfferSentTemplate, getCustomerRequestRe
 import { generateHumanQuoteText } from '../../utils/quoteTextGenerator';
 import AiTrainingView from './AiTrainingView';
 import TeamManagement from './TeamManagement';
+import CaseManagement from './CaseManagement';
+import MaterialList from './MaterialList';
 import OnboardingModal from './OnboardingModal';
 import SetPasswordModal from './SetPasswordModal';
 import SuperAdminView from './SuperAdminView';
@@ -85,7 +87,6 @@ const WindowsChecklist = ({ leadId }) => {
             boxShadow: '0 1px 3px rgba(0,0,0,0.05)' 
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <span style={{ fontSize: '1.2rem' }}>🛠️</span>
                 <strong style={{ color: '#0369a1', fontSize: '1.1rem' }}>Tømrerens Huskepunkter (Vinduer)</strong>
             </div>
             <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: '#0284c7', fontStyle: 'italic' }}>
@@ -157,6 +158,9 @@ const Dashboard = () => {
     const [leadFilter, setLeadFilter] = useState('Ny forespørgsel');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLead, setSelectedLead] = useState(null);
+    const [isCustomerChoicesOpen, setIsCustomerChoicesOpen] = useState(false);
+    const [isMaterialListOpen, setIsMaterialListOpen] = useState(false);
+    const [isQuoteEditorOpen, setIsQuoteEditorOpen] = useState(false);
 
     // Håndter åbning af specifik opgave via URL fra e-mail (deep linking)
     useEffect(() => {
@@ -1073,6 +1077,9 @@ const Dashboard = () => {
 
     const handleSelectLead = async (lead) => {
         setSelectedLead(lead);
+        setIsCustomerChoicesOpen(false);
+        setIsMaterialListOpen(false);
+        setIsQuoteEditorOpen(false);
         if (lead.is_read === false) {
             setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...l, is_read: true } : l));
             try {
@@ -1617,6 +1624,9 @@ const Dashboard = () => {
                             return null;
                         })()}
                     </button>
+                    <button className={activeTab === 'cases' ? 'active' : ''} onClick={() => setActiveTab('cases')}>
+                        <Briefcase size={20} /> Sager & Ordrestyring
+                    </button>
                     {(carpenterProfile?.role !== 'accountant' || carpenterProfile?.permissions?.view_materials) && (
                         <>
                             <button className={activeTab === 'map' ? 'active' : ''} onClick={() => setActiveTab('map')}>
@@ -2097,6 +2107,20 @@ const Dashboard = () => {
                             )}
                         </div>
                     )}
+                    {activeTab === 'cases' && (
+                        <div className="tab-pane active" style={{ height: '100%', overflowY: 'auto' }}>
+                            <CaseManagement 
+                                leads={leadsData} 
+                                profile={carpenterProfile} 
+                                onUpdateLead={(updated) => {
+                                    setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
+                                    if (selectedLead && selectedLead.id === updated.id) {
+                                        setSelectedLead(updated);
+                                    }
+                                }} 
+                            />
+                        </div>
+                    )}
                     {activeTab === 'leads' && (
                         <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
                             <div className="settings-card">
@@ -2354,7 +2378,17 @@ const Dashboard = () => {
 
                             {selectedLead && createPortal(
                                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setSelectedLead(null)}>
-                                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', padding: '32px', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                                    <div style={{ 
+                                        backgroundColor: 'var(--bg-card)', 
+                                        backdropFilter: 'blur(24px)', 
+                                        borderRadius: '20px', 
+                                        width: '100%', 
+                                        maxWidth: '1100px', 
+                                        maxHeight: '90vh', 
+                                        overflowY: 'auto', 
+                                        padding: '32px', 
+                                        position: 'relative'
+                                    }} onClick={(e) => e.stopPropagation()}>
                                         <button onClick={() => setSelectedLead(null)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
                                         
                                         <h2 style={{ color: '#1a1a1a', borderBottom: '2px solid #e8e6e1', paddingBottom: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', paddingRight: '40px' }}>
@@ -2489,7 +2523,7 @@ const Dashboard = () => {
 
                                         {selectedLead.status === 'Bekræftet opgave' && selectedLead.raw_data?.audit_trail && (
                                             <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '16px', borderRadius: '14px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'center' }}>
-                                                <div style={{ fontSize: '2rem' }}>⚖️</div>
+                                                <div style={{ color: '#059669', display: 'flex', alignItems: 'center' }}><Shield size={32} /></div>
                                                 <div>
                                                     <strong style={{ color: '#065f46', display: 'block', fontSize: '1rem', marginBottom: '4px' }}>Juridisk Bindende Accept (Digital Signatur)</strong>
                                                     <p style={{ color: '#047857', fontSize: '0.9rem', margin: 0, lineHeight: '1.4' }}>
@@ -2537,474 +2571,794 @@ const Dashboard = () => {
                                             </div>
                                         </div>
 
-                                        <h3 style={{ color: '#374151', marginBottom: '16px' }}>Kundens Valg i Beregneren</h3>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            {selectedLead.raw_data && (() => {
-                                                const details = selectedLead.raw_data.details || {};
-                                                
-                                                const renderRow = (label, rawValue, keyInput, type) => {
-                                                    if (rawValue === undefined || rawValue === null || rawValue === '') return null;
+                                        <div 
+                                            onClick={() => setIsCustomerChoicesOpen(!isCustomerChoicesOpen)}
+                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px' }}
+                                        >
+                                            <h3 style={{ color: '#1a1a1a', margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Sliders size={18} style={{ color: '#6b7280' }} /> Kundens Valg i Beregneren
+                                            </h3>
+                                            <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: 'bold' }}>
+                                                {isCustomerChoicesOpen ? 'Skjul ▲' : 'Vis ▼'}
+                                            </span>
+                                        </div>
+
+                                        {isCustomerChoicesOpen && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                                                {selectedLead.raw_data && (() => {
+                                                    const details = selectedLead.raw_data.details || {};
                                                     
-                                                    // Hvis det er et Array (F.eks filer/billeder der er gemt som Base64 i Step2Dynamic)
-                                                    if (Array.isArray(rawValue)) {
-                                                        const isFileArray = rawValue.length > 0 && typeof rawValue[0] === 'object' && rawValue[0].preview;
-                                                        if (isFileArray) {
-                                                            return (
-                                                                <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
-                                                                    <strong style={{ color: '#6b7280' }}>{label}</strong>
-                                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                                                                        {rawValue.map((file, idx) => (
-                                                                            <a key={idx} href={file.preview} target="_blank" rel="noopener noreferrer" style={{ display: 'block', border: '1px solid #e8e6e1', borderRadius: '8px', overflow: 'hidden', width: '120px', height: '120px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-                                                                                <img 
-                                                                                    src={file.preview} 
-                                                                                    alt={file.name || 'Kundebillede'} 
-                                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                                                                    onError={(e) => {
-                                                                                        e.target.onerror = null; 
-                                                                                        e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>'; 
-                                                                                        e.target.style.objectFit = 'contain'; 
-                                                                                        e.target.style.padding = '20px';
-                                                                                    }}
-                                                                                />
-                                                                            </a>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            );
+                                                    const translationMap = {
+                                                        'material': 'Materialetype / Beklædning',
+                                                        'amount': 'Areal / Mængde',
+                                                        'roofAmount': 'Tagareal i kvm',
+                                                        'facadeAmount': 'Facadeareal i kvm',
+                                                        'notes': 'Særlige forhold / Bemærkninger',
+                                                        'disposal': 'Afmontering og bortskaffelse',
+                                                        'qualityLevel': 'Kvalitetsniveau',
+                                                        'housingType': 'Bygningstype',
+                                                        'scope': 'Projektets omfang',
+                                                        'floors': 'Antal plan / etager',
+                                                        'houseAge': 'Huset byggeår',
+                                                        'floorType': 'Valgt gulvtype',
+                                                        'oldFloorType': 'Eksisterende gulvtype',
+                                                        'floorFoundation': 'Underlag / Konstruktion',
+                                                        'underfloorHeating': 'Gulvvarme',
+                                                        'floorPattern': 'Lægningsmønster',
+                                                        'floorDoorsNear': 'Døre i nærheden',
+                                                        'floorObstacles': 'Forhindringer i rummet',
+                                                        'specificFloorWishes': 'Særlige gulvønsker',
+                                                        'specificFloorDetails': 'Yderligere gulvdetaljer',
+                                                        'finish': 'Afslutning / Lister / Fuge',
+                                                        'underlayment': 'Underlagstype',
+                                                        'terraceWood': 'Terrasse træsort',
+                                                        'terraceFoundation': 'Fundamentstype',
+                                                        'terraceHeight': 'Højde over terræn',
+                                                        'terraceShape': 'Form på terrassen',
+                                                        'terraceSteps': 'Trappetrin',
+                                                        'terraceRailing': 'Gelænder',
+                                                        'terraceBuiltIn': 'Indbyggede elementer',
+                                                        'terraceSubConstruction': 'Underkonstruktion / Strøer',
+                                                        'screwType': 'Skruetype / Montering',
+                                                        'roofPitch': 'Tagets hældning',
+                                                        'roofType': 'Tagtype',
+                                                        'oldRoofType': 'Eksisterende tagtype',
+                                                        'eavesMaterial': 'Stern & Vindskede materiale',
+                                                        'skotrender': 'Skotrender',
+                                                        'skotrenderMeters': 'Meter skotrende',
+                                                        'grater': 'Grater (ved valmtag)',
+                                                        'graterMeters': 'Meter grat',
+                                                        'chimney': 'Skorstene til inddækning',
+                                                        'chimneyAmount': 'Antal skorstene',
+                                                        'skylightReplace': 'Ovenlysvinduer til udskiftning',
+                                                        'skylightReplaceAmount': 'Antal udskiftede ovenlys',
+                                                        'skylightNew': 'Nye ovenlysvinduer',
+                                                        'skylightNewAmount': 'Antal nye ovenlys',
+                                                        'fenceLength': 'Hegnslængde (meter)',
+                                                        'fenceHeight': 'Hegnhøjde (meter)',
+                                                        'fencePostType': 'Stolpetype',
+                                                        'fenceGravelBoard': 'Bundplade / Hjulplade',
+                                                        'fenceGates': 'Hegnsporte',
+                                                        'facadeWood': 'Facade beklædningstype',
+                                                        'facadeDirection': 'Lægningsretning',
+                                                        'facadeIsolation': 'Efterisolering',
+                                                        'facadeScaffolding': 'Stillads / Arbejdsplatform',
+                                                        'kitchenBrand': 'Køkkenbrand / Mærke',
+                                                        'kitchenElements': 'Antal elementer',
+                                                        'kitchenTabletop': 'Bordplademateriale',
+                                                        'kitchenSinkTabletop': 'Planlimet/underlimet vask',
+                                                        'kitchenAppliances': 'Montering af hvidevarer',
+                                                        'ceilingMaterial': 'Loftmateriale',
+                                                        'ceilingHeight': 'Lofthøjde',
+                                                        'ceilingInsulation': 'Efterisolering af loft',
+                                                        'additionalNotes': 'Ekstra noter',
+                                                        'subProjectCount': 'Antal delprojekter',
+                                                        'length': 'Længde i meter',
+                                                        'height': 'Højde i meter',
+                                                        'width': 'Bredde i meter',
+                                                        'isKombi': 'Kombi-projekt'
+                                                    };
+
+                                                    const valueTranslationMap = {
+                                                        'yes': 'Ja',
+                                                        'no': 'Nej',
+                                                        'none': 'Ingen',
+                                                        'both': 'Begge',
+                                                        'standard': 'Standard',
+                                                        'premium': 'Premium',
+                                                        'oak': 'Eg',
+                                                        'pine': 'Fyr',
+                                                        'larch': 'Lærk',
+                                                        'spruce': 'Gran',
+                                                        'plywood': 'Krydsfiner',
+                                                        'felt': 'Tagpap',
+                                                        'tiles': 'Tegl',
+                                                        'concrete': 'Beton',
+                                                        'steel': 'Stål',
+                                                        'composite': 'Komposit'
+                                                    };
+
+                                                    const translateValue = (val) => {
+                                                        if (val === undefined || val === null) return '';
+                                                        const str = val.toString().trim();
+                                                        const lower = str.toLowerCase();
+                                                        if (valueTranslationMap[lower]) {
+                                                            return valueTranslationMap[lower];
                                                         }
-                                                        return null; // Skip non-file arrays as text
-                                                    }
-                                                    
-                                                    let displayVal = rawValue.toString();
-                                                    
-                                                    // Oversæt yes/no
-                                                    if (displayVal.toLowerCase() === 'yes') displayVal = 'Ja';
-                                                    if (displayVal.toLowerCase() === 'no') displayVal = 'Nej';
-                                                    
-                                                    if (type === 'textarea') {
+                                                        if (lower === 'yes') return 'Ja';
+                                                        if (lower === 'no') return 'Nej';
+                                                        return str;
+                                                    };
+
+                                                    const getUnit = (key, category) => {
+                                                        const k = key.toLowerCase();
+                                                        if (k.includes('amount') || k.includes('area') || k.includes('roofamount') || k.includes('facadeamount')) {
+                                                            if (category === 'fence') return ' meter';
+                                                            if (category === 'windows' || category === 'doors' || category === 'kitchen') return ' stk.';
+                                                            return ' m²';
+                                                        }
+                                                        if (k.includes('length') || k.includes('meters') || k.includes('width') || k.includes('height')) {
+                                                            return ' m';
+                                                        }
+                                                        return '';
+                                                    };
+
+                                                    const categorizeKey = (key) => {
+                                                        const k = key.toLowerCase();
+                                                        if (k.includes('disposal') || k.includes('demolition') || k.includes('old') || k.includes('obstacle') || k.includes('scaffolding') || k.includes('stillads') || k.includes('bortskaffelse') || k.includes('fjern')) {
+                                                            return 'preparation';
+                                                        }
+                                                        if (k.includes('foundation') || k.includes('underlag') || k.includes('subcon') || k.includes('heating') || k.includes('varme') || k.includes('pattern') || k.includes('mønster') || k.includes('screw') || k.includes('skru') || k.includes('skotrende') || k.includes('grat') || k.includes('chimney') || k.includes('skorsten') || k.includes('gate') || k.includes('post') || k.includes('isol') || k.includes('door') || k.includes('vindue') || k.includes('window') || k.includes('dør')) {
+                                                            return 'construction';
+                                                        }
+                                                        if (k.includes('finish') || k.includes('afslutning') || k.includes('list') || k.includes('fuge') || k.includes('shape') || k.includes('step') || k.includes('rail') || k.includes('gelænder') || k.includes('builtin') || k.includes('sink') || k.includes('tabletop') || k.includes('bordplade') || k.includes('appliance') || k.includes('hvidevare') || k.includes('wish') || k.includes('ønske') || k.includes('detail') || k.includes('note') || k.includes('bemærkning')) {
+                                                            return 'finish';
+                                                        }
+                                                        return 'scope';
+                                                    };
+
+                                                    const renderStructuredBrief = (briefDetails, briefCategory) => {
+                                                        const phases = [
+                                                            {
+                                                                id: 'scope',
+                                                                title: 'Opgave & Omfang',
+                                                                icon: <FileText size={16} style={{ color: '#3b82f6' }} />,
+                                                                borderColor: '#3b82f6',
+                                                                items: []
+                                                            },
+                                                            {
+                                                                id: 'preparation',
+                                                                title: 'Forberedelse & Nedrivning',
+                                                                icon: <Wrench size={16} style={{ color: '#f59e0b' }} />,
+                                                                borderColor: '#f59e0b',
+                                                                items: []
+                                                            },
+                                                            {
+                                                                id: 'construction',
+                                                                title: 'Konstruktion & Montering',
+                                                                icon: <Layers size={16} style={{ color: '#10b981' }} />,
+                                                                borderColor: '#10b981',
+                                                                items: []
+                                                            },
+                                                            {
+                                                                id: 'finish',
+                                                                title: 'Afslutning & Finish',
+                                                                icon: <CheckCircle size={16} style={{ color: '#8b5cf6' }} />,
+                                                                borderColor: '#8b5cf6',
+                                                                items: []
+                                                            }
+                                                        ];
+
+                                                        Object.keys(briefDetails).forEach(key => {
+                                                            if (['isAiEstimate', 'chatLog', 'summaryBullets', 'obsNotes', 'aiLaborHours', 'aiMaterialCost', 'aiBreakdown', 'photos', 'projects'].includes(key)) {
+                                                                return;
+                                                            }
+
+                                                            const val = briefDetails[key];
+                                                            if (val === undefined || val === null || val === '') return;
+
+                                                            let label = translationMap[key];
+                                                            if (!label) {
+                                                                const keyLower = key.toLowerCase();
+                                                                const overrides = {
+                                                                    'specificfloordetails': 'Gulvtype detaljer',
+                                                                    'floortype': 'Valgt gulvtype',
+                                                                    'underlayment': 'Underlag',
+                                                                    'area': 'Areal i kvm',
+                                                                    'subprojectcount': 'Antal delprojekter',
+                                                                    'length': 'Længde i meter',
+                                                                    'height': 'Højde i meter',
+                                                                    'width': 'Bredde i meter',
+                                                                    'amount': 'Mængde/Areal',
+                                                                    'additionalnotes': 'Ekstra noter',
+                                                                    'iskombi': 'Kombi-projekt',
+                                                                    'disposal': 'Afmontering og bortskaffelse',
+                                                                    'oldfloortype': 'Gamle gulvtype',
+                                                                    'floorfoundation': 'Gulv-underlag/konstruktion',
+                                                                    'underfloorheating': 'Gulvvarme',
+                                                                    'floorpattern': 'Lægningsmønster'
+                                                                };
+                                                                if (overrides[keyLower]) {
+                                                                    label = overrides[keyLower];
+                                                                } else {
+                                                                    label = key
+                                                                        .replace(/([A-Z])/g, ' $1')
+                                                                        .replace(/^./, str => str.toUpperCase())
+                                                                        .trim();
+                                                                }
+                                                            }
+
+                                                            const phaseId = categorizeKey(key);
+                                                            const phase = phases.find(p => p.id === phaseId) || phases[0];
+                                                            phase.items.push({ key, label, val });
+                                                        });
+
                                                         return (
-                                                            <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#fcfcfc', width: '100%' }}>
-                                                                <strong style={{ color: '#6b7280' }}>{label}</strong>
-                                                                <div style={{ color: '#1a1a1a', fontWeight: '500', wordBreak: 'break-word', whiteSpace: 'pre-wrap', backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', lineHeight: '1.6' }}>
-                                                                    {displayVal}
-                                                                </div>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+                                                                {phases.map(phase => {
+                                                                    if (phase.items.length === 0) return null;
+                                                                    return (
+                                                                        <div key={phase.id} style={{ 
+                                                                            padding: '18px 20px', 
+                                                                            borderLeft: `4px solid ${phase.borderColor}`, 
+                                                                            backgroundColor: '#fafafa', 
+                                                                            borderRadius: '10px', 
+                                                                            boxShadow: '0 1px 3px rgba(0,0,0,0.01)',
+                                                                            display: 'flex',
+                                                                            flexDirection: 'column',
+                                                                            gap: '12px'
+                                                                        }}>
+                                                                            <h4 style={{ 
+                                                                                margin: '0 0 4px 0', 
+                                                                                fontSize: '0.9rem', 
+                                                                                fontWeight: '700', 
+                                                                                color: '#334155', 
+                                                                                display: 'flex', 
+                                                                                alignItems: 'center', 
+                                                                                gap: '8px',
+                                                                                textTransform: 'uppercase',
+                                                                                letterSpacing: '0.05em'
+                                                                            }}>
+                                                                                {phase.icon}
+                                                                                {phase.title}
+                                                                            </h4>
+                                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                                {phase.items.map(item => {
+                                                                                    if (Array.isArray(item.val)) {
+                                                                                        const isFileArray = item.val.length > 0 && typeof item.val[0] === 'object' && item.val[0].preview;
+                                                                                        if (isFileArray) {
+                                                                                            return (
+                                                                                                <div key={item.key} style={{ padding: '12px 14px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #f1f1ef', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                                                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b' }}>{item.label}</span>
+                                                                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                                                                        {item.val.map((file, idx) => (
+                                                                                                            <a key={idx} href={file.preview} target="_blank" rel="noopener noreferrer" style={{ display: 'block', border: '1px solid #e8e6e1', borderRadius: '6px', overflow: 'hidden', width: '80px', height: '80px' }}>
+                                                                                                                <img 
+                                                                                                                    src={file.preview} 
+                                                                                                                    alt={file.name || 'Billede'} 
+                                                                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                                                                                    onError={(e) => {
+                                                                                                                        e.target.onerror = null; 
+                                                                                                                        e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>'; 
+                                                                                                                        e.target.style.objectFit = 'contain'; 
+                                                                                                                        e.target.style.padding = '10px';
+                                                                                                                    }}
+                                                                                                                />
+                                                                                                            </a>
+                                                                                                        ))}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            );
+                                                                                        }
+                                                                                    }
+
+                                                                                    const displayStr = translateValue(item.val);
+                                                                                    const isLongText = typeof item.val === 'string' && (item.val.length > 60 || item.key === 'notes' || item.key === 'additionalNotes');
+
+                                                                                    if (isLongText) {
+                                                                                        return (
+                                                                                            <div key={item.key} style={{ 
+                                                                                                display: 'flex', 
+                                                                                                flexDirection: 'column', 
+                                                                                                gap: '6px', 
+                                                                                                padding: '12px 14px', 
+                                                                                                backgroundColor: '#ffffff', 
+                                                                                                borderRadius: '8px', 
+                                                                                                border: '1px solid #f1f1ef' 
+                                                                                            }}>
+                                                                                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b' }}>{item.label}</span>
+                                                                                                <div style={{ 
+                                                                                                    fontSize: '0.9rem', 
+                                                                                                    color: '#0f172a', 
+                                                                                                    fontWeight: '500', 
+                                                                                                    whiteSpace: 'pre-wrap', 
+                                                                                                    lineHeight: '1.5',
+                                                                                                    backgroundColor: '#f8fafc',
+                                                                                                    padding: '10px 12px',
+                                                                                                    borderRadius: '6px',
+                                                                                                    border: '1px solid #e2e8f0'
+                                                                                                }}>
+                                                                                                    {displayStr}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+
+                                                                                    return (
+                                                                                        <div key={item.key} style={{ 
+                                                                                            display: 'flex', 
+                                                                                            justifyContent: 'space-between', 
+                                                                                            alignItems: 'center', 
+                                                                                            padding: '10px 14px', 
+                                                                                            backgroundColor: '#ffffff', 
+                                                                                            borderRadius: '8px', 
+                                                                                            border: '1px solid #f1f1ef' 
+                                                                                        }}>
+                                                                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#475569' }}>{item.label}</span>
+                                                                                            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', textAlign: 'right' }}>
+                                                                                                {displayStr}{getUnit(item.key, briefCategory)}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         );
-                                                    }
+                                                    };
+
+                                                    const renderElements = [];
                                                     
-                                                    // Håndter Links og Orddeling
-                                                    let finalValElement = <span style={{ color: '#1a1a1a', textAlign: 'right', fontWeight: '500', maxWidth: '55%', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{displayVal}</span>;
+                                                    const isKombi = selectedLead.raw_data.category === 'Kombi-projekt' || selectedLead.raw_data.calc_data?.isKombi;
                                                     
-                                                    if (displayVal.includes('http://') || displayVal.includes('https://') || displayVal.includes('www.')) {
-                                                        const words = displayVal.split(' ');
-                                                        const formattedWords = words.map((w, idx) => {
-                                                            if (w.startsWith('http') || w.startsWith('www.')) {
-                                                                const url = w.startsWith('www.') ? 'https://' + w : w;
-                                                                return <a key={idx} href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all', display: 'inline-block' }}>{w} </a>;
-                                                            }
-                                                            return w + ' ';
+                                                    if (isKombi && Array.isArray(selectedLead.raw_data.projects)) {
+                                                        return selectedLead.raw_data.projects.map((p, pIdx) => {
+                                                            const pCatName = categoryNames[p.category] || p.category;
+                                                            const pDetails = p.details || {};
+                                                            
+                                                            return (
+                                                                <details key={p.id} style={{ border: '1px solid #cbd5e1', borderRadius: '12px', backgroundColor: '#ffffff', overflow: 'hidden', marginBottom: '16px', width: '100%' }} open={pIdx === 0}>
+                                                                    <summary style={{ padding: '16px 20px', background: '#0f172a', color: '#ffffff', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none' }}>
+                                                                        <span>Del {pIdx + 1}: {pCatName}</span>
+                                                                        <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Vis/skjul</span>
+                                                                    </summary>
+                                                                    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#fafafa' }}>
+                                                                        {renderStructuredBrief(pDetails, p.category)}
+                                                                    </div>
+                                                                </details>
+                                                            );
                                                         });
-                                                        finalValElement = <span style={{ color: '#1a1a1a', textAlign: 'right', fontWeight: '500', maxWidth: '55%', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{formattedWords}</span>;
                                                     }
                                                     
-                                                    return (
-                                                        <div key={keyInput} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
-                                                            <strong style={{ color: '#6b7280', maxWidth: '40%' }}>{label}</strong>
-                                                            {finalValElement}
+                                                    // Tilføj det smukke, strukturerede brief-card for standalone projekter
+                                                    renderElements.push(
+                                                        <div key="structured_brief" style={{ width: '100%' }}>
+                                                            {renderStructuredBrief(details, selectedLead.project_category)}
                                                         </div>
                                                     );
-                                                };
+                                                    
+                                                    if (details.isAiEstimate && details.chatLog) {
+                                                        const hasSummary = details.summaryBullets && details.summaryBullets.length > 0;
+                                                        
+                                                        renderElements.push(
+                                                            <div key="ai_chat" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: 'white', width: '100%' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <Sliders size={18} style={{ color: '#4f46e5' }} />
+                                                                    <strong style={{ color: '#1a1a1a', fontSize: '1.05rem' }}>Digital Opsummering af Kundens Ønsker</strong>
+                                                                </div>
+                                                                
+                                                                {hasSummary ? (
+                                                                    <>
+                                                                        <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                                            <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                                {details.summaryBullets.map((bullet, idx) => (
+                                                                                    <li key={idx} style={{ fontSize: '0.95rem' }}>{bullet}</li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                        
+                                                                        {details.obsNotes && details.obsNotes.toLowerCase() !== 'ingen særlige forbehold' && (
+                                                                            <div style={{ backgroundColor: '#fffbeb', padding: '16px', borderRadius: '8px', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b' }}>
+                                                                                <strong style={{ color: '#b45309', display: 'block', marginBottom: '4px', fontSize: '0.9rem' }}>OBS / Særlige Forbehold:</strong>
+                                                                                <span style={{ color: '#92400e', fontSize: '0.95rem' }}>{details.obsNotes}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b', fontStyle: 'italic' }}>
+                                                                        (Ældre opgave uden automatisk opsummering. Se chatlog herunder.)
+                                                                    </p>
+                                                                )}
 
-                                                const isKombi = selectedLead.raw_data.category === 'Kombi-projekt' || selectedLead.raw_data.calc_data?.isKombi;
-                                                
-                                                if (isKombi && Array.isArray(selectedLead.raw_data.projects)) {
-                                                    return selectedLead.raw_data.projects.map((p, pIdx) => {
-                                                        const pCatName = categoryNames[p.category] || p.category;
-                                                        const pQuestions = QUESTIONS[p.category] || [];
-                                                        const pDetails = p.details || {};
-                                                        
-                                                        const pRenderRows = [];
-                                                        
-                                                        if (pDetails.amount !== undefined) {
-                                                            const qtyLabel = p.category === 'floor' || p.category === 'roof' || p.category === 'terrace' || p.category === 'ceilings' || p.category === 'facades' ? 'Areal i kvm' : p.category === 'fence' ? 'Længde i meter' : 'Antal enheder';
-                                                            const qtyEl = renderRow(qtyLabel, pDetails.amount, 'amount_' + p.id, 'number');
-                                                            if (qtyEl) pRenderRows.push(qtyEl);
-                                                        }
-                                                        
-                                                        pQuestions.forEach(q => {
-                                                            const rowEl = renderRow(q.label, pDetails[q.id], q.id + '_' + p.id, q.type);
-                                                            if (rowEl) pRenderRows.push(rowEl);
-                                                        });
-                                                        
-                                                        if (pDetails.notes) {
-                                                            const noteEl = renderRow('Særlige forhold / Bemærkninger', pDetails.notes, 'notes_' + p.id, 'textarea');
-                                                            if (noteEl) pRenderRows.push(noteEl);
-                                                        }
-                                                        
-                                                        if (pDetails.photos && pDetails.photos.length > 0) {
-                                                            pRenderRows.push(
-                                                                <div key={"photos_" + p.id} style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
-                                                                    <strong style={{ color: '#6b7280' }}>Billeder til denne del</strong>
-                                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
-                                                                        {pDetails.photos.map((url, idx) => (
-                                                                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer" style={{ position: 'relative', paddingTop: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e8e6e1', display: 'block' }}>
-                                                                                <img 
-                                                                                    src={url} 
-                                                                                    alt={`Billede ${idx + 1}`} 
-                                                                                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
-                                                                                />
-                                                                            </a>
+                                                                <details style={{ marginTop: hasSummary ? '8px' : '0' }}>
+                                                                    <summary style={{ cursor: 'pointer', color: '#2563eb', fontWeight: '500', fontSize: '0.9rem', userSelect: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '8px 12px', backgroundColor: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                                                                        {hasSummary ? 'Læs hele samtalen med kunden' : 'Vis rå chatlog'} ({details.chatLog.filter(m => m.role !== 'system').length} beskeder)
+                                                                    </summary>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto', padding: '12px', backgroundColor: '#f1f5f9', borderRadius: '6px', marginTop: '12px', border: '1px solid #e2e8f0' }}>
+                                                                        {details.chatLog.filter(m => m.role !== 'system').map((msg, idx) => (
+                                                                            <div key={idx} style={{ 
+                                                                                padding: '10px 14px', 
+                                                                                borderRadius: '8px', 
+                                                                                maxWidth: '90%', 
+                                                                                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                                                                                backgroundColor: msg.role === 'user' ? '#3b82f6' : 'white',
+                                                                                color: msg.role === 'user' ? 'white' : '#1e293b',
+                                                                                border: msg.role === 'user' ? 'none' : '1px solid #cbd5e1',
+                                                                                fontSize: '0.95rem',
+                                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                                            }}>
+                                                                                <strong style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px', display: 'block' }}>{msg.role === 'user' ? 'Kunde' : 'Digital Assistent'}</strong>
+                                                                                <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content.replace(/\[KLAR_TIL_TILBUD.*?\]/i, '').trim()}</span>
+                                                                            </div>
                                                                         ))}
                                                                     </div>
-                                                                </div>
-                                                            );
-                                                        }
-                                                        
-                                                        return (
-                                                            <details key={p.id} style={{ border: '1px solid #cbd5e1', borderRadius: '12px', backgroundColor: '#ffffff', overflow: 'hidden', marginBottom: '16px', width: '100%' }} open={pIdx === 0}>
-                                                                <summary style={{ padding: '16px 20px', background: '#0f172a', color: '#ffffff', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none' }}>
-                                                                    <span>Del {pIdx + 1}: {pCatName}</span>
-                                                                    <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Vis/skjul</span>
-                                                                </summary>
-                                                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#fafafa' }}>
-                                                                    {pRenderRows.length > 0 ? pRenderRows : <p style={{ color: '#6b7280', fontStyle: 'italic', margin: 0 }}>Ingen specifikke valg indtastet.</p>}
-                                                                </div>
-                                                            </details>
-                                                        );
-                                                    });
-                                                }
-
-                                                const categoryQuestions = QUESTIONS[selectedLead.raw_data.category] || [];
-                                                const renderElements = [];
-                                                
-                                                categoryQuestions.forEach(q => {
-                                                    const rowEl = renderRow(q.label, details[q.id], q.id, q.type);
-                                                    if (rowEl) renderElements.push(rowEl);
-                                                });
-                                                
-                                                if (details.isAiEstimate && details.chatLog) {
-                                                    const hasSummary = details.summaryBullets && details.summaryBullets.length > 0;
-                                                    
-                                                    renderElements.push(
-                                                        <div key="ai_chat" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: 'white', width: '100%' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <span style={{ fontSize: '1.2rem' }}>🤖</span>
-                                                                <strong style={{ color: '#1a1a1a', fontSize: '1.05rem' }}>Digital Opsummering af Kundens Ønsker</strong>
-                                                            </div>
-                                                            
-                                                            {hasSummary ? (
-                                                                <>
-                                                                    <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                                            {details.summaryBullets.map((bullet, idx) => (
-                                                                                <li key={idx} style={{ fontSize: '0.95rem' }}>{bullet}</li>
-                                                                            ))}
-                                                                        </ul>
-                                                                    </div>
+                                                                </details>
+                                                                <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', color: '#065f46' }}>
+                                                                    <strong>Systemets hemmelige estimat:</strong><br/>
+                                                                    Arbejdstid: {details.aiLaborHours} timer<br/>
+                                                                    Materialer: {details.aiMaterialCost} kr. (før din avance)
                                                                     
-                                                                    {details.obsNotes && details.obsNotes.toLowerCase() !== 'ingen særlige forbehold' && (
-                                                                        <div style={{ backgroundColor: '#fffbeb', padding: '16px', borderRadius: '8px', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b' }}>
-                                                                            <strong style={{ color: '#b45309', display: 'block', marginBottom: '4px', fontSize: '0.9rem' }}>⚠️ OBS / Særlige Forbehold:</strong>
-                                                                            <span style={{ color: '#92400e', fontSize: '0.95rem' }}>{details.obsNotes}</span>
+                                                                    {details.aiBreakdown && details.aiBreakdown.length > 0 && (
+                                                                        <div style={{ marginTop: '12px', borderTop: '1px solid #a7f3d0', paddingTop: '12px' }}>
+                                                                            <strong style={{ fontSize: '0.9rem' }}>Beregningsoversigt:</strong>
+                                                                            <ul style={{ margin: '8px 0 0', paddingLeft: '20px', fontSize: '0.9rem' }}>
+                                                                                {details.aiBreakdown.map((item, i) => (
+                                                                                    <li key={i} style={{ marginBottom: '4px' }}>
+                                                                                        <strong>{item.item}:</strong> {item.hours} timer, {item.materials} kr.
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
                                                                         </div>
                                                                     )}
-                                                                </>
-                                                            ) : (
-                                                                <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b', fontStyle: 'italic' }}>
-                                                                    (Ældre opgave uden automatisk opsummering. Se chatlog herunder.)
-                                                                </p>
-                                                            )}
-
-                                                            <details style={{ marginTop: hasSummary ? '8px' : '0' }}>
-                                                                <summary style={{ cursor: 'pointer', color: '#2563eb', fontWeight: '500', fontSize: '0.9rem', userSelect: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '8px 12px', backgroundColor: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-                                                                    💬 {hasSummary ? 'Læs hele samtalen med kunden' : 'Vis rå chatlog'} ({details.chatLog.filter(m => m.role !== 'system').length} beskeder)
-                                                                </summary>
-                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto', padding: '12px', backgroundColor: '#f1f5f9', borderRadius: '6px', marginTop: '12px', border: '1px solid #e2e8f0' }}>
-                                                                    {details.chatLog.filter(m => m.role !== 'system').map((msg, idx) => (
-                                                                        <div key={idx} style={{ 
-                                                                            padding: '10px 14px', 
-                                                                            borderRadius: '8px', 
-                                                                            maxWidth: '90%', 
-                                                                            alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                                                                            backgroundColor: msg.role === 'user' ? '#3b82f6' : 'white',
-                                                                            color: msg.role === 'user' ? 'white' : '#1e293b',
-                                                                            border: msg.role === 'user' ? 'none' : '1px solid #cbd5e1',
-                                                                            fontSize: '0.95rem',
-                                                                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                                                                        }}>
-                                                                            <strong style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px', display: 'block' }}>{msg.role === 'user' ? 'Kunde' : 'Digital Assistent'}</strong>
-                                                                            <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content.replace(/\[KLAR_TIL_TILBUD.*?\]/i, '').trim()}</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    } else if (details.aiLaborHours !== undefined && details.aiMaterialCost !== undefined) {
+                                                        renderElements.push(
+                                                            <div key="ai_internal_estimate" style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+                                                                <details style={{ border: '1px solid #e8e6e1', borderRadius: '8px', backgroundColor: '#ffffff', overflow: 'hidden' }}>
+                                                                    <summary style={{ padding: '12px 16px', background: '#fafafa', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none' }}>
+                                                                        <span>Se beregningsdetaljer (systemets bud)</span>
+                                                                    </summary>
+                                                                    <div style={{ padding: '16px', borderTop: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                            <span>Beregnet tidsforbrug:</span>
+                                                                            <strong>{details.aiLaborHours} timer</strong>
                                                                         </div>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                            <span>Beregnet materialeindkøb:</span>
+                                                                            <strong>{details.aiMaterialCost.toLocaleString('da-DK')} DKK</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                </details>
+                                                                <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', color: '#065f46' }}>
+                                                                    <strong>Systemets hemmelige estimat:</strong><br/>
+                                                                    Arbejdstid: {details.aiLaborHours} timer<br/>
+                                                                    Materialer: {details.aiMaterialCost} kr. (før din avance)
+                                                                    
+                                                                    {details.aiBreakdown && details.aiBreakdown.length > 0 && (
+                                                                        <div style={{ marginTop: '12px', borderTop: '1px solid #a7f3d0', paddingTop: '12px' }}>
+                                                                            <strong style={{ fontSize: '0.9rem' }}>Beregningsoversigt:</strong>
+                                                                            <ul style={{ margin: '8px 0 0', paddingLeft: '20px', fontSize: '0.9rem' }}>
+                                                                                {details.aiBreakdown.map((item, i) => (
+                                                                                    <li key={i} style={{ marginBottom: '4px' }}>
+                                                                                        <strong>{item.item}:</strong> {item.hours} timer, {item.materials} kr.
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+                                    
+                                                    if (details.photos && details.photos.length > 0) {
+                                                        renderElements.push(
+                                                            <div key="photos" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+                                                                <strong style={{ color: '#6b7280' }}>Kundens Billeder</strong>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
+                                                                    {details.photos.map((url, idx) => (
+                                                                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer" style={{ position: 'relative', paddingTop: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e8e6e1', display: 'block' }}>
+                                                                            <img 
+                                                                                src={url} 
+                                                                                alt={`Kundebillede ${idx + 1}`} 
+                                                                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                                            />
+                                                                        </a>
                                                                     ))}
                                                                 </div>
-                                                            </details>
-                                                            <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', color: '#065f46' }}>
-                                                                <strong>Systemets hemmelige estimat:</strong><br/>
-                                                                Arbejdstid: {details.aiLaborHours} timer<br/>
-                                                                Materialer: {details.aiMaterialCost} kr. (før din avance)
-                                                                
-                                                                {details.aiBreakdown && details.aiBreakdown.length > 0 && (
-                                                                    <div style={{ marginTop: '12px', borderTop: '1px solid #a7f3d0', paddingTop: '12px' }}>
-                                                                        <strong style={{ fontSize: '0.9rem' }}>Beregningsoversigt:</strong>
-                                                                        <ul style={{ margin: '8px 0 0', paddingLeft: '20px', fontSize: '0.9rem' }}>
-                                                                            {details.aiBreakdown.map((item, i) => (
-                                                                                <li key={i} style={{ marginBottom: '4px' }}>
-                                                                                    <strong>{item.item}:</strong> {item.hours} timer, {item.materials} kr.
-                                                                                </li>
-                                                                            ))}
-                                                                        </ul>
-                                                                    </div>
-                                                                )}
                                                             </div>
-                                                        </div>
-                                                    );
-                                                }
-                                                
-                                                if (details.notes) {
-                                                    renderElements.push(renderRow('Særlige forhold / Bemærkninger', details.notes, 'notes', 'textarea'));
-                                                }
-
-                                                if (details.photos && details.photos.length > 0) {
-                                                    renderElements.push(
-                                                        <div key="photos" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
-                                                            <strong style={{ color: '#6b7280' }}>Kundens Billeder</strong>
-                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
-                                                                {details.photos.map((url, idx) => (
-                                                                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer" style={{ position: 'relative', paddingTop: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e8e6e1', display: 'block' }}>
-                                                                        <img 
-                                                                            src={url} 
-                                                                            alt={`Kundebillede ${idx + 1}`} 
-                                                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
-                                                                        />
-                                                                    </a>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                }
-                                                
-                                                return renderElements;
-                                            })()}
-                                        </div>
+                                                        );
+                                                    }
+                                                    
+                                                    return renderElements;
+                                                })()}
+                                            </div>
+                                        )}
 
                                         {selectedLead.project_category === 'windows' && (
                                             <WindowsChecklist leadId={selectedLead.id} />
                                         )}
 
+                                        {/* MATERIALELISTE ACCORDION (For alle ikke-bekræftede cases) */}
+                                        {selectedLead.status !== 'Bekræftet opgave' && (
+                                            <>
+                                                <div 
+                                                    onClick={() => setIsMaterialListOpen(!isMaterialListOpen)}
+                                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px', marginTop: '24px' }}
+                                                >
+                                                    <h3 style={{ color: '#1a1a1a', margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <Package size={18} style={{ color: '#6b7280' }} /> Materialeliste (Internt indkøb)
+                                                     </h3>
+                                                     <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: 'bold' }}>
+                                                         {isMaterialListOpen ? 'Skjul ▲' : 'Vis ▼'}
+                                                     </span>
+                                                 </div>
+
+                                                 {isMaterialListOpen && (
+                                                     <div style={{ marginBottom: '24px', padding: '24px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1' }}>
+                                                         <MaterialList 
+                                                             lead={selectedLead} 
+                                                             profile={carpenterProfile} 
+                                                             onUpdate={(updated) => {
+                                                                 setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
+                                                                 setSelectedLead(updated);
+                                                             }} 
+                                                         />
+                                                     </div>
+                                                 )}
+                                             </>
+                                         )}
+
                                         {/* QUOTE BUILDER SEKTION */}
-                                        {selectedLead.status !== 'Bekræftet opgave' && (quoteBuilder ? (
-                                            selectedLead.status === 'Sendt tilbud' && !quoteBuilder.forceEdit ? (
-                                                <div style={{ marginTop: '24px', padding: '40px 20px', backgroundColor: '#ecfdf5', borderRadius: '14px', border: '1px solid #10b981', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📨</div>
-                                                    <h3 style={{ margin: '0 0 12px', color: '#065f46', fontSize: '1.5rem' }}>Nu har jeg sendt tilbuddet på mail til kunden!</h3>
-                                                    <p style={{ margin: '0 0 32px', color: '#047857', fontSize: '1rem', maxWidth: '400px' }}>
-                                                        Kunden afventer nu, og du får direkte besked (samt en ny mail), så snart de accepterer opgaven.
-                                                    </p>
-                                                    <button 
-                                                        onClick={() => setSelectedLead(null)}
-                                                        style={{ padding: '14px 28px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', marginBottom: '24px' }}
-                                                    >
-                                                        Gå tilbage til dashboardet
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setQuoteBuilder(p => ({...p, forceEdit: true}))}
-                                                        style={{ background: 'none', border: 'none', color: '#6b7280', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.9rem' }}
-                                                    >
-                                                        Har du lavet en fejl? Tryk her for at rette og sende igen
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                            <div style={{ marginTop: '24px', padding: '24px', backgroundColor: '#f3f1ed', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                <h3 style={{ margin: '0', color: '#1a1a1a' }}>
-                                                    {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
-                                                </h3>
-                                                <p style={{ margin: '0', color: '#6b7280', fontSize: '0.95rem' }}>
-                                                    {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') 
-                                                        ? "Dette er et projekt uden auto-estimat. Opbyg tilbuddet fra bunden ved at indtaste dine beregnede timer og materialer, så bygger systemet en professionel PDF-kontrakt." 
-                                                        : "Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig."}
-                                                </p>
-                                                
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
-                                                    {quoteBuilder.isKombi && quoteBuilder.subprojects && quoteBuilder.subprojects.length > 0 ? (
-                                                        <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '8px' }}>
-                                                            <strong style={{ color: '#1a1a1a', fontSize: '0.95rem' }}>Individuel tilpasning pr. underprojekt:</strong>
-                                                            {quoteBuilder.subprojects.map((sub, sIdx) => (
-                                                                <details key={sub.id} style={{ border: '1px solid #e8e6e1', borderRadius: '8px', backgroundColor: '#ffffff', overflow: 'hidden' }} open={sIdx === 0}>
-                                                                    <summary style={{ padding: '10px 14px', background: '#fafafa', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none' }}>
-                                                                        <span>Del {sIdx + 1}: {sub.title}</span>
-                                                                        <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'normal' }}>
-                                                                            ({sub.laborHours} t / {sub.materialCost.toLocaleString('da-DK')} kr.)
-                                                                        </span>
-                                                                    </summary>
-                                                                    <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', borderTop: '1px solid #e8e6e1' }}>
-                                                                        <div className="input-group">
-                                                                            <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Arbejdstimer (antal)</label>
-                                                                            <input 
-                                                                                type="number" 
-                                                                                value={sub.laborHours} 
-                                                                                onChange={(e) => {
-                                                                                    const val = Number(e.target.value);
-                                                                                    const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, laborHours: val } : item);
-                                                                                    const newTotalHours = updatedSubs.reduce((sum, item) => sum + item.laborHours, 0);
-                                                                                    setQuoteBuilder({
-                                                                                        ...quoteBuilder,
-                                                                                        subprojects: updatedSubs,
-                                                                                        laborHours: newTotalHours
-                                                                                    });
-                                                                                }} 
-                                                                                style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
-                                                                            />
-                                                                        </div>
-                                                                        <div className="input-group">
-                                                                            <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Materialer eks. moms (kr)</label>
-                                                                            <input 
-                                                                                type="number" 
-                                                                                value={sub.materialCost} 
-                                                                                onChange={(e) => {
-                                                                                    const val = Number(e.target.value);
-                                                                                    const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, materialCost: val } : item);
-                                                                                    const newTotalMaterials = updatedSubs.reduce((sum, item) => sum + item.materialCost, 0);
-                                                                                    setQuoteBuilder({
-                                                                                        ...quoteBuilder,
-                                                                                        subprojects: updatedSubs,
-                                                                                        materialCost: newTotalMaterials
-                                                                                    });
-                                                                                }} 
-                                                                                style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                </details>
-                                                            ))}
-                                                            <div className="input-group" style={{ marginTop: '8px' }}>
-                                                                <label style={{ fontWeight: 'bold' }}>Timepris (kr) - Gælder alle underprojekter</label>
-                                                                <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <div className="input-group">
-                                                                <label>Arbejdstimer (antal)</label>
-                                                                <input type="number" value={quoteBuilder.laborHours} onChange={(e) => setQuoteBuilder({...quoteBuilder, laborHours: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                            </div>
-                                                            <div className="input-group">
-                                                                <label>Timepris (kr)</label>
-                                                                <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                            </div>
-                                                            <div className="input-group">
-                                                                <label>Materialer eks. moms (kr)</label>
-                                                                <input type="number" value={quoteBuilder.materialCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, materialCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                    <div className="input-group">
-                                                        <label>Kørsel/Øvrigt eks. moms (kr)</label>
-                                                        <input type="number" value={quoteBuilder.drivingCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, drivingCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                    </div>
-                                                </div>
-
-                                                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                    {(quoteBuilder.customLines || []).map((line, idx) => (
-                                                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px', alignItems: 'center' }}>
-                                                            <div className="input-group">
-                                                                <input type="text" placeholder="F.eks. Leje af stillads" value={line.description} onChange={(e) => {
-                                                                    const newLines = [...quoteBuilder.customLines];
-                                                                    newLines[idx].description = e.target.value;
-                                                                    setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                            </div>
-                                                            <div className="input-group" style={{ display: 'flex', gap: '8px' }}>
-                                                                <input type="number" placeholder="Pris (kr)" value={line.price || ''} onChange={(e) => {
-                                                                    const newLines = [...quoteBuilder.customLines];
-                                                                    newLines[idx].price = Number(e.target.value);
-                                                                    setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                                <button onClick={() => {
-                                                                    const newLines = [...quoteBuilder.customLines];
-                                                                    newLines.splice(idx, 1);
-                                                                    setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                }} style={{ background: '#fef2f2', border: '1px solid #e8e6e1', color: '#ef4444', padding: '10px', borderRadius: '6px', cursor: 'pointer' }}>✖</button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    <button onClick={() => setQuoteBuilder({...quoteBuilder, customLines: [...(quoteBuilder.customLines || []), { description: '', price: 0 }] })} style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed #94a3b8', color: '#6b7280', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Tilføj ekstra linje</button>
-                                                </div>
-
-                                                <div style={{ padding: '16px', background: '#e8e6e1', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-                                                    <span style={{ fontWeight: 'bold' }}>Total inkl. 25% moms:</span>
-                                                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1d4ed8' }}>
-                                                        {new Intl.NumberFormat('da-DK').format(((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25)} kr.
+                                        {selectedLead.status !== 'Bekræftet opgave' && (
+                                            <>
+                                                <div 
+                                                    onClick={() => setIsQuoteEditorOpen(!isQuoteEditorOpen)}
+                                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px', marginTop: '24px' }}
+                                                >
+                                                    <h3 style={{ color: '#1a1a1a', margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <FileText size={18} style={{ color: '#6b7280' }} /> {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
+                                                    </h3>
+                                                    <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: 'bold' }}>
+                                                        {isQuoteEditorOpen ? 'Skjul ▲' : 'Vis ▼'}
                                                     </span>
                                                 </div>
 
-                                                {/* PDF Customization UI */}
-                                                <div style={{ marginTop: '16px', padding: '16px', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(12px)' }}>
-                                                    <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem', color: '#1a1a1a' }}>Tilpas PDF-udseende til kunden</h4>
-                                                    
-                                                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', marginBottom: '16px' }}>
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={!quoteBuilder.showDetailedBreakdown} 
-                                                            onChange={(e) => setQuoteBuilder({...quoteBuilder, showDetailedBreakdown: !e.target.checked})}
-                                                            style={{ width: '18px', height: '18px', marginTop: '2px' }}
-                                                        />
-                                                        <div>
-                                                            <strong style={{ display: 'block', fontSize: '0.95rem', color: '#1a1a1a' }}>Skjul detaljer (Vis kun samlet pris)</strong>
-                                                            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Fravælger du detaljer, skjules tømrer-timer, materialer og ekstra ydelser på PDF'en. Kunden ser kun én samlet "Entreprise" pris.</span>
-                                                        </div>
-                                                    </label>
-
-                                                    <div>
-                                                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', color: '#374151', marginBottom: '6px' }}>Bemærkninger / Beskrivelse til kunden</label>
-                                                        <textarea 
-                                                            value={quoteBuilder.customMessage || ''} 
-                                                            onChange={(e) => setQuoteBuilder({...quoteBuilder, customMessage: e.target.value})}
-                                                            placeholder="F.eks. 'Tak for god snak. I tilbuddet er der taget højde for...'"
-                                                            style={{ width: '100%', minHeight: '80px', padding: '10px', borderRadius: '6px', border: '1px solid #e8e6e1', resize: 'vertical' }}
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <button  
-                                                    className="btn-primary" 
-                                                    style={{ width: '100%', marginTop: '10px', background: '#10b981' }}
-                                                    onClick={() => setQuoteBuilder({...quoteBuilder, showPreview: true})}
-                                                >
-                                                    {selectedLead.status === 'Sendt tilbud' ? 'Se PDF & Opdateringsmuligheder 👉' : 'Generer & Gennemse 👉'}
-                                                </button>
-                                                {selectedLead.status === 'Sendt tilbud' && (
-                                                    <div style={{ padding: '12px', background: '#ecfdf5', color: '#065f46', borderRadius: '8px', fontWeight: '500', fontSize: '0.9rem', marginTop: '10px', textAlign: 'center' }}>
-                                                        ✅ Et tilbud (PDF) ligger gemt på sagen. Tryk ovenfor for at ændre det.
-                                                    </div>
-                                                )}
-
-                                                {selectedLead.status !== 'Sendt tilbud' && (
-                                                    <div style={{ marginTop: '24px', borderTop: '1px solid #cbd5e1', paddingTop: '20px' }}>
-                                                        <p style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#6b7280', textAlign: 'center', fontWeight: '500' }}>— Eller brug dit eget vante system —</p>
-                                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                                            <input 
-                                                                type="file" 
-                                                                accept="application/pdf" 
-                                                                onChange={(e) => setSelectedPdfFile(e.target.files[0])}
-                                                                style={{ border: '1px dashed rgba(255, 255, 255, 0.4)', padding: '10px', borderRadius: '6px', flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(12px)', fontSize: '0.9rem', cursor: 'pointer', color: '#1a1a1a' }}
-                                                            />
+                                                {isQuoteEditorOpen && (quoteBuilder ? (
+                                                    selectedLead.status === 'Sendt tilbud' && !quoteBuilder.forceEdit ? (
+                                                        <div style={{ marginTop: '24px', padding: '40px 20px', backgroundColor: '#ecfdf5', borderRadius: '14px', border: '1px solid #10b981', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                                                            <div style={{ color: '#10b981', marginBottom: '16px' }}><CheckCircle size={48} /></div>
+                                                            <h3 style={{ margin: '0 0 12px', color: '#065f46', fontSize: '1.5rem' }}>Nu har jeg sendt tilbuddet på mail til kunden!</h3>
+                                                            <p style={{ margin: '0 0 32px', color: '#047857', fontSize: '1rem', maxWidth: '400px' }}>
+                                                                Kunden afventer nu, og du får direkte besked (samt en ny mail), så snart de accepterer opgaven.
+                                                            </p>
                                                             <button 
-                                                                style={{ padding: '0 24px', borderRadius: '6px', border: '1px solid #94a3b8', backgroundColor: '#f3f1ed', color: '#1a1a1a', cursor: selectedPdfFile ? 'pointer' : 'not-allowed', opacity: selectedPdfFile ? 1 : 0.5, fontWeight: 'bold' }}
-                                                                disabled={!selectedPdfFile || isUploadingPdf}
-                                                                onClick={() => handleUploadAndSendQuote(selectedLead.id, carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst')}
+                                                                onClick={() => setSelectedLead(null)}
+                                                                style={{ padding: '14px 28px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', marginBottom: '24px' }}
                                                             >
-                                                                {isUploadingPdf ? 'Sender...' : (selectedLead.status === 'Sendt tilbud' ? 'Sendt. Tilbud til kunde' : 'Upload dit eget tilbud')}
+                                                                Gå tilbage til dashboardet
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => setQuoteBuilder(p => ({...p, forceEdit: true}))}
+                                                                style={{ background: 'none', border: 'none', color: '#6b7280', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.9rem' }}
+                                                            >
+                                                                Har du lavet en fejl? Tryk her for at rette og sende igen
                                                             </button>
                                                         </div>
+                                                    ) : (
+                                                    <div style={{ marginTop: '24px', padding: '24px', backgroundColor: '#f3f1ed', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                        <h3 style={{ margin: '0', color: '#1a1a1a' }}>
+                                                            {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
+                                                        </h3>
+                                                        <p style={{ margin: '0', color: '#6b7280', fontSize: '0.95rem' }}>
+                                                            {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') 
+                                                                ? "Dette er et projekt uden auto-estimat. Opbyg tilbuddet fra bunden ved at indtaste dine beregnede timer og materialer, så bygger systemet en professionel PDF-kontrakt." 
+                                                                : "Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig."}
+                                                        </p>
+                                                        
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
+                                                            {quoteBuilder.isKombi && quoteBuilder.subprojects && quoteBuilder.subprojects.length > 0 ? (
+                                                                <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '8px' }}>
+                                                                    <strong style={{ color: '#1a1a1a', fontSize: '0.95rem' }}>Individuel tilpasning pr. underprojekt:</strong>
+                                                                    {quoteBuilder.subprojects.map((sub, sIdx) => (
+                                                                        <details key={sub.id} style={{ border: '1px solid #e8e6e1', borderRadius: '8px', backgroundColor: '#ffffff', overflow: 'hidden' }} open={sIdx === 0}>
+                                                                            <summary style={{ padding: '10px 14px', background: '#fafafa', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none' }}>
+                                                                                <span>Del {sIdx + 1}: {sub.title}</span>
+                                                                                <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'normal' }}>
+                                                                                    ({sub.laborHours} t / {sub.materialCost.toLocaleString('da-DK')} kr.)
+                                                                                </span>
+                                                                            </summary>
+                                                                            <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', borderTop: '1px solid #e8e6e1' }}>
+                                                                                <div className="input-group">
+                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Arbejdstimer (antal)</label>
+                                                                                    <input 
+                                                                                        type="number" 
+                                                                                        value={sub.laborHours} 
+                                                                                        onChange={(e) => {
+                                                                                            const val = Number(e.target.value);
+                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, laborHours: val } : item);
+                                                                                            const newTotalHours = updatedSubs.reduce((sum, item) => sum + item.laborHours, 0);
+                                                                                            setQuoteBuilder({
+                                                                                                ...quoteBuilder,
+                                                                                                subprojects: updatedSubs,
+                                                                                                laborHours: newTotalHours
+                                                                                            });
+                                                                                        }} 
+                                                                                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
+                                                                                    />
+                                                                                </div>
+                                                                                <div className="input-group">
+                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Materialer eks. moms (kr)</label>
+                                                                                    <input 
+                                                                                        type="number" 
+                                                                                        value={sub.materialCost} 
+                                                                                        onChange={(e) => {
+                                                                                            const val = Number(e.target.value);
+                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, materialCost: val } : item);
+                                                                                            const newTotalMaterials = updatedSubs.reduce((sum, item) => sum + item.materialCost, 0);
+                                                                                            setQuoteBuilder({
+                                                                                                ...quoteBuilder,
+                                                                                                subprojects: updatedSubs,
+                                                                                                materialCost: newTotalMaterials
+                                                                                            });
+                                                                                        }} 
+                                                                                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+                                                                        </details>
+                                                                    ))}
+                                                                    <div className="input-group" style={{ marginTop: '8px' }}>
+                                                                        <label style={{ fontWeight: 'bold' }}>Timepris (kr) - Gælder alle underprojekter</label>
+                                                                        <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="input-group">
+                                                                        <label>Arbejdstimer (antal)</label>
+                                                                        <input type="number" value={quoteBuilder.laborHours} onChange={(e) => setQuoteBuilder({...quoteBuilder, laborHours: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                    </div>
+                                                                    <div className="input-group">
+                                                                        <label>Timepris (kr)</label>
+                                                                        <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                    </div>
+                                                                    <div className="input-group">
+                                                                        <label>Materialer eks. moms (kr)</label>
+                                                                        <input type="number" value={quoteBuilder.materialCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, materialCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                            <div className="input-group">
+                                                                <label>Kørsel/Øvrigt eks. moms (kr)</label>
+                                                                <input type="number" value={quoteBuilder.drivingCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, drivingCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                            {(quoteBuilder.customLines || []).map((line, idx) => (
+                                                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px', alignItems: 'center' }}>
+                                                                    <div className="input-group">
+                                                                        <input type="text" placeholder="F.eks. Leje af stillads" value={line.description} onChange={(e) => {
+                                                                            const newLines = [...quoteBuilder.customLines];
+                                                                            newLines[idx].description = e.target.value;
+                                                                            setQuoteBuilder({...quoteBuilder, customLines: newLines});
+                                                                        }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                    </div>
+                                                                    <div className="input-group" style={{ display: 'flex', gap: '8px' }}>
+                                                                        <input type="number" placeholder="Pris (kr)" value={line.price || ''} onChange={(e) => {
+                                                                            const newLines = [...quoteBuilder.customLines];
+                                                                            newLines[idx].price = Number(e.target.value);
+                                                                            setQuoteBuilder({...quoteBuilder, customLines: newLines});
+                                                                        }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                        <button onClick={() => {
+                                                                            const newLines = [...quoteBuilder.customLines];
+                                                                            newLines.splice(idx, 1);
+                                                                            setQuoteBuilder({...quoteBuilder, customLines: newLines});
+                                                                        }} style={{ background: '#fef2f2', border: '1px solid #e8e6e1', color: '#ef4444', padding: '10px', borderRadius: '6px', cursor: 'pointer' }}>&times;</button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button onClick={() => setQuoteBuilder({...quoteBuilder, customLines: [...(quoteBuilder.customLines || []), { description: '', price: 0 }] })} style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed #94a3b8', color: '#6b7280', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Tilføj ekstra linje</button>
+                                                        </div>
+
+                                                        <div style={{ padding: '16px', background: '#e8e6e1', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                                                            <span style={{ fontWeight: 'bold' }}>Total inkl. 25% moms:</span>
+                                                            <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1d4ed8' }}>
+                                                                {new Intl.NumberFormat('da-DK').format(((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25)} kr.
+                                                            </span>
+                                                        </div>
+
+                                                        {/* PDF Customization UI */}
+                                                        <div style={{ marginTop: '16px', padding: '16px', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(12px)' }}>
+                                                            <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem', color: '#1a1a1a' }}>Tilpas PDF-udseende til kunden</h4>
+                                                            
+                                                            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', marginBottom: '16px' }}>
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    checked={!quoteBuilder.showDetailedBreakdown} 
+                                                                    onChange={(e) => setQuoteBuilder({...quoteBuilder, showDetailedBreakdown: !e.target.checked})}
+                                                                    style={{ width: '18px', height: '18px', marginTop: '2px' }}
+                                                                />
+                                                                <div>
+                                                                    <strong style={{ display: 'block', fontSize: '0.95rem', color: '#1a1a1a' }}>Skjul detaljer (Vis kun samlet pris)</strong>
+                                                                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Fravælger du detaljer, skjules tømrer-timer, materialer og ekstra ydelser på PDF'en. Kunden ser kun én samlet "Entreprise" pris.</span>
+                                                                </div>
+                                                            </label>
+
+                                                            <div>
+                                                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', color: '#374151', marginBottom: '6px' }}>Bemærkninger / Beskrivelse til kunden</label>
+                                                                <textarea 
+                                                                    value={quoteBuilder.customMessage || ''} 
+                                                                    onChange={(e) => setQuoteBuilder({...quoteBuilder, customMessage: e.target.value})}
+                                                                    placeholder="F.eks. 'Tak for god snak. I tilbuddet er der taget højde for...'"
+                                                                    style={{ width: '100%', minHeight: '80px', padding: '10px', borderRadius: '6px', border: '1px solid #e8e6e1', resize: 'vertical' }}
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        <button  
+                                                            className="btn-primary" 
+                                                            style={{ width: '100%', marginTop: '10px', background: '#10b981' }}
+                                                            onClick={() => setQuoteBuilder({...quoteBuilder, showPreview: true})}
+                                                        >
+                                                            {selectedLead.status === 'Sendt tilbud' ? 'Se PDF & Opdateringsmuligheder 👉' : 'Generer & Gennemse 👉'}
+                                                        </button>
+                                                        {selectedLead.status === 'Sendt tilbud' && (
+                                                            <div style={{ padding: '12px', background: '#ecfdf5', color: '#065f46', borderRadius: '8px', fontWeight: '500', fontSize: '0.9rem', marginTop: '10px', textAlign: 'center' }}>
+                                                                ✅ Et tilbud (PDF) ligger gemt på sagen. Tryk ovenfor for at ændre det.
+                                                            </div>
+                                                        )}
+
+                                                        {selectedLead.status !== 'Sendt tilbud' && (
+                                                            <div style={{ marginTop: '24px', borderTop: '1px solid #cbd5e1', paddingTop: '20px' }}>
+                                                                <p style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#6b7280', textAlign: 'center', fontWeight: '500' }}>— Eller brug dit eget vante system —</p>
+                                                                <div style={{ display: 'flex', gap: '10px' }}>
+                                                                    <input 
+                                                                        type="file" 
+                                                                        accept="application/pdf" 
+                                                                        onChange={(e) => setSelectedPdfFile(e.target.files[0])}
+                                                                        style={{ border: '1px dashed rgba(255, 255, 255, 0.4)', padding: '10px', borderRadius: '6px', flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(12px)', fontSize: '0.9rem', cursor: 'pointer', color: '#1a1a1a' }}
+                                                                    />
+                                                                    <button 
+                                                                        style={{ padding: '0 24px', borderRadius: '6px', border: '1px solid #94a3b8', backgroundColor: '#f3f1ed', color: '#1a1a1a', cursor: selectedPdfFile ? 'pointer' : 'not-allowed', opacity: selectedPdfFile ? 1 : 0.5, fontWeight: 'bold' }}
+                                                                        disabled={!selectedPdfFile || isUploadingPdf}
+                                                                        onClick={() => handleUploadAndSendQuote(selectedLead.id, carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst')}
+                                                                    >
+                                                                        {isUploadingPdf ? 'Sender...' : (selectedLead.status === 'Sendt tilbud' ? 'Sendt. Tilbud til kunde' : 'Upload dit eget tilbud')}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
+                                                    )
+                                                ) : (
+                                                    <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#fff5f5', color: '#991b1b', borderRadius: '8px', border: '1px solid #f87171' }}>
+                                                        <strong>Hov!</strong> Dette lead blev oprettet <em>før</em> vi integrerede Tilbuds-generatoren. Værdier til auto-udfyldelse mangler i databasen. Generer dog et nyt test-lead for at se det nye system.
+                                                    </div>
+                                                ))}
+                                            </>
+                                        )}
+                                        {selectedLead.status === 'Bekræftet opgave' && (
+                                            <div style={{ marginTop: '24px', borderTop: '2px solid #cbd5e1', paddingTop: '24px' }}>
+                                                <CaseManagement 
+                                                    isModalView={true} 
+                                                    selectedLeadId={selectedLead.id} 
+                                                    leads={leadsData} 
+                                                    profile={carpenterProfile} 
+                                                    onUpdateLead={(updated) => {
+                                                        setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
+                                                        if (selectedLead && selectedLead.id === updated.id) {
+                                                            setSelectedLead(updated);
+                                                        }
+                                                    }} 
+                                                />
                                             </div>
-                                            )
-                                        ) : (
-                                            <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#fff5f5', color: '#991b1b', borderRadius: '8px', border: '1px solid #f87171' }}>
-                                                <strong>Hov!</strong> Dette lead blev oprettet <em>før</em> vi integrerede Tilbuds-generatoren. Værdier til auto-udfyldelse mangler i databasen. Generer dog et nyt test-lead for at se det nye system.
-                                            </div>
-                                        ))}
+                                        )}
 
                                         {selectedLead.status === 'Bekræftet opgave' && (
                                             <div style={{ marginTop: '32px', borderTop: '2px solid #e2e8f0', paddingTop: '24px', display: 'flex', justifyContent: 'center' }}>
