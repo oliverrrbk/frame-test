@@ -65,6 +65,10 @@ html, body {
   overflow-x: hidden;
   overflow-y: auto !important;
   scroll-behavior: smooth;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -1378,6 +1382,23 @@ button:focus-visible {
     .accept-page-card {
         padding: 24px 16px !important;
         border-radius: 12px !important;
+    }
+
+    /* 10. Enforce minimum 16px font-size to prevent automatic iOS Safari zoom */
+    .input-group input,
+    .input-group select,
+    .input-group textarea,
+    .contact-form-card input,
+    .contact-form-card select,
+    .contact-form-card textarea,
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="password"],
+    select,
+    textarea {
+        font-size: 16px !important;
     }
 }
 
