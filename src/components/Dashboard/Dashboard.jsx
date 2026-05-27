@@ -1717,7 +1717,7 @@ const Dashboard = () => {
                                     {myProfile?.owner_name || myProfile?.company_name || 'Henter...'}
                                 </strong>
                                 <span className="text-xs text-blue-500 font-medium">
-                                    {myProfile?.role === 'sales' ? 'Sælger / Projektleder' : myProfile?.role === 'accountant' ? 'Bogholder' : myProfile?.role === 'admin' && myProfile?.email === 'team@bisoncompany.dk' ? 'Bizon Admin' : 'Mester'}
+                                    {myProfile?.role === 'sales' ? 'Sælger / Projektleder' : myProfile?.role === 'accountant' ? 'Bogholder' : myProfile?.role === 'worker' ? 'Tømrersvend' : myProfile?.role === 'apprentice' ? 'Tømrerlærling' : myProfile?.role === 'admin' && myProfile?.email === 'team@bisoncompany.dk' ? 'Bizon Admin' : 'Mester'}
                                 </span>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-300 dark:border-slate-600">

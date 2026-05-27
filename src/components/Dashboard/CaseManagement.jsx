@@ -35,7 +35,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     useEffect(() => {
         const confirmed = leads.filter(l => l.status === 'Bekræftet opgave');
         
-        if (profile?.role === 'worker') {
+        if (profile?.role === 'worker' || profile?.role === 'apprentice') {
             const filtered = confirmed.filter(c => {
                 const workers = c.raw_data?.assigned_workers || [];
                 const pm = c.raw_data?.assigned_pm;
@@ -58,7 +58,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
         }
 
         if (profile) {
-            setNewTime(prev => ({ ...prev, employeeId: profile.role === 'worker' ? profile.id : '' }));
+            setNewTime(prev => ({ ...prev, employeeId: (profile.role === 'worker' || profile.role === 'apprentice') ? profile.id : '' }));
         }
     }, [leads, isModalView, selectedLeadId, profile]);
 
@@ -88,7 +88,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                 { id: profile.id, owner_name: profile.owner_name + ' (Dig)', role: 'admin' },
                 { id: 'mock-pm-1', owner_name: 'Christian (Projektleder)', role: 'sales' },
                 { id: 'mock-worker-1', owner_name: 'Niklas (Tømrersvend)', role: 'worker' },
-                { id: 'mock-worker-2', owner_name: 'Kasper (Tømrerlærling)', role: 'worker' }
+                { id: 'mock-worker-2', owner_name: 'Kasper (Tømrerlærling)', role: 'apprentice' }
             ]);
         }
     };
@@ -446,11 +446,11 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                     {activeCases.length > 0 && (
                         <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', marginTop: '16px' }}>
                             <h4 style={{ margin: '0 0 16px 0', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <TrendingUp size={18} style={{ color: '#10b981' }} /> {profile?.role === 'worker' ? 'Min Ugeseddel (Dine timer)' : 'Mandskabets Tidsstyring (Central Ugeseddel)'}
+                                <TrendingUp size={18} style={{ color: '#10b981' }} /> {(profile?.role === 'worker' || profile?.role === 'apprentice') ? 'Min Ugeseddel (Dine timer)' : 'Mandskabets Tidsstyring (Central Ugeseddel)'}
                             </h4>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                                 {team
-                                    .filter(member => profile?.role !== 'worker' || member.id === profile.id)
+                                    .filter(member => (profile?.role !== 'worker' && profile?.role !== 'apprentice') || member.id === profile.id)
                                     .map(member => {
                                         const hrs = getEmployeeTotalHoursThisWeek(member.id);
                                         return (
@@ -518,7 +518,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                     )}
 
                     {/* MANDSKABS DELEGERING BAR */}
-                    {profile?.role === 'worker' ? (
+                    {(profile?.role === 'worker' || profile?.role === 'apprentice') ? (
                         <div style={{ padding: '16px 20px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
                             <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>
                                 <strong style={{ color: '#1a1a1a', marginRight: '6px' }}>Projektleder:</strong> 
@@ -557,7 +557,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 'bold' }}>Tildelt Byggehold (Svende & Lærlinge)</span>
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                        {team.filter(t => t.role === 'worker' || t.id !== profile.id).map(worker => {
+                                        {team.filter(t => t.role === 'worker' || t.role === 'apprentice').map(worker => {
                                             const isAssigned = assignedWorkers.includes(worker.id);
                                             return (
                                                 <button
@@ -590,7 +590,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                             { id: 'logs', label: 'Progress Logbog' },
                             { id: 'timesheet', label: 'Timeregistrering' }
                         ].filter(tab => {
-                            if (profile?.role === 'worker') {
+                            if (profile?.role === 'worker' || profile?.role === 'apprentice') {
                                 return tab.id !== 'materials';
                             }
                             return true;
@@ -634,7 +634,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                                 </span>
                                             </div>
                                             
-                                            {profile?.role !== 'worker' && (
+                                            {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
                                                 <button 
                                                     onClick={() => handleDeleteTodo(todo.id)}
                                                     style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
@@ -647,7 +647,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                 </div>
 
                                 {/* TILFØJ CUSTOM OPGAVE */}
-                                {profile?.role !== 'worker' && (
+                                {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
                                     <form onSubmit={handleAddTodo} style={{ display: 'flex', gap: '12px', borderTop: '1px solid #f1f1ef', paddingTop: '20px' }}>
                                         <input 
                                             type="text"
@@ -831,7 +831,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                     
                                     <form onSubmit={handleAddTimeEntry} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                                         
-                                        {profile?.role === 'worker' ? (
+                                        {(profile?.role === 'worker' || profile?.role === 'apprentice') ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                                 <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Medarbejder (Hvem)</label>
                                                 <div style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #e8e6e1', fontSize: '0.9rem', backgroundColor: '#f3f4f6', color: '#374151', fontWeight: 'bold' }}>

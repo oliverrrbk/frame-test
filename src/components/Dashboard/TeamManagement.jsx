@@ -1,7 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const roles = [
+    { value: 'sales', label: 'Projektleder', desc: 'Ser kun egne leads og opretter tilbud.' },
+    { value: 'worker', label: 'Tømrersvend', desc: 'Kan registrere timer og se checklister.' },
+    { value: 'apprentice', label: 'Tømrerlærling', desc: 'Registrerer egne timer på sager.' },
+    { value: 'accountant', label: 'Bogholder / Sekretær', desc: 'Godkender timer og ser økonomisk bogføring.' },
+    { value: 'admin', label: 'Mester (Administrator)', desc: 'Fuld adgang til priser og systemindstillinger.' }
+];
+
+const getRoleLabel = (role) => {
+    switch (role) {
+        case 'admin': return 'Mester';
+        case 'sales': return 'Projektleder';
+        case 'worker': return 'Tømrersvend';
+        case 'apprentice': return 'Tømrerlærling';
+        case 'accountant': return 'Bogholder';
+        default: return role;
+    }
+};
 
 const TeamManagement = ({ profile, leadsData = [] }) => {
     const [expandedEmployee, setExpandedEmployee] = useState(null);
@@ -17,6 +36,21 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
         phone: '',
         role: 'sales'
     });
+
+    const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsRoleDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     // Mesterens ID bruges som company_id
     const companyId = profile.company_id || profile.id;
@@ -177,17 +211,104 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                 />
                             </div>
 
-                            <div className="input-group">
+                            <div className="input-group" style={{ position: 'relative' }} ref={dropdownRef}>
                                 <label>Rolle</label>
-                                <select
-                                    value={inviteData.role}
-                                    onChange={(e) => setInviteData({...inviteData, role: e.target.value})}
+                                <div 
+                                    onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+                                    style={{
+                                        padding: '14px 20px',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '16px',
+                                        fontSize: '0.95rem',
+                                        color: 'var(--text-primary)',
+                                        background: 'rgba(255, 255, 255, 0.6)',
+                                        backdropFilter: 'blur(12px)',
+                                        WebkitBackdropFilter: 'blur(12px)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        userSelect: 'none',
+                                        borderColor: isRoleDropdownOpen ? 'var(--border-focus)' : 'var(--border)',
+                                        boxShadow: isRoleDropdownOpen ? '0 0 0 3px rgba(26, 26, 26, 0.06)' : 'none'
+                                    }}
                                 >
-                                    <option value="sales">Projektleder</option>
-                                    <option value="worker">Tømrersvend / Lærling</option>
-                                    <option value="accountant">Bogholder / Sekretær</option>
-                                    <option value="admin">Mester (Administrator)</option>
-                                </select>
+                                    <span style={{ fontWeight: '500' }}>
+                                        {roles.find(r => r.value === inviteData.role)?.label || 'Vælg rolle'}
+                                    </span>
+                                    <ChevronDown 
+                                        size={18} 
+                                        style={{ 
+                                            transform: isRoleDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                            transition: 'transform 0.2s ease',
+                                            color: 'var(--text-secondary)'
+                                        }} 
+                                    />
+                                </div>
+
+                                <AnimatePresence>
+                                    {isRoleDropdownOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                                            transition={{ duration: 0.15 }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 'calc(100% + 8px)',
+                                                left: 0,
+                                                right: 0,
+                                                background: 'rgba(255, 255, 255, 0.98)',
+                                                backdropFilter: 'blur(24px)',
+                                                WebkitBackdropFilter: 'blur(24px)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '16px',
+                                                boxShadow: 'var(--shadow-lg)',
+                                                zIndex: 50,
+                                                overflow: 'hidden',
+                                                padding: '8px 0'
+                                            }}
+                                        >
+                                            {roles.map((roleOption) => {
+                                                const isSelected = inviteData.role === roleOption.value;
+                                                return (
+                                                    <div
+                                                        key={roleOption.value}
+                                                        onClick={() => {
+                                                            setInviteData({ ...inviteData, role: roleOption.value });
+                                                            setIsRoleDropdownOpen(false);
+                                                        }}
+                                                        style={{
+                                                            padding: '12px 20px',
+                                                            cursor: 'pointer',
+                                                            background: isSelected ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                                                            transition: 'background 0.2s ease',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            gap: '2px'
+                                                        }}
+                                                    >
+                                                        <span style={{ 
+                                                            fontSize: '0.9rem', 
+                                                            fontWeight: isSelected ? '600' : '500', 
+                                                            color: isSelected ? '#2563eb' : 'var(--text-primary)' 
+                                                        }}>
+                                                            {roleOption.label}
+                                                        </span>
+                                                        <span style={{ 
+                                                            fontSize: '0.75rem', 
+                                                            color: 'var(--text-secondary)' 
+                                                        }}>
+                                                            {roleOption.desc}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '8px' }}>
                                     Projektledere ser kun egne leads. Bogholdere ser kun bekræftede opgaver. Svende og lærlinge kan registrere timer og se byggechecklister på sager.
                                 </p>
@@ -265,7 +386,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                             <h4 style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 4px' }}>
                                                                 {member.owner_name || 'Uden Navn'}
                                                                 <span style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '9999px', background: 'var(--surface-bg)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>
-                                                                    {member.role === 'admin' ? 'Mester' : member.role === 'accountant' ? 'Bogholder' : member.role === 'worker' ? 'Svend / Lærling' : member.role === 'sales' ? 'Projektleder' : member.role}
+                                                                    {getRoleLabel(member.role)}
                                                                 </span>
                                                             </h4>
                                                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm" style={{ color: 'var(--text-secondary)' }}>

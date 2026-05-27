@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
         const { name, email, phone, role, companyId, adminId } = req.body;
 
-        if (!['sales', 'admin', 'accountant', 'worker'].includes(role)) {
+        if (!['sales', 'admin', 'accountant', 'worker', 'apprentice'].includes(role)) {
             return res.status(400).json({ error: 'Ugyldig rolle.' });
         }
 
