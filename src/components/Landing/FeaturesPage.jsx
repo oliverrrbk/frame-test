@@ -63,7 +63,7 @@ export default function FeaturesPage({ setSession }) {
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
                         viewport={{ once: true }}
-                        className="text-[clamp(3.5rem,6vw,4.5rem)] font-bold leading-tight tracking-[-0.03em] text-slate-900 dark:text-slate-50 mb-6"
+                        className="text-[clamp(2.15rem,6vw,4.5rem)] font-bold leading-tight tracking-[-0.03em] text-slate-900 dark:text-slate-50 mb-6"
                     >
                         Designet til <br /><span className="text-orange-600 dark:text-orange-400 opacity-90">Præcision.</span>
                     </motion.h1>

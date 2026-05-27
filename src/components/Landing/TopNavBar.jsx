@@ -91,28 +91,28 @@ export default function TopNavBar({ onLoginClick }) {
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <motion.div
-                        initial={{ height: 0, opacity: 0 }}
+                        initial={{ opacity: 0, y: -16 }}
                         animate={{ 
-                            height: 'auto', 
-                            opacity: 1,
+                            opacity: 1, 
+                            y: 0,
                             transition: {
-                                height: { type: "spring", stiffness: 450, damping: 38 },
-                                opacity: { duration: 0.15 },
-                                staggerChildren: 0.05,
+                                duration: 0.22,
+                                ease: [0.16, 1, 0.3, 1],
+                                staggerChildren: 0.04,
                                 delayChildren: 0.02
                             }
                         }}
                         exit={{ 
-                            height: 0, 
-                            opacity: 0,
+                            opacity: 0, 
+                            y: -16,
                             transition: {
-                                height: { type: "spring", stiffness: 450, damping: 38 },
-                                opacity: { duration: 0.12 },
-                                staggerChildren: 0.03,
+                                duration: 0.16,
+                                ease: [0.16, 1, 0.3, 1],
+                                staggerChildren: 0.02,
                                 staggerDirection: -1
                             }
                         }}
-                        className="md:hidden bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-b border-slate-100 dark:border-slate-900 overflow-hidden"
+                        className="absolute top-full left-0 w-full md:hidden bg-white/98 dark:bg-slate-950/98 backdrop-blur-xl border-b border-slate-100 dark:border-slate-900 shadow-2xl z-50"
                     >
                         <div className="px-6 py-6 flex flex-col gap-4 font-body">
                             {navLinks.map((link) => (

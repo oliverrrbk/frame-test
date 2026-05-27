@@ -11,6 +11,122 @@ export default function PricingPage({ setSession }) {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const navigate = useNavigate();
 
+    // Stater for den cirkulære swipe-karrusel på mobil
+    const [activeIndex, setActiveIndex] = useState(1); // Standard 'Professionel' (index 1)
+    const [touchStart, setTouchStart] = useState(null);
+    const [touchEnd, setTouchEnd] = useState(null);
+
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+        if (isLeftSwipe) {
+            setActiveIndex((prev) => (prev + 1) % 3);
+        } else if (isRightSwipe) {
+            setActiveIndex((prev) => (prev - 1 + 3) % 3);
+        }
+    };
+
+    const getCardStyle = (relIndex) => {
+        if (relIndex === 0) {
+            return {
+                zIndex: 30,
+                x: '0%',
+                scale: 1,
+                opacity: 1,
+                rotate: 0,
+                pointerEvents: 'auto'
+            };
+        }
+        if (relIndex === 1) {
+            return {
+                zIndex: 20,
+                x: '55%',
+                scale: 0.88,
+                opacity: 0.35,
+                rotate: 6,
+                pointerEvents: 'none'
+            };
+        }
+        if (relIndex === -1) {
+            return {
+                zIndex: 20,
+                x: '-55%',
+                scale: 0.88,
+                opacity: 0.35,
+                rotate: -6,
+                pointerEvents: 'none'
+            };
+        }
+        return { opacity: 0, zIndex: 0, scale: 0.5 };
+    };
+
+    const pricingTiers = [
+        {
+            id: 'basis',
+            name: 'Basis',
+            sub: 'Perfekt til den enkelte tømrer.',
+            price: '390',
+            description: 'Drop Excel-arkene. Få et komplet salgsværktøj, der sikrer, at du vinder flere opgaver professionelt.',
+            features: [
+                'Beregn Standardopgaver (Tag, Gulv mm.)',
+                'Dashboard & Kundehåndtering',
+                'Op til 20 Tilbud / måned',
+                'Auto-PDF med AB Forbruger',
+                'Integration til e-conomic & Dinero'
+            ],
+            badge: null,
+            highlight: false,
+            iconType: 'user'
+        },
+        {
+            id: 'professional',
+            name: 'Professionel',
+            sub: 'Den komplette pakke for etablerede firmaer.',
+            price: '790',
+            description: 'Gør salgsprocessen flydende. Automatisér overførsel til drifts-systemer og få AI til at udregne specialopgaver.',
+            features: [
+                'Alt fra Basis inkluderet',
+                'Ubegrænsede Tilbud',
+                'AI-Agent til Special- & Kombiprojekter',
+                'Ordrestyring / Apacta Integration',
+                'White-label (Fjern Bison logo)'
+            ],
+            badge: 'Mest Valgte',
+            highlight: true,
+            iconType: 'users'
+        },
+        {
+            id: 'enterprise',
+            name: 'Enterprise',
+            sub: 'Til den større håndværksvirksomhed.',
+            price: '1.890',
+            description: 'Styr dit salgsteam, hold styr på leads på tværs af afdelinger og få systemet til at matche dit brand 100%.',
+            features: [
+                'Alt fra Professionel inkluderet',
+                'Multi-bruger (Mester & Projektledere)',
+                'Avanceret Data & Konvertering',
+                'Specialtilpasset CSS Design',
+                'Dedikeret Onboarding Expert'
+            ],
+            badge: null,
+            highlight: false,
+            iconType: 'building'
+        }
+    ];
+
     // Final CTA Scroll Animation
     const ctaRef = useRef(null);
     const { scrollYProgress } = useScroll({
@@ -62,7 +178,7 @@ export default function PricingPage({ setSession }) {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="text-[clamp(3.5rem,6vw,4.5rem)] font-bold text-slate-900 dark:text-slate-50 tracking-tight leading-[1.1] max-w-3xl"
+                        className="text-[clamp(2.15rem,6vw,4.5rem)] font-bold text-slate-900 dark:text-slate-50 tracking-tight leading-[1.15] max-w-3xl"
                     >
                         Gennemskuelige <span className="text-orange-600 dark:text-orange-400">Priser</span> for Håndværkere.
                     </motion.h1>
@@ -77,165 +193,174 @@ export default function PricingPage({ setSession }) {
                     </motion.p>
                 </section>
 
-                {/* Pricing Tiers */}
-                <section className="w-full max-w-[1200px] grid grid-cols-1 md:grid-cols-3 gap-8 mb-[clamp(6rem,10vw,8rem)] relative z-10">
-                    {/* Tier 1: Starter / Basis */}
-                    <motion.div 
-                        whileHover={{ y: -5 }}
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1, duration: 0.5 }}
-                        viewport={{ once: true, margin: "-50px" }}
-                        style={{ WebkitTransform: "translateZ(0)", willChange: "transform", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
-                        className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 flex flex-col gap-8 relative overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-300 group"
-                    >
-                        <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100">
-                            <User size={80} strokeWidth={1} />
-                        </div>
-                        <div className="flex flex-col gap-2 relative z-10">
-                            <h3 className="text-[clamp(1.25rem,1.5vw,1.5rem)] font-semibold text-slate-900 dark:text-slate-100">Basis</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Perfekt til den enkelte tømrer.</p>
-                        </div>
-                        <ul className="flex flex-col gap-4 text-sm text-slate-600 dark:text-slate-300 flex-grow relative z-10 pb-8 pt-4">
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Beregn Standardopgaver (Tag, Gulv mm.)</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Dashboard & Kundehåndtering</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Op til 20 Tilbud / måned</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Auto-PDF med AB Forbruger</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Integration til e-conomic & Dinero</span>
-                            </li>
-                        </ul>
-                        <div className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-slate-900 dark:text-slate-100 flex items-baseline gap-1 mt-4 mb-2">
-                            390 <span className="text-sm font-medium text-slate-500 dark:text-slate-400">kr/md (eks. moms)</span>
-                        </div>
-                        <p className="text-slate-500 dark:text-slate-500 text-sm mb-8 leading-relaxed line-clamp-3">Drop Excel-arkene. Få et komplet salgsværktøj, der sikrer, at du vinder flere opgaver professionelt.</p>
-                        <div className="mt-auto flex flex-col items-center gap-2 z-10 w-full">
-                            <button onClick={() => navigate('/register')} className="w-full py-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold text-[clamp(0.875rem,1vw,1rem)] hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                                Start 30 dages gratis prøve
-                            </button>
-                            <span className="text-[0.75rem] text-slate-400 dark:text-slate-500 font-medium">Ingen kortoplysninger påkrævet</span>
-                        </div>
-                    </motion.div>
+                {/* Desktop Pricing Grid */}
+                <section className="hidden md:grid w-full max-w-[1200px] grid-cols-3 gap-8 mb-[clamp(6rem,10vw,8rem)] relative z-10">
+                    {pricingTiers.map((tier, idx) => (
+                        <motion.div 
+                            key={tier.id}
+                            whileHover={{ y: -5 }}
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 * (idx + 1), duration: 0.5 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            style={{ WebkitTransform: "translateZ(0)", willChange: "transform", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
+                            className={`bg-white dark:bg-slate-900 rounded-[2rem] p-8 flex flex-col gap-8 relative overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 group border ${
+                                tier.highlight 
+                                    ? 'border-2 border-blue-600/30 dark:border-blue-500/30 md:scale-105 z-20' 
+                                    : 'border-slate-100 dark:border-slate-800'
+                            }`}
+                        >
+                            {tier.highlight && (
+                                <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-600/10 dark:bg-blue-400/10 rounded-full blur-[60px] pointer-events-none z-0"></div>
+                            )}
+                            <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100">
+                                {tier.iconType === 'user' && <User size={80} strokeWidth={1} />}
+                                {tier.iconType === 'users' && <Users size={80} strokeWidth={1} />}
+                                {tier.iconType === 'building' && <Building2 size={80} strokeWidth={1} />}
+                            </div>
+                            
+                            {tier.badge && (
+                                <div className="absolute top-4 right-4 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[0.65rem] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-md z-10">
+                                    {tier.badge}
+                                </div>
+                            )}
+                            
+                            <div className="flex flex-col gap-2 relative z-10">
+                                <h3 className="text-[clamp(1.25rem,1.5vw,1.5rem)] font-semibold text-slate-900 dark:text-slate-100">{tier.name}</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">{tier.sub}</p>
+                            </div>
+                            <ul className="flex flex-col gap-4 text-sm text-slate-600 dark:text-slate-300 flex-grow relative z-10 pb-8 pt-4">
+                                {tier.features.map((feature, fIdx) => (
+                                    <li key={fIdx} className="flex items-start gap-3">
+                                        <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
+                                        <span className={fIdx === 0 && tier.highlight ? "font-semibold text-slate-900 dark:text-slate-100" : ""}>{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-slate-900 dark:text-slate-100 flex items-baseline gap-1 mt-4 mb-2">
+                                {tier.price} <span className="text-sm font-medium text-slate-500 dark:text-slate-400">kr/md (eks. moms)</span>
+                            </div>
+                            <p className="text-slate-500 dark:text-slate-500 text-sm mb-8 leading-relaxed line-clamp-3">{tier.description}</p>
+                            <div className="mt-auto flex flex-col items-center gap-2 z-10 w-full">
+                                <button 
+                                    onClick={() => navigate('/register')} 
+                                    className={`w-full py-4 rounded-full font-semibold text-[clamp(0.875rem,1vw,1rem)] transition-colors ${
+                                        tier.highlight 
+                                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 shadow-lg' 
+                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                    }`}
+                                >
+                                    Start 30 dages gratis prøve
+                                </button>
+                                <span className="text-[0.75rem] text-slate-400 dark:text-slate-500 font-medium">Ingen kortoplysninger påkrævet</span>
+                            </div>
+                        </motion.div>
+                    ))}
+                </section>
 
-                    {/* Tier 2: Growth / Premium (Highlighted) */}
-                    <motion.div 
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2, duration: 0.5 }}
-                        viewport={{ once: true, margin: "-50px" }}
-                        style={{ WebkitTransform: "translateZ(0)", willChange: "transform", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
-                        className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 flex flex-col gap-8 relative overflow-hidden shadow-xl border-2 border-blue-600/30 dark:border-blue-500/30 z-20 md:scale-105"
+                {/* Mobile Pricing Circular Swipe Deck */}
+                <section className="block md:hidden w-full max-w-[450px] mx-auto px-4 mb-[clamp(4rem,8vw,6rem)] relative z-10">
+                    <div 
+                        className="relative w-full h-[580px] flex items-center justify-center overflow-visible"
+                        onTouchStart={onTouchStart}
+                        onTouchMove={onTouchMove}
+                        onTouchEnd={onTouchEnd}
                     >
-                        <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-600/10 dark:bg-blue-400/10 rounded-full blur-[60px] pointer-events-none z-0"></div>
-                        <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 pointer-events-none text-blue-600 dark:text-blue-400 mt-8">
-                            <Users size={80} strokeWidth={1} />
-                        </div>
-                        
-                        <div className="absolute top-4 right-4 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[0.65rem] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-md z-10">
-                            Mest Valgte
-                        </div>
-                        
-                        <div className="flex flex-col gap-2 relative z-10">
-                            <h3 className="text-[clamp(1.25rem,1.5vw,1.5rem)] font-semibold text-slate-900 dark:text-slate-100">Professionel</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Den komplette pakke for etablerede firmaer.</p>
-                        </div>
-                        <ul className="flex flex-col gap-4 text-sm text-slate-600 dark:text-slate-300 flex-grow relative z-10 pb-8 pt-4">
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span className="font-semibold text-slate-900 dark:text-slate-100">Alt fra Basis inkluderet</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span className="font-semibold text-slate-900 dark:text-slate-100">Ubegrænsede Tilbud</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>AI-Agent til Special- & Kombiprojekter</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Ordrestyring / Apacta Integration</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>White-label (Fjern Bison logo)</span>
-                            </li>
-                        </ul>
-                        <div className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-slate-900 dark:text-slate-100 flex items-baseline gap-1 mt-4 mb-2 relative z-10">
-                            790 <span className="text-sm font-medium text-slate-500 dark:text-slate-400">kr/md (eks. moms)</span>
-                        </div>
-                        <p className="text-slate-600 dark:text-slate-400 text-sm mb-8 relative z-10 leading-relaxed line-clamp-3">Gør salgsprocessen flydende. Automatisér overførsel til drifts-systemer og få AI til at udregne specialopgaver.</p>
-                        <div className="mt-auto flex flex-col items-center gap-2 z-10 w-full">
-                            <button onClick={() => navigate('/register')} className="w-full py-4 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold text-[clamp(0.875rem,1vw,1rem)] hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors shadow-lg">
-                                Start 30 dages gratis prøve
-                            </button>
-                            <span className="text-[0.75rem] text-slate-400 dark:text-slate-500 font-medium">Ingen kortoplysninger påkrævet</span>
-                        </div>
-                    </motion.div>
+                        {pricingTiers.map((tier, idx) => {
+                            let relIndex = idx - activeIndex;
+                            if (relIndex === -2) relIndex = 1;
+                            if (relIndex === 2) relIndex = -1;
 
-                    {/* Tier 3: Enterprise / Mester */}
-                    <motion.div 
-                        whileHover={{ y: -5 }}
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3, duration: 0.5 }}
-                        viewport={{ once: true, margin: "-50px" }}
-                        style={{ WebkitTransform: "translateZ(0)", willChange: "transform", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
-                        className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 flex flex-col gap-8 relative overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-300 group"
-                    >
-                        <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100">
-                            <Building2 size={80} strokeWidth={1} />
-                        </div>
-                        <div className="flex flex-col gap-2 relative z-10">
-                            <h3 className="text-[clamp(1.25rem,1.5vw,1.5rem)] font-semibold text-slate-900 dark:text-slate-100">Enterprise</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Til den større håndværksvirksomhed.</p>
-                        </div>
-                        <ul className="flex flex-col gap-4 text-sm text-slate-600 dark:text-slate-300 flex-grow relative z-10 pb-8 pt-4">
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span className="font-semibold text-slate-900 dark:text-slate-100">Alt fra Professionel inkluderet</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Multi-bruger (Mester & Projektledere)</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Avanceret Data & Konvertering</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Specialtilpasset CSS Design</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Dedikeret Onboarding Expert</span>
-                            </li>
-                        </ul>
-                        <div className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-slate-900 dark:text-slate-100 flex items-baseline gap-1 mt-4 mb-2">
-                            1.890 <span className="text-sm font-medium text-slate-500 dark:text-slate-400">kr/md (eks. moms)</span>
-                        </div>
-                        <p className="text-slate-500 dark:text-slate-500 text-sm mb-8 leading-relaxed line-clamp-3">Styr dit salgsteam, hold styr på leads på tværs af afdelinger og få systemet til at matche dit brand 100%.</p>
-                        <div className="mt-auto flex flex-col items-center gap-2 z-10 w-full">
-                            <button onClick={() => navigate('/register')} className="w-full py-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold text-[clamp(0.875rem,1vw,1rem)] hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                                Start 30 dages gratis prøve
-                            </button>
-                            <span className="text-[0.75rem] text-slate-400 dark:text-slate-500 font-medium">Ingen kortoplysninger påkrævet</span>
-                        </div>
-                    </motion.div>
+                            return (
+                                <motion.div
+                                    key={tier.id}
+                                    style={{
+                                        position: 'absolute',
+                                        width: '85%',
+                                        maxWidth: '320px',
+                                        height: '520px',
+                                        WebkitTransform: 'translateZ(0)',
+                                        willChange: 'transform, opacity',
+                                    }}
+                                    animate={getCardStyle(relIndex)}
+                                    transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                                    onClick={() => {
+                                        if (relIndex === 1) setActiveIndex((idx) % 3);
+                                        if (relIndex === -1) setActiveIndex((idx) % 3);
+                                    }}
+                                    className={`bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 flex flex-col gap-5 relative overflow-hidden shadow-2xl transition-all duration-300 border ${
+                                        tier.highlight 
+                                            ? 'border-2 border-blue-500 dark:border-blue-400 shadow-blue-500/10' 
+                                            : 'border-slate-100 dark:border-slate-800'
+                                    }`}
+                                >
+                                    {tier.highlight && (
+                                        <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-blue-600/5 dark:bg-blue-400/5 rounded-full blur-[40px] pointer-events-none z-0"></div>
+                                    )}
+                                    <div className="absolute top-0 right-0 p-5 opacity-5 dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100">
+                                        {tier.iconType === 'user' && <User size={60} strokeWidth={1} />}
+                                        {tier.iconType === 'users' && <Users size={60} strokeWidth={1} />}
+                                        {tier.iconType === 'building' && <Building2 size={60} strokeWidth={1} />}
+                                    </div>
+                                    
+                                    {tier.badge && (
+                                        <div className="absolute top-4 right-4 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[0.6rem] font-bold uppercase tracking-widest px-2 py-1 rounded z-10">
+                                            {tier.badge}
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-col gap-1 relative z-10">
+                                        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{tier.name}</h3>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">{tier.sub}</p>
+                                    </div>
+
+                                    <ul className="flex flex-col gap-3 text-xs text-slate-600 dark:text-slate-300 flex-grow relative z-10 pb-4 pt-2">
+                                        {tier.features.map((feature, fIdx) => (
+                                            <li key={fIdx} className="flex items-start gap-2.5">
+                                                <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={16} />
+                                                <span className={fIdx === 0 && tier.highlight ? "font-semibold text-slate-900 dark:text-slate-100" : ""}>{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 flex items-baseline gap-1 mt-2 relative z-10">
+                                        {tier.price} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">kr/md (eks. moms)</span>
+                                    </div>
+
+                                    <p className="text-slate-500 dark:text-slate-500 text-xs leading-relaxed line-clamp-3 mb-4">{tier.description}</p>
+
+                                    <div className="mt-auto flex flex-col items-center gap-1.5 z-10 w-full">
+                                        <button 
+                                            onClick={() => navigate('/register')} 
+                                            className={`w-full py-3 rounded-full font-semibold text-sm transition-colors ${
+                                                tier.highlight 
+                                                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100' 
+                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                            }`}
+                                        >
+                                            Start prøveperiode
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Indicator dots for Mobile Swipe Deck */}
+                    <div className="flex justify-center gap-2.5 mt-6">
+                        {pricingTiers.map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setActiveIndex(i)}
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                    activeIndex === i 
+                                        ? 'bg-blue-600 dark:bg-blue-400 w-6' 
+                                        : 'bg-slate-200 dark:bg-slate-800 w-2'
+                                }`}
+                                aria-label={`Gå til pakke ${i + 1}`}
+                            />
+                        ))}
+                    </div>
                 </section>
 
                 {/* Integration Value Proposition */}
