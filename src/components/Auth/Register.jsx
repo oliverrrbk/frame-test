@@ -372,9 +372,9 @@ const Register = ({ setSession }) => {
                                                     <CheckCircle2 size={14} strokeWidth={3} />
                                                 </div>
                                             )}
-                                            <span className={`text-[10px] sm:text-xs font-bold mb-1 ${selectedTier === tier.id ? 'text-blue-700 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>{tier.name}</span>
-                                            <span className={`text-sm sm:text-lg md:text-xl font-black ${selectedTier === tier.id ? 'text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-300'}`}>{tier.price}</span>
-                                            <span className="text-[9px] sm:text-[10px] font-medium text-slate-400 mt-0.5">kr / md</span>
+                                            <span className={`text-xs sm:text-sm font-bold mb-1 ${selectedTier === tier.id ? 'text-blue-700 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>{tier.name}</span>
+                                            <span className={`text-lg sm:text-xl md:text-2xl font-black ${selectedTier === tier.id ? 'text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-300'}`}>{tier.price}</span>
+                                            <span className="text-[10px] sm:text-xs font-medium text-slate-400 mt-0.5 text-center leading-tight">kr. ekskl. moms / md.</span>
                                         </button>
                                     ))}
                                 </div>
