@@ -128,8 +128,29 @@ const PublicWizardPage = () => {
 const MAP_LIBRARIES = ['places'];
 
 function App() {
-  const [session, setSession] = useState(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [session, setSession] = useState(() => {
+    try {
+      const keys = Object.keys(localStorage);
+      const tokenKey = keys.find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+      if (tokenKey) {
+        const item = localStorage.getItem(tokenKey);
+        if (item) {
+          return JSON.parse(item);
+        }
+      }
+    } catch (e) {}
+    return null;
+  });
+
+  const [isInitializing, setIsInitializing] = useState(() => {
+    try {
+      const keys = Object.keys(localStorage);
+      const hasToken = keys.some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+      return hasToken;
+    } catch (e) {
+      return true;
+    }
+  });
 
   // Global Google Maps script loader
   const { isLoaded: _isLoaded, loadError } = useLoadScript({
@@ -139,7 +160,7 @@ function App() {
   });
 
   useEffect(() => {
-    // Tjek nuværende session ved start
+    // Tjek nuværende session ved start for at sikre gyldighed
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setIsInitializing(false);
@@ -150,13 +171,31 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setIsInitializing(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   if (isInitializing) {
-    return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}><h3>Låser systemet op...</h3></div>;
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 font-body antialiased">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-slate-900/5 dark:bg-white/5 rounded-full animate-ping opacity-25 scale-150"></div>
+            <img src="/logo.png" alt="Bison Frame" className="h-16 w-auto relative z-10 opacity-90" />
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <h3 className="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-200">
+              Bison Frame
+            </h3>
+            <p className="text-[10px] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase animate-pulse">
+              Låser systemet op
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (loadError) {

@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
 import TopNavBar from './TopNavBar';
-import { Ruler, DollarSign, FileText, Link as LinkIcon, Database, ArrowRight, X } from 'lucide-react';
+import { Ruler, DollarSign, FileText, Link as LinkIcon, Database, ArrowRight, X, Compass } from 'lucide-react';
 import Lenis from 'lenis';
 
 export default function FeaturesPage({ setSession }) {
@@ -204,9 +204,6 @@ export default function FeaturesPage({ setSession }) {
                             <p className="text-[clamp(1rem,1.25vw,1.125rem)] text-slate-500 dark:text-slate-400 leading-relaxed mb-8">
                                 Vi bruger ikke blot grove skøn. Vores teknologi udregner præcist profitten ud fra din timesats, kørsel, benzin og bilens slitage.
                             </p>
-                            <a href="#" className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold hover:gap-3 transition-all">
-                                Læs Mere Om Teknologien Bag <ArrowRight size={16} />
-                            </a>
                         </div>
                         <motion.div 
                             initial={{ opacity: 0, x: 50 }}
@@ -215,33 +212,62 @@ export default function FeaturesPage({ setSession }) {
                             viewport={{ once: true, margin: "-50px" }}
                             className="md:w-2/3 w-full bg-white dark:bg-slate-900 rounded-[2rem] p-8 md:p-12 border border-slate-100 dark:border-slate-800 shadow-sm relative z-10 overflow-hidden" style={{ WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
                         >
-                            <div className="border-b border-slate-100 dark:border-slate-800 pb-4 mb-6 flex justify-between items-end">
+                            <div className="border-b border-slate-100 dark:border-slate-800 pb-6 mb-8 flex justify-between items-end">
                                 <div>
-                                    <div className="text-[0.65rem] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-1">Modul ID</div>
-                                    <div className="font-mono font-medium text-slate-900 dark:text-slate-100">BEREGNING_AF_TILLÆG</div>
+                                    <div className="text-[0.65rem] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-1">Modul</div>
+                                    <div className="font-bold text-slate-900 dark:text-slate-100 text-lg tracking-tight">Beregning af tillæg</div>
                                 </div>
                                 <div className="text-right">
                                     <div className="text-[0.65rem] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-1">Status</div>
-                                    <div className="text-blue-600 dark:text-blue-400 font-bold text-sm">AKTIV</div>
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse"></span>
+                                        Aktiv
+                                    </span>
                                 </div>
                             </div>
-                            <div className="space-y-6 font-mono text-sm relative z-20">
-                                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 items-start pb-6 border-b border-slate-100 dark:border-slate-800">
-                                    <div className="col-span-3 text-slate-400 dark:text-slate-500 font-medium">Din Timesats</div>
-                                    <div className="col-span-9 text-slate-600 dark:text-slate-300">
-                                        Sæt din ønskede timesats og beregn nemt fortjeneste uanset hvor lang tid et projekt forventes at tage med den givne arbejdsbyrde.
+                            <div className="space-y-8 relative z-20 font-body">
+                                {/* Timesats Block */}
+                                <div className="group/item flex gap-6 items-start pb-8 border-b border-slate-100 dark:border-slate-800/80 transition-all duration-300">
+                                    <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400 shrink-0 group-hover/item:scale-110 transition-transform duration-300 shadow-sm">
+                                        <DollarSign size={22} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 group-hover/item:text-orange-600 dark:group-hover/item:text-orange-400 transition-colors duration-300">
+                                            Din Timesats
+                                        </h3>
+                                        <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            Sæt din ønskede timesats og beregn nemt fortjeneste, uanset hvor lang tid et projekt forventes at tage med den givne arbejdsbyrde.
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 items-start pb-6 border-b border-slate-100 dark:border-slate-800">
-                                    <div className="col-span-3 text-slate-400 dark:text-slate-500 font-medium">Kørsel Penge</div>
-                                    <div className="col-span-9 text-slate-600 dark:text-slate-300">
-                                        Regner fuldautomatisk ud præcist hvad det koster dig at køre dertil, bl.a ud fra benzin priser samt dækslip, så det lægges på toppen.
+
+                                {/* Kørsel & Slid Block */}
+                                <div className="group/item flex gap-6 items-start pb-8 border-b border-slate-100 dark:border-slate-800/80 transition-all duration-300">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 group-hover/item:scale-110 transition-transform duration-300 shadow-sm">
+                                        <Compass size={22} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400 transition-colors duration-300">
+                                            Kørsel & Slid
+                                        </h3>
+                                        <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            Regner fuldautomatisk ud præcist, hvad det koster dig at køre dertil, bl.a. ud fra benzinpriser samt dækslip, så det lægges på toppen.
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 items-start">
-                                    <div className="col-span-3 text-slate-400 dark:text-slate-500 font-medium">Materialer</div>
-                                    <div className="col-span-9 text-slate-600 dark:text-slate-300">
-                                        Udregner totalprisen for materialer, hvorefter du tilføjer din ønskede avance procent. Derefter kan faktura skabes og sendes afsted.
+
+                                {/* Materialer Block */}
+                                <div className="group/item flex gap-6 items-start transition-all duration-300">
+                                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 group-hover/item:scale-110 transition-transform duration-300 shadow-sm">
+                                        <Ruler size={22} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors duration-300">
+                                            Materialer & Avance
+                                        </h3>
+                                        <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            Udregner totalprisen for materialer, hvorefter du tilføjer din ønskede avanceprocent. Derefter kan et specificeret tilbud skabes og sendes afsted med det samme.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
