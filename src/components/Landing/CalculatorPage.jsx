@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
+import TopNavBar from './TopNavBar';
 import { ROICalculator } from '../ui/roi-calculator';
 import Lenis from 'lenis';
 
@@ -29,45 +30,7 @@ export default function CalculatorPage({ setSession }) {
             <div className="absolute inset-0 grid-pattern pointer-events-none z-0"></div>
 
             {/* TopNavBar */}
-            <nav className="sticky top-0 w-full z-50 bg-slate-50/40 dark:bg-slate-950/40 backdrop-blur-md font-headline tracking-tight antialiased text-slate-600 dark:text-slate-300">
-                <div className="flex justify-between items-center max-w-[1440px] mx-auto px-8 py-4">
-                    <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                        <img src="/logo.png" alt="Bison Frame Logo" className="h-10 w-auto object-contain" />
-                        <div className="text-lg font-bold tracking-[-0.02em] uppercase text-slate-800 dark:text-slate-100">
-                            Bison Frame
-                        </div>
-                    </Link>
-                    
-                    <div className="hidden md:flex gap-8">
-                        <Link to="/calculate" className="text-slate-800 dark:text-slate-100 font-medium bg-slate-100/50 dark:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Beregner</Link>
-                        <Link to="/features" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Funktioner</Link>
-                        <Link to="/pricing" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Priser</Link>
-                        <Link to="/about" className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 px-3 py-2 rounded-md">Om os</Link>
-                    </div>
-                    
-                    <div className="flex gap-4 items-center">
-                        <motion.button 
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}
-                            onClick={() => setIsLoginOpen(true)}
-                            className="hidden md:block text-slate-500 font-medium hover:text-slate-800 transition-colors"
-                        >
-                            Log ind
-                        </motion.button>
-                        <motion.button 
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}
-                            onClick={() => navigate('/register')}
-                            className="bg-inverse-surface text-inverse-primary rounded-full px-6 py-2.5 font-medium hover:bg-primary shadow-sm hover:shadow-md transition-all duration-300"
-                        >
-                            Kom i gang
-                        </motion.button>
-                    </div>
-                </div>
-                <div className="h-px w-full bg-slate-100 dark:bg-slate-900"></div>
-            </nav>
+            <TopNavBar onLoginClick={() => setIsLoginOpen(true)} />
 
             {/* Main Content Canvas */}
             <main className="flex-grow flex flex-col items-center w-full px-6 md:px-12 pt-16 pb-24 z-10 relative">
@@ -157,7 +120,7 @@ export default function CalculatorPage({ setSession }) {
                             }}
                             className="shadow-[-10px_0_40px_rgba(0,0,0,0.2)]"
                         >
-                            <div style={{ padding: '60px 40px', height: '100%' }}>
+                            <div style={{ position: 'relative', zIndex: 110, minHeight: '100svh' }}>
                                 <Login setSession={setSession} />
                             </div>
                         </motion.div>
