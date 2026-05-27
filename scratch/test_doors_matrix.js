@@ -30,7 +30,7 @@ const testCases = [
             amount: 1,
             doorStyle: "Indvendig dør",
             doorModel: "Standard indvendig dør",
-            electricLock: "Nej, vi ønsker standard lås/greb"
+            electricLock: "Nej, standard lås/greb er fint"
         }
     },
     {
@@ -39,7 +39,7 @@ const testCases = [
             amount: 10,
             doorStyle: "Indvendig dør",
             doorModel: "Special indvendig dør",
-            electricLock: "Nej, vi ønsker standard lås/greb"
+            electricLock: "Nej, standard lås/greb er fint"
         }
     },
     {
@@ -49,27 +49,27 @@ const testCases = [
             doorStyle: "Hoveddør (Udvendig)",
             doorModel: "Robust standard hoveddør",
             material: "Træ / Alu (Kombination)",
-            electricLock: "Nej, vi ønsker standard lås/greb"
+            electricLock: "Nej, standard lås/greb er fint"
         }
     },
     {
-        name: "Premium/High-End Hoveddør - Aluminium med Yale Doorman",
+        name: "Premium/High-End Hoveddør - Aluminium med elektronisk smart-lås",
         data: {
             amount: 1,
             doorStyle: "Hoveddør (Udvendig)",
             doorModel: "Premium/High-End hoveddør",
             material: "Aluminium",
-            electricLock: "Ja, tømreren skal levere og montere elektrisk lås"
+            electricLock: "Ja, vi skal levere og montere elektronisk smart-lås"
         }
     },
     {
-        name: "Special/Dobbelt terrassedør - Massivt træ og glas - Yale Doorman",
+        name: "Special/Dobbelt terrassedør - Massivt træ og glas - elektronisk smart-lås",
         data: {
             amount: 2,
             doorStyle: "Terrassedør",
             doorModel: "Special/Dobbelt terrassedør",
             material: "Massivt træ og glas",
-            electricLock: "Ja, tømreren skal levere og montere elektrisk lås"
+            electricLock: "Ja, vi skal levere og montere elektronisk smart-lås"
         }
     }
 ];

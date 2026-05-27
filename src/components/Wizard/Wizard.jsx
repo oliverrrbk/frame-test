@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Step1Category from './Step1Category';
 import Step2Dynamic from './Step2Dynamic';
-import Step3Photos from './Step3Photos';
 import Step4Contact from './Step4Contact';
 import StepResult from './StepResult';
 import Step5Success from './Step5Success';
 import ChatEstimator from './ChatEstimator';
 import AiSupportWidget from './AiSupportWidget';
-import { QUESTIONS } from './questionsConfig';
+import { QUESTIONS, initialCategories } from './questionsConfig';
 import { performCalculation } from '../../utils/calculator';
 import { fetchCalibrationFactor } from '../../utils/calibration';
 import { supabase } from '../../supabaseClient';
@@ -23,7 +22,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     const [currentStep, setCurrentStep] = useState(1);
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const handleAddAnotherProject = () => {
+    const handleAddAnotherProject = (nextCategory = null) => {
         if (!isStep2Valid()) {
             toast.error('Udfyld venligst alle obligatoriske felter under detaljer først.');
             return;
@@ -36,13 +35,22 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
         };
         
         setProjects(prev => [...prev, newProject]);
-        setProjectData({
-            category: null,
-            details: {}
-        });
         
-        toast.success('Opgaven er tilføjet til dit Kombi-projekt. Vælg nu den næste opgave!');
-        goToStep(1);
+        if (nextCategory) {
+            setProjectData({
+                category: nextCategory,
+                details: {}
+            });
+            const catObj = initialCategories.find(c => c.id === nextCategory);
+            toast.success(`Tilføjet! Du kan nu konfigurere: ${catObj ? catObj.label : nextCategory}.`);
+        } else {
+            setProjectData({
+                category: null,
+                details: {}
+            });
+            toast.success('Opgaven er tilføjet til dit Kombi-projekt. Vælg nu den næste opgave!');
+            goToStep(1);
+        }
     };
 
     const handleUpdateProjectPhotosAndNotes = (id, updatedData) => {
@@ -70,21 +78,19 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     const stepToParam = {
         1: 'opgave',
         2: 'detaljer',
-        3: 'billeder',
-        4: 'kontakt',
+        3: 'kontakt',
         'special_chat': 'chat',
-        5: 'result',
-        6: 'success'
+        4: 'result',
+        5: 'success'
     };
 
     const paramToStep = {
         'opgave': 1,
         'detaljer': 2,
-        'billeder': 3,
-        'kontakt': 4,
+        'kontakt': 3,
         'chat': 'special_chat',
-        'result': 5,
-        'success': 6
+        'result': 4,
+        'success': 5
     };
 
     const isStep2Valid = () => {
@@ -140,7 +146,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     const canAccessStepNumber = (stepNum) => {
         if (stepNum === 1) return true;
         if (stepNum === 2) return !!projectData.category;
-        if (stepNum === 3 || stepNum === 4) return !!projectData.category && isStep2Valid();
+        if (stepNum === 3) return !!projectData.category && isStep2Valid();
         return false;
     };
 
@@ -158,13 +164,13 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             } else {
                 toast.error('Du skal vælge et byggeprojekt først.');
             }
-        } else if (stepNum === 3 || stepNum === 4) {
+        } else if (stepNum === 3) {
             if (!projectData.category) {
                 toast.error('Du skal vælge et byggeprojekt først.');
             } else if (!isStep2Valid()) {
                 toast.error('Udfyld venligst alle obligatoriske felter under detaljer først.');
             } else {
-                goToStep(stepNum);
+                goToStep(3);
             }
         }
     };
@@ -194,7 +200,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             return;
         }
 
-        if ((mappedStep === 3 || mappedStep === 4) && !isStep2Valid()) {
+        if (mappedStep === 3 && !isStep2Valid()) {
             setSearchParams({ step: 'detaljer' }, { replace: true });
             return;
         }
@@ -256,7 +262,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
     const [priceRange, setPriceRange] = useState("-- kr.");
     const [breakdownArr, setBreakdownArr] = useState([]);
 
-    const totalSteps = 4;
+    const totalSteps = 3;
     const progressPercentage = (currentStep / totalSteps) * 100;
 
     const updateCategory = (category) => {
@@ -567,7 +573,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             }));
 
             setIsCalculating(false);
-            goToStep(isFastTrack ? 6 : 5);
+            goToStep(isFastTrack ? 5 : 4);
         } catch (error) {
             console.error(error);
             import('react-hot-toast').then(toast => {
@@ -611,13 +617,13 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
 
     return (
         <main className="wizard-container" style={{ position: 'relative', paddingBottom: '40px' }}>
-            {activeStepNum < 5 && (
+            {activeStepNum < 4 && (
                 <div className="progress-section progress-steps-container" style={{ marginBottom: '32px', maxWidth: '800px', marginInline: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
                         <div className="progress-step-line" style={{ position: 'absolute', top: '16px', left: '10%', right: '10%', height: '3px', background: '#e2e8f0', zIndex: 0 }}>
                             <div style={{ width: `${(activeStepNum - 1) / (totalSteps - 1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #10b981, #2563eb)', transition: 'width 0.4s ease' }}></div>
                         </div>
-                        {['Opgave', 'Detaljer', 'Billeder', 'Kontakt'].map((name, idx) => {
+                        {['Opgave', 'Detaljer', 'Kontakt'].map((name, idx) => {
                             const stepNum = idx + 1;
                             const activeStepIndex = currentStep === 'special_chat' ? 2 : currentStep;
                             const isCompleted = activeStepIndex > stepNum;
@@ -700,18 +706,15 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         }
                         if (aiData.isStandardCategory) {
                             toast.success("Vi har udfyldt formularen baseret på vores snak. Tjek venligst om alt stemmer, og tryk 'Videre'!", { duration: 6000 });
-                            goToStep(2); // Rescue Guard: Vis kunden dataen i visual form for implicit godkendelse
-                        } else {
-                            goToStep(3); // Gå til foto-upload for specialopgaver
                         }
+                        goToStep(2); // Gå altid til detaljesiden (som nu også indeholder billeder/beskrivelse)
                     }} 
                 />
             )}
-            {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} onAddAnotherProject={projectData.category !== 'special' ? handleAddAnotherProject : null} />}
-            {currentStep === 3 && <Step3Photos category={projectData.category} photos={projectData.details.photos || []} setPhotos={(photos) => updateDetails('photos', photos)} notes={projectData.details.notes || ''} setNotes={(notes) => updateDetails('notes', notes)} nextStep={nextStep} prevStep={() => projectData.category === 'special' ? goToStep('special_chat') : prevStep()} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} allProjects={projects.length > 0 ? [...projects, { id: 'active', category: projectData.category, details: projectData.details }] : null} onUpdateProject={handleUpdateProjectPhotosAndNotes} />}
-            {currentStep === 4 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} />}
-            {currentStep === 5 && <StepResult projectData={projectData} notes={projectData.details?.notes || ''} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} />}
-            {currentStep === 6 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
+            {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} onAddAnotherProject={projectData.category !== 'special' ? handleAddAnotherProject : null} projects={projects} />}
+            {currentStep === 3 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} />}
+            {currentStep === 4 && <StepResult projectData={projectData} notes={projectData.details?.notes || ''} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} />}
+            {currentStep === 5 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
 
             <AiSupportWidget 
                 carpenter={carpenter} 

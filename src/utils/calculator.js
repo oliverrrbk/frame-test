@@ -452,11 +452,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         laborHours += thresholdHours;
         bArr.push(`Standard tillæg: Montering af nye dørtrin / bundstykker (+${thresholdHours.toFixed(1)} arbejdstimer)`);
 
-        // Elektrisk lås monteringstid (SOP #7 / Yale Doorman) eller standard hardware
-        if (d.electricLock === 'Ja, tømreren skal levere og montere elektrisk lås') {
+        // Elektrisk lås monteringstid (SOP #7 / Elektronisk smart-lås) eller standard hardware
+        if (d.electricLock === 'Ja, vi skal levere og montere elektronisk smart-lås') {
             let lockHoursExtra = numericAmount * 1.5;
             laborHours += lockHoursExtra;
-            bArr.push(`Tillæg: Udfræsning i karm, kabeltræk og programmering af elektrisk lås (Yale Doorman) (+${lockHoursExtra.toFixed(1)} arbejdstimer)`);
+            bArr.push(`Tillæg: Udfræsning i karm, montering og programmering af elektronisk smart-lås (+${lockHoursExtra.toFixed(1)} arbejdstimer)`);
         } else {
             let hardwareHours = numericAmount * (formula.hardwareHours || 0.3);
             laborHours += hardwareHours;
@@ -638,11 +638,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 let accessoriesCost = 0;
 
                 // A. Dørgreb / Cylinder
-                if (d.electricLock === 'Ja, tømreren skal levere og montere elektrisk lås') {
-                    // Elektrisk lås (Yale Doorman)
+                if (d.electricLock === 'Ja, vi skal levere og montere elektronisk smart-lås') {
+                    // Elektrisk lås (Elektronisk smart-lås)
                     const lockPrice = indexCat['Elektrisk lås'] || 3500;
                     accessoriesCost += numericAmount * lockPrice;
-                    bArr.push(`Tilbehør: Yale Doorman / Elektrisk låseenhed komplet monteret (${numericAmount} stk)`);
+                    bArr.push(`Tilbehør: Elektronisk smart-lås komplet leveret og monteret (${numericAmount} stk)`);
                 } else {
                     // Standard greb pr. dør
                     const grebPrice = indexCat['Dørgreb inkl roset'] || 350;

@@ -1,17 +1,188 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
-import { ImagePlus, Info, ZoomIn, Copy, Trash2, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
-import { QUESTIONS } from './questionsConfig';
+import { ImagePlus, Info, ZoomIn, Copy, Trash2, Plus, ChevronLeft, ChevronRight, Camera } from 'lucide-react';
+import { QUESTIONS, initialCategories } from './questionsConfig';
 import CustomSelect from './CustomSelect';
 import AudioPlayerButton from './AudioPlayerButton';
+import { supabase } from '../../supabaseClient';
 
-const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, quickRecalculate, onAddAnotherProject }) => {
+const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, quickRecalculate, onAddAnotherProject, projects = [] }) => {
     const questions = QUESTIONS[category] || [];
     const [openTooltips, setOpenTooltips] = React.useState({});
     const [zoomedImage, setZoomedImage] = React.useState(null);
     const [showSketcher, setShowSketcher] = React.useState(false);
     const isMouseDown = React.useRef(false);
+
+    // Photos & Notes Integrated Upload States
+    const [isUploading, setIsUploading] = React.useState(false);
+    const [isDragging, setIsDragging] = React.useState(false);
+    const fileInputRef = React.useRef(null);
+
+    const getPhotoHint = (cat) => {
+        switch (cat) {
+            case 'roof': return "Tip: Tag et billede nede fra haven, hvor man kan se tagrenden, og et billede oppe fra loftrummet (hvis muligt).";
+            case 'windows': return "Tip: Tag et billede af de nuværende vinduer indefra og udefra, så tømreren kan se murværket omkring.";
+            case 'doors': return "Tip: Tag et billede af den eksisterende dør og karmen omkring.";
+            case 'floor': return "Tip: Tag et billede af de tilstødende rum, dørtrin og panelerne, så tømreren kan se overgangene.";
+            case 'special': return "Tip: Tag et par oversigtsbilleder af området, hvor opgaven skal udføres.";
+            default: return "Tip: Tag et par billeder af området, hvor opgaven skal udføres, gerne fra lidt forskellige vinkler.";
+        }
+    };
+
+    const getPhotosLabel = (cat) => {
+        switch (cat) {
+            case 'roof': return 'Upload billeder af dit hus og tag (valgfrit):';
+            case 'windows': return 'Upload evt. billeder af vindueskarmene/vinduerne (valgfrit):';
+            case 'doors': return 'Upload evt. billeder af døråbningerne (valgfrit):';
+            case 'floor': return 'Upload billeder af det nuværende gulvareal (valgfrit):';
+            case 'ceilings': return 'Upload billeder af dine lofter (valgfrit):';
+            case 'facades': return 'Upload billeder af dine facader (valgfrit):';
+            case 'terrace': return 'Upload billeder af det nuværende areal (valgfrit):';
+            case 'special': return 'Upload billeder af arbejdsområdet (valgfrit):';
+            default: return 'Upload billeder af arbejdsområdet (valgfrit):';
+        }
+    };
+
+    const getNotesLabel = (cat) => {
+        switch (cat) {
+            case 'roof': return 'Særlige ønsker eller kommentarer til taget? (valgfrit)';
+            case 'windows': return 'Særlige ønsker eller kommentarer til vinduerne? (valgfrit)';
+            case 'doors': return 'Særlige ønsker eller kommentarer til dørene? (valgfrit)';
+            case 'floor': return 'Særlige ønsker eller kommentarer til gulvet? (valgfrit)';
+            case 'ceilings': return 'Særlige ønsker eller kommentarer til lofterne? (valgfrit)';
+            case 'facades': return 'Særlige ønsker eller kommentarer til facaden? (valgfrit)';
+            case 'terrace': return 'Særlige ønsker eller kommentarer til terrassen? (valgfrit)';
+            case 'kitchen': return 'Særlige ønsker eller kommentarer til køkkenet? (valgfrit)';
+            case 'annex': return 'Særlige ønsker eller kommentarer til annekset? (valgfrit)';
+            case 'carport': return 'Særlige ønsker eller kommentarer til carporten? (valgfrit)';
+            case 'fence': return 'Særlige ønsker eller kommentarer til hegnet? (valgfrit)';
+            case 'special': return 'Særlige ønsker eller kommentarer til specialopgaven? (valgfrit)';
+            default: return 'Særlige ønsker eller kommentarer til opgaven? (valgfrit)';
+        }
+    };
+
+    const getPhotosTooltip = (cat) => {
+        switch (cat) {
+            case 'roof': return 'Tip: Tag billeder på afstand, så vi kan se tagfladen og adgangsforholdene i haven.';
+            case 'windows': return 'Tip: Få hele vinduet med – både indvendigt og udvendigt – så vi kan se murværket og rammerne.';
+            case 'doors': return 'Tip: Tag billederne på afstand, så vi kan se hele karmen samt eventuelle overliggende ledninger eller rør.';
+            case 'floor': return 'Tip: Tag billeder af dørtrin og overgange til tilstødende rum, så vi kan vurdere gulvhøjden.';
+            case 'ceilings': return 'Tip: Tag billeder af loftets hjørner og eventuelle spots eller synlige bjælker.';
+            case 'facades': return 'Tip: Tag billeder af hele facadefladen udefra, så vi kan vurdere arbejdshøjden.';
+            default: return 'Tip: Tag gerne et par gode billeder af området, hvor opgaven skal udføres, gerne fra lidt afstand.';
+        }
+    };
+
+    const compressImageForUpload = (file) => {
+        return new Promise((resolve) => {
+            if (!file.type.startsWith('image/')) {
+                resolve(file);
+                return;
+            }
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    const MAX_WIDTH = 1200;
+                    if (width > MAX_WIDTH) {
+                        height = Math.round(height * (MAX_WIDTH / width));
+                        width = MAX_WIDTH;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob((blob) => {
+                        resolve(blob);
+                    }, 'image/jpeg', 0.8);
+                };
+                img.onerror = () => resolve(file);
+                img.src = event.target.result;
+            };
+            reader.onerror = () => resolve(file);
+        });
+    };
+
+    const processFiles = async (filesArray) => {
+        if (!filesArray.length) return;
+
+        setIsUploading(true);
+        const uploadedUrls = [];
+
+        for (const file of filesArray) {
+            try {
+                const compressedBlob = await compressImageForUpload(file);
+                const fileExt = file.type.startsWith('image/') ? 'jpg' : file.name.split('.').pop();
+                const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+                const filePath = `${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('leads_photos')
+                    .upload(filePath, compressedBlob, {
+                        contentType: file.type.startsWith('image/') ? 'image/jpeg' : file.type,
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (uploadError) throw uploadError;
+
+                const { data: publicUrlData } = supabase.storage
+                    .from('leads_photos')
+                    .getPublicUrl(filePath);
+
+                uploadedUrls.push(publicUrlData.publicUrl);
+            } catch (error) {
+                console.error("Error uploading image:", error);
+                toast.error(`Kunne ikke uploade billedet: ${file.name}`);
+            }
+        }
+
+        if (uploadedUrls.length > 0) {
+            const currentPhotos = details.photos || [];
+            updateDetails('photos', [...currentPhotos, ...uploadedUrls]);
+            toast.success(`${uploadedUrls.length} billede(r) uploadet!`);
+        }
+        
+        setIsUploading(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const handleFileChangeLocal = (e) => {
+        processFiles(Array.from(e.target.files));
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (!isUploading && e.dataTransfer.files) {
+            processFiles(Array.from(e.dataTransfer.files));
+        }
+    };
+
+    const removePhoto = (idx) => {
+        const currentPhotos = details.photos || [];
+        updateDetails('photos', currentPhotos.filter((_, i) => i !== idx));
+    };
 
     const handleNextImage = React.useCallback(() => {
         setZoomedImage((prev) => {
@@ -951,7 +1122,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             ) : (
                                 <>
                                     <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Vejledende oplysninger</strong>
-                                    Du vil som udgangspunkt aldrig blive holdt ansvarlig for nøjagtigheden af dine mål eller valg. Tømreren kommer <strong>altid</strong> ud og kigger på projektet inden en endelig aftale indgås, medmindre du aktivt fravælger opmålingsbesøget mod en prisreduktion (hvor dette er en mulighed). Overslaget er til for at give dig et realistisk prisleje.
+                                    Du bliver aldrig holdt ansvarlig for nøjagtigheden af dine mål eller valg. Tømreren kommer altid ud og foretager præcise kontrolmål inden en endelig aftale indgås. Overslaget er udelukkende til for at give dig et realistisk prisleje.
                                 </>
                             )}
                         </div>
@@ -1004,6 +1175,214 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 })}
             </div>
 
+            {/* Elegant Photos Card (Quiet and matching standard question cards) */}
+            <div className="form-group wizard-question-card" style={{ 
+                marginBottom: '32px', 
+                background: 'var(--bg-card)', 
+                padding: '24px', 
+                borderRadius: 'var(--radius-lg)', 
+                border: '1px solid var(--border)', 
+                boxShadow: 'var(--shadow-sm)' 
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                    <label style={{ fontWeight: '700', margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
+                        {getPhotosLabel(category)}
+                    </label>
+                    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <button 
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); toggleTooltip('photosTooltip'); }}
+                            style={{ 
+                                background: openTooltips['photosTooltip'] ? 'var(--accent)' : '#e2e8f0', 
+                                color: openTooltips['photosTooltip'] ? 'white' : '#64748b', 
+                                border: 'none', 
+                                borderRadius: '50%', 
+                                width: '24px', 
+                                height: '24px', 
+                                fontSize: '13px', 
+                                fontWeight: 'bold', 
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 0,
+                                flexShrink: 0,
+                                transition: 'all 0.2s ease',
+                                boxShadow: openTooltips['photosTooltip'] ? '0 0 0 3px rgba(59, 130, 246, 0.2)' : 'none'
+                            }}
+                            title="Læs mere"
+                        >
+                            ?
+                        </button>
+                        {openTooltips['photosTooltip'] && (
+                            <>
+                                <div 
+                                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 }} 
+                                    onClick={() => toggleTooltip('photosTooltip')}
+                                />
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '32px',
+                                    left: '0',
+                                    background: '#fff',
+                                    border: '1px solid var(--border)',
+                                    boxShadow: 'var(--shadow-lg)',
+                                    padding: '16px',
+                                    borderRadius: '12px',
+                                    width: 'max(280px, 100%)',
+                                    maxWidth: '350px',
+                                    zIndex: 100,
+                                    fontSize: '0.95rem',
+                                    color: 'var(--text-secondary)',
+                                    lineHeight: '1.5',
+                                    borderLeft: '4px solid var(--accent)'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>Tip til gode billeder</div>
+                                    </div>
+                                    {getPhotosTooltip(category)}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Drag-and-drop upload zone */}
+                <div style={{ marginTop: '10px' }}>
+                    <div 
+                        onClick={() => !isUploading && fileInputRef.current && fileInputRef.current.click()}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        style={{ 
+                            cursor: isUploading ? 'wait' : 'pointer', 
+                            opacity: isUploading ? 0.7 : 1,
+                            padding: '32px 20px', 
+                            border: `2px dashed ${isDragging ? '#10b981' : 'var(--border)'}`, 
+                            textAlign: 'center', 
+                            borderRadius: '12px', 
+                            background: isDragging ? '#ecfdf5' : 'rgba(255, 255, 255, 0.5)', 
+                            transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => {
+                            if (!isDragging) e.currentTarget.style.borderColor = 'var(--accent)';
+                        }}
+                        onMouseOut={(e) => {
+                            if (!isDragging) e.currentTarget.style.borderColor = 'var(--border)';
+                        }}
+                    >
+                        <input 
+                            type="file" 
+                            multiple 
+                            accept="image/*" 
+                            style={{ display: 'none' }} 
+                            ref={fileInputRef}
+                            onChange={handleFileChangeLocal}
+                            disabled={isUploading}
+                        />
+                        <div style={{ color: isDragging ? '#10b981' : 'var(--text-secondary)' }}>
+                            <ImagePlus size={36} />
+                        </div>
+                        <p style={{ margin: '12px 0 0 0', fontSize: '1rem', fontWeight: '500', color: 'var(--text-secondary)' }}>
+                            {isUploading ? 'Uploader billeder...' : (isDragging ? 'Slip filerne her for at uploade' : 'Klik her for at uploade billede(r)')}
+                        </p>
+                    </div>
+
+                    {/* Uploaded thumbnail list */}
+                    {details.photos && details.photos.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '16px' }}>
+                            {details.photos.map((url, idx) => (
+                                <div 
+                                    key={idx} 
+                                    style={{ 
+                                        position: 'relative', 
+                                        width: '90px', 
+                                        height: '90px', 
+                                        borderRadius: '8px', 
+                                        overflow: 'hidden', 
+                                        border: '2px solid var(--border)', 
+                                        boxShadow: 'var(--shadow-xs)' 
+                                    }}
+                                >
+                                    <img src={url} alt="Uploadet" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <button 
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); removePhoto(idx); }}
+                                        style={{ 
+                                            position: 'absolute', 
+                                            top: '4px', 
+                                            right: '4px', 
+                                            background: '#ef4444', 
+                                            color: 'white', 
+                                            border: 'none', 
+                                            borderRadius: '50%', 
+                                            width: '24px', 
+                                            height: '24px', 
+                                            fontSize: '12px', 
+                                            cursor: 'pointer', 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'center', 
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)' 
+                                        }}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Elegant Notes Card (Quiet and matching standard question cards) */}
+            <div className="form-group wizard-question-card" style={{ 
+                marginBottom: '32px', 
+                background: 'var(--bg-card)', 
+                padding: '24px', 
+                borderRadius: 'var(--radius-lg)', 
+                border: '1px solid var(--border)', 
+                boxShadow: 'var(--shadow-sm)' 
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                    <label style={{ fontWeight: '700', margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
+                        {getNotesLabel(category)}
+                    </label>
+                </div>
+
+                <div style={{ marginTop: '10px' }}>
+                    <textarea 
+                        rows="3" 
+                        placeholder={category === 'special' 
+                            ? "Beskriv din opgave så detaljeret som muligt..." 
+                            : `F.eks. specifikke ønsker til farve, materiale, eller eventuelle bemærkninger til montagen...`
+                        }
+                        style={{ 
+                            width: '100%', 
+                            padding: '14px 20px', 
+                            borderRadius: '12px', 
+                            border: '2px solid var(--border)', 
+                            fontSize: '1rem',
+                            color: 'var(--text-primary)',
+                            background: 'rgba(255, 255, 255, 0.8)',
+                            resize: 'vertical',
+                            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                            boxSizing: 'border-box'
+                        }}
+                        onFocus={(e) => { 
+                            e.target.style.borderColor = 'var(--accent)'; 
+                            e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; 
+                        }}
+                        onBlur={(e) => { 
+                            e.target.style.borderColor = 'var(--border)'; 
+                            e.target.style.boxShadow = 'none'; 
+                        }}
+                        value={details.notes || ''}
+                        onChange={(e) => updateDetails('notes', e.target.value)}
+                    />
+                </div>
+            </div>
+
             {onAddAnotherProject && (
                 <div style={{ 
                     display: 'flex', 
@@ -1015,16 +1394,16 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                     <button 
                         type="button" 
                         className="wizard-btn" 
-                        onClick={onAddAnotherProject} 
+                        onClick={() => onAddAnotherProject(null)} 
                         style={{ 
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '8px',
+                            gap: '10px',
                             background: '#ffffff',
                             color: '#10b981',
                             border: '2px solid #10b981',
                             borderRadius: '30px',
-                            padding: '12px 24px',
+                            padding: '12px 28px',
                             fontWeight: '700',
                             fontSize: '0.95rem',
                             cursor: 'pointer',
@@ -1042,7 +1421,23 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.05)';
                         }}
                     >
-                        <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>+</span> Tilføj endnu en opgave
+                        <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>+</span>
+                        <span>Tilføj endnu en opgave</span>
+                        <span style={{ 
+                            background: '#10b981', 
+                            color: '#ffffff', 
+                            fontSize: '0.75rem', 
+                            fontWeight: '800', 
+                            padding: '4px 10px', 
+                            borderRadius: '12px', 
+                            marginLeft: '8px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            letterSpacing: '0.3px',
+                            textTransform: 'uppercase'
+                        }}>
+                            Spar kørsel & opstart
+                        </span>
                     </button>
                 </div>
             )}
@@ -1065,7 +1460,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         </button>
                     )}
                     <button type="button" className={`wizard-btn ${quickRecalculate ? 'wizard-btn-secondary' : 'wizard-btn-primary'}`} onClick={handleNextStep}>
-                        {quickRecalculate ? 'Tilføj Billeder →' : 'Bekræft & Fortsæt →'}
+                        {quickRecalculate ? 'Bekræft Kontaktinfo →' : 'Bekræft & Fortsæt til prisberegning →'}
                     </button>
                 </div>
             </div>
