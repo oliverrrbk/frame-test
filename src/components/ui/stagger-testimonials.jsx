@@ -230,6 +230,31 @@ const TestimonialCard = ({
 export const StaggerTestimonials = () => {
   const [cardSize, setCardSize] = useState(365);
   const [testimonialsList, setTestimonialsList] = useState(testimonials);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    if (isLeftSwipe) {
+      handleMove(1);
+    } else if (isRightSwipe) {
+      handleMove(-1);
+    }
+  };
 
   const handleMove = (steps) => {
     const newList = [...testimonialsList];
@@ -273,6 +298,9 @@ export const StaggerTestimonials = () => {
     <div
       className="relative w-full overflow-hidden bg-slate-50/50"
       style={{ height: 600 }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
       {testimonialsList.map((testimonial, index) => {
         const position = testimonialsList.length % 2

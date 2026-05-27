@@ -91,25 +91,53 @@ export default function TopNavBar({ onLoginClick }) {
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.2 }}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ 
+                            height: 'auto', 
+                            opacity: 1,
+                            transition: {
+                                height: { type: "spring", stiffness: 450, damping: 38 },
+                                opacity: { duration: 0.15 },
+                                staggerChildren: 0.05,
+                                delayChildren: 0.02
+                            }
+                        }}
+                        exit={{ 
+                            height: 0, 
+                            opacity: 0,
+                            transition: {
+                                height: { type: "spring", stiffness: 450, damping: 38 },
+                                opacity: { duration: 0.12 },
+                                staggerChildren: 0.03,
+                                staggerDirection: -1
+                            }
+                        }}
                         className="md:hidden bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-b border-slate-100 dark:border-slate-900 overflow-hidden"
                     >
                         <div className="px-6 py-6 flex flex-col gap-4 font-body">
                             {navLinks.map((link) => (
-                                <Link 
+                                <motion.div 
                                     key={link.path}
-                                    to={link.path}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className="text-lg font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white py-2 border-b border-slate-50 dark:border-slate-900 transition-colors"
+                                    initial={{ opacity: 0, y: -8 }}
+                                    animate={{ opacity: 1, y: 0, transition: { type: "spring", stiffness: 350, damping: 28 } }}
+                                    exit={{ opacity: 0, y: -8, transition: { duration: 0.1 } }}
                                 >
-                                    {link.label}
-                                </Link>
+                                    <Link 
+                                        to={link.path}
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className="block text-lg font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white py-2 border-b border-slate-50 dark:border-slate-900 transition-colors"
+                                    >
+                                        {link.label}
+                                    </Link>
+                                </motion.div>
                             ))}
                             
-                            <div className="flex flex-col gap-3 mt-4 pt-2">
+                            <motion.div 
+                                initial={{ opacity: 0, y: -8 }}
+                                animate={{ opacity: 1, y: 0, transition: { type: "spring", stiffness: 350, damping: 28 } }}
+                                exit={{ opacity: 0, y: -8, transition: { duration: 0.1 } }}
+                                className="flex flex-col gap-3 mt-4 pt-2"
+                            >
                                 <button 
                                     onClick={() => {
                                         setIsMobileMenuOpen(false);
@@ -128,7 +156,7 @@ export default function TopNavBar({ onLoginClick }) {
                                 >
                                     Prøv gratis i en måned
                                 </button>
-                            </div>
+                            </motion.div>
                         </div>
                     </motion.div>
                 )}

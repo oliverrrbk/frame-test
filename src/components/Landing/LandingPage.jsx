@@ -212,7 +212,7 @@ const LandingPage = ({ setSession }) => {
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         viewport={{ once: true }}
                         style={{ WebkitTransform: "translateZ(0)", WebkitBackfaceVisibility: "hidden" }}
-                        className="bg-white dark:bg-slate-900 rounded-[3rem] p-[clamp(3rem,6vw,5rem)] flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden shadow-xl border border-slate-100 dark:border-slate-800/[0.5]"
+                        className="bg-white dark:bg-slate-900 rounded-[3rem] p-[clamp(3rem,6vw,5rem)] flex flex-col md:flex-row items-center justify-between gap-12 md:gap-8 relative overflow-hidden shadow-xl border border-slate-100 dark:border-slate-800/[0.5]"
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 z-0 pointer-events-none"></div>
                         
@@ -227,7 +227,7 @@ const LandingPage = ({ setSession }) => {
                             </h2>
                         </div>
                         
-                        <div className="relative z-10 flex-shrink-0 mt-4 md:mt-0 flex flex-col items-center md:items-end gap-3">
+                        <div className="relative z-10 flex-shrink-0 mt-4 md:mt-0 flex flex-col items-center md:items-end gap-5 md:gap-3">
                             <motion.button 
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
