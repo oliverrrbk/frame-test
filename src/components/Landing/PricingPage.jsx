@@ -12,7 +12,7 @@ export default function PricingPage({ setSession }) {
     const navigate = useNavigate();
 
     // Stater for den mobile scroll-karrusel
-    const [activeIndex, setActiveIndex] = useState(1); // Standard 'Professionel' (index 1)
+    const [isMounted, setIsMounted] = useState(false);
     const scrollContainerRef = useRef(null);
 
     useLayoutEffect(() => {
@@ -21,6 +21,7 @@ export default function PricingPage({ setSession }) {
             const container = scrollContainerRef.current;
             const centerPos = (container.scrollWidth - container.clientWidth) / 2;
             container.scrollLeft = centerPos;
+            setIsMounted(true);
         }
     }, []);
 
@@ -28,12 +29,22 @@ export default function PricingPage({ setSession }) {
         if (scrollContainerRef.current) {
             const container = scrollContainerRef.current;
 
-            // IntersectionObserver sikrer lynhurtig performance uden JS-scroll-lag
+            // IntersectionObserver muterer DOM direkte for at undgå React-render-lag under native swipe!
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const index = Number(entry.target.dataset.index);
-                        setActiveIndex(index);
+                        const dots = document.querySelectorAll('.mobile-dot');
+                        dots.forEach((dot) => {
+                            const dotIndex = Number(dot.dataset.dotIndex);
+                            if (dotIndex === index) {
+                                dot.classList.add('bg-blue-600', 'dark:bg-blue-400', 'w-6');
+                                dot.classList.remove('bg-slate-200', 'dark:bg-slate-800', 'w-2');
+                            } else {
+                                dot.classList.remove('bg-blue-600', 'dark:bg-blue-400', 'w-6');
+                                dot.classList.add('bg-slate-200', 'dark:bg-slate-800', 'w-2');
+                            }
+                        });
                     }
                 });
             }, {
@@ -237,10 +248,10 @@ export default function PricingPage({ setSession }) {
                 </section>
 
                 {/* Mobile Pricing Horizontal Scroll Snap */}
-                <section className="block md:hidden w-full max-w-full mb-[clamp(4rem,8vw,6rem)] relative z-10">
+                <section className={`block md:hidden w-full max-w-full mb-[clamp(4rem,8vw,6rem)] relative z-10 transition-opacity duration-300 ${isMounted ? 'opacity-100' : 'opacity-0'}`}>
                     <div 
                         ref={scrollContainerRef}
-                        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 px-[7.5vw] pb-8 pt-4"
+                        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 px-[12vw] pb-8 pt-4"
                         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
                     >
                         {pricingTiers.map((tier, idx) => (
@@ -250,7 +261,7 @@ export default function PricingPage({ setSession }) {
                                 onClick={(e) => {
                                     e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                                 }}
-                                className={`pricing-card-mobile flex-shrink-0 w-[85vw] max-w-[320px] snap-center bg-white dark:bg-slate-900 rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden shadow-xl border cursor-pointer ${
+                                className={`pricing-card-mobile flex-shrink-0 w-[76vw] max-w-[300px] snap-center bg-white dark:bg-slate-900 rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden shadow-xl border cursor-pointer ${
                                     tier.highlight 
                                         ? 'border-2 border-blue-500 dark:border-blue-400 shadow-blue-500/10' 
                                         : 'border-slate-100 dark:border-slate-800'
@@ -312,6 +323,7 @@ export default function PricingPage({ setSession }) {
                         {pricingTiers.map((_, i) => (
                             <button
                                 key={i}
+                                data-dot-index={i}
                                 onClick={() => {
                                     if (scrollContainerRef.current) {
                                         const container = scrollContainerRef.current;
@@ -320,8 +332,8 @@ export default function PricingPage({ setSession }) {
                                         container.scrollTo({ left: targetScroll, behavior: 'smooth' });
                                     }
                                 }}
-                                className={`h-2 rounded-full transition-all duration-300 ${
-                                    activeIndex === i 
+                                className={`mobile-dot h-2 rounded-full transition-all duration-300 ${
+                                    i === 1 
                                         ? 'bg-blue-600 dark:bg-blue-400 w-6' 
                                         : 'bg-slate-200 dark:bg-slate-800 w-2'
                                 }`}
