@@ -171,7 +171,7 @@ const SuperAdminView = () => {
                                                             letterSpacing: '0.05em', 
                                                             fontWeight: '600' 
                                                         }}>
-                                                            {member.role === 'sales' ? 'Sælger' : member.role === 'accountant' ? 'Bogholder' : member.role}
+                                                            {member.role === 'sales' ? 'Projektleder' : member.role === 'accountant' ? 'Bogholder' : member.role}
                                                         </span>
                                                     </div>
                                                 ))}

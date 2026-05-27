@@ -187,7 +187,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                     required
                                     value={inviteData.name}
                                     onChange={(e) => setInviteData({...inviteData, name: e.target.value})}
-                                    placeholder="F.eks. Kasper Sælger"
+                                    placeholder="F.eks. Kasper Hansen"
                                 />
                             </div>
                             
@@ -361,7 +361,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                     {team.map((member) => {
                                         const isExpanded = expandedEmployee === member.id;
                                         
-                                        // Beregn Sælger-Statistikker
+                                        // Beregn Projektleder-Statistikker
                                         const assignedLeads = leadsData.filter(l => l.assigned_to === member.id);
                                         const wonLeads = assignedLeads.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status));
                                         const lostLeads = assignedLeads.filter(l => ['Afvist', 'Fortrudt'].includes(l.status));
@@ -486,7 +486,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                     </div>
                                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                                         {[
-                                                                            { key: 'view_all_leads', label: 'Se ALLE firmaets leads', desc: 'Hvis slået fra, ser sælgere kun egne, og bogholdere kun bekræftede.' },
+                                                                            { key: 'view_all_leads', label: 'Se ALLE firmaets leads', desc: 'Hvis slået fra, ser projektledere kun egne, og bogholdere kun bekræftede.' },
                                                                             { key: 'view_pricing', label: 'Adgang til Prisberegner', desc: 'Giver adgang til avancerede indstillinger og avancer.' },
                                                                             { key: 'view_materials', label: 'Adgang til Materialer', desc: 'Kan oprette og redigere materialer og priser.' },
                                                                             { key: 'view_integrations', label: 'Integrationer', desc: 'Må opsætte og bruge e-conomic / Dinero integrationer.' }

@@ -318,7 +318,7 @@ const AdminDashboard = () => {
                                                         {carp.team.map(member => (
                                                             <div key={member.id} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '12px' }}>
                                                                 <div style={{ fontWeight: 'bold', color: '#f8fafc', fontSize: '14px', marginBottom: '4px' }}>{member.owner_name || member.email}</div>
-                                                                <div style={{ color: '#94a3b8', fontSize: '12px', textTransform: 'capitalize' }}>Rolle: {member.role === 'sales' ? 'Sælger/Projektleder' : member.role === 'accountant' ? 'Bogholder' : member.role}</div>
+                                                                <div style={{ color: '#94a3b8', fontSize: '12px', textTransform: 'capitalize' }}>Rolle: {member.role === 'sales' ? 'Projektleder' : member.role === 'accountant' ? 'Bogholder' : member.role}</div>
                                                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', borderTop: '1px solid #334155', paddingTop: '10px' }}>
                                                                     <button 
                                                                         disabled={isUpdating}

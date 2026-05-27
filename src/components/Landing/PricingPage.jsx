@@ -247,7 +247,7 @@ export default function PricingPage({ setSession }) {
                             </li>
                             <li className="flex items-start gap-3">
                                 <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
-                                <span>Multi-bruger (Mester & Sælgere)</span>
+                                <span>Multi-bruger (Mester & Projektledere)</span>
                             </li>
                             <li className="flex items-start gap-3">
                                 <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0" size={20} />
