@@ -177,14 +177,14 @@ Hvad kan vi hjælpe dig med i dag?`;
     };
 
     return createPortal(
-        <div style={{ 
+        <div className={`ai-support-wrapper ${isOpen ? 'is-open' : ''}`} style={{ 
             position: 'fixed', 
-            bottom: '24px', 
-            right: '24px', 
             zIndex: 999999, // Ultra high z-index to make sure it floats on top of everything
             fontFamily: '"Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            pointerEvents: 'auto'
         }}>
+            {/* Background overlay on mobile when open */}
+            {isOpen && <div className="ai-support-overlay" onClick={() => setIsOpen(false)} />}
+            
             {/* FLOATING CHAT BUTTON */}
             {!isOpen && (
                 <button
@@ -256,14 +256,11 @@ Hvad kan vi hjælpe dig med i dag?`;
 
             {/* EXPANDED CHAT PANEL */}
             {isOpen && (
-                <div style={{
-                    width: '390px',
-                    height: '590px',
+                <div className="ai-chat-window" style={{
                     background: 'rgba(255, 255, 255, 0.85)',
                     backdropFilter: 'blur(30px) saturate(190%)',
                     WebkitBackdropFilter: 'blur(30px) saturate(190%)',
                     border: '1px solid rgba(15, 23, 42, 0.08)',
-                    borderRadius: '24px',
                     boxShadow: '0 30px 60px -15px rgba(15, 23, 42, 0.15), 0 0 1px rgba(15, 23, 42, 0.1)',
                     display: 'flex',
                     flexDirection: 'column',
@@ -570,7 +567,63 @@ Hvad kan vi hjælpe dig med i dag?`;
                     -ms-overflow-style: none;
                     scrollbar-width: none;
                 }
+                    @keyframes slideUp {
+                        from { transform: translateY(100%); }
+                        to { transform: translateY(0); }
+                    }
+                }
+
+                .ai-support-wrapper {
+                    bottom: 24px;
+                    right: 24px;
+                    pointer-events: none;
+                }
+                .ai-support-wrapper > * {
+                    pointer-events: auto;
+                }
+                .ai-chat-window {
+                    width: 390px;
+                    height: 590px;
+                    border-radius: 24px;
+                }
+                .ai-support-overlay {
+                    display: none;
+                }
+
                 @media (max-width: 640px) {
+                    .ai-support-wrapper {
+                        bottom: 16px;
+                        right: 16px;
+                    }
+                    .ai-support-wrapper.is-open {
+                        bottom: 0;
+                        right: 0;
+                        width: 100%;
+                        height: 100dvh;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: flex-end;
+                    }
+                    .ai-support-overlay {
+                        display: block;
+                        position: absolute;
+                        top: 0; left: 0; right: 0; bottom: 0;
+                        background: rgba(15, 23, 42, 0.4);
+                        backdrop-filter: blur(4px);
+                        -webkit-backdrop-filter: blur(4px);
+                        z-index: 1;
+                        animation: fadeIn 0.3s ease-out;
+                    }
+                    .ai-chat-window {
+                        width: 100%;
+                        height: 85dvh;
+                        border-radius: 28px 28px 0 0 !important;
+                        border: none !important;
+                        box-shadow: 0 -10px 40px rgba(0,0,0,0.15) !important;
+                        z-index: 2;
+                        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                    }
+                    
                     .ai-chat-btn {
                         padding: 12px 14px !important;
                         border-radius: 30px !important;

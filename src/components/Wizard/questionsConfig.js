@@ -19,7 +19,6 @@ export const QUESTIONS = {
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilken slags nyt tag skal lægges?',
-            subLabel: 'Bemærk, at dette valg er udelukkende vejledende for at give et retvisende prisestimat. Du binder dig ikke til et specifikt tagmateriale nu. Ved den fysiske besigtigelse tjekker tømreren altid lokalplanens regler og foretager en præcis beregning af dine spærs bæreevne samt tagets hældning, så vi i fællesskab sikrer en fuldstændig lovlig og sikker konstruktion.',
             options: [
                 { label: 'Paptag', img: '/images/roof_felt_1776270223442.png' },
                 { label: 'Tagplader (eternit asbest fri)', img: '/images/roof_eternit_1777277162521.png' },
@@ -171,7 +170,6 @@ export const QUESTIONS = {
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilket materiale skal de nye vinduer primært være i?', 
-            subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af vindue. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde, så du har en god idé om, hvad prisen ligger på. Vi gennemgår naturligvis alle detaljemål og specifikke designløsninger med dig inden bestilling.',
             options: [
                 { label: 'Træ/alu (kombination)', img: '/images/window_wood_alu_1776261163640.png' },
                 { label: 'Massivt træ', img: '/images/window_wood_1776261054616.png' },
@@ -212,7 +210,6 @@ export const QUESTIONS = {
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilken type gulv skal der lægges?',
-            subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af gulv. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde. Vi gennemgår naturligvis alle gulvprøver, tykkelser og specifikke designønsker med dig inden bestilling.',
             options: [
                 { label: 'Træ', img: '/images/floor_wood_1776266012828.png' },
                 { label: 'Massivt træ', img: '/images/floor_solid_wood_1776266027333.png' },
@@ -313,8 +310,6 @@ export const QUESTIONS = {
             type: 'visual_select',
             label: 'Hvilken dør-model / kvalitetsniveau ønsker du?',
             condition: (d) => d.doorStyle === 'Indvendig dør',
-            subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Vi gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
-            tooltip: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et vejledende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Vi gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
             options: [
                 { label: 'Standard indvendig dør', img: '/images/door_interior_standard.png' },
                 { label: 'Special indvendig dør', img: '/images/door_interior_special.png' }
@@ -325,8 +320,6 @@ export const QUESTIONS = {
             type: 'select',
             label: 'Hvilken dør-model / kvalitetsniveau ønsker du?',
             condition: (d) => d.doorStyle && d.doorStyle !== 'Indvendig dør',
-            subLabel: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et retvisende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Vi gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
-            tooltip: 'Bemærk, at dette ikke er det endelige design eller valg af dør. Spørgsmålet er udelukkende medtaget for at give et vejledende prisniveau til dig som kunde, så du har en god idé om, hvad prisrammen ligger på. Vi gennemgår naturligvis alle detaljer, mål og specifikke designønsker med dig inden bestilling.',
             options: (d) => {
                 if (d.doorStyle === 'Terrassedør') {
                     return ['Standard terrassedør', 'Special/Dobbelt terrassedør'];
@@ -468,7 +461,6 @@ export const QUESTIONS = {
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvad skal det nye loft laves af?',
-            subLabel: 'Bemærk, at dette valg er udelukkende vejledende for at give et retvisende prisestimat. Du binder dig ikke til en bestemt lofttype eller farve nu. Ved den fysiske besigtigelse tjekker tømreren altid de eksisterende loftskonstruktioner, måler den præcise lofthøjde og gennemgår forskellige materialeprøver med dig, så vi sammen finder den perfekte akustiske og visuelle løsning til dit hjem.',
             options: [
                 { label: 'Træloft (listeloft/paneler/rustikloft)', img: '/images/ceiling_wood_1776270268417.png' },
                 { label: 'Gipsloft (standard 2-lag)', img: '/images/ceiling_drywall_1776270282269.png' },
@@ -535,7 +527,6 @@ export const QUESTIONS = {
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilken type facadebeklædning ønsker du?',
-            subLabel: 'Bemærk: Dette valg er udelukkende vejledende for at give et retvisende prisestimat. Du binder dig ikke til en bestemt facadebeklædning eller farve nu. Ved den fysiske besigtigelse tjekker tømreren altid lokalplanens regler for dit område og medbringer konkrete materialeprøver af træ, komposit og fibercement i forskellige profiler, så du kan se og mærke kvaliteten i virkeligheden inden endelig bestilling.',
             options: [
                 { label: 'Trykimprægneret', img: '/images/facade_pine_1776270383566.png' },
                 { label: 'Almindeligt træ (Malet)', img: '/images/facade_painted_wood.png' },
@@ -666,7 +657,6 @@ export const QUESTIONS = {
             id: 'material', 
             type: 'visual_select', 
             label: 'Hvilken type hegn ønsker du?', 
-            subLabel: 'Bemærk: Dette valg er udelukkende vejledende for at give et retvisende prisestimat. Du binder dig ikke til et bestemt hegn, farve eller stolpe-type nu. Ved den fysiske besigtigelse tjekker tømreren altid skellinjens forhold, måler præcist op og medbringer konkrete materialeprøver af klink, lamel, liste og komposit, så du kan se og mærke kvaliteten samt aftale detaljerne i fred og ro inden endelig bestilling.',
             options: [
                 { label: 'Klinkehegn (Træ)', img: '/images/fence_klinke_1778675155755.png' },
                 { label: 'Listehegn (Træ)', img: '/images/fence_liste_1778675176127.png' },

@@ -1105,8 +1105,8 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 </h2>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>
                     {isInspectionRequired 
-                        ? 'For at vi kan yde den bedste rådgivning, bedes du beskrive projektet nedenfor. Da denne type opgaver er komplekse, udarbejdes der ikke en automatisk prisberegning på forhånd.' 
-                        : 'For at jeg bedst muligt kan give dig det rigtige estimat og forstå opgaven, bedes du svare på følgende spørgsmål om projektet.'}
+                        ? 'Beskriv dit komplekse projekt nedenfor, så vi kan rådgive dig bedst muligt. Vi udarbejder ikke forhåndspriser på disse opgaver.' 
+                        : 'Besvar venligst spørgsmålene nedenfor, så vi kan give dig et retvisende estimat.'}
                 </p>
                 
                 <div style={{ background: '#f8fafc', borderLeft: '4px solid #10b981', padding: '16px', borderRadius: '8px', marginBottom: '32px', fontSize: '0.9rem', color: '#475569', lineHeight: '1.5' }}>
@@ -1118,12 +1118,12 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             {isInspectionRequired ? (
                                 <>
                                     <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Fysisk besigtigelse og rådgivning</strong>
-                                    Dette trin fungerer som forberedelse til vores indledende dialog. Din beskrivelse sendes direkte til tømreren, som herefter vil kontakte dig for at aftale en uforpligtende besigtigelse af opgaven. Først efter besigtigelsen udarbejdes der et præcist og retvisende prisestimat.
+                                    Din beskrivelse sendes direkte til os, hvorefter vi kontakter dig for at aftale en uforpligtende besigtigelse. Først derefter udarbejdes et præcist prisestimat.
                                 </>
                             ) : (
                                 <>
                                     <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Vejledende oplysninger</strong>
-                                    Du bliver aldrig holdt ansvarlig for nøjagtigheden af dine mål eller valg. Tømreren kommer altid ud og foretager præcise kontrolmål inden en endelig aftale indgås. Overslaget er udelukkende til for at give dig et realistisk prisleje.
+                                    Dine valg her er vejledende og du binder dig ikke. Vi foretager altid præcise kontrolmål inden en endelig aftale indgås.
                                 </>
                             )}
                         </div>
