@@ -38,6 +38,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
     });
 
     const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+    const [hoveredRole, setHoveredRole] = useState(null);
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -158,7 +159,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 {/* Inviter Medarbejder Formular */}
                 <div className="lg:col-span-1">
-                    <div className="settings-card sticky top-6">
+                    <div className="settings-card sticky top-6" style={{ overflow: 'visible' }}>
                         <div className="card-header">
                             <div className="icon-wrapper">
                                 <UserPlus size={24} />
@@ -272,6 +273,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                         >
                                             {roles.map((roleOption) => {
                                                 const isSelected = inviteData.role === roleOption.value;
+                                                const isHovered = hoveredRole === roleOption.value;
                                                 return (
                                                     <div
                                                         key={roleOption.value}
@@ -279,11 +281,17 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                             setInviteData({ ...inviteData, role: roleOption.value });
                                                             setIsRoleDropdownOpen(false);
                                                         }}
+                                                        onMouseEnter={() => setHoveredRole(roleOption.value)}
+                                                        onMouseLeave={() => setHoveredRole(null)}
                                                         style={{
                                                             padding: '12px 20px',
                                                             cursor: 'pointer',
-                                                            background: isSelected ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
-                                                            transition: 'background 0.2s ease',
+                                                            background: isSelected 
+                                                                ? 'rgba(59, 130, 246, 0.08)' 
+                                                                : isHovered 
+                                                                    ? 'rgba(15, 23, 42, 0.04)' 
+                                                                    : 'transparent',
+                                                            transition: 'background 0.15s ease',
                                                             display: 'flex',
                                                             flexDirection: 'column',
                                                             gap: '2px'
@@ -298,7 +306,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                         </span>
                                                         <span style={{ 
                                                             fontSize: '0.75rem', 
-                                                            color: 'var(--text-secondary)' 
+                                                            color: isSelected ? 'rgba(37, 99, 235, 0.8)' : 'var(--text-secondary)' 
                                                         }}>
                                                             {roleOption.desc}
                                                         </span>
