@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
@@ -15,16 +15,18 @@ export default function PricingPage({ setSession }) {
     const [activeIndex, setActiveIndex] = useState(1); // Standard 'Professionel' (index 1)
     const scrollContainerRef = useRef(null);
 
+    useLayoutEffect(() => {
+        if (scrollContainerRef.current) {
+            // Centrer 'Professionel' kortet instantly inden browseren maler, så vi undgår hakkende jump
+            const container = scrollContainerRef.current;
+            const centerPos = (container.scrollWidth - container.clientWidth) / 2;
+            container.scrollLeft = centerPos;
+        }
+    }, []);
+
     useEffect(() => {
         if (scrollContainerRef.current) {
             const container = scrollContainerRef.current;
-            // Centrer 'Professionel' kortet på mobil ved load
-            setTimeout(() => {
-                if (scrollContainerRef.current) {
-                    const centerPos = (container.scrollWidth - container.clientWidth) / 2;
-                    container.scrollTo({ left: centerPos, behavior: 'instant' });
-                }
-            }, 100);
 
             // IntersectionObserver sikrer lynhurtig performance uden JS-scroll-lag
             const observer = new IntersectionObserver((entries) => {
@@ -153,9 +155,8 @@ export default function PricingPage({ setSession }) {
                     </motion.div>
                     
                     <motion.h1 
-                        initial={{ opacity: 0, y: 30 }}
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
                         className="text-[clamp(2.15rem,6vw,4.5rem)] font-bold text-slate-900 dark:text-slate-50 tracking-tight leading-[1.15] max-w-3xl"
                     >
                         Gennemskuelige <span className="text-orange-600 dark:text-orange-400">Priser</span> for Håndværkere.
@@ -164,7 +165,6 @@ export default function PricingPage({ setSession }) {
                     <motion.p 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ delay: 0.2 }}
                         className="text-[clamp(1.125rem,1.5vw,1.25rem)] text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed mt-4"
                     >
                         Bison Frame er bygget til håndværkere med præcis det, du har brug for. Ingen skjulte gebyrer eller uoverskuelig matematik. Bare et skarpt system.
@@ -240,7 +240,7 @@ export default function PricingPage({ setSession }) {
                 <section className="block md:hidden w-full max-w-full mb-[clamp(4rem,8vw,6rem)] relative z-10">
                     <div 
                         ref={scrollContainerRef}
-                        className="flex overflow-x-auto hide-scrollbar gap-4 px-[7.5vw] pb-8 pt-4"
+                        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 px-[7.5vw] pb-8 pt-4"
                         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
                     >
                         {pricingTiers.map((tier, idx) => (
@@ -250,7 +250,7 @@ export default function PricingPage({ setSession }) {
                                 onClick={(e) => {
                                     e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                                 }}
-                                className={`pricing-card-mobile flex-shrink-0 w-[85vw] max-w-[320px] bg-white dark:bg-slate-900 rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden shadow-xl transition-all duration-300 border cursor-pointer ${
+                                className={`pricing-card-mobile flex-shrink-0 w-[85vw] max-w-[320px] snap-center bg-white dark:bg-slate-900 rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden shadow-xl border cursor-pointer ${
                                     tier.highlight 
                                         ? 'border-2 border-blue-500 dark:border-blue-400 shadow-blue-500/10' 
                                         : 'border-slate-100 dark:border-slate-800'
