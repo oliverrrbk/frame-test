@@ -278,12 +278,12 @@ const LandingPage = ({ setSession }) => {
                                 position: 'fixed',
                                 top: 0,
                                 right: 0,
+                                bottom: 0,
                                 width: '100%',
                                 maxWidth: '550px',
-                                height: '100svh', // Fixed for Safari
                                 background: '#f8fafc',
                                 zIndex: 110,
-                                overflowY: 'hidden',
+                                overflowY: 'auto',
                                 WebkitTransform: 'translateZ(0)',
                                 willChange: 'transform'
                             }}
@@ -292,7 +292,7 @@ const LandingPage = ({ setSession }) => {
 
 
                 {/* Login Component inside Drawer */}
-                <div style={{ position: 'relative', zIndex: 110, minHeight: '100svh' }}>
+                <div style={{ position: 'relative', zIndex: 110, minHeight: '100%' }}>
                    <Login setSession={setSession} />
                 </div>
             </motion.div>

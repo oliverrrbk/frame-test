@@ -508,19 +508,19 @@ export default function PricingPage({ setSession }) {
                                 position: 'fixed',
                                 top: 0,
                                 right: 0,
+                                bottom: 0,
                                 width: '100%',
                                 maxWidth: '550px',
-                                height: '100svh', // Fixed for Safari
                                 background: '#f8fafc',
                                 zIndex: 110,
-                                overflowY: 'hidden',
+                                overflowY: 'auto',
                                 WebkitTransform: 'translateZ(0)',
                                 willChange: 'transform'
                             }}
                             className="shadow-[-10px_0_40px_rgba(0,0,0,0.2)]"
                         >
 
-                            <div style={{ position: 'relative', zIndex: 110, minHeight: '100svh' }}>
+                            <div style={{ position: 'relative', zIndex: 110, minHeight: '100%' }}>
                                 <Login setSession={setSession} />
                             </div>
                         </motion.div>
