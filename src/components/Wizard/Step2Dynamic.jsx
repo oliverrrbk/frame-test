@@ -12,7 +12,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
     const [openTooltips, setOpenTooltips] = React.useState({});
     const [zoomedImage, setZoomedImage] = React.useState(null);
     const [showSketcher, setShowSketcher] = React.useState(false);
-    const questionRefs = useRef({});
+    const questionRefs = React.useRef({});
     const isMouseDown = React.useRef(false);
     const touchStartX = React.useRef(null);
 
