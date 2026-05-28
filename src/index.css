@@ -541,6 +541,21 @@ p {
     transition: var(--transition);
 }
 
+.notification-badge {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #ef4444;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 14px;
+    min-width: 24px;
+    text-align: center;
+}
+
 .sidebar-nav button:hover {
     background-color: var(--bg-hover);
     color: var(--text-primary);
@@ -1184,10 +1199,11 @@ button:focus-visible {
     .sidebar-nav {
         flex-direction: row;
         padding: 8px 12px;
-        gap: 8px;
+        gap: 0px; /* Reduced gap so buttons fit on one screen */
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
+        justify-content: flex-start;
     }
     
     .sidebar-nav::-webkit-scrollbar {
@@ -1196,15 +1212,25 @@ button:focus-visible {
 
     .sidebar-nav button {
         flex-direction: column;
-        padding: 6px 8px;
+        padding: 6px 4px; /* Reduced padding */
         white-space: nowrap;
         min-height: auto;
         font-size: 0.65rem;
-        gap: 4px;
+        gap: 2px; /* Tighter gap between icon and text */
         flex-shrink: 0;
-        min-width: 72px;
+        min-width: 68px; /* Reduced min-width so they fit */
         justify-content: center;
         background: transparent;
+    }
+    
+    .notification-badge {
+        right: 50%;
+        top: 4px;
+        transform: translateX(12px); /* Position it at the top right of the icon */
+        padding: 0px 5px;
+        font-size: 0.65rem;
+        min-width: 18px;
+        border: 2px solid var(--bg-card); /* Cutout effect against background */
     }
     
     .sidebar-nav button svg {

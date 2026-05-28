@@ -1710,11 +1710,7 @@ const Dashboard = () => {
                             const unreadCount = leadsData.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel' && l.is_read === false).length;
                             if (unreadCount > 0) {
                                 return (
-                                    <span style={{
-                                        position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                                        backgroundColor: '#ef4444', color: '#fff', fontSize: '0.75rem', fontWeight: 'bold',
-                                        padding: '2px 8px', borderRadius: '14px', minWidth: '24px', textAlign: 'center'
-                                    }}>
+                                    <span className="notification-badge">
                                         {unreadCount}
                                     </span>
                                 );
