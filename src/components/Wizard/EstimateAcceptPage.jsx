@@ -208,6 +208,46 @@ const EstimateAcceptPage = () => {
     const isKombi = projectData.category === 'Kombi-projekt';
     const needsPhysicalInspection = lead.price_estimate === 'Besigtigelse kræves';
 
+    if (isAccepted) {
+        return (
+            <div className="accept-page-wrapper" style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' }}>
+                <div style={{ textAlign: 'center', padding: '40px 20px', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', maxWidth: '600px', width: '100%' }}>
+                    <div style={{ width: '80px', height: '80px', background: '#10b981', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', margin: '0 auto 24px' }}>
+                        ✓
+                    </div>
+                    <h2 style={{ fontSize: '2.5rem', fontWeight: '900', color: '#0f172a', marginBottom: '16px' }}>Tak for din forespørgsel!</h2>
+                    <p style={{ fontSize: '1.2rem', color: '#475569', maxWidth: '600px', margin: '0 auto 32px', lineHeight: '1.6' }}>
+                        Opgaven er nu modtaget i vores system. Vi ringer dig op {isAsap ? 'hurtigst muligt' : 'på dit ønskede tidspunkt'}, så vi kan tage en snak om projektet og aftale det videre forløb.
+                    </p>
+                    <div style={{ padding: '24px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', margin: '0 auto', textAlign: 'left' }}>
+                        <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '1.1rem' }}>Hvad sker der nu?</h4>
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <li style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', color: '#475569' }}>
+                                <span style={{ color: '#10b981', fontWeight: 'bold' }}>1.</span>
+                                <span>Tømreren gennemgår dit foreløbige overslag.</span>
+                            </li>
+                            <li style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', color: '#475569' }}>
+                                <span style={{ color: '#10b981', fontWeight: 'bold' }}>2.</span>
+                                <span>Vi kontakter dig for at afstemme forventninger og eventuelt aftale besigtigelse.</span>
+                            </li>
+                            <li style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', color: '#475569' }}>
+                                <span style={{ color: '#10b981', fontWeight: 'bold' }}>3.</span>
+                                <span>Du modtager et endeligt, bindende tilbud, før arbejdet går i gang.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <button 
+                        className="wizard-btn-secondary" 
+                        style={{ marginTop: '40px', padding: '14px 32px', border: '2px solid #e2e8f0', background: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#475569' }}
+                        onClick={() => window.location.href = 'https://bisonframe.dk'}
+                    >
+                        Tilbage til forsiden
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="accept-page-wrapper" style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' }}>
             
@@ -438,12 +478,17 @@ const EstimateAcceptPage = () => {
                     </ul>
                 </div>
 
-                {isAccepted ? (
-                    <div style={{ backgroundColor: '#ecfdf5', borderRadius: '12px', border: '2px solid #10b981', padding: '40px', textAlign: 'center', marginTop: '32px' }}>
-                        <div style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '50%', width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 24px' }}>✓</div>
-                        <h2 style={{ margin: '0 0 16px 0', color: '#065f46', fontSize: '1.8rem', fontWeight: '800' }}>Forespørgsel sendt!</h2>
-                        <p style={{ margin: '0 0 16px 0', color: '#047857', fontSize: '1.1rem', lineHeight: '1.6' }}>Tak for din tillid. Vi har også sendt en bekræftelse til din e-mail.</p>
-                        <p style={{ margin: 0, color: '#065f46', fontSize: '1.05rem', opacity: 0.9 }}><strong>Næste skridt:</strong> Vi kontakter dig {isAsap ? 'hurtigst muligt' : 'på dit valgte tidspunkt'} for at aftale nærmere, så vi kan udarbejde et endeligt og bindende tilbud til dig.</p>
+                {lead.status === 'Ny forespørgsel' ? (
+                    <div style={{ backgroundColor: '#ecfdf5', borderRadius: '12px', border: '2px solid #10b981', padding: '32px', textAlign: 'center', marginTop: '32px' }}>
+                        <div style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 16px' }}>✓</div>
+                        <h3 style={{ margin: '0 0 12px 0', color: '#065f46', fontSize: '1.4rem', fontWeight: '800' }}>Du har allerede sendt denne forespørgsel afsted</h3>
+                        <p style={{ margin: '0 0 16px 0', color: '#047857', fontSize: '1.05rem', lineHeight: '1.6' }}>Vi vender tilbage hurtigst muligt. Hvis du ikke hører fra os, kan du altid kontakte os direkte herunder.</p>
+                        <div style={{ marginTop: '20px', padding: '16px', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #a7f3d0', color: '#065f46', fontSize: '0.95rem' }}>
+                            <strong style={{ display: 'block', marginBottom: '8px' }}>Kontakt os direkte:</strong>
+                            <p style={{ margin: '0 0 4px 0' }}>{carpenter?.company_name || 'Bison Frame Tømrer'}</p>
+                            {carpenter?.phone && <p style={{ margin: '0 0 4px 0' }}>📞 {carpenter.phone}</p>}
+                            {carpenter?.email && <p style={{ margin: '0' }}>✉️ {carpenter.email}</p>}
+                        </div>
                     </div>
                 ) : !wantsQuote ? (
                     <div className="result-actions" style={{ marginTop: '40px', display: 'flex', gap: '16px', flexDirection: 'column' }}>
