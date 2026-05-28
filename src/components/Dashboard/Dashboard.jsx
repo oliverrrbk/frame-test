@@ -11,6 +11,7 @@ import { QUESTIONS, initialCategories } from '../Wizard/questionsConfig';
 import Wizard from '../Wizard/Wizard';
 import { getFeedbackTemplate, getCustomerOfferSentTemplate, getCustomerRequestReceivedTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
 import { generateHumanQuoteText } from '../../utils/quoteTextGenerator';
+import { parseBreakdownToExplanation } from '../../utils/explanationGenerator';
 import AiTrainingView from './AiTrainingView';
 import TeamManagement from './TeamManagement';
 import CaseManagement from './CaseManagement';
