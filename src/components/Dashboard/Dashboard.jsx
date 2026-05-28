@@ -2362,9 +2362,15 @@ const Dashboard = () => {
                                             </div>
                                             <div style={{ flex: '1 1 250px', backgroundColor: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
                                                 <h4 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '0.9rem', textTransform: 'uppercase' }}>Kontaktinfo</h4>
-                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>📞 {lead.customer_phone}</p>
-                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>📧 {lead.customer_email}</p>
-                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>🏠 {lead.customer_address}</p>
+                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                    📞 <a href={`tel:${(lead.customer_phone || '').replace(/[^0-9+]/g, '')}`} style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{lead.customer_phone}</a>
+                                                </p>
+                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                    📧 <a href={`mailto:${lead.customer_email}`} style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{lead.customer_email}</a>
+                                                </p>
+                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                    🏠 <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.customer_address || '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{lead.customer_address}</a>
+                                                </p>
                                                 <p style={{ margin: '0', color: '#60a5fa', fontSize: '0.9rem', fontWeight: 'bold' }}>🗓️ Ring/Besøg: {lead.contact_preference}</p>
                                             </div>
                                             <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>

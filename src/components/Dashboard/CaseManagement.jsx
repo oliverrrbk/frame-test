@@ -414,7 +414,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                                 Kunde: {c.customer_name || 'Privatkunde'}
                                             </span>
                                             <span style={{ fontSize: '0.825rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <MapPin size={14} style={{ color: '#94a3b8' }} /> {c.customer_address || 'Adresse ikke angivet'}
+                                                <MapPin size={14} style={{ color: '#94a3b8' }} /> <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.customer_address || '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{c.customer_address || 'Adresse ikke angivet'}</a>
                                             </span>
                                         </div>
                                         
@@ -486,7 +486,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                 {selectedCase.raw_data?.project_title || `Sag: ${selectedCase.project_category}`}
                             </h3>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '0.9rem' }}>
-                                <MapPin size={14} style={{ color: '#94a3b8' }} /> {selectedCase.customer_address || 'Adresse ikke angivet'} 
+                                <MapPin size={14} style={{ color: '#94a3b8' }} /> <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCase.customer_address || '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{selectedCase.customer_address || 'Adresse ikke angivet'}</a> 
                                 <span style={{ color: '#cbd5e1' }}>|</span> 
                                 <strong>Kunde: {selectedCase.customer_name || 'Privatkunde'}</strong>
                             </div>
