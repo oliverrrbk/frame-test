@@ -1161,16 +1161,16 @@ button:focus-visible {
 
     .dashboard-sidebar {
         width: 100% !important;
-        height: auto;
+        height: auto !important;
         position: fixed;
         bottom: 0;
         left: 0;
-        flex-direction: row;
+        top: auto; /* Fixes the full-screen stretching bug */
+        display: block;
         border-right: none;
         border-top: 1px solid var(--border);
         background: var(--bg-card);
         z-index: 1000;
-        overflow-x: auto;
     }
 
     .dashboard-sidebar:hover {
