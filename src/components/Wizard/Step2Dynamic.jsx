@@ -548,8 +548,8 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         <input 
                             type="number" 
                             min="0"
-                            value={details[q.id] || ''} 
-                            onChange={(e) => handleInputChange(q.id, parseFloat(e.target.value))} 
+                            value={details[q.id] !== undefined ? details[q.id] : ''} 
+                            onChange={(e) => handleInputChange(q.id, e.target.value === '' ? '' : parseFloat(e.target.value))} 
                             onKeyDown={handleKeyDown}
                             placeholder={q.placeholder || 'Indtast tal her...'}
                             style={{ 
