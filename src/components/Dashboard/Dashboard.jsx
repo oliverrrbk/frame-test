@@ -3342,10 +3342,6 @@ const Dashboard = () => {
 
                                                             {/* DETAILED BULLET POINTS / AI SUMMARY */}
                                                             <div style={{ borderTop: calc ? '1px solid #e2e8f0' : 'none', paddingTop: calc ? '24px' : '0' }}>
-                                                                <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.6' }}>
-                                                                    <strong>Detaljeret opgavebeskrivelse (Beregningens afsæt):</strong><br />
-                                                                    Nedenfor er listet systemets antagelser og bagvedliggende tillæg for opgaven. Dette kan bruges direkte af tømreren som huskeliste eller overblik.
-                                                                </p>
                                                                 
                                                                 {bArr.length === 0 ? (
                                                                     <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #94a3b8' }}>
@@ -3354,13 +3350,62 @@ const Dashboard = () => {
                                                                         </p>
                                                                     </div>
                                                                 ) : (
-                                                                    <ul style={{ margin: 0, paddingLeft: '20px', color: '#4b5563', lineHeight: '1.6', fontSize: '0.95rem' }}>
-                                                                        {bArr.map((item, idx) => (
-                                                                            <li key={idx} style={{ marginBottom: '8px' }}>
-                                                                                {item.includes('---') ? <strong>{item.replace(/---/g, '').trim()}</strong> : item}
-                                                                            </li>
-                                                                        ))}
-                                                                    </ul>
+                                                                    (() => {
+                                                                        const expl = parseBreakdownToExplanation(calc, bArr);
+                                                                        if (!expl) return null;
+                                                                        
+                                                                        return (
+                                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                                                                <p style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#1e293b', fontWeight: 'bold' }}>
+                                                                                    Detaljeret Begrundelse for Prisestimatet:
+                                                                                </p>
+                                                                                <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#64748b', lineHeight: '1.6' }}>
+                                                                                    Systemets "tankegang" brudt ned i tømrer-logik, så I har det fulde belæg bag de estimerede tal.
+                                                                                </p>
+                                                                                
+                                                                                {Object.values(expl).map((cat, idx) => {
+                                                                                    if (cat.items.length === 0) return null;
+                                                                                    return (
+                                                                                        <div key={idx} style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                                            <h4 style={{ margin: '0 0 6px 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: 'bold' }}>{cat.title}</h4>
+                                                                                            <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.85rem' }}>{cat.description}</p>
+                                                                                            <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', lineHeight: '1.6', fontSize: '0.9rem' }}>
+                                                                                                {cat.items.map((item, i) => (
+                                                                                                    <li key={i} style={{ marginBottom: '8px' }}>
+                                                                                                        {item.includes(':') ? (
+                                                                                                            <>
+                                                                                                                <strong>{item.split(':')[0]}:</strong>{item.split(':').slice(1).join(':')}
+                                                                                                            </>
+                                                                                                        ) : item}
+                                                                                                    </li>
+                                                                                                ))}
+                                                                                            </ul>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                                
+                                                                                {calc && (
+                                                                                    <div style={{ marginTop: '12px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                                                                                        <h4 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: 'bold' }}>Resultat (Ekskl. moms)</h4>
+                                                                                        <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.85rem' }}>Når systemet lægger alt dette sammen:</p>
+                                                                                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', lineHeight: '1.6', fontSize: '0.9rem', marginBottom: '12px' }}>
+                                                                                            <li>Arbejdsløn (~{(calc.totalLaborCost || 0).toLocaleString('da-DK')} kr.)</li>
+                                                                                            <li>Materialer (~{(calc.materialCost || 0).toLocaleString('da-DK')} kr.)</li>
+                                                                                            {((calc.drivingCost || 0) + (calc.externalLeaseCost || 0) > 0) && (
+                                                                                                <li>Kørsel & Maskinleje (~{((calc.drivingCost || 0) + (calc.externalLeaseCost || 0)).toLocaleString('da-DK')} kr.)</li>
+                                                                                            )}
+                                                                                            {(calc.hiddenBuffer > 0) && (
+                                                                                                <li>Logistik & Buffer (~{(calc.hiddenBuffer || 0).toLocaleString('da-DK')} kr.)</li>
+                                                                                            )}
+                                                                                        </ul>
+                                                                                        <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '12px', color: '#0f172a', fontSize: '1rem', fontWeight: 'bold' }}>
+                                                                                            Systemet runder afslutningsvist overslaget ekskl. moms op til nærmeste pæne hele tusinde – i dette scenarie lander den på præcis {Math.ceil(calc.strictPrice / 1000) * 1000} kr. ekskl. moms.
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })()
                                                                 )}
                                                             </div>
                                                         </div>
