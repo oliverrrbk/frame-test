@@ -13,15 +13,7 @@ export default function GetStartedPage({ setSession }) {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const lenis = new Lenis({
-            autoRaf: true,
-        });
-
-        window.scrollTo(0, 0);
-
-        return () => {
-            lenis.destroy();
-        };
+        // Scroll restoration handled globally
     }, []);
 
     return (

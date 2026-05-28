@@ -25,13 +25,7 @@ const LandingPage = ({ setSession }) => {
     const glowOpacity = useTransform(scrollYProgress, [0, 1], [0.1, 1]);
 
     useEffect(() => {
-        const lenis = new Lenis({
-            autoRaf: true,
-        });
-
-        return () => {
-            lenis.destroy();
-        };
+        // Scroll restoration handled globally
     }, []);
 
     return (

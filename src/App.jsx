@@ -129,12 +129,45 @@ const MAP_LIBRARIES = ['places'];
 
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { useEffect, useRef } from 'react';
+import Lenis from 'lenis';
 
 const AnimatedRoutes = ({ session, setSession }) => {
   const location = useLocation();
+  const lenisRef = useRef(null);
+
+  useEffect(() => {
+    const isMarketingRoute = ['/', '/features', '/pricing', '/about', '/get-started', '/calculate'].includes(location.pathname);
+    if (isMarketingRoute && !lenisRef.current) {
+        lenisRef.current = new Lenis({ autoRaf: true });
+    } else if (!isMarketingRoute && lenisRef.current) {
+        lenisRef.current.destroy();
+        lenisRef.current = null;
+    }
+    
+    return () => {
+       // Only cleanup when AnimatedRoutes unmounts
+       // we don't want to destroy on every pathname change, only if it leaves marketing
+    };
+  }, [location.pathname]);
+
+  // Clean up entirely on unmount
+  useEffect(() => {
+      return () => {
+          if (lenisRef.current) {
+              lenisRef.current.destroy();
+          }
+      }
+  }, []);
   
   return (
-    <AnimatePresence mode="wait" onExitComplete={() => window.scrollTo(0, 0)}>
+    <AnimatePresence mode="wait" onExitComplete={() => {
+        if (lenisRef.current) {
+            lenisRef.current.scrollTo(0, { immediate: true });
+        } else {
+            window.scrollTo(0, 0);
+        }
+    }}>
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={
           session ? (

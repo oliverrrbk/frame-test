@@ -22,16 +22,7 @@ export default function FeaturesPage({ setSession }) {
     const glowOpacity = useTransform(scrollYProgress, [0, 1], [0.1, 1]);
 
     useEffect(() => {
-        const lenis = new Lenis({
-            autoRaf: true,
-        });
-
-        // Ensure page starts at top
-        window.scrollTo(0, 0);
-
-        return () => {
-            lenis.destroy();
-        };
+        // Scroll restoration handled globally
     }, []);
 
     return (
