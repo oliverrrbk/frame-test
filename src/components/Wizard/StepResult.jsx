@@ -189,7 +189,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                                 Dit vejledende overslag er klar!
                             </h2>
                             <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
-                                Du kan trygt bruge dette overslag til at sammenligne markedet. Vi tror på fuld gennemsigtighed fra start.
+                                Et realistisk udgangspunkt, du trygt kan bruge til at sammenligne markedet.
                             </p>
                         </>
                     )}
@@ -222,7 +222,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     }}>
                         <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Forventet prisramme</span>
                         <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>{priceRange}</h1>
-                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Dette er et stærkt vejledende overslag inkl. moms. Vores erfaring er, at det endelige, bindende tilbud fra os oftest lander lidt lavere – men med denne pris har du et realistisk udgangspunkt.</p>
+                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Vejledende pris inkl. moms. Et endeligt tilbud fra os vil oftest lande lidt lavere.</p>
                     </div>
                 )}
 
