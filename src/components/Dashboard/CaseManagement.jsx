@@ -23,10 +23,13 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     const [newLogText, setNewLogText] = useState('');
     const [logStatus, setLogStatus] = useState('green'); // 'green', 'yellow', 'red'
     const [logPhotos, setLogPhotos] = useState([]);
+    const [isChangeOrder, setIsChangeOrder] = useState(false);
+    const [extraHours, setExtraHours] = useState('');
+    const [extraPrice, setExtraPrice] = useState('');
 
     // States til timeregistrering
     const [timeEntries, setTimeEntries] = useState([]);
-    const [newTime, setNewTime] = useState({ hours: '', date: new Date().toISOString().substring(0, 10), desc: '', employeeId: '' });
+    const [newTime, setNewTime] = useState({ startTime: '07:00', endTime: '15:00', date: new Date().toISOString().substring(0, 10), desc: '', employeeId: '' });
 
     // States til Mesterens ugentlige medarbejder-tidsstyring
     const [selectedEmployeeForTidslog, setSelectedEmployeeForTidslog] = useState('');
@@ -288,15 +291,21 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
             text: newLogText.trim(),
             author: currentAuthor,
             date: new Date().toISOString(),
-            photos: logPhotos
+            photos: logPhotos,
+            isChangeOrder: isChangeOrder,
+            extraHours: isChangeOrder ? (parseFloat(extraHours) || 0) : 0,
+            extraPrice: isChangeOrder ? (parseFloat(extraPrice) || 0) : 0
         };
 
         const updated = [newLog, ...logsList];
         setLogsList(updated);
         setNewLogText('');
         setLogPhotos([]);
+        setIsChangeOrder(false);
+        setExtraHours('');
+        setExtraPrice('');
         saveCaseDataToDb({ logs: updated });
-        toast.success('Logbog opdateret!');
+        toast.success(isChangeOrder ? 'Aftaleseddel/Ekstraarbejde oprettet!' : 'Logbog opdateret!');
     };
 
     const handleSimulatePhotoUpload = () => {
@@ -314,16 +323,27 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     // Timeregistrering-håndtering
     const handleAddTimeEntry = (e) => {
         e.preventDefault();
-        if (!newTime.hours || !newTime.employeeId) {
-            toast.error('Udfyld venligst medarbejder og antal timer');
+        if (!newTime.startTime || !newTime.endTime || !newTime.employeeId) {
+            toast.error('Udfyld venligst medarbejder, samt start- og sluttidspunkt');
             return;
         }
 
         const employeeName = team.find(t => t.id === newTime.employeeId)?.owner_name || 'Ukendt medarbejder';
 
+        // Beregn timer (inkl. håndtering af evt. overnatning/negativ tid - primitiv udgave)
+        const start = new Date(`${newTime.date}T${newTime.startTime}`);
+        const end = new Date(`${newTime.date}T${newTime.endTime}`);
+        let diffHours = (end - start) / (1000 * 60 * 60);
+        if (diffHours < 0) {
+            toast.error('Sluttid kan ikke være før starttid');
+            return;
+        }
+
         const entry = {
             id: `time-${Date.now()}`,
-            hours: parseFloat(newTime.hours) || 0,
+            startTime: newTime.startTime,
+            endTime: newTime.endTime,
+            hours: diffHours,
             date: newTime.date,
             desc: newTime.desc.trim() || 'Almindeligt tømrerarbejde',
             employeeId: newTime.employeeId,
@@ -332,7 +352,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
 
         const updated = [entry, ...timeEntries];
         setTimeEntries(updated);
-        setNewTime({ ...newTime, hours: '', desc: '' });
+        setNewTime({ ...newTime, desc: '' });
         saveCaseDataToDb({ time_entries: updated });
         toast.success('Timer registreret på sagen!');
     };
@@ -695,16 +715,23 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                                     
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <strong style={{ fontSize: '0.85rem', color: '#1a1a1a' }}>
-                                                            {log.author} <span style={{ fontWeight: 'normal', color: '#6b7280' }}>tilføjede status</span>
+                                                            {log.author} <span style={{ fontWeight: 'normal', color: '#6b7280' }}>tilføjede {log.isChangeOrder ? 'en Aftaleseddel' : 'status'}</span>
                                                         </strong>
                                                         <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
                                                             {new Date(log.date).toLocaleDateString('da-DK')} {new Date(log.date).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
                                                         </span>
                                                     </div>
 
-                                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#374151', lineHeight: '1.5', backgroundColor: '#fcfcfc', padding: '12px', borderRadius: '8px', border: '1px solid #f1f1ef' }}>
+                                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#374151', lineHeight: '1.5', backgroundColor: log.isChangeOrder ? '#fef2f2' : '#fcfcfc', padding: '12px', borderRadius: '8px', border: log.isChangeOrder ? '1px solid #fca5a5' : '1px solid #f1f1ef' }}>
                                                         {log.text}
                                                     </p>
+
+                                                    {log.isChangeOrder && (
+                                                        <div style={{ display: 'flex', gap: '16px', padding: '10px 14px', backgroundColor: '#fff1f2', borderRadius: '8px', border: '1px solid #ffe4e6', color: '#be123c', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                                            <span>Ekstra timer: +{log.extraHours} t</span>
+                                                            <span>Ekstra materialer/omk: +{log.extraPrice} kr.</span>
+                                                        </div>
+                                                    )}
 
                                                     {log.photos && log.photos.length > 0 && (
                                                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
@@ -758,6 +785,44 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                             />
                                         </div>
 
+                                        {/* Aftaleseddel Checkbox */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', backgroundColor: isChangeOrder ? '#fff1f2' : '#f8fafc', borderRadius: '8px', border: isChangeOrder ? '1px solid #fecdd3' : '1px solid #e2e8f0' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', color: isChangeOrder ? '#be123c' : '#1e293b' }}>
+                                                <input 
+                                                    type="checkbox"
+                                                    checked={isChangeOrder}
+                                                    onChange={(e) => setIsChangeOrder(e.target.checked)}
+                                                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                />
+                                                Opret som Aftaleseddel (Ekstraarbejde)
+                                            </label>
+                                            
+                                            {isChangeOrder && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '4px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '0.75rem', color: '#9f1239' }}>Estimeret ekstra tid (Timer)</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={extraHours}
+                                                            onChange={(e) => setExtraHours(e.target.value)}
+                                                            placeholder="F.eks. 4"
+                                                            style={{ border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '0.75rem', color: '#9f1239' }}>Ekstra materialekost (Kr.)</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={extraPrice}
+                                                            onChange={(e) => setExtraPrice(e.target.value)}
+                                                            placeholder="F.eks. 2500"
+                                                            style={{ border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
                                         {/* Foto-upload simulering */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Vedhæft byggeplads-foto (valgfrit)</label>
@@ -809,6 +874,9 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                                     <div>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
                                                             <strong style={{ fontSize: '0.9rem', color: '#1a1a1a' }}>{entry.employeeName}</strong>
+                                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <Clock size={12} /> {entry.startTime} - {entry.endTime}
+                                                            </span>
                                                             <span style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '30px', background: '#3b82f6', color: 'white', fontWeight: 'bold' }}>
                                                                 {entry.hours} timer
                                                             </span>
@@ -856,25 +924,33 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
 
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Antal Timer</label>
+                                                <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Starttid</label>
                                                 <input 
-                                                    type="number"
-                                                    step="0.25"
-                                                    value={newTime.hours}
-                                                    onChange={(e) => setNewTime({ ...newTime, hours: e.target.value })}
-                                                    placeholder="F.eks. 7.5"
+                                                    type="time"
+                                                    value={newTime.startTime}
+                                                    onChange={(e) => setNewTime({ ...newTime, startTime: e.target.value })}
                                                     style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
                                                 />
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Dato</label>
+                                                <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Sluttid</label>
                                                 <input 
-                                                    type="date"
-                                                    value={newTime.date}
-                                                    onChange={(e) => setNewTime({ ...newTime, date: e.target.value })}
+                                                    type="time"
+                                                    value={newTime.endTime}
+                                                    onChange={(e) => setNewTime({ ...newTime, endTime: e.target.value })}
                                                     style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
                                                 />
                                             </div>
+                                        </div>
+                                        
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Dato</label>
+                                            <input 
+                                                type="date"
+                                                value={newTime.date}
+                                                onChange={(e) => setNewTime({ ...newTime, date: e.target.value })}
+                                                style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
+                                            />
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

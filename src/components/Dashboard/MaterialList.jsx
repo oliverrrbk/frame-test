@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
-import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail } from 'lucide-react';
 import { generateMaterialList } from '../../utils/materialGenerator';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -73,7 +73,8 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
             item: newItem.item,
             qty: parseFloat(newItem.qty) || 1,
             unit: newItem.unit,
-            section: newItem.section
+            section: newItem.section,
+            status: 'Ikke bestilt'
         };
 
         setMaterials([...materials, added]);
@@ -265,6 +266,32 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
         }
     };
 
+    const handleGenerateEmail = () => {
+        const unOrdered = materials.filter(m => !m.status || m.status === 'Ikke bestilt');
+        if (unOrdered.length === 0) {
+            toast.success('Alle materialer er allerede bestilt eller leveret!');
+            return;
+        }
+
+        let emailBody = `Hej,\n\nJeg vil gerne bestille følgende materialer til levering på ${deliveryInfo.address || 'vores byggeplads'}:\n\n`;
+        emailBody += `Ønsket leveringsdato: ${deliveryInfo.date ? new Date(deliveryInfo.date).toLocaleDateString('da-DK') : 'Hurtigst muligt'}\n`;
+        if (deliveryInfo.notes) {
+            emailBody += `Bemærkninger: ${deliveryInfo.notes}\n`;
+        }
+        emailBody += `\nMATERIALER:\n`;
+        
+        unOrdered.forEach(m => {
+            emailBody += `- ${m.qty} ${m.unit} : ${m.item}\n`;
+        });
+
+        emailBody += `\nMed venlig hilsen,\n${profile?.company_name || profile?.owner_name || 'Bison Frame Partner'}\n`;
+        emailBody += `Sags-ref: Lead #${String(lead.id).substring(0, 8)}`;
+        
+        const mailto = `mailto:?subject=Materialebestilling - Sag #${String(lead.id).substring(0,8)}&body=${encodeURIComponent(emailBody)}`;
+        window.open(mailto, '_blank');
+        toast.success('Email-skabelon åbnet i dit mail-program!');
+    };
+
     // Grupperede materialer til rendering i UI
     const groupedMaterials = {};
     materials.forEach((m, idx) => {
@@ -319,11 +346,18 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                     <strong style={{ color: '#1a1a1a', fontSize: '1.05rem' }}>Indkøbs- & Materialespecifikation</strong>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button 
+                            onClick={handleGenerateEmail}
+                            className="btn-secondary"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #cbd5e1', backgroundColor: '#eff6ff', color: '#1d4ed8' }}
+                        >
+                            <Mail size={16} /> GENERÉR BESTILLINGS-EMAIL
+                        </button>
+                        <button 
                             onClick={handleDownloadPdf}
                             className="btn-secondary"
                             style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#1e293b' }}
                         >
-                            <Download size={16} /> DOWNLOAD PDF TIL TRÆLAST
+                            <Download size={16} /> DOWNLOAD PDF
                         </button>
                         <button 
                             onClick={handleSaveList}
@@ -346,26 +380,35 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                 {groupedMaterials[section].map((item, idx) => (
                                     <div 
                                         key={item.originalIndex}
-                                        style={{ display: 'grid', gridTemplateColumns: '1fr 100px 100px 50px', gap: '12px', padding: '10px 14px', borderBottom: idx === groupedMaterials[section].length - 1 ? 'none' : '1px solid #f1f1ef', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafaf9', alignItems: 'center' }}
+                                        style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 140px 40px', gap: '12px', padding: '10px 14px', borderBottom: idx === groupedMaterials[section].length - 1 ? 'none' : '1px solid #f1f1ef', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafaf9', alignItems: 'center' }}
                                     >
                                         <input 
                                             type="text" 
                                             value={item.item}
                                             onChange={(e) => handleCellChange(item.originalIndex, 'item', e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#1a1a1a', fontWeight: '500', outline: 'none', fontSize: '0.9rem' }}
+                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#1a1a1a', fontWeight: '500', outline: 'none', fontSize: '0.9rem', textDecoration: item.status === 'Leveret' ? 'line-through' : 'none', opacity: item.status === 'Leveret' ? 0.6 : 1 }}
                                         />
                                         <input 
                                             type="number" 
                                             value={item.qty}
                                             onChange={(e) => handleCellChange(item.originalIndex, 'qty', e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#1a1a1a', textAlign: 'right', fontWeight: 'bold', outline: 'none', fontSize: '0.9rem' }}
+                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#1a1a1a', textAlign: 'right', fontWeight: 'bold', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.6 : 1 }}
                                         />
                                         <input 
                                             type="text" 
                                             value={item.unit}
                                             onChange={(e) => handleCellChange(item.originalIndex, 'unit', e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#6b7280', outline: 'none', fontSize: '0.9rem' }}
+                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#6b7280', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.6 : 1 }}
                                         />
+                                        <select
+                                            value={item.status || 'Ikke bestilt'}
+                                            onChange={(e) => handleCellChange(item.originalIndex, 'status', e.target.value)}
+                                            style={{ border: 'none', background: (item.status === 'Leveret') ? '#dcfce7' : (item.status === 'Bestilt' ? '#dbeafe' : '#fee2e2'), color: (item.status === 'Leveret') ? '#166534' : (item.status === 'Bestilt' ? '#1e40af' : '#991b1b'), borderRadius: '6px', padding: '6px 8px', fontSize: '0.8rem', outline: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+                                        >
+                                            <option value="Ikke bestilt">Ikke bestilt</option>
+                                            <option value="Bestilt">Bestilt/På vej</option>
+                                            <option value="Leveret">Leveret plads</option>
+                                        </select>
                                         <button 
                                             onClick={() => handleDeleteItem(item.originalIndex)}
                                             style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
