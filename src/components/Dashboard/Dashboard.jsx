@@ -3268,14 +3268,29 @@ const Dashboard = () => {
                                                 {(() => {
                                                     const bArr = selectedLead.raw_data?.breakdownArr || selectedLead.raw_data?.calc_data?.breakdownArr || [];
                                                     if (bArr.length === 0) {
-                                                        return <p style={{ margin: 0, color: '#6b7280' }}>Ingen prisberegningsdata tilgængelig for denne sag.</p>;
+                                                        return (
+                                                            <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #94a3b8' }}>
+                                                                <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                                                                    <strong>Standard Beregningsgrundlag:</strong><br />
+                                                                    Denne beregning er foretaget automatisk baseret på vores indbyggede branchespecifikke formler. Beregningen tager højde for estimeret arbejdstid, gennemsnitlige materialepriser, forventet spild og nødvendigt tilbehør (såsom beslag og fugematerialer).
+                                                                </p>
+                                                            </div>
+                                                        );
                                                     }
                                                     return (
-                                                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#4b5563', lineHeight: '1.6', fontSize: '0.95rem' }}>
-                                                            {bArr.map((item, idx) => (
-                                                                <li key={idx} style={{ marginBottom: '8px' }}>{item}</li>
-                                                            ))}
-                                                        </ul>
+                                                        <>
+                                                            <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.6' }}>
+                                                                <strong>Systemets detaljerede beregningsgrundlag:</strong><br />
+                                                                Nedenfor kan du se, præcis hvordan systemet har sammensat prisestimatet, og hvilke skjulte omkostninger, tillæg og materialer der er taget højde for.
+                                                            </p>
+                                                            <ul style={{ margin: 0, paddingLeft: '20px', color: '#4b5563', lineHeight: '1.6', fontSize: '0.95rem' }}>
+                                                                {bArr.map((item, idx) => (
+                                                                    <li key={idx} style={{ marginBottom: '8px' }}>
+                                                                        {item.includes('---') ? <strong>{item.replace(/---/g, '').trim()}</strong> : item}
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </>
                                                     );
                                                 })()}
                                             </div>
