@@ -424,7 +424,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                     .from('leads')
                     .update({
                         price_estimate: res.priceRange,
-                        raw_data: { ...updatedProjectData, calc_data: res.calcData },
+                        raw_data: { ...updatedProjectData, calc_data: res.calcData, breakdownArr: res.breakdownArr },
                         updated_at: new Date().toISOString()
                     });
                 
@@ -453,7 +453,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                         project_category: categoryName,
                         price_estimate: res.priceRange,
                         contact_preference: isFastTrack ? 'Hurtigst muligt' : 'Afventer accept',
-                        raw_data: { ...updatedProjectData, calc_data: res.calcData },
+                        raw_data: { ...updatedProjectData, calc_data: res.calcData, breakdownArr: res.breakdownArr },
                         carpenter_id: carpenter?.id || null,
                         status: isFastTrack ? 'Ny forespørgsel' : 'Overslag (Afventer)'
                     }]);
