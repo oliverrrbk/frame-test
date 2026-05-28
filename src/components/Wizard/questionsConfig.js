@@ -336,7 +336,7 @@ export const QUESTIONS = {
             tooltip: 'Vælg det ønskede materiale til din hoveddør. Træ/Alu er meget populært pga. minimal vedligeholdelse udvendigt.',
             options: [
                 { label: 'Massivt træ', img: '/images/door_solid_wood_1776258727433.png' },
-                { label: 'Massivt træ og glass', img: '/images/door_solid_wood_glass.png' },
+                { label: 'Massivt træ og glas', img: '/images/door_solid_wood_glass.png' },
                 { label: 'Finér', img: '/images/door_veneer_1776258742752.png' },
                 { label: 'PVC', img: '/images/door_pvc_solid.png' },
                 { label: 'PVC og glas', img: '/images/door_pvc_glass.png' },
