@@ -1391,11 +1391,11 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 </div>
             </div>
 
-            {isAddingAnotherProject && (
+            {onAddAnotherProject && (
                 <div style={{ marginTop: '24px', marginBottom: '32px', display: 'flex', justifyContent: 'center' }}>
                     <button 
                         type="button" 
-                        onClick={handleAddProjectClick}
+                        onClick={() => onAddAnotherProject(null)}
                         style={{
                             display: 'inline-flex',
                             alignItems: 'center',

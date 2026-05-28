@@ -11,12 +11,10 @@ const AiSupportWidget = ({ carpenter, currentStep, projectData, projects }) => {
     const messagesEndRef = useRef(null);
 
     // Filter tier: Kun tilgængelig for standard (professionel) og enterprise tiers
-    if (!carpenter || carpenter.tier === 'basis') {
-        return null;
-    }
+    // Moved to the bottom to avoid breaking Rules of Hooks
 
-    const carpenterName = carpenter.owner_name?.split(' ')[0] || 'Tømreren';
-    const companyName = carpenter.company_name || 'Tømrerfirmaet';
+    const carpenterName = carpenter?.owner_name?.split(' ')[0] || 'Tømreren';
+    const companyName = carpenter?.company_name || 'Tømrerfirmaet';
 
     // Generer præcise dynamiske hjælpespørgsmål baseret på trin og kategori
     const getSuggestions = () => {
@@ -137,10 +135,10 @@ Hvad kan vi hjælpe dig med i dag?`;
                 category: projectData?.category || 'Kombi-projekt',
                 answers: projectData?.details || {},
                 carpenterInfo: {
-                    id: carpenter.id,
-                    owner_name: carpenter.owner_name,
-                    company_name: carpenter.company_name,
-                    tier: carpenter.tier
+                    id: carpenter?.id,
+                    owner_name: carpenter?.owner_name,
+                    company_name: carpenter?.company_name,
+                    tier: carpenter?.tier
                 }
             };
 
@@ -175,6 +173,10 @@ Hvad kan vi hjælpe dig med i dag?`;
             setIsLoading(false);
         }
     };
+
+    if (!carpenter || carpenter.tier === 'basis') {
+        return null;
+    }
 
     return createPortal(
         <div className={`ai-support-wrapper ${isOpen ? 'is-open' : ''}`} style={{ 
