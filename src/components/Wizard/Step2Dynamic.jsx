@@ -1123,7 +1123,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             ) : (
                                 <>
                                     <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Vejledende oplysninger</strong>
-                                    Dine valg her er vejledende og du binder dig ikke. Vi foretager altid præcise kontrolmål inden en endelig aftale indgås.
+                                    Dine valg af materialer og design er udelukkende vejledende, så vi kan give dig et retvisende prisestimat. Du binder dig ikke til dine valg nu. Vi tager altid en snak om detaljerne og foretager præcise kontrolmål inden en aftale indgås.
                                 </>
                             )}
                         </div>
