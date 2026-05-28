@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat } from 'lucide-react';
+import { Home, Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
@@ -142,6 +142,102 @@ const WindowsChecklist = ({ leadId }) => {
     );
 };
 
+const generateShortSummary = (lead) => {
+    if (!lead || !lead.raw_data || !lead.raw_data.details) return "Ingen opgavedetaljer tilgængelige.";
+    
+    const categoryMap = {
+        'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
+        'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
+        'Tagprojekt': 'roof', 'Tag': 'roof', 'Nyt Køkken': 'kitchen', 'Køkken': 'kitchen',
+        'Nye Lofter': 'ceilings', 'Lofter': 'ceilings', 'Ny Facadebeklædning': 'facades',
+        'Facader': 'facades', 'Tilbygning': 'extensions', 'Anneks': 'annex', 'Annekser & Skure': 'annex',
+        'Carport': 'carport', 'Hegn': 'fence'
+    };
+    
+    const cat = categoryMap[lead.project_category] || lead.project_category;
+    const d = lead.raw_data.details;
+    
+    const amount = d.amount || d.area || d.roofAmount || d.facadeAmount || d.length || d.fenceLength || d.windowAmount || d.doorAmount || 0;
+    const material = d.material || d.roofType || d.facadeWood || d.terraceWood || d.floorType || d.doorType || d.kitchenBrand || "";
+    
+    let text = `Opgaven indebærer `;
+    
+    switch(cat) {
+        case 'fence':
+            text += `opsætning af ${amount} meter løbende hegn`;
+            if (material) text += ` i ${material}.`; else text += `.`;
+            if (d.disposal && d.disposal.toLowerCase().includes('ja')) {
+                text += ` Der skal fjernes eksisterende ${d.oldMaterial ? d.oldMaterial.toLowerCase() : 'hegn/beplantning'}, og dette er inkluderet i opgaven.`;
+            }
+            break;
+        case 'roof':
+            text += `etablering af ${amount} m² nyt tag`;
+            if (material) text += ` med ${material}.`; else text += `.`;
+            if (d.disposal && d.disposal.toLowerCase().includes('ja')) {
+                text += ` Det eksisterende tag (${d.oldRoofType || 'ukendt type'}) skal pilles ned og bortskaffes først.`;
+            }
+            break;
+        case 'windows':
+        case 'doors':
+            text += `udskiftning af ${amount} elementer`;
+            if (material) text += ` (${material}).`; else text += `.`;
+            text += ` Opgaven omfatter både demontering, montering og evt. indvendig finish.`;
+            break;
+        case 'terrace':
+            text += `opbygning af ${amount} m² træterrasse`;
+            if (material) text += ` i ${material}.`; else text += `.`;
+            if (d.terraceHeight && d.terraceHeight !== 'none') {
+                text += ` Terrassen er hævet, hvilket kræver ekstra underkonstruktion.`;
+            }
+            if (d.disposal && d.disposal.toLowerCase().includes('ja')) {
+                text += ` Eksisterende belægning/terrasse skal fjernes først.`;
+            }
+            break;
+        case 'floor':
+            text += `lægning af ${amount} m² nyt gulv`;
+            if (material) text += ` i ${material}.`; else text += `.`;
+            if (d.disposal && d.disposal.toLowerCase().includes('ja')) {
+                text += ` Det eksisterende gulv (${d.oldFloorType || 'ukendt type'}) skal fjernes og bortskaffes inden lægning.`;
+            }
+            break;
+        case 'facades':
+            text += `montering af ${amount} m² ny facadebeklædning`;
+            if (material) text += ` i ${material}.`; else text += `.`;
+            if (d.disposal && d.disposal.toLowerCase().includes('ja')) {
+                text += ` Den eksisterende facadebeklædning skal nedrives og bortskaffes som del af opgaven.`;
+            }
+            break;
+        case 'ceilings':
+            text += `opsætning af ${amount} m² nye lofter`;
+            if (material) text += ` i ${material}.`; else text += `.`;
+            if (d.spots && d.spotsAmount) {
+                text += ` Opgaven inkluderer forberedelse til ${d.spotsAmount} spots.`;
+            }
+            break;
+        case 'extensions':
+        case 'annex':
+        case 'carport':
+            text += `opbygning af en ny ${lead.project_category}`;
+            if (amount) text += ` på ca. ${amount} m².`; else text += `.`;
+            if (material) text += ` Kunden ønsker det primært udført i ${material}.`;
+            break;
+        case 'kitchen':
+            text += `montering af nyt køkken`;
+            if (material) text += ` fra ${material}.`; else text += `.`;
+            if (d.kitchenElements) text += ` Det anslås at indeholde ca. ${d.kitchenElements} elementer, der skal opstilles og justeres.`;
+            break;
+        default:
+            text += `et projekt inden for ${lead.project_category}`;
+            if (amount) text += ` (Omfang: ${amount}).`; else text += `.`;
+    }
+    
+    if (d.notes) {
+        text += ` Tjek desuden kundens egne noter for specifikke ønsker.`;
+    }
+    
+    return text;
+};
+
 const Dashboard = () => {
     const [activeTab, setActiveTab] = useState(() => {
         return localStorage.getItem('dashboard_active_tab') || 'overview';
@@ -159,6 +255,7 @@ const Dashboard = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLead, setSelectedLead] = useState(null);
     const [isCustomerChoicesOpen, setIsCustomerChoicesOpen] = useState(false);
+    const [isPriceBasisOpen, setIsPriceBasisOpen] = useState(false);
     const [isMaterialListOpen, setIsMaterialListOpen] = useState(false);
     const [isQuoteEditorOpen, setIsQuoteEditorOpen] = useState(false);
 
@@ -2538,7 +2635,17 @@ const Dashboard = () => {
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
                                             <div style={{ padding: '16px', backgroundColor: '#f3f1ed', borderRadius: '14px' }}>
                                                 <span style={{ fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kategori</span>
-                                                <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem' }}>{categoryNames[selectedLead.project_category] || selectedLead.project_category}</p>
+                                                <p style={{ margin: '4px 0 12px', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem' }}>{categoryNames[selectedLead.project_category] || selectedLead.project_category}</p>
+                                                {/* AI Opgavebeskrivelse */}
+                                                <div style={{ padding: '12px', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e8e6e1' }}>
+                                                    <span style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                                                        Opsummering af opgaven
+                                                    </span>
+                                                    <p style={{ margin: 0, fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5' }}>
+                                                        {selectedLead.raw_data?.ai_summary || selectedLead.ai_summary || generateShortSummary(selectedLead)}
+                                                    </p>
+                                                </div>
                                             </div>
                                             <div style={{ padding: '16px', backgroundColor: selectedLead.status === 'Bekræftet opgave' ? '#ecfdf5' : '#f7f6f3', borderRadius: '14px', border: selectedLead.status === 'Bekræftet opgave' ? '1px solid #10b981' : '1px solid #e8e6e1' }}>
                                                 {selectedLead.status === 'Bekræftet opgave' ? (
@@ -3100,6 +3207,37 @@ const Dashboard = () => {
 
                                         {selectedLead.project_category === 'windows' && (
                                             <WindowsChecklist leadId={selectedLead.id} />
+                                        )}
+
+                                        {/* GRUNDLAG FOR PRISESTIMATET ACCORDION */}
+                                        <div 
+                                            onClick={() => setIsPriceBasisOpen(!isPriceBasisOpen)}
+                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px', marginTop: '24px' }}
+                                        >
+                                            <h3 style={{ color: '#1a1a1a', margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Calculator size={18} style={{ color: '#6b7280' }} /> Grundlag for Prisestimatet
+                                            </h3>
+                                            <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: 'bold' }}>
+                                                {isPriceBasisOpen ? 'Skjul ▲' : 'Vis ▼'}
+                                            </span>
+                                        </div>
+
+                                        {isPriceBasisOpen && (
+                                            <div style={{ marginBottom: '24px', padding: '24px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1' }}>
+                                                {(() => {
+                                                    const bArr = selectedLead.raw_data?.breakdownArr || selectedLead.raw_data?.calc_data?.breakdownArr || [];
+                                                    if (bArr.length === 0) {
+                                                        return <p style={{ margin: 0, color: '#6b7280' }}>Ingen prisberegningsdata tilgængelig for denne sag.</p>;
+                                                    }
+                                                    return (
+                                                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#4b5563', lineHeight: '1.6', fontSize: '0.95rem' }}>
+                                                            {bArr.map((item, idx) => (
+                                                                <li key={idx} style={{ marginBottom: '8px' }}>{item}</li>
+                                                            ))}
+                                                        </ul>
+                                                    );
+                                                })()}
+                                            </div>
                                         )}
 
                                         {/* MATERIALELISTE ACCORDION (For alle ikke-bekræftede cases) */}

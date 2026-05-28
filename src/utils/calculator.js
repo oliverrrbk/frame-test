@@ -770,9 +770,17 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             needsDisposalLabor = true;
             needsDisposalFee = true;
         } else if (d.disposal && d.disposal.startsWith('Ja')) {
-            needsDisposalLabor = true;
-            if (d.disposal.toLowerCase().includes('bortskaffe')) {
-                needsDisposalFee = true;
+            // SOP: Undgå dobbeltbetaling for nedrivning (container/timer), hvis kategorien selv håndterer den specifikke nedrivning komplet.
+            let skipGenericDisposal = false;
+            if (cat === 'fence' && d.oldMaterial && (d.oldMaterial.includes('Hæk') || d.oldMaterial.includes('Levende') || d.oldMaterial.includes('Buske'))) {
+                skipGenericDisposal = true; // Hegn håndterer selv timer og deponi (maskine) for hæk.
+            }
+            
+            if (!skipGenericDisposal) {
+                needsDisposalLabor = true;
+                if (d.disposal.toLowerCase().includes('bortskaffe')) {
+                    needsDisposalFee = true;
+                }
             }
         }
         
@@ -1736,8 +1744,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (!userSuppliesMaterials) {
                 let baseMatPrice = indexCat[d.material] || 500;
                 let spildM = numericAmount * 0.10; // 10% tillæg af basismaterialerne
-                materialCost += (spildM * baseMatPrice) * dbSettings.material_markup;
-                bArr.push(`Standard tillæg: Forventet materialespild (+10%) samt montagematerialer (skruer, stolpebeton, beslag)`);
+                
+                // Tilføj reelle montagematerialer (skruer, L-beslag, mv.) pr. meter
+                let montagePris = indexCat['Montagematerialer (Skruer, beslag) pr m'] || 45;
+                
+                materialCost += ((spildM * baseMatPrice) + (numericAmount * montagePris)) * dbSettings.material_markup;
+                bArr.push(`Standard tillæg: Forventet materialespild (+10%) samt montagematerialer (skruer, beslag, mv.)`);
             }
         }
         

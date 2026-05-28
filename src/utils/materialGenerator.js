@@ -238,8 +238,9 @@ export const generateMaterialList = (category, details = {}, amount = 0) => {
     }
 
     // Standard items for all builders, added at the very end
-    list.push({ item: 'Affaldssække / Afdækningsplastik (rulle)', qty: 1, unit: 'rulle', section: 'Forbrugsstoffer & Værktøj' });
-    list.push({ item: 'Trælasthandsker / Sandpapir / Klinger', qty: 1, unit: 'pakke', section: 'Forbrugsstoffer & Værktøj' });
+    list.push({ item: 'Affaldssække, plastikkiler og afdækning', qty: 1, unit: 'sæt', section: 'Forbrugsstoffer & Værktøj' });
+    list.push({ item: 'Diverse skruer, beslag og fuge/lim (Buffer)', qty: 1, unit: 'kasse', section: 'Forbrugsstoffer & Værktøj' });
+    list.push({ item: 'Sliddele: Savklinger, bits, sandpapir, knivblade', qty: 1, unit: 'pakke', section: 'Forbrugsstoffer & Værktøj' });
 
     return list;
 };
