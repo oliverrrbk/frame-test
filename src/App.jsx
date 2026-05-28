@@ -127,6 +127,69 @@ const PublicWizardPage = () => {
 
 const MAP_LIBRARIES = ['places'];
 
+import { useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+
+const AnimatedRoutes = ({ session, setSession }) => {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait" onExitComplete={() => window.scrollTo(0, 0)}>
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={
+          session ? (
+            session.user?.email === 'team@bisoncompany.dk' 
+              ? <Navigate to="/admin" replace /> 
+              : <Navigate to="/dashboard" replace />
+          ) : <LandingPage setSession={setSession} />
+        } />
+        <Route path="/calculate" element={<CalculatorPage setSession={setSession} />} />
+        <Route path="/features" element={<FeaturesPage setSession={setSession} />} />
+        <Route path="/pricing" element={<PricingPage setSession={setSession} />} />
+        <Route path="/about" element={<AboutUsPage setSession={setSession} />} />
+        <Route path="/get-started" element={<GetStartedPage setSession={setSession} />} />
+        <Route path="/login" element={
+          session ? (
+            session.user?.email === 'team@bisoncompany.dk' 
+              ? <Navigate to="/admin" replace /> 
+              : <Navigate to="/dashboard" replace />
+          ) : (
+            <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyItems: 'center' }}>
+                <div style={{ margin: '0 auto', width: '100%', maxWidth: '550px' }}>
+                    <Login setSession={setSession} />
+                </div>
+            </div>
+          )
+        } />
+        <Route path="/:slug" element={<PublicWizardPage />} />
+        <Route path="/:slug/overslag/:lead_id" element={<EstimateAcceptPage />} />
+        <Route path="/:slug/tilbud/:lead_id" element={<QuoteAcceptPage />} />
+        <Route path="/bekraeftet" element={<ConfirmedPage />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/register" element={
+          session ? (
+            session.user?.email === 'team@bisoncompany.dk' 
+              ? <Navigate to="/admin" replace /> 
+              : <Navigate to="/dashboard" replace />
+          ) : <Register setSession={setSession} />
+        } />
+        <Route path="/dashboard" element={
+          <ProtectedRoute session={session}>
+            <ErrorBoundary>
+              <Dashboard />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <ProtectedRoute session={session}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </AnimatePresence>
+  );
+};
+
 function App() {
   const [session, setSession] = useState(() => {
     try {
@@ -206,57 +269,7 @@ function App() {
     <div className="smooth-fade-in" style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
         <Toaster position="top-center" />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={
-              session ? (
-                session.user?.email === 'team@bisoncompany.dk' 
-                  ? <Navigate to="/admin" replace /> 
-                  : <Navigate to="/dashboard" replace />
-              ) : <LandingPage setSession={setSession} />
-            } />
-            <Route path="/calculate" element={<CalculatorPage setSession={setSession} />} />
-            <Route path="/features" element={<FeaturesPage setSession={setSession} />} />
-            <Route path="/pricing" element={<PricingPage setSession={setSession} />} />
-            <Route path="/about" element={<AboutUsPage setSession={setSession} />} />
-            <Route path="/get-started" element={<GetStartedPage setSession={setSession} />} />
-            <Route path="/login" element={
-              session ? (
-                session.user?.email === 'team@bisoncompany.dk' 
-                  ? <Navigate to="/admin" replace /> 
-                  : <Navigate to="/dashboard" replace />
-              ) : (
-                <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyItems: 'center' }}>
-                    <div style={{ margin: '0 auto', width: '100%', maxWidth: '550px' }}>
-                        <Login setSession={setSession} />
-                    </div>
-                </div>
-              )
-            } />
-            <Route path="/:slug" element={<PublicWizardPage />} />
-            <Route path="/:slug/overslag/:lead_id" element={<EstimateAcceptPage />} />
-            <Route path="/:slug/tilbud/:lead_id" element={<QuoteAcceptPage />} />
-            <Route path="/bekraeftet" element={<ConfirmedPage />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/register" element={
-              session ? (
-                session.user?.email === 'team@bisoncompany.dk' 
-                  ? <Navigate to="/admin" replace /> 
-                  : <Navigate to="/dashboard" replace />
-              ) : <Register setSession={setSession} />
-            } />
-            <Route path="/dashboard" element={
-              <ProtectedRoute session={session}>
-                <ErrorBoundary>
-                  <Dashboard />
-                </ErrorBoundary>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <ProtectedRoute session={session}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
-          </Routes>
+          <AnimatedRoutes session={session} setSession={setSession} />
         </BrowserRouter>
     </div>
   );

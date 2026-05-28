@@ -9,6 +9,7 @@ import { TheInfiniteGrid } from '../ui/the-infinite-grid';
 import { AnimatedTestimonials } from '../ui/animated-testimonials';
 import { StaggerTestimonials } from '../ui/stagger-testimonials';
 import Lenis from 'lenis';
+import PageTransition from '../ui/PageTransition';
 
 const LandingPage = ({ setSession }) => {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -34,7 +35,7 @@ const LandingPage = ({ setSession }) => {
     }, []);
 
     return (
-        <div className="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col relative overflow-hidden">
+        <PageTransition className="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col relative overflow-hidden">
             {/* Infinite Grid Overlay */}
             <div className="absolute inset-0 grid-pattern pointer-events-none z-0"></div>
 
@@ -299,7 +300,7 @@ const LandingPage = ({ setSession }) => {
             </>
             )}
             </AnimatePresence>
-        </div>
+        </PageTransition>
     );
 };
 

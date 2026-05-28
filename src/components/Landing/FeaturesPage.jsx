@@ -6,6 +6,7 @@ import Footer from './Footer';
 import TopNavBar from './TopNavBar';
 import { Ruler, DollarSign, FileText, Link as LinkIcon, Database, ArrowRight, X, Compass } from 'lucide-react';
 import Lenis from 'lenis';
+import PageTransition from '../ui/PageTransition';
 
 export default function FeaturesPage({ setSession }) {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -34,7 +35,7 @@ export default function FeaturesPage({ setSession }) {
     }, []);
 
     return (
-        <div className="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col relative overflow-hidden">
+        <PageTransition className="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col relative overflow-hidden">
             {/* Infinite Grid Overlay */}
             <div className="absolute inset-0 grid-pattern pointer-events-none z-0"></div>
 
@@ -380,6 +381,6 @@ export default function FeaturesPage({ setSession }) {
                     </>
                 )}
             </AnimatePresence>
-        </div>
+        </PageTransition>
     );
 }

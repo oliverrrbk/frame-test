@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
 import TopNavBar from './TopNavBar';
+import PageTransition from '../ui/PageTransition';
 import { User, Users, Building2, CheckCircle2, ArrowRight, X } from 'lucide-react';
 import Lenis from 'lenis';
 
@@ -140,7 +141,7 @@ export default function PricingPage({ setSession }) {
     }, []);
 
     return (
-        <div className="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col relative overflow-hidden">
+        <PageTransition className="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col relative overflow-hidden">
             {/* Infinite Grid Overlay */}
             <div className="absolute inset-0 grid-pattern pointer-events-none z-0"></div>
 
@@ -527,6 +528,6 @@ export default function PricingPage({ setSession }) {
                     </>
                 )}
             </AnimatePresence>
-        </div>
+        </PageTransition>
     );
 }
