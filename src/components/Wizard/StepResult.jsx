@@ -207,7 +207,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     }}>
                         <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Komplekst Projekt</span>
                         <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: '900', margin: '0 0 16px 0', color: 'var(--text-primary)' }}>Kræver fysisk besigtigelse</h1>
-                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}>At bygge en tilbygning, carport, køkkenmontage eller et isoleret/større anneks er et fantastisk projekt. Fordi den endelige pris afhænger stærkt af de specifikke forhold, eksisterende konstruktioner og eventuelle byggetilladelser, er det ikke muligt at give et retvisende overslag gennem en beregner.</p>
+                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}>Større og mere komplekse byggeprojekter kræver altid en besigtigelse. Den endelige pris afhænger nemlig stærkt af de specifikke rammer og forhold på din adresse.</p>
                         <p style={{ fontSize: '1.05rem', marginTop: '16px', color: '#64748b', maxWidth: '550px', marginInline: 'auto', lineHeight: '1.6' }}><strong>Men dit forarbejde er guld værd!</strong> Vi har nu de helt rigtige forudsætninger for at forstå din drøm. Send opgaven ind til os nedenfor, så ringer vi dig op og aftaler et møde.</p>
                     </div>
                 ) : (
@@ -407,12 +407,12 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                         {needsPhysicalInspection ? (
                             <>
                                 <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Få besøg af {carpenter?.company_name || 'os'}</strong>
-                                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Hvis du går videre herfra, sender du blot opgaven til os. Vi kvitterer med en mail og ringer dig op for at aftale et uforpligtende tidspunkt, hvor vi kan komme ud og se på projektet i virkeligheden.</p>
+                                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Går du videre herfra, sender du opgaven direkte til os. Vi ringer dig efterfølgende op for at aftale en besigtigelse, så vi kan give dig en fast pris.</p>
                             </>
                         ) : (
                             <>
                                 <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Er du klar til at vælge {carpenter?.company_name || 'os'}?</strong>
-                                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Overslaget er allerede sendt til din mail, så du kan tænke over det. Hvis du går videre herfra, bekræfter du, at vi skal udføre opgaven for dig. Vi kommer ud og kigger på detaljerne, så vi sammen kan låse den endelige pris og lave en fast aftale.</p>
+                                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Overslaget er sendt til din mail. Går du videre herfra, sender du opgaven til os. Vi kontakter dig for at aftale de sidste detaljer og låse den endelige pris i en aftale.</p>
                             </>
                         )}
                     </div>

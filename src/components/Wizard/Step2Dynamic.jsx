@@ -390,30 +390,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
     };
 
     const handleAutoScroll = (currentQuestionId) => {
-        if (window.innerWidth >= 768) return; // Kun auto-scroll på mobil/tablet
-        
-        const questionsForCategory = QUESTIONS[category] || [];
-        const visibleQuestions = questionsForCategory.filter(q => isVisible(q.condition));
-        
-        const currentIndex = visibleQuestions.findIndex(q => q.id === currentQuestionId);
-        
-        if (currentIndex !== -1 && currentIndex + 1 < visibleQuestions.length) {
-            const nextQuestionId = visibleQuestions[currentIndex + 1].id;
-            
-            setTimeout(() => {
-                const nextEl = questionRefs.current[nextQuestionId];
-                if (nextEl) {
-                    // Vi scroller, men trækker 100px fra toppen for at bevare lidt kontekst
-                    const y = nextEl.getBoundingClientRect().top + window.scrollY - 100;
-                    window.scrollTo({ top: y, behavior: 'smooth' });
-                }
-            }, 400); // 400ms delay giver en følelse af flow, og at de kan nå at se deres valg
-        } else if (currentIndex === visibleQuestions.length - 1) {
-            // Hvis det er det allersidste spørgsmål, scroll helt ned i bunden til Næste-knappen
-            setTimeout(() => {
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            }, 400);
-        }
+        // Auto-scroll er slået fra efter brugerfeedback
     };
 
     const renderQuestion = (q) => {
@@ -505,7 +482,6 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             value={details[q.id] || ''} 
                             onChange={(val) => {
                                 handleInputChange(q.id, val);
-                                handleAutoScroll(q.id);
                             }}
                             options={resolvedOptions}
                             placeholder="-- Vælg en mulighed --"
@@ -522,7 +498,6 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                                 className={`material-card ${details[q.id] === opt.label ? 'selected' : ''}`}
                                 onClick={() => {
                                     handleInputChange(q.id, opt.label);
-                                    handleAutoScroll(q.id);
                                 }}
                                 style={{ position: 'relative' }}
                             >
@@ -584,13 +559,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             min="0"
                             value={details[q.id] !== undefined ? details[q.id] : ''} 
                             onChange={(e) => handleInputChange(q.id, e.target.value === '' ? '' : parseFloat(e.target.value))} 
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    handleAutoScroll(q.id);
-                                }
-                            }}
-                            placeholder={q.placeholder || 'Indtast tal her...'}
+                            placeholder={q.placeholder || 'Skriv her...'}
                             style={{ 
                                 width: '100%', 
                                 padding: '14px 20px', 
@@ -789,13 +758,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         type="text" 
                         value={details[q.id] || ''} 
                         onChange={(e) => handleInputChange(q.id, e.target.value)} 
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAutoScroll(q.id);
-                            }
-                        }}
-                        placeholder={q.placeholder || 'Indtast tekst her...'}
+                        placeholder={q.placeholder || 'Skriv her...'}
                         style={{ 
                             width: '100%', 
                             padding: '14px 20px', 
@@ -1167,7 +1130,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             ) : (
                                 <>
                                     <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Vejledende oplysninger</strong>
-                                    Dine valg af materialer og design er udelukkende vejledende, så vi kan give dig et retvisende prisestimat. Du binder dig ikke til dine valg nu. Vi tager altid en snak om detaljerne og foretager præcise kontrolmål inden en aftale indgås.
+                                    Dine valg giver os et stærkt grundlag for at udregne et retvisende prisestimat. Du binder dig ikke til noget, og vi tager altid en snak og foretager præcise kontrolmål på adressen før en bindende aftale.
                                 </>
                             )}
                         </div>
@@ -1380,65 +1343,6 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 </div>
             </div>
 
-            {onAddAnotherProject && (
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    margin: '16px 0 32px 0',
-                    width: '100%'
-                }}>
-                    <button 
-                        type="button" 
-                        className="wizard-btn" 
-                        onClick={() => onAddAnotherProject(null)} 
-                        style={{ 
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            background: '#ffffff',
-                            color: '#10b981',
-                            border: '1.5px solid #10b981',
-                            borderRadius: '24px',
-                            padding: '8px 20px',
-                            fontWeight: '600',
-                            fontSize: '0.9rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.05)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#ecfdf5';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.15)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#ffffff';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.05)';
-                        }}
-                    >
-                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>+</span>
-                        <span>Tilføj endnu en opgave</span>
-                        <span style={{ 
-                            background: '#10b981', 
-                            color: '#ffffff', 
-                            fontSize: '0.7rem', 
-                            fontWeight: '700', 
-                            padding: '3px 8px', 
-                            borderRadius: '10px', 
-                            marginLeft: '4px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            letterSpacing: '0.2px',
-                            textTransform: 'uppercase'
-                        }}>
-                            Spar kørsel
-                        </span>
-                    </button>
-                </div>
-            )}
-
             {/* Elegant Notes Card (Quiet and matching standard question cards) */}
             <div className="form-group wizard-question-card" style={{ 
                 marginBottom: '32px', 
@@ -1487,7 +1391,44 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 </div>
             </div>
 
-            <div className="actions" style={{ 
+            {isAddingAnotherProject && (
+                <div style={{ marginTop: '24px', marginBottom: '32px', display: 'flex', justifyContent: 'center' }}>
+                    <button 
+                        type="button" 
+                        onClick={handleAddProjectClick}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: '#ffffff',
+                            color: '#10b981',
+                            border: '1.5px solid #10b981',
+                            borderRadius: '24px',
+                            padding: '10px 24px',
+                            fontWeight: '600',
+                            fontSize: '1rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.05)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#ecfdf5';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.15)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#ffffff';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.05)';
+                        }}
+                    >
+                        <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>+</span>
+                        <span>Tilføj endnu en opgave</span>
+                    </button>
+                </div>
+            )}
+
+            <div className="wizard-actions" style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center', 

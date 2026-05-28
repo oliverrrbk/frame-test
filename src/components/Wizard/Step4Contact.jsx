@@ -27,6 +27,24 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
         }
     }, []);
 
+    useEffect(() => {
+        if (zip.length === 4 && /^\d+$/.test(zip)) {
+            fetch(`https://api.dataforsyningen.dk/postnumre/${zip}`)
+                .then(res => {
+                    if (res.ok) return res.json();
+                    throw new Error('Not found');
+                })
+                .then(data => {
+                    if (data && data.navn) {
+                        setCity(data.navn);
+                    }
+                })
+                .catch(() => {
+                    // Ignorer fejl, hvis postnummeret ikke findes
+                });
+        }
+    }, [zip]);
+
     const [autocomplete, setAutocomplete] = useState(null);
     const onLoad = (autoC) => setAutocomplete(autoC);
     
@@ -142,6 +160,10 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
         <section className="wizard-step active contact-step-section" style={{ padding: '0 12px' }}>
             <style>
                 {`
+                .pac-container::after, .pac-logo::after {
+                    display: none !important;
+                    background-image: none !important;
+                }
                 .premium-contact-card {
                     background: rgba(255, 255, 255, 0.85);
                     backdrop-filter: blur(20px);

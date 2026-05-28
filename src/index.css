@@ -1416,3 +1416,4 @@ button:focus-visible {
         gap: 12px !important;
     }
 }
+.pac-logo::after { display: none !important; }
