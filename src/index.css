@@ -1143,7 +1143,20 @@ button:focus-visible {
    ═══════════════════════════════════════ */
 @media (max-width: 768px) {
     .dashboard-layout {
-        flex-direction: column;
+        display: block;
+        min-height: auto;
+    }
+
+    .dashboard-main {
+        display: block;
+        overflow: visible;
+        padding-bottom: 80px;
+        min-height: 100vh;
+    }
+
+    .dashboard-content {
+        overflow-y: visible;
+        padding: 20px 16px;
     }
 
     .dashboard-sidebar {
@@ -1209,14 +1222,6 @@ button:focus-visible {
 
     .sidebar-booking-card {
         display: none !important;
-    }
-
-    .dashboard-main {
-        padding-bottom: 80px;
-    }
-
-    .dashboard-content {
-        padding: 20px 16px;
     }
 
     .dashboard-topbar {
