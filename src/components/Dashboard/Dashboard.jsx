@@ -3266,31 +3266,104 @@ const Dashboard = () => {
                                         {isPriceBasisOpen && (
                                             <div style={{ marginBottom: '24px', padding: '24px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1' }}>
                                                 {(() => {
-                                                    const bArr = selectedLead.raw_data?.breakdownArr || selectedLead.raw_data?.calc_data?.breakdownArr || [];
-                                                    if (bArr.length === 0) {
-                                                        return (
-                                                            <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #94a3b8' }}>
-                                                                <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', lineHeight: '1.6' }}>
-                                                                    <strong>Standard Beregningsgrundlag:</strong><br />
-                                                                    Denne beregning er foretaget automatisk baseret på vores indbyggede branchespecifikke formler. Beregningen tager højde for estimeret arbejdstid, gennemsnitlige materialepriser, forventet spild og nødvendigt tilbehør (såsom beslag og fugematerialer).
-                                                                </p>
-                                                            </div>
-                                                        );
-                                                    }
+                                                    const calc = selectedLead.raw_data?.calc_data;
+                                                    const bArr = selectedLead.raw_data?.breakdownArr || calc?.breakdownArr || [];
+                                                    
                                                     return (
-                                                        <>
-                                                            <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.6' }}>
-                                                                <strong>Systemets detaljerede beregningsgrundlag:</strong><br />
-                                                                Nedenfor kan du se, præcis hvordan systemet har sammensat prisestimatet, og hvilke skjulte omkostninger, tillæg og materialer der er taget højde for.
-                                                            </p>
-                                                            <ul style={{ margin: 0, paddingLeft: '20px', color: '#4b5563', lineHeight: '1.6', fontSize: '0.95rem' }}>
-                                                                {bArr.map((item, idx) => (
-                                                                    <li key={idx} style={{ marginBottom: '8px' }}>
-                                                                        {item.includes('---') ? <strong>{item.replace(/---/g, '').trim()}</strong> : item}
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        </>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                                            {/* GORGEOUS NUMERICAL BREAKDOWN */}
+                                                            {calc && (
+                                                                <div>
+                                                                    <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.6' }}>
+                                                                        <strong>Økonomisk Overblik:</strong><br />
+                                                                        Her er systemets nøjagtige udregning af tidsforbrug og omkostninger, før moms.
+                                                                    </p>
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                                                                        
+                                                                        {/* Arbejdstid Card */}
+                                                                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                            <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                                                Arbejdstid
+                                                                            </div>
+                                                                            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '2px' }}>
+                                                                                {calc.laborHours ? Math.ceil(calc.laborHours) : 0} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#64748b' }}>timer</span>
+                                                                            </div>
+                                                                            <div style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: '500' }}>
+                                                                                {(calc.totalLaborCost || 0).toLocaleString('da-DK')} kr.
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Materialer Card */}
+                                                                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                            <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                                                                                Materialer
+                                                                            </div>
+                                                                            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '2px' }}>
+                                                                                {(calc.materialCost || 0).toLocaleString('da-DK')} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#64748b' }}>kr.</span>
+                                                                            </div>
+                                                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                                                                Inkl. spild & tillæg
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Kørsel & Maskinleje Card */}
+                                                                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                            <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                                                                Kørsel & Maskiner
+                                                                            </div>
+                                                                            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '2px' }}>
+                                                                                {((calc.drivingCost || 0) + (calc.externalLeaseCost || 0)).toLocaleString('da-DK')} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#64748b' }}>kr.</span>
+                                                                            </div>
+                                                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                                                                Logistik udgifter
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Risikobuffer Card */}
+                                                                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                            <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                                                                Tømrer Risikobuffer
+                                                                            </div>
+                                                                            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '2px' }}>
+                                                                                {(calc.hiddenBuffer || 0).toLocaleString('da-DK')} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#64748b' }}>kr.</span>
+                                                                            </div>
+                                                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                                                                Tillæg for uforudset
+                                                                            </div>
+                                                                        </div>
+
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* DETAILED BULLET POINTS / AI SUMMARY */}
+                                                            <div style={{ borderTop: calc ? '1px solid #e2e8f0' : 'none', paddingTop: calc ? '24px' : '0' }}>
+                                                                <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.6' }}>
+                                                                    <strong>Detaljeret opgavebeskrivelse (Beregningens afsæt):</strong><br />
+                                                                    Nedenfor er listet systemets antagelser og bagvedliggende tillæg for opgaven. Dette kan bruges direkte af tømreren som huskeliste eller overblik.
+                                                                </p>
+                                                                
+                                                                {bArr.length === 0 ? (
+                                                                    <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #94a3b8' }}>
+                                                                        <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                                                                            Denne beregning er foretaget automatisk baseret på vores indbyggede branchespecifikke formler. Beregningen tager højde for estimeret arbejdstid, gennemsnitlige materialepriser, forventet spild og nødvendigt tilbehør (såsom beslag og fugematerialer).
+                                                                        </p>
+                                                                    </div>
+                                                                ) : (
+                                                                    <ul style={{ margin: 0, paddingLeft: '20px', color: '#4b5563', lineHeight: '1.6', fontSize: '0.95rem' }}>
+                                                                        {bArr.map((item, idx) => (
+                                                                            <li key={idx} style={{ marginBottom: '8px' }}>
+                                                                                {item.includes('---') ? <strong>{item.replace(/---/g, '').trim()}</strong> : item}
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     );
                                                 })()}
                                             </div>
