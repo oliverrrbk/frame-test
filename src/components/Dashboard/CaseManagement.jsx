@@ -30,6 +30,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     // States til timeregistrering
     const [timeEntries, setTimeEntries] = useState([]);
     const [newTime, setNewTime] = useState({ startTime: '07:00', endTime: '15:00', date: new Date().toISOString().substring(0, 10), desc: '', employeeId: '' });
+    const [deductPause, setDeductPause] = useState(true);
 
     // States til Mesterens ugentlige medarbejder-tidsstyring
     const [selectedEmployeeForTidslog, setSelectedEmployeeForTidslog] = useState('');
@@ -338,6 +339,11 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
             toast.error('Sluttid kan ikke være før starttid');
             return;
         }
+        
+        if (deductPause) {
+            diffHours -= 0.5;
+            if (diffHours < 0) diffHours = 0;
+        }
 
         const entry = {
             id: `time-${Date.now()}`,
@@ -361,9 +367,13 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     const completedTodos = todoList.filter(t => t.done).length;
     const progressPercent = todoList.length > 0 ? Math.round((completedTodos / todoList.length) * 100) : 0;
 
-    // Beregn tidsbudget overholdelse
+    // Beregn tidsbudget overholdelse (inklusive godkendte aftalesedler)
     const totalActualHours = timeEntries.reduce((sum, item) => sum + item.hours, 0);
-    const budgetedHours = parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) || 40; // budget
+    const baseBudgetedHours = parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) || 40; 
+    const totalExtraHours = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraHours || 0), 0);
+    const totalExtraPrice = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraPrice || 0), 0);
+    
+    const budgetedHours = baseBudgetedHours + totalExtraHours;
     const hourBudgetRatio = budgetedHours > 0 ? (totalActualHours / budgetedHours) : 0;
     
     // Anomali: Hvis timer overstiger 80% af budget, men fremskridt er under 50%
@@ -785,43 +795,45 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                             />
                                         </div>
 
-                                        {/* Aftaleseddel Checkbox */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', backgroundColor: isChangeOrder ? '#fff1f2' : '#f8fafc', borderRadius: '8px', border: isChangeOrder ? '1px solid #fecdd3' : '1px solid #e2e8f0' }}>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', color: isChangeOrder ? '#be123c' : '#1e293b' }}>
-                                                <input 
-                                                    type="checkbox"
-                                                    checked={isChangeOrder}
-                                                    onChange={(e) => setIsChangeOrder(e.target.checked)}
-                                                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                                                />
-                                                Opret som Aftaleseddel (Ekstraarbejde)
-                                            </label>
-                                            
-                                            {isChangeOrder && (
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '4px' }}>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        <label style={{ fontSize: '0.75rem', color: '#9f1239' }}>Estimeret ekstra tid (Timer)</label>
-                                                        <input 
-                                                            type="number"
-                                                            value={extraHours}
-                                                            onChange={(e) => setExtraHours(e.target.value)}
-                                                            placeholder="F.eks. 4"
-                                                            style={{ border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
-                                                        />
+                                        {/* Aftaleseddel Checkbox (Kun for Ledelse/PM) */}
+                                        {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', backgroundColor: isChangeOrder ? '#fff1f2' : '#f8fafc', borderRadius: '8px', border: isChangeOrder ? '1px solid #fecdd3' : '1px solid #e2e8f0' }}>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', color: isChangeOrder ? '#be123c' : '#1e293b' }}>
+                                                    <input 
+                                                        type="checkbox"
+                                                        checked={isChangeOrder}
+                                                        onChange={(e) => setIsChangeOrder(e.target.checked)}
+                                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                    />
+                                                    Opret som Aftaleseddel (Ekstraarbejde)
+                                                </label>
+                                                
+                                                {isChangeOrder && (
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '4px' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            <label style={{ fontSize: '0.75rem', color: '#9f1239' }}>Estimeret ekstra tid (Timer)</label>
+                                                            <input 
+                                                                type="number"
+                                                                value={extraHours}
+                                                                onChange={(e) => setExtraHours(e.target.value)}
+                                                                placeholder="F.eks. 4"
+                                                                style={{ border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                                                            />
+                                                        </div>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            <label style={{ fontSize: '0.75rem', color: '#9f1239' }}>Ekstra materialekost (Kr.)</label>
+                                                            <input 
+                                                                type="number"
+                                                                value={extraPrice}
+                                                                onChange={(e) => setExtraPrice(e.target.value)}
+                                                                placeholder="F.eks. 2500"
+                                                                style={{ border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                                                            />
+                                                        </div>
                                                     </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        <label style={{ fontSize: '0.75rem', color: '#9f1239' }}>Ekstra materialekost (Kr.)</label>
-                                                        <input 
-                                                            type="number"
-                                                            value={extraPrice}
-                                                            onChange={(e) => setExtraPrice(e.target.value)}
-                                                            placeholder="F.eks. 2500"
-                                                            style={{ border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {/* Foto-upload simulering */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -859,6 +871,25 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                         <h4 style={{ margin: 0, color: '#1a1a1a' }}>Registrerede arbejdstimer på sagen</h4>
                                         <div style={{ fontSize: '0.9rem', color: '#6b7280' }}>
                                             Samlet timeforbrug: <strong style={{ color: totalActualHours > budgetedHours ? '#ef4444' : '#10b981' }}>{totalActualHours} timer</strong> (Systembudget: {budgetedHours} t)
+                                        </div>
+                                    </div>
+
+                                    {/* BOGHOLDER / ØKONOMI OVERBLIK */}
+                                    <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold' }}>Samlet Tidsforbrug</div>
+                                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#1e293b' }}>{totalActualHours} t</div>
+                                        </div>
+                                        <div style={{ width: '1px', backgroundColor: '#cbd5e1' }}></div>
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Ekstraregning</div>
+                                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#10b981' }}>+ {totalExtraPrice} kr.</div>
+                                        </div>
+                                        <div style={{ width: '1px', backgroundColor: '#cbd5e1' }}></div>
+                                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                            <button onClick={() => window.print()} style={{ padding: '8px 16px', border: '1px solid #cbd5e1', backgroundColor: 'white', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', color: '#334155' }}>
+                                                🖨️ Udskriv Timeseddel
+                                            </button>
                                         </div>
                                     </div>
 
@@ -942,7 +973,17 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                                 />
                                             </div>
                                         </div>
-                                        
+
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#4b5563', cursor: 'pointer' }}>
+                                            <input 
+                                                type="checkbox"
+                                                checked={deductPause}
+                                                onChange={(e) => setDeductPause(e.target.checked)}
+                                                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                            />
+                                            Fratræk 30 min. selvbetalt frokostpause
+                                        </label>
+
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Dato</label>
                                             <input 
