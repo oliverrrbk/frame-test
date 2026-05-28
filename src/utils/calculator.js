@@ -592,37 +592,32 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 let matAdjText = "";
                 
                 if (d.doorStyle !== 'Indvendig dør' && d.material) {
-                    // Vi skalerer tillæggene intelligent med tømreriets egne databasepriser for råmaterialer (SOP #6)
-                    const baseWood = indexCat['Træ'] || 4500;
-                    const baseSolidWood = indexCat['Massivt træ'] || 7500;
-                    const baseAlu = indexCat['Aluminium'] || 8500;
-                    const basePvc = indexCat['PVC / plast'] || 4000;
-                    const baseVeneer = indexCat['Finér'] || 2500;
-                    const baseGlass = indexCat['Glas'] || 9000;
+                    // Vi bruger direkte opslag i kartoteket for at beregne prisforskellen i materialer
+                    const dbTræ = indexCat['Yderdør (Træ)'] || 8500;
+                    const dbTræAlu = indexCat['Yderdør (Træ/Alu)'] || 10500;
+                    const dbFiner = indexCat['Finér'] || 6500;
+                    const dbPvc = indexCat['PVC'] || 4000;
+                    const dbAlu = indexCat['Aluminium'] || 13000;
+                    const dbGlassAdd = 3500; // Tillæg for termoglas
 
                     if (d.material === 'Massivt træ' || d.material === 'Træ (med glas)') {
                         matAdj = 0; // Baseline
                     } else if (d.material === 'Massivt træ og glas') {
-                        // Tillæg for termoglas og udskæring (skalerer med glassets db-pris)
-                        matAdj = 3500 * (baseGlass / 9000);
+                        matAdj = dbGlassAdd;
                     } else if (d.material === 'Finér') {
-                        matAdj = -1500 * (baseVeneer / 2500);
+                        matAdj = dbFiner - dbTræ;
                     } else if (d.material === 'PVC') {
-                        matAdj = -2000 * (basePvc / 4000);
+                        matAdj = dbPvc - dbTræ;
                     } else if (d.material === 'PVC og glas' || d.material === 'PVC / Plast (med glas)') {
-                        matAdj = -1000 * (basePvc / 4000);
+                        matAdj = (dbPvc - dbTræ) + dbGlassAdd;
                     } else if (d.material === 'Aluminium' || d.material === 'Aluminium (med glas)') {
-                        matAdj = 4500 * (baseAlu / 8500);
+                        matAdj = dbAlu - dbTræ;
                     } else if (d.material === 'Træ / Alu (Kombination)' || d.material === 'Træ / Alu (Kombination, med glas)') {
-                        const dbTræAlu = indexCat['Yderdør (Træ/Alu)'] || 10500;
-                        const dbTræ = indexCat['Yderdør (Træ)'] || 8500;
-                        matAdj = dbTræAlu - dbTræ; // Typisk 2.000 kr.
+                        matAdj = dbTræAlu - dbTræ;
                     } else if (d.material === 'Træ / Alu med glas') {
-                        const dbTræAlu = indexCat['Yderdør (Træ/Alu)'] || 10500;
-                        const dbTræ = indexCat['Yderdør (Træ)'] || 8500;
-                        matAdj = (dbTræAlu - dbTræ) + 3500 * (baseGlass / 9000);
+                        matAdj = (dbTræAlu - dbTræ) + dbGlassAdd;
                     } else if (d.material === 'Fuldglas (skydedør)') {
-                        matAdj = 6500 * (baseGlass / 9000);
+                        matAdj = dbGlassAdd * 2;
                     }
 
                     modelPrice += matAdj;

@@ -57,6 +57,7 @@ export const MATERIAL_INDEX = {
         'Stern/Vindskede i Zink (tillæg pr meter)': 180,
         'Stern/Vindskede i Eternit (tillæg pr meter)': 120,
         'Stern/Vindskede i Kobber (tillæg pr meter)': 450,
+        'Stern/Vindskede i Aluminium (tillæg pr meter)': 150,
         'Stern/Vindskede i Træ': 0
     },
     windows: {
@@ -109,10 +110,13 @@ export const MATERIAL_INDEX = {
         // Materialer (tillæg/fradrag i forhold til baseline yderdør)
         'Massivt træ': 0,
         'Massivt træ og glas': 3500,
-        'Finér': -1500,
-        'PVC og glas': -1000,
-        'Aluminium': 4500,
-        'Træ / Alu (Kombination)': 3000,
+        'Yderdør (Træ)': 8500,
+        'Yderdør (Træ/Alu)': 10500,
+        'Finér': 6500,
+        'PVC': 4000,
+        'PVC og glas': 5500,
+        'Aluminium': 13000,
+        'Træ / Alu (Kombination)': 10500,
         
         // Tillæg døre
         'Dørgreb inkl roset': 350,
