@@ -1177,15 +1177,18 @@ button:focus-visible {
     .dashboard-sidebar {
         width: 100% !important;
         height: auto !important;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        top: auto; /* Fixes the full-screen stretching bug */
+        position: fixed !important;
+        bottom: 0 !important;
+        bottom: env(safe-area-inset-bottom) !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
         display: block;
         border-right: none;
         border-top: 1px solid var(--border);
         background: var(--bg-card);
-        z-index: 1000;
+        z-index: 9999 !important; /* Ensure it stays on top of everything */
+        transform: translateZ(0); /* Force hardware acceleration, helps iOS fixed pos */
     }
 
     .dashboard-sidebar:hover {
@@ -1197,13 +1200,14 @@ button:focus-visible {
     }
 
     .sidebar-nav {
+        display: flex;
         flex-direction: row;
-        padding: 8px 12px;
-        gap: 0px; /* Reduced gap so buttons fit on one screen */
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        justify-content: flex-start;
+        padding: 8px 6px;
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+        gap: 0px;
+        overflow-x: visible; /* Prevent clipping */
+        width: 100%;
+        justify-content: space-around; /* Distribute evenly like Instagram */
     }
     
     .sidebar-nav::-webkit-scrollbar {
@@ -1211,14 +1215,18 @@ button:focus-visible {
     }
 
     .sidebar-nav button {
+        width: auto !important; /* CRITICAL: overrides the desktop 100% width */
+        flex: 1; /* CRITICAL: make all buttons share space equally */
         flex-direction: column;
-        padding: 6px 4px; /* Reduced padding */
-        white-space: nowrap;
+        padding: 4px 2px;
+        white-space: normal; /* Let text wrap if needed */
+        text-align: center;
+        line-height: 1.1;
         min-height: auto;
-        font-size: 0.65rem;
-        gap: 2px; /* Tighter gap between icon and text */
-        flex-shrink: 0;
-        min-width: 68px; /* Reduced min-width so they fit */
+        font-size: 0.60rem; /* Slightly smaller text for better fit */
+        gap: 2px;
+        flex-shrink: 1;
+        min-width: 0 !important; /* Allow shrinking */
         justify-content: center;
         background: transparent;
     }
