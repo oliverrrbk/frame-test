@@ -728,7 +728,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 materialCost += winMatCost * dbSettings.material_markup;
                 
                 const totalCount = d.windowsConfig.reduce((acc, w) => acc + (parseInt(w.count) || 1), 0);
-                bArr.push(`Hovedmateriale: Udregnet for ${totalCount} elementer (fordelt på ${d.windowsConfig.length} specifikke grupper). Total materiale-afregning er inkl. ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
+                bArr.push(`Hovedmateriale: Udregnet for ${totalCount} elementer (fordelt på ${d.windowsConfig.length} specifikke grupper). Samlet pris inkl. ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance: ${(winMatCost * dbSettings.material_markup).toLocaleString('da-DK', {maximumFractionDigits: 0})} kr.`);
             } else if (cat === 'windows' && d.windowType === 'Blanding') {
                 let roofCost = indexCat[d.roofMaterial] || 500;
                 let facadeCost = indexCat[d.facadeMaterial] || 500;
@@ -736,12 +736,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 const facadeA = parseInt(d.facadeAmount) || 0;
 
                 materialCost += ((roofA * roofCost) + (facadeA * facadeCost)) * dbSettings.material_markup;
-                bArr.push(`Materialer udregnet (Blanding af tag/facade): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
+                bArr.push(`Hovedmateriale: Blanding af tag/facade. Tag: ${roofA} á ${roofCost} kr. Facade: ${facadeA} á ${facadeCost} kr. Samlet inkl. ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance: ${(((roofA * roofCost) + (facadeA * facadeCost)) * dbSettings.material_markup).toLocaleString('da-DK', {maximumFractionDigits: 0})} kr.`);
             } else {
                 let matPriceDb = indexCat[d.material] || 500;
                 materialCost += (numericAmount * matPriceDb) * dbSettings.material_markup;
                 const matName = d.material || 'Standard materiale';
-                bArr.push(`Hovedmateriale: ${matName} (Grundpris i kartotek: ${matPriceDb} kr. pr. enhed). Total materiale-afregning for opgaven er inkl. ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
+                bArr.push(`Hovedmateriale: ${matName}. Forbrug: ${numericAmount} enhed(er) á ${matPriceDb} kr. = ${(numericAmount * matPriceDb).toLocaleString('da-DK', {maximumFractionDigits: 0})} kr. (Hertil lægges automatisk +${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance)`);
             }
         }
     }

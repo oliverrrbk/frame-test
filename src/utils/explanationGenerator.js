@@ -5,22 +5,22 @@ export const parseBreakdownToExplanation = (calcData, breakdownArr) => {
 
     const categories = {
         labor: {
-            title: '1. Arbejdstid (Montage og Finish)',
+            title: 'Arbejdstid (Montage og Finish)',
             description: 'Systemet beregner ikke bare "en opgave = x timer". Det bygger tidsforbruget op som klodser:',
             items: []
         },
         materials: {
-            title: '2. Hovedmaterialer & Avance',
+            title: 'Hovedmaterialer & Avance',
             description: 'Systemet slår materialet op i kartoteket og bygger prisen:',
             items: []
         },
         accessories: {
-            title: '3. "Skjult" Tilbehør & Bortskaffelse',
+            title: '"Skjult" Tilbehør & Bortskaffelse',
             description: 'For at sikre, at tømreren ikke betaler for tilbehør ud af egen lomme, lægges dette usynligt i kurven:',
             items: []
         },
         logistics: {
-            title: '4. Kørsel, Logistik & Risikobuffer',
+            title: 'Kørsel, Logistik & Risikobuffer',
             description: 'Til sidst kigger systemet på de bløde parametre for at sikre rentabilitet:',
             items: []
         }
@@ -41,7 +41,7 @@ export const parseBreakdownToExplanation = (calcData, breakdownArr) => {
             categories.accessories.items.push(cleanLine);
         }
         // MATERIALS
-        else if (lowerLine.includes('materialer') || lowerLine.includes('premiumkvalitet') || lowerLine.includes('2-farvede profiler') || lowerLine.includes('materialespild')) {
+        else if (lowerLine.includes('hovedmateriale') || lowerLine.includes('materiale') || lowerLine.includes('premiumkvalitet') || lowerLine.includes('2-farvede profiler') || lowerLine.includes('materialespild')) {
             categories.materials.items.push(cleanLine);
         }
         // LABOR (Catch all for hours, montering, finish, etc)

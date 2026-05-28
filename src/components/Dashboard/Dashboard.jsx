@@ -3366,11 +3366,11 @@ const Dashboard = () => {
                                                                                     Systemets "tankegang" brudt ned i tømrer-logik, så I har det fulde belæg bag de estimerede tal.
                                                                                 </p>
                                                                                 
-                                                                                {Object.values(expl).map((cat, idx) => {
-                                                                                    if (cat.items.length === 0) return null;
-                                                                                    return (
+                                                                                {(() => {
+                                                                                    const activeCategories = Object.values(expl).filter(cat => cat.items.length > 0);
+                                                                                    return activeCategories.map((cat, idx) => (
                                                                                         <div key={idx} style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                                                                                            <h4 style={{ margin: '0 0 6px 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: 'bold' }}>{cat.title}</h4>
+                                                                                            <h4 style={{ margin: '0 0 6px 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: 'bold' }}>{idx + 1}. {cat.title}</h4>
                                                                                             <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.85rem' }}>{cat.description}</p>
                                                                                             <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', lineHeight: '1.6', fontSize: '0.9rem' }}>
                                                                                                 {cat.items.map((item, i) => (
@@ -3384,8 +3384,8 @@ const Dashboard = () => {
                                                                                                 ))}
                                                                                             </ul>
                                                                                         </div>
-                                                                                    );
-                                                                                })}
+                                                                                    ));
+                                                                                })()}
                                                                                 
                                                                                 {calc && (
                                                                                     <div style={{ marginTop: '16px', padding: '20px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '2px solid #bbf7d0' }}>
