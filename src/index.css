@@ -1149,10 +1149,14 @@ button:focus-visible {
     .dashboard-sidebar {
         width: 100% !important;
         height: auto;
-        position: relative;
+        position: fixed;
+        bottom: 0;
+        left: 0;
         flex-direction: row;
         border-right: none;
-        border-bottom: 1px solid var(--border);
+        border-top: 1px solid var(--border);
+        background: var(--bg-card);
+        z-index: 1000;
         overflow-x: auto;
     }
 
@@ -1167,15 +1171,48 @@ button:focus-visible {
     .sidebar-nav {
         flex-direction: row;
         padding: 8px 12px;
-        gap: 4px;
+        gap: 8px;
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    
+    .sidebar-nav::-webkit-scrollbar {
+        display: none;
     }
 
     .sidebar-nav button {
-        padding: 10px 14px;
+        flex-direction: column;
+        padding: 6px 8px;
         white-space: nowrap;
         min-height: auto;
-        font-size: 0.8rem;
+        font-size: 0.65rem;
+        gap: 4px;
+        flex-shrink: 0;
+        min-width: 72px;
+        justify-content: center;
+        background: transparent;
+    }
+    
+    .sidebar-nav button svg {
+        width: 24px;
+        height: 24px;
+        padding: 4px;
+        background: transparent;
+        border: none;
+    }
+
+    .sidebar-nav button.active {
+        background: var(--bg-muted);
+        border-radius: 12px;
+    }
+
+    .sidebar-booking-card {
+        display: none !important;
+    }
+
+    .dashboard-main {
+        padding-bottom: 80px;
     }
 
     .dashboard-content {
@@ -1191,7 +1228,7 @@ button:focus-visible {
     }
 
     .mobile-menu {
-        display: block;
+        display: none;
     }
 }
 
@@ -1417,3 +1454,57 @@ button:focus-visible {
     }
 }
 .pac-logo::after { display: none !important; }
+
+/* ═══════════════════════════════════════
+   DASHBOARD OVERVIEW SPECIFIC MOBILE FIXES
+   ═══════════════════════════════════════ */
+.overview-metrics-sidebar {
+    width: 100%;
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-light);
+    background: var(--bg-card);
+}
+
+.overview-chart-area {
+    flex: 1;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    min-width: 400px;
+}
+
+.timeframe-filters {
+    display: flex;
+    gap: 8px;
+    background: rgba(255,255,255,0.4);
+    padding: 6px;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+@media (max-width: 768px) {
+    .overview-metrics-sidebar {
+        max-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-light);
+    }
+    .overview-chart-area {
+        padding: 16px;
+        min-width: 100%;
+    }
+    .timeframe-filters {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        width: 100%;
+    }
+    .timeframe-filters::-webkit-scrollbar {
+        display: none;
+    }
+    .timeframe-filters button {
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+}

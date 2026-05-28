@@ -222,7 +222,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
             <div className="glass-panel" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', minHeight: '600px', overflow: 'hidden' }}>
                 
                 {/* Left Area - Metric Selection (Acts like tabs) */}
-                <div style={{ width: '100%', maxWidth: '320px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-light)', background: 'var(--bg-card)' }}>
+                <div className="overview-metrics-sidebar">
                     <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--border-light)' }}>
                         <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>Nøgletal</h3>
                     </div>
@@ -275,7 +275,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                 </div>
 
                 {/* Right Area - Chart */}
-                <div style={{ flex: 1, padding: '32px', display: 'flex', flexDirection: 'column', minWidth: '400px' }}>
+                <div className="overview-chart-area">
                     <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                         <div>
                             <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -287,7 +287,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                             <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Viser udviklingen for {metrics[selectedMetric].label.toLowerCase()} i den valgte periode.</p>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.4)', padding: '6px', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
+                        <div className="timeframe-filters">
                             {[
                                 { id: '7d', label: 'Seneste 7 dage' },
                                 { id: '30d', label: 'Seneste 30 dage' },
