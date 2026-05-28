@@ -111,16 +111,115 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
     };
 
     return (
-        <section className="wizard-step active contact-step-section">
-            <div className="step-header">
+        <section className="wizard-step active contact-step-section" style={{ padding: '0 12px' }}>
+            <style>
+                {`
+                .premium-contact-card {
+                    background: rgba(255, 255, 255, 0.85);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border-radius: 24px;
+                    border: 1px solid rgba(255, 255, 255, 0.6);
+                    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+                    padding: 32px;
+                    margin-bottom: 32px;
+                }
+                .premium-input {
+                    width: 100%;
+                    padding: 16px 20px;
+                    border-radius: 16px;
+                    border: 2px solid #e2e8f0;
+                    font-size: 1rem;
+                    background: #f8fafc;
+                    color: #0f172a;
+                    font-weight: 500;
+                    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                    min-height: 56px;
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+                }
+                .premium-input:focus {
+                    background: #ffffff;
+                    border-color: #3b82f6;
+                    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+                    outline: none;
+                }
+                .premium-input::placeholder {
+                    color: #94a3b8;
+                    font-weight: 400;
+                }
+                .premium-label {
+                    font-weight: 700;
+                    display: block;
+                    margin-bottom: 10px;
+                    font-size: 0.95rem;
+                    color: #334155;
+                    letter-spacing: -0.01em;
+                }
+                .premium-grid {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 24px;
+                }
+                .premium-grid-dual {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                    gap: 24px;
+                }
+                .premium-gdpr {
+                    background: linear-gradient(145deg, #f8fafc, #f1f5f9);
+                    border: 1px solid #e2e8f0;
+                    padding: 20px;
+                    border-radius: 20px;
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 16px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                .premium-gdpr:hover {
+                    border-color: #cbd5e1;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+                }
+                .premium-checkbox {
+                    width: 24px;
+                    height: 24px;
+                    margin-top: 2px;
+                    cursor: pointer;
+                    accent-color: #3b82f6;
+                    flex-shrink: 0;
+                }
+                @media (max-width: 600px) {
+                    .premium-contact-card {
+                        padding: 24px 20px;
+                        border-radius: 20px;
+                    }
+                    .premium-input {
+                        padding: 14px 16px;
+                        font-size: 16px; /* Forhindrer iOS zoom */
+                        min-height: 52px;
+                    }
+                    .premium-gdpr {
+                        padding: 16px;
+                        border-radius: 16px;
+                    }
+                    .step-header h2 {
+                        font-size: 1.7rem !important;
+                    }
+                    .step-header p {
+                        font-size: 1rem !important;
+                    }
+                }
+                `}
+            </style>
+            <div className="step-header" style={{ textAlign: 'center', marginBottom: '32px' }}>
                 <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>Kontaktoplysninger</h2>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>For at jeg kan kontakte dig med dit personlige overslag, skal jeg bruge et par oplysninger om dig.</p>
             </div>
             
-            <div className="form-group contact-form-card" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '32px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                <div className="form-grid">
-                    <div className="form-group" style={{ marginBottom: '20px' }}>
-                        <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Fulde navn <span style={{ color: '#ef4444' }}>*</span></label>
+            <div className="premium-contact-card">
+                <div className="premium-grid">
+                    <div>
+                        <label className="premium-label">Fulde navn <span style={{ color: '#ef4444' }}>*</span></label>
                         <input 
                             type="text" 
                             name="name"
@@ -130,13 +229,12 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                             onChange={(e) => setFullName(e.target.value)} 
                             ref={nameInputRef}
                             onKeyDown={handleKeyDown}
-                            style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
-                            onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
-                            onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                            className="premium-input"
                         />
                     </div>
-                    <div className="form-group" style={{ position: 'relative', marginBottom: '20px' }}>
-                        <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Vejnavn og Husnummer <span style={{ color: '#ef4444' }}>*</span></label>
+                    
+                    <div style={{ position: 'relative' }}>
+                        <label className="premium-label">Vejnavn og Husnummer <span style={{ color: '#ef4444' }}>*</span></label>
                         {window.google && window.google.maps && window.google.maps.places ? (
                             <Autocomplete 
                                 onLoad={onLoad} 
@@ -154,9 +252,8 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                     placeholder="Søg på din adresse (fx Skovvejen 15)" 
                                     value={street} 
                                     onChange={(e) => setStreet(e.target.value)} 
-                                    style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--accent)', fontSize: '1rem', background: '#f0f9ff', transition: 'var(--transition-fast)' }}
-                                    onFocus={(e) => { e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)'; }}
-                                    onBlur={(e) => { e.target.style.boxShadow = 'none'; }}
+                                    className="premium-input"
+                                    style={{ borderColor: '#bfdbfe', background: '#eff6ff' }}
                                     onKeyDown={(e) => {
                                         if(e.key === 'Enter') e.preventDefault();
                                     }}
@@ -170,18 +267,21 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 placeholder="Skovvejen 15" 
                                 value={street} 
                                 onChange={(e) => setStreet(e.target.value)} 
-                                style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
-                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
-                                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                                className="premium-input"
                             />
                         )}
-                        <span style={{ fontSize: '0.8rem', color: '#10b981', position: 'absolute', bottom: '-22px', left: '4px', fontWeight: '500' }}>✓ Google Maps integreret for hurtig indtastning</span>
+                        <span style={{ fontSize: '0.75rem', color: '#10b981', position: 'absolute', bottom: '-20px', left: '4px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Google Maps integration
+                        </span>
                     </div>
-                    <div className="form-grid dual" style={{ marginBottom: '20px', marginTop: '28px' }}>
-                        <div className="form-group">
-                            <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Postnummer <span style={{ color: '#ef4444' }}>*</span></label>
+
+                    <div className="premium-grid-dual" style={{ marginTop: '12px' }}>
+                        <div>
+                            <label className="premium-label">Postnummer <span style={{ color: '#ef4444' }}>*</span></label>
                             <input 
                                 type="text" 
+                                inputMode="numeric"
                                 name="postal-code"
                                 autoComplete="postal-code"
                                 placeholder="8000" 
@@ -189,13 +289,11 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 onChange={(e) => setZip(e.target.value)} 
                                 onKeyDown={handleKeyDown}
                                 maxLength="4" 
-                                style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
-                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
-                                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                                className="premium-input"
                             />
                         </div>
-                        <div className="form-group">
-                            <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>By <span style={{ color: '#ef4444' }}>*</span></label>
+                        <div>
+                            <label className="premium-label">By <span style={{ color: '#ef4444' }}>*</span></label>
                             <input 
                                 type="text" 
                                 name="address-level2"
@@ -204,15 +302,14 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 value={city} 
                                 onChange={(e) => setCity(e.target.value)} 
                                 onKeyDown={handleKeyDown}
-                                style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
-                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
-                                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                                className="premium-input"
                             />
                         </div>
                     </div>
-                    <div className="form-grid dual" style={{ marginBottom: 0 }}>
-                        <div className="form-group">
-                            <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>Telefon <span style={{ color: '#ef4444' }}>*</span></label>
+
+                    <div className="premium-grid-dual">
+                        <div>
+                            <label className="premium-label">Telefon <span style={{ color: '#ef4444' }}>*</span></label>
                             <input 
                                 type="tel" 
                                 name="tel"
@@ -221,13 +318,11 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 value={phone} 
                                 onChange={handlePhoneChange} 
                                 onKeyDown={handleKeyDown}
-                                style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
-                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
-                                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                                className="premium-input"
                             />
                         </div>
-                        <div className="form-group">
-                            <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', fontSize: '1.05rem', color: 'var(--text-primary)' }}>E-mail <span style={{ color: '#ef4444' }}>*</span></label>
+                        <div>
+                            <label className="premium-label">E-mail <span style={{ color: '#ef4444' }}>*</span></label>
                             <input 
                                 type="email" 
                                 name="email"
@@ -236,9 +331,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 value={email} 
                                 onChange={(e) => setEmail(e.target.value)} 
                                 onKeyDown={handleKeyDown}
-                                style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.8)', transition: 'var(--transition-fast)' }}
-                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 4px rgba(17, 17, 17, 0.05)'; }}
-                                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+                                className="premium-input"
                             />
                         </div>
                     </div>
@@ -246,22 +339,53 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
             </div>
             
             {/* NY: GDPR Checkbox før actions */}
-            <div className="gdpr-checkbox-container" style={{ marginTop: '24px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', background: 'var(--bg-muted)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }} onClick={() => setAcceptedTerms(!acceptedTerms)}>
+            <div className="premium-gdpr" onClick={() => setAcceptedTerms(!acceptedTerms)}>
                 <input 
                     type="checkbox" 
                     checked={acceptedTerms} 
                     onChange={() => setAcceptedTerms(!acceptedTerms)}
-                    style={{ width: '20px', height: '20px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--accent)' }}
+                    className="premium-checkbox"
                 />
-                <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569', lineHeight: '1.6' }}>
                     Jeg accepterer, at mine indtastede oplysninger gemmes og behandles med det formål at modtage et estimat, samt at jeg kan blive kontaktet af det pågældende tømrerfirma i forbindelse med min forespørgsel.
                 </p>
             </div>
             
-            <div className="actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
-                <button className="wizard-btn wizard-btn-secondary" onClick={prevStep}>← Tilbage</button>
-                <button className="wizard-btn wizard-btn-primary" onClick={handleCalculate} style={{ boxShadow: '0 10px 25px rgba(59,130,246,0.3)' }}>
-                    Vis Mit Overslag →
+            <div className="actions" style={{ display: 'flex', flexDirection: 'column-reverse', gap: '16px', marginTop: '40px' }}>
+                {/* På mobil vendes retningen om med column-reverse så "Vis Mit Overslag" er øverst, men på desktop skal de stå ved siden af hinanden */}
+                <style>
+                    {`
+                    @media (min-width: 600px) {
+                        .actions {
+                            flex-direction: row !important;
+                            justify-content: space-between;
+                            align-items: center;
+                        }
+                        .wizard-btn-primary {
+                            width: auto !important;
+                        }
+                        .wizard-btn-secondary {
+                            width: auto !important;
+                        }
+                    }
+                    .wizard-btn-primary {
+                        width: 100%;
+                        justify-content: center;
+                        padding: 18px !important;
+                        font-size: 1.1rem !important;
+                        border-radius: 16px !important;
+                    }
+                    .wizard-btn-secondary {
+                        width: 100%;
+                        justify-content: center;
+                        padding: 16px !important;
+                        border-radius: 16px !important;
+                    }
+                    `}
+                </style>
+                <button className="wizard-btn wizard-btn-secondary" onClick={prevStep}>← Tilbage til opgaver</button>
+                <button className="wizard-btn wizard-btn-primary" onClick={handleCalculate} style={{ boxShadow: '0 10px 30px -10px rgba(59,130,246,0.5)' }}>
+                    Vis Mit Prisoverslag Nu →
                 </button>
             </div>
         </section>
