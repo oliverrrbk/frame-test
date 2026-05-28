@@ -322,10 +322,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 className="premium-input"
                             />
                         )}
-                        <span style={{ fontSize: '0.75rem', color: '#10b981', position: 'absolute', bottom: '-20px', left: '4px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            Google Maps integration
-                        </span>
+
                     </div>
 
                     <div className="premium-grid-dual" style={{ marginTop: '12px' }}>

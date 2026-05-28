@@ -559,7 +559,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             min="0"
                             value={details[q.id] !== undefined ? details[q.id] : ''} 
                             onChange={(e) => handleInputChange(q.id, e.target.value === '' ? '' : parseFloat(e.target.value))} 
-                            placeholder={q.placeholder || 'Skriv her...'}
+                            placeholder="Skriv her..."
                             style={{ 
                                 width: '100%', 
                                 padding: '14px 20px', 
@@ -758,7 +758,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         type="text" 
                         value={details[q.id] || ''} 
                         onChange={(e) => handleInputChange(q.id, e.target.value)} 
-                        placeholder={q.placeholder || 'Skriv her...'}
+                        placeholder="Skriv her..."
                         style={{ 
                             width: '100%', 
                             padding: '14px 20px', 
@@ -780,7 +780,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                     <textarea 
                         value={details[q.id] || ''} 
                         onChange={(e) => handleInputChange(q.id, e.target.value)} 
-                        placeholder={q.placeholder || ''}
+                        placeholder="Skriv her..."
                         rows={4}
                         style={{ 
                             width: '100%', 
