@@ -12,6 +12,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
     const [openTooltips, setOpenTooltips] = React.useState({});
     const [zoomedImage, setZoomedImage] = React.useState(null);
     const [showSketcher, setShowSketcher] = React.useState(false);
+    const questionRefs = useRef({});
     const isMouseDown = React.useRef(false);
     const touchStartX = React.useRef(null);
 
@@ -388,6 +389,33 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
         }
     };
 
+    const handleAutoScroll = (currentQuestionId) => {
+        if (window.innerWidth >= 768) return; // Kun auto-scroll på mobil/tablet
+        
+        const questionsForCategory = QUESTIONS[category] || [];
+        const visibleQuestions = questionsForCategory.filter(q => isVisible(q.condition));
+        
+        const currentIndex = visibleQuestions.findIndex(q => q.id === currentQuestionId);
+        
+        if (currentIndex !== -1 && currentIndex + 1 < visibleQuestions.length) {
+            const nextQuestionId = visibleQuestions[currentIndex + 1].id;
+            
+            setTimeout(() => {
+                const nextEl = questionRefs.current[nextQuestionId];
+                if (nextEl) {
+                    // Vi scroller, men trækker 100px fra toppen for at bevare lidt kontekst
+                    const y = nextEl.getBoundingClientRect().top + window.scrollY - 100;
+                    window.scrollTo({ top: y, behavior: 'smooth' });
+                }
+            }, 400); // 400ms delay giver en følelse af flow, og at de kan nå at se deres valg
+        } else if (currentIndex === visibleQuestions.length - 1) {
+            // Hvis det er det allersidste spørgsmål, scroll helt ned i bunden til Næste-knappen
+            setTimeout(() => {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }, 400);
+        }
+    };
+
     const renderQuestion = (q) => {
         if (!isVisible(q.condition)) return null;
 
@@ -397,7 +425,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
         const resolvedOptions = typeof q.options === 'function' ? q.options(details) : (q.options || []);
 
         return (
-            <div key={q.id} className="form-group wizard-question-card" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+            <div key={q.id} ref={el => questionRefs.current[q.id] = el} className="form-group wizard-question-card" style={{ marginBottom: '32px', background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: q.subLabel ? '4px' : '12px' }}>
                     <label style={{ fontWeight: '700', margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
                         {q.label}
@@ -475,7 +503,10 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                     <div style={{ position: 'relative' }}>
                         <CustomSelect 
                             value={details[q.id] || ''} 
-                            onChange={(val) => handleInputChange(q.id, val)}
+                            onChange={(val) => {
+                                handleInputChange(q.id, val);
+                                handleAutoScroll(q.id);
+                            }}
                             options={resolvedOptions}
                             placeholder="-- Vælg en mulighed --"
                             style={{ width: '100%' }}
@@ -489,7 +520,10 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             <div 
                                 key={idx} 
                                 className={`material-card ${details[q.id] === opt.label ? 'selected' : ''}`}
-                                onClick={() => handleInputChange(q.id, opt.label)}
+                                onClick={() => {
+                                    handleInputChange(q.id, opt.label);
+                                    handleAutoScroll(q.id);
+                                }}
                                 style={{ position: 'relative' }}
                             >
                                 {opt.img && (
@@ -550,7 +584,12 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                             min="0"
                             value={details[q.id] !== undefined ? details[q.id] : ''} 
                             onChange={(e) => handleInputChange(q.id, e.target.value === '' ? '' : parseFloat(e.target.value))} 
-                            onKeyDown={handleKeyDown}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAutoScroll(q.id);
+                                }
+                            }}
                             placeholder={q.placeholder || 'Indtast tal her...'}
                             style={{ 
                                 width: '100%', 
@@ -750,7 +789,12 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                         type="text" 
                         value={details[q.id] || ''} 
                         onChange={(e) => handleInputChange(q.id, e.target.value)} 
-                        onKeyDown={handleKeyDown}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAutoScroll(q.id);
+                            }
+                        }}
                         placeholder={q.placeholder || 'Indtast tekst her...'}
                         style={{ 
                             width: '100%', 

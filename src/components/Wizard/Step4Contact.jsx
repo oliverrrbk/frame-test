@@ -11,6 +11,14 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
     const [acceptedTerms, setAcceptedTerms] = useState(!!prefillData); // Accept default if prefilled
     
     const nameInputRef = useRef(null);
+    const inputRefs = useRef({
+        address: null,
+        zip: null,
+        city: null,
+        tel: null,
+        email: null,
+        gdpr: null
+    });
 
     useEffect(() => {
         // Autofokus på navn feltet når trinnet indlæses
@@ -43,8 +51,12 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                 if (route) setStreet(`${route} ${streetNumber}`.trim());
                 if (postalCode) setZip(postalCode);
                 if (locality) setCity(locality);
+
+                // Auto-scroll ned til postnummer feltet (kun på mobil)
+                scrollToNext('zip');
             } else if (place && place.name) {
                 setStreet(place.name); 
+                scrollToNext('zip');
             }
         }
     };
@@ -103,10 +115,26 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
         });
     };
 
-    const handleKeyDown = (e) => {
+    const scrollToNext = (fieldId) => {
+        if (window.innerWidth >= 768) return; // Kun auto-scroll på mobil/tablet
+        
+        setTimeout(() => {
+            const el = inputRefs.current[fieldId];
+            if (el) {
+                const y = el.getBoundingClientRect().top + window.scrollY - 120; // 120px offset for kontekst
+                window.scrollTo({ top: y, behavior: 'smooth' });
+            }
+        }, 300);
+    };
+
+    const handleKeyDown = (e, nextFieldId = null) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            handleCalculate();
+            if (nextFieldId) {
+                scrollToNext(nextFieldId);
+            } else {
+                handleCalculate();
+            }
         }
     };
 
@@ -228,12 +256,12 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                             value={fullName} 
                             onChange={(e) => setFullName(e.target.value)} 
                             ref={nameInputRef}
-                            onKeyDown={handleKeyDown}
+                            onKeyDown={(e) => handleKeyDown(e, 'address')}
                             className="premium-input"
                         />
                     </div>
                     
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative' }} ref={el => inputRefs.current.address = el}>
                         <label className="premium-label">Vejnavn og Husnummer <span style={{ color: '#ef4444' }}>*</span></label>
                         {window.google && window.google.maps && window.google.maps.places ? (
                             <Autocomplete 
@@ -267,6 +295,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 placeholder="Skovvejen 15" 
                                 value={street} 
                                 onChange={(e) => setStreet(e.target.value)} 
+                                onKeyDown={(e) => handleKeyDown(e, 'zip')}
                                 className="premium-input"
                             />
                         )}
@@ -277,7 +306,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                     </div>
 
                     <div className="premium-grid-dual" style={{ marginTop: '12px' }}>
-                        <div>
+                        <div ref={el => inputRefs.current.zip = el}>
                             <label className="premium-label">Postnummer <span style={{ color: '#ef4444' }}>*</span></label>
                             <input 
                                 type="text" 
@@ -287,12 +316,12 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 placeholder="8000" 
                                 value={zip} 
                                 onChange={(e) => setZip(e.target.value)} 
-                                onKeyDown={handleKeyDown}
+                                onKeyDown={(e) => handleKeyDown(e, 'city')}
                                 maxLength="4" 
                                 className="premium-input"
                             />
                         </div>
-                        <div>
+                        <div ref={el => inputRefs.current.city = el}>
                             <label className="premium-label">By <span style={{ color: '#ef4444' }}>*</span></label>
                             <input 
                                 type="text" 
@@ -301,14 +330,14 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 placeholder="Aarhus C" 
                                 value={city} 
                                 onChange={(e) => setCity(e.target.value)} 
-                                onKeyDown={handleKeyDown}
+                                onKeyDown={(e) => handleKeyDown(e, 'tel')}
                                 className="premium-input"
                             />
                         </div>
                     </div>
 
                     <div className="premium-grid-dual">
-                        <div>
+                        <div ref={el => inputRefs.current.tel = el}>
                             <label className="premium-label">Telefon <span style={{ color: '#ef4444' }}>*</span></label>
                             <input 
                                 type="tel" 
@@ -317,11 +346,11 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 placeholder="+45 20 30 40 50" 
                                 value={phone} 
                                 onChange={handlePhoneChange} 
-                                onKeyDown={handleKeyDown}
+                                onKeyDown={(e) => handleKeyDown(e, 'email')}
                                 className="premium-input"
                             />
                         </div>
-                        <div>
+                        <div ref={el => inputRefs.current.email = el}>
                             <label className="premium-label">E-mail <span style={{ color: '#ef4444' }}>*</span></label>
                             <input 
                                 type="email" 
@@ -330,7 +359,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                                 placeholder="din@mail.dk" 
                                 value={email} 
                                 onChange={(e) => setEmail(e.target.value)} 
-                                onKeyDown={handleKeyDown}
+                                onKeyDown={(e) => handleKeyDown(e, 'gdpr')}
                                 className="premium-input"
                             />
                         </div>
@@ -339,7 +368,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
             </div>
             
             {/* NY: GDPR Checkbox før actions */}
-            <div className="premium-gdpr" onClick={() => setAcceptedTerms(!acceptedTerms)}>
+            <div className="premium-gdpr" ref={el => inputRefs.current.gdpr = el} onClick={() => setAcceptedTerms(!acceptedTerms)}>
                 <input 
                     type="checkbox" 
                     checked={acceptedTerms} 
