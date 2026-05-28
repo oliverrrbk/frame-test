@@ -71,6 +71,10 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
 
             const contactPreferenceStr = isAsap ? 'Hurtigst muligt' : `${selectedDays.join(', ')} (${selectedTime})`;
 
+            const customerName = projectData.customerDetails?.name || 'Ukendt Kunde';
+            const customerEmail = projectData.customerDetails?.email || 'Ukendt';
+            const customerPhone = projectData.customerDetails?.phone || 'Ukendt';
+
             // Vi opdaterer den eksisterende lead, der blev oprettet som kladde
             let newLeadId = projectData.leadId;
             if (newLeadId) {
