@@ -129,7 +129,7 @@ const MAP_LIBRARIES = ['places'];
 
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import Lenis from 'lenis';
 
 const AnimatedRoutes = ({ session, setSession }) => {
