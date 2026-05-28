@@ -3386,21 +3386,24 @@ const Dashboard = () => {
                                                                                 })}
                                                                                 
                                                                                 {calc && (
-                                                                                    <div style={{ marginTop: '12px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
-                                                                                        <h4 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: 'bold' }}>Resultat (Ekskl. moms)</h4>
-                                                                                        <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.85rem' }}>Når systemet lægger alt dette sammen:</p>
-                                                                                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', lineHeight: '1.6', fontSize: '0.9rem', marginBottom: '12px' }}>
-                                                                                            <li>Arbejdsløn (~{(calc.totalLaborCost || 0).toLocaleString('da-DK')} kr.)</li>
-                                                                                            <li>Materialer (~{(calc.materialCost || 0).toLocaleString('da-DK')} kr.)</li>
+                                                                                    <div style={{ marginTop: '16px', padding: '20px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '2px solid #bbf7d0' }}>
+                                                                                        <h4 style={{ margin: '0 0 8px 0', color: '#166534', fontSize: '1.05rem', fontWeight: 'bold' }}>Samlet Investering (Ekskl. moms)</h4>
+                                                                                        <p style={{ margin: '0 0 12px 0', color: '#166534', fontSize: '0.9rem' }}>Beregningen er opsat ud fra følgende summer:</p>
+                                                                                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#15803d', lineHeight: '1.6', fontSize: '0.95rem', marginBottom: '16px' }}>
+                                                                                            <li><strong>Arbejdsløn:</strong> ~{(calc.totalLaborCost || 0).toLocaleString('da-DK')} kr.</li>
+                                                                                            <li><strong>Materialer:</strong> ~{(calc.materialCost || 0).toLocaleString('da-DK')} kr.</li>
                                                                                             {((calc.drivingCost || 0) + (calc.externalLeaseCost || 0) > 0) && (
-                                                                                                <li>Kørsel & Maskinleje (~{((calc.drivingCost || 0) + (calc.externalLeaseCost || 0)).toLocaleString('da-DK')} kr.)</li>
+                                                                                                <li><strong>Kørsel & Maskinleje:</strong> ~{((calc.drivingCost || 0) + (calc.externalLeaseCost || 0)).toLocaleString('da-DK')} kr.</li>
                                                                                             )}
                                                                                             {(calc.hiddenBuffer > 0) && (
-                                                                                                <li>Logistik & Buffer (~{(calc.hiddenBuffer || 0).toLocaleString('da-DK')} kr.)</li>
+                                                                                                <li><strong>Logistik & Buffer:</strong> ~{(calc.hiddenBuffer || 0).toLocaleString('da-DK')} kr.</li>
                                                                                             )}
                                                                                         </ul>
-                                                                                        <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '12px', color: '#0f172a', fontSize: '1rem', fontWeight: 'bold' }}>
-                                                                                            Systemet runder afslutningsvist overslaget ekskl. moms op til nærmeste pæne hele tusinde – i dette scenarie lander den på præcis {Math.ceil(calc.strictPrice / 1000) * 1000} kr. ekskl. moms.
+                                                                                        <div style={{ borderTop: '2px dashed #bbf7d0', paddingTop: '16px', color: '#166534', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                                                                            Systemet runder afslutningsvist overslaget op til nærmeste pæne hele tusinde – i dette scenarie lander den på præcis {Math.ceil(calc.strictPrice / 1000) * 1000} kr.
+                                                                                        </div>
+                                                                                        <div style={{ marginTop: '12px', fontSize: '0.85rem', color: '#dc2626', fontWeight: 'bold' }}>
+                                                                                            Vigtigt: Alle ovenstående beløb og summer er angivet eksklusive moms. Kørsel og logistik indeholder slidtage på biler samt din indtastede risikobuffer.
                                                                                         </div>
                                                                                     </div>
                                                                                 )}

@@ -732,7 +732,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 materialCost += winMatCost * dbSettings.material_markup;
                 
                 const totalCount = d.windowsConfig.reduce((acc, w) => acc + (parseInt(w.count) || 1), 0);
-                bArr.push(`Materialer udregnet for ${totalCount} elementer (fordelt på ${d.windowsConfig.length} gruppe(r)): ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
+                bArr.push(`Hovedmateriale: Udregnet for ${totalCount} elementer (fordelt på ${d.windowsConfig.length} specifikke grupper). Total materiale-afregning er inkl. ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
             } else if (cat === 'windows' && d.windowType === 'Blanding') {
                 let roofCost = indexCat[d.roofMaterial] || 500;
                 let facadeCost = indexCat[d.facadeMaterial] || 500;
@@ -744,7 +744,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             } else {
                 let matPriceDb = indexCat[d.material] || 500;
                 materialCost += (numericAmount * matPriceDb) * dbSettings.material_markup;
-                bArr.push(`Materialer afregnet inkl. tillæg: ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
+                const matName = d.material || 'Standard materiale';
+                bArr.push(`Hovedmateriale: ${matName} (Grundpris i kartotek: ${matPriceDb} kr. pr. enhed). Total materiale-afregning for opgaven er inkl. ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance`);
             }
         }
     }
