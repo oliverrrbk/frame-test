@@ -2818,6 +2818,8 @@ const Dashboard = () => {
                                                         'doorType': 'Dørtype',
                                                         'doorStyle': 'Dørstil',
                                                         'doorModel': 'Dørmodel',
+                                                        'electricLock': 'Elektrisk lås / Smart-lock',
+                                                        'doorHinge': 'Dørhængsling (Indad/Udad)',
                                                         'windowAmount': 'Antal vinduer',
                                                         'additionalNotes': 'Ekstra noter',
                                                         'subProjectCount': 'Antal delprojekter',

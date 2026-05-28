@@ -432,7 +432,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         } else {
             let baseHours = numericAmount * (formula.exteriorDoorHours || 7.0);
             laborHours += baseHours;
-            bArr.push(`Basis montering: ${numericAmount} yder-/terrassedøre vurderet til ca. ${baseHours.toFixed(1)} arbejdstimer`);
+            const doorName = d.doorModel ? d.doorModel.toLowerCase() : 'udvendig dør';
+            bArr.push(`Basis montering: ${numericAmount} ${doorName} vurderet til ca. ${baseHours.toFixed(1)} arbejdstimer`);
             
             // Tømrer-audit: Special/dobbeltdøre tager væsentligt længere tid at bakse med og justere
             if (d.doorModel === 'Special/Dobbelt terrassedør') {
