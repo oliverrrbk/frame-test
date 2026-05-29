@@ -845,6 +845,17 @@ p {
     .delivery-info-grid {
         grid-template-columns: 1fr !important;
     }
+    .delivery-info-grid > div {
+        grid-column: span 1 !important;
+    }
+    .material-list-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 16px;
+    }
+    .material-list-header strong {
+        text-align: center;
+    }
     .material-row-grid {
         display: grid !important;
         grid-template-columns: 1fr 1fr 2fr auto !important;
@@ -882,6 +893,37 @@ p {
     grid-template-columns: 2fr 1fr;
     gap: 8px;
 }
+
+.pdf-preview-container {
+    width: 210mm;
+    min-height: 297mm;
+    background-color: #ffffff;
+    position: relative;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+}
+.pdf-action-bar {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #1e293b;
+    padding: 16px 24px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    z-index: 10001;
+    width: auto;
+}
+.pdf-action-buttons {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
 @media (max-width: 768px) {
     .quote-builder-grid {
         grid-template-columns: 1fr !important;
@@ -889,6 +931,28 @@ p {
     .quote-custom-line-grid {
         grid-template-columns: 1fr !important;
         gap: 12px !important;
+    }
+    .pdf-preview-wrapper {
+        padding: 20px 10px !important;
+        padding-bottom: 250px !important;
+    }
+    .pdf-preview-container {
+        transform-origin: top center;
+        transform: scale(0.45);
+        margin-bottom: -500px; /* Offset scaled height so it doesn't leave huge gap */
+    }
+    .pdf-action-bar {
+        bottom: 0 !important;
+        width: 100% !important;
+        border-radius: 20px 20px 0 0 !important;
+        padding: 20px 16px 30px 16px !important;
+    }
+    .pdf-action-buttons {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+    .pdf-action-buttons button {
+        width: 100% !important;
     }
 }
 

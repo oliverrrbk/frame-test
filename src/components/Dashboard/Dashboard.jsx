@@ -3677,25 +3677,29 @@ const Dashboard = () => {
 
                                                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                             {(quoteBuilder.customLines || []).map((line, idx) => (
-                                                                <div key={idx} className="quote-custom-line-grid" style={{ alignItems: 'center' }}>
+                                                                <div key={idx} className="quote-builder-grid" style={{ alignItems: 'flex-start', position: 'relative', border: '1px dashed #cbd5e1', padding: '12px', borderRadius: '8px' }}>
                                                                     <div className="input-group">
+                                                                        <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Ekstra ydelse / Vare</label>
                                                                         <input type="text" placeholder="F.eks. Leje af stillads" value={line.description} onChange={(e) => {
                                                                             const newLines = [...quoteBuilder.customLines];
                                                                             newLines[idx].description = e.target.value;
                                                                             setQuoteBuilder({...quoteBuilder, customLines: newLines});
                                                                         }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                                     </div>
-                                                                    <div className="input-group" style={{ display: 'flex', gap: '8px' }}>
-                                                                        <input type="number" placeholder="Pris (kr)" value={line.price || ''} onChange={(e) => {
-                                                                            const newLines = [...quoteBuilder.customLines];
-                                                                            newLines[idx].price = Number(e.target.value);
-                                                                            setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                        }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                                        <button onClick={() => {
-                                                                            const newLines = [...quoteBuilder.customLines];
-                                                                            newLines.splice(idx, 1);
-                                                                            setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                        }} style={{ background: '#fef2f2', border: '1px solid #e8e6e1', color: '#ef4444', padding: '10px', borderRadius: '6px', cursor: 'pointer' }}>&times;</button>
+                                                                    <div className="input-group">
+                                                                        <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Pris eks. moms (kr)</label>
+                                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                                            <input type="number" placeholder="Pris (kr)" value={line.price || ''} onChange={(e) => {
+                                                                                const newLines = [...quoteBuilder.customLines];
+                                                                                newLines[idx].price = Number(e.target.value);
+                                                                                setQuoteBuilder({...quoteBuilder, customLines: newLines});
+                                                                            }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                            <button onClick={() => {
+                                                                                const newLines = [...quoteBuilder.customLines];
+                                                                                newLines.splice(idx, 1);
+                                                                                setQuoteBuilder({...quoteBuilder, customLines: newLines});
+                                                                            }} style={{ background: '#fef2f2', border: '1px solid #e8e6e1', color: '#ef4444', padding: '10px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>&times; Slet</button>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -3843,9 +3847,9 @@ const Dashboard = () => {
                                         </div>
 
                                         {quoteBuilder && quoteBuilder.showPreview && createPortal(
-                                            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.9)', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
+                                            <div className="pdf-preview-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.9)', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
                                                 
-                                                <div style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff', position: 'relative', boxShadow: '0 0 30px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }}>
+                                                <div className="pdf-preview-container">
                                                     <div ref={invoiceRef} style={{ width: '210mm', height: '297mm', padding: '25mm', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif' }}>
                                                         
                                                         {/* Invoice Header */}
@@ -3979,8 +3983,8 @@ const Dashboard = () => {
                                                     </div>
 
                                                     {/* ActionBar fixed til bunden for funktionalitet */}
-                                                    <div style={{ position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#1e293b', padding: '16px 24px', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 10001 }}>
-                                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                                    <div className="pdf-action-bar">
+                                                        <div className="pdf-action-buttons">
                                                             <button 
                                                                 disabled={quoteBuilder.isGeneratingPdf}
                                                                 onClick={(e) => { e.stopPropagation(); setQuoteBuilder({...quoteBuilder, showPreview: false}); }} 
