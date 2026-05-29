@@ -980,13 +980,13 @@ p {
         overscroll-behavior-y: none;
         overflow-x: hidden !important;
         overflow-y: auto !important;
-        justify-content: flex-start !important;
+        justify-content: center !important;
     }
     .pdf-preview-container {
         transform-origin: top left;
-        transform: scale(calc(100vw / 794));
-        margin-bottom: calc(-1123px * (1 - (100vw / 794)));
-        margin-right: calc(-794px * (1 - (100vw / 794)));
+        transform: scale(0.45);
+        margin-right: -437px;
+        margin-bottom: -618px;
     }
     .pdf-action-bar {
         bottom: 0 !important;
