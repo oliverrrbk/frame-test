@@ -3885,7 +3885,7 @@ const Dashboard = () => {
                                             <div className="pdf-preview-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
                                                 
                                                 <div className="pdf-preview-container">
-                                                    <div ref={invoiceRef} style={{ width: '210mm', height: '297mm', padding: '25mm', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif' }}>
+                                                    <div ref={invoiceRef} style={{ width: '210mm', minHeight: '297mm', padding: '25mm', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
                                                         
                                                         {/* Invoice Header */}
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #e8e6e1', paddingBottom: '20px', marginBottom: '30px' }}>
@@ -4017,7 +4017,7 @@ const Dashboard = () => {
                                                             })()}
                                                         </div>
 
-                                                        <div style={{ position: 'absolute', bottom: '15mm', left: '25mm', right: '25mm', fontSize: '10px', color: '#6b7280', borderTop: '1px solid #e8e6e1', paddingTop: '15px', lineHeight: '1.4' }}>
+                                                        <div style={{ marginTop: 'auto', fontSize: '10px', color: '#6b7280', borderTop: '1px solid #e8e6e1', paddingTop: '15px', lineHeight: '1.4' }}>
                                                             <p style={{ margin: '0 0 6px', fontSize: '12px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i 30 dage fra ovenstående dato.</p>
                                                             <p style={{ margin: 0 }}>Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.</p>
                                                         </div>
@@ -4027,13 +4027,25 @@ const Dashboard = () => {
                                                     {/* ActionBar fixed til bunden for funktionalitet */}
                                                     <div className="pdf-action-bar">
                                                         <div className="pdf-action-buttons">
-                                                            <button 
-                                                                disabled={quoteBuilder.isGeneratingPdf}
-                                                                onClick={(e) => { e.stopPropagation(); setQuoteBuilder({...quoteBuilder, showPreview: false}); }} 
-                                                                style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #475569', backgroundColor: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
-                                                            >
-                                                                ← Tilbage og redigér
-                                                            </button>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', width: '100%', marginBottom: '4px' }}>
+                                                                <button 
+                                                                    disabled={quoteBuilder.isGeneratingPdf}
+                                                                    onClick={(e) => { e.stopPropagation(); setQuoteBuilder({...quoteBuilder, showPreview: false}); }} 
+                                                                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #475569', backgroundColor: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}
+                                                                >
+                                                                    ← Tilbage og redigér
+                                                                </button>
+                                                                <button 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setShowEmailPreview(true);
+                                                                    }}
+                                                                    style={{ background: 'none', border: 'none', color: '#10b981', fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                                >
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                                                    E-mail forhåndsvisning
+                                                                </button>
+                                                            </div>
                                                             <button 
                                                                 disabled={quoteBuilder.isGeneratingPdf}
                                                                 onClick={async (e) => {
@@ -4043,7 +4055,21 @@ const Dashboard = () => {
                                                                         const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
                                                                         const pdf = new jsPDF('p', 'mm', 'a4');
                                                                         const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                                                                        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                                                                        
+                                                                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                                                                        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                                                                        let heightLeft = pdfHeight;
+                                                                        let position = 0;
+
+                                                                        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
+                                                                        heightLeft -= 297;
+
+                                                                        while (heightLeft > 0) {
+                                                                            position = heightLeft - pdfHeight;
+                                                                            pdf.addPage();
+                                                                            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
+                                                                            heightLeft -= 297;
+                                                                        }
                                                                         const pdfBlob = pdf.output('blob');
                                                                         
                                                                         setQuoteBuilder(p => ({...p, uploadStepText: '☁️ Gemmer sikkert i skyen...'}));
@@ -4097,7 +4123,21 @@ const Dashboard = () => {
                                                                         const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
                                                                         const pdf = new jsPDF('p', 'mm', 'a4');
                                                                         const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                                                                        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                                                                        
+                                                                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                                                                        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                                                                        let heightLeft = pdfHeight;
+                                                                        let position = 0;
+
+                                                                        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
+                                                                        heightLeft -= 297;
+
+                                                                        while (heightLeft > 0) {
+                                                                            position = heightLeft - pdfHeight;
+                                                                            pdf.addPage();
+                                                                            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
+                                                                            heightLeft -= 297;
+                                                                        }
                                                                         const pdfBlob = pdf.output('blob');
                                                                         
                                                                         setQuoteBuilder(p => ({...p, uploadStepText: '☁️ Opdaterer dokumentet...'}));
@@ -4144,18 +4184,7 @@ const Dashboard = () => {
                                                         )}
                                                     </div>
                                                     
-                                                    <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
-                                                        <button 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setShowEmailPreview(true);
-                                                            }}
-                                                            style={{ background: 'none', border: 'none', color: '#10b981', fontSize: '0.9rem', cursor: 'pointer', textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                                        >
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                                            Se forhåndsvisning af e-mail til kunden
-                                                        </button>
-                                                    </div>
+
                                                 </div>
                                         , document.body)}
 
