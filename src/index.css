@@ -454,8 +454,10 @@ p {
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.dashboard-sidebar:hover {
-    width: 280px;
+@media (hover: hover) {
+    .dashboard-sidebar:hover {
+        width: 280px;
+    }
 }
 
 .sidebar-header {
@@ -480,8 +482,10 @@ p {
     transition: opacity 0.2s ease;
 }
 
-.dashboard-sidebar:hover .sidebar-header h2 {
-    opacity: 1;
+@media (hover: hover) {
+    .dashboard-sidebar:hover .sidebar-header h2 {
+        opacity: 1;
+    }
 }
 
 .sidebar-booking-card {
@@ -490,9 +494,11 @@ p {
     transition: opacity 0.2s ease;
 }
 
-.dashboard-sidebar:hover .sidebar-booking-card {
-    opacity: 1;
-    pointer-events: auto;
+@media (hover: hover) {
+    .dashboard-sidebar:hover .sidebar-booking-card {
+        opacity: 1;
+        pointer-events: auto;
+    }
 }
 
 .brand-icon {
@@ -1199,9 +1205,6 @@ button:focus-visible {
         box-shadow: 4px 0 24px rgba(0,0,0,0.15);
     }
 
-    .dashboard-sidebar:hover {
-        width: 280px !important;
-    }
 
     .sidebar-header {
         display: flex;
