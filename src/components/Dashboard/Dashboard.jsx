@@ -260,6 +260,7 @@ const Dashboard = () => {
     const [isMaterialListOpen, setIsMaterialListOpen] = useState(false);
     const [isQuoteEditorOpen, setIsQuoteEditorOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
     // Håndter åbning af specifik opgave via URL fra e-mail (deep linking)
     useEffect(() => {
@@ -2269,34 +2270,88 @@ const Dashboard = () => {
                                         ))}
                                     </div>
                                     <div className="mobile-filters" style={{ width: '100%', position: 'relative' }}>
-                                        <select 
-                                            value={leadFilter}
-                                            onChange={(e) => setLeadFilter(e.target.value)}
+                                        <button 
+                                            onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
                                             style={{
                                                 width: '100%',
-                                                padding: '12px 16px',
-                                                borderRadius: '12px',
-                                                border: '1px solid var(--border)',
-                                                backgroundColor: 'var(--bg-card)',
-                                                color: 'var(--text-primary)',
-                                                fontSize: '1rem',
+                                                padding: '12px 20px',
+                                                borderRadius: '24px',
+                                                border: '1px solid',
+                                                borderColor: leadFilter === 'Ny forespørgsel' ? '#3b82f6' : leadFilter === 'Sendt tilbud' ? '#eab308' : leadFilter === 'Bekræftet opgave' ? '#10b981' : leadFilter === 'Historik' ? '#6b7280' : '#ef4444',
+                                                backgroundColor: leadFilter === 'Ny forespørgsel' ? 'rgba(59, 130, 246, 0.1)' : leadFilter === 'Sendt tilbud' ? 'rgba(234, 179, 8, 0.1)' : leadFilter === 'Bekræftet opgave' ? 'rgba(16, 185, 129, 0.1)' : leadFilter === 'Historik' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                color: leadFilter === 'Ny forespørgsel' ? '#60a5fa' : leadFilter === 'Sendt tilbud' ? '#facc15' : leadFilter === 'Bekræftet opgave' ? '#34d399' : leadFilter === 'Historik' ? '#9ca3af' : '#f87171',
+                                                fontSize: '1.05rem',
                                                 fontWeight: 'bold',
-                                                appearance: 'none',
-                                                cursor: 'pointer'
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                cursor: 'pointer',
+                                                backdropFilter: 'blur(10px)',
+                                                transition: 'all 0.2s',
+                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
                                             }}
                                         >
-                                            {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Udgået opgave', 'Historik']
-                                                .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
-                                                .map(status => (
-                                                    <option key={status} value={status}>
-                                                        {status} ({leadsData.filter(l => (l.status || 'Ny forespørgsel') === status).length})
-                                                    </option>
-                                                ))
-                                            }
-                                        </select>
-                                        <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-secondary)' }}>
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                        </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {leadFilter}
+                                                <span style={{ 
+                                                    background: leadFilter === 'Ny forespørgsel' ? '#3b82f6' : leadFilter === 'Sendt tilbud' ? '#eab308' : leadFilter === 'Bekræftet opgave' ? '#10b981' : leadFilter === 'Historik' ? '#6b7280' : '#ef4444', 
+                                                    color: '#fff', 
+                                                    borderRadius: '10px', 
+                                                    padding: '2px 8px', 
+                                                    fontSize: '0.8rem' 
+                                                }}>
+                                                    {leadsData.filter(l => (l.status || 'Ny forespørgsel') === leadFilter).length}
+                                                </span>
+                                            </div>
+                                            <svg style={{ transform: isFilterDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </button>
+                                        
+                                        {isFilterDropdownOpen && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: 0,
+                                                right: 0,
+                                                marginTop: '8px',
+                                                backgroundColor: 'var(--bg-card)',
+                                                borderRadius: '16px',
+                                                border: '1px solid var(--border)',
+                                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                                                zIndex: 50,
+                                                overflow: 'hidden'
+                                            }}>
+                                                {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Udgået opgave', 'Historik']
+                                                    .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
+                                                    .map(status => (
+                                                        <button
+                                                            key={status}
+                                                            onClick={() => { setLeadFilter(status); setIsFilterDropdownOpen(false); }}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '16px 20px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
+                                                                borderBottom: '1px solid var(--border-light)',
+                                                                backgroundColor: leadFilter === status ? 'rgba(255,255,255,0.03)' : 'transparent',
+                                                                color: leadFilter === status ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                                fontWeight: leadFilter === status ? 'bold' : 'normal',
+                                                                textAlign: 'left',
+                                                                border: 'none',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                {leadFilter === status && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                                                <span style={{ marginLeft: leadFilter === status ? '0' : '26px' }}>{status}</span>
+                                                            </div>
+                                                            <span style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>
+                                                                {leadsData.filter(l => (l.status || 'Ny forespørgsel') === status).length}
+                                                            </span>
+                                                        </button>
+                                                    ))}
+                                            </div>
+                                        )}
                                     </div>
                                     <button className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, padding: '10px 20px', borderRadius: '30px' }}>
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
