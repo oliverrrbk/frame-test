@@ -980,6 +980,7 @@ p {
         overscroll-behavior-y: none;
         overflow-x: hidden !important;
         overflow-y: auto !important;
+        justify-content: flex-start !important;
     }
     .pdf-preview-container {
         transform-origin: top left;
