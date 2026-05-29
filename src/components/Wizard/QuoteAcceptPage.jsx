@@ -224,9 +224,11 @@ const QuoteAcceptPage = () => {
     const settings = lead?.raw_data?.quote_settings;
 
     const customLinesSum = calcData?.customLines ? calcData.customLines.reduce((acc, line) => acc + (line.price || 0), 0) : 0;
-    const totalPris = calcData ? (calcData.laborHours * calcData.hourlyRate) + calcData.materialCost + calcData.drivingCost + customLinesSum : 0;
+    const totalPris = calcData ? (calcData.laborHours * calcData.hourlyRate) + calcData.materialCost + calcData.drivingCost + (calcData.extraMaterialsCost || 0) + customLinesSum : 0;
     const moms = totalPris * 0.25;
     const totalMedMoms = totalPris + moms;
+
+    const isExpired = lead?.created_at ? new Date() > new Date(new Date(lead.created_at).getTime() + 45 * 24 * 60 * 60 * 1000) : false;
 
     return (
         <div className="accept-page-wrapper" style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' }}>
@@ -275,7 +277,7 @@ const QuoteAcceptPage = () => {
                 {/* Digital Prisoversigt */}
                 {calcData && (
                     <div style={{ padding: '32px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#f8fafc' }}>
-                        <h3 style={{ margin: '0 0 20px 0', fontSize: '1.2rem', color: '#1e293b' }}>Prisoverslag</h3>
+                        <h3 style={{ margin: '0 0 20px 0', fontSize: '1.2rem', color: '#1e293b' }}>Samlet Tilbud</h3>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {settings?.showDetailedBreakdown ? (
@@ -344,14 +346,28 @@ const QuoteAcceptPage = () => {
                 <div style={{ padding: '32px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#fff' }}>
                     <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', color: '#1e293b' }}>Betingelser & Forbehold</h3>
                     <ul style={{ margin: 0, paddingLeft: '20px', color: '#475569', fontSize: '0.95rem', lineHeight: '1.7' }}>
-                        <li style={{ marginBottom: '8px' }}>Tilbuddet er gældende i <strong>30 dage</strong> fra modtagelsen.</li>
+                        <li style={{ marginBottom: '8px' }}>Tilbuddet er gældende i <strong>45 dage</strong> fra modtagelsen.</li>
                         <li style={{ marginBottom: '8px' }}>Arbejdet udføres i henhold til <strong>AB Forbruger</strong> (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen.</li>
                         <li>Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er <strong>ikke inkluderet</strong> og vil blive udbedret i samråd til gældende timepris.</li>
                     </ul>
                 </div>
 
+                {/* Udløbet Tilbud */}
+                {isExpired && !(accepted || lead.status === 'Bekræftet opgave') && (
+                    <div style={{ padding: '40px 32px', display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'center', backgroundColor: '#fff' }}>
+                        <div style={{ textAlign: 'center', maxWidth: '600px', width: '100%', background: '#fef2f2', padding: '24px', borderRadius: '12px', border: '1px solid #fecaca' }}>
+                            <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}>⏳</span>
+                            <h3 style={{ color: '#991b1b', margin: '0 0 8px 0', fontSize: '1.2rem' }}>Tilbuddet er udløbet</h3>
+                            <p style={{ color: '#7f1d1d', margin: 0, lineHeight: '1.5' }}>
+                                Dette tilbud er mere end 45 dage gammelt og er desværre ikke længere gældende. 
+                                Kontakt venligst {carpenter?.company_name || 'din håndværker'} for at få et opdateret tilbud.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Consent & Actions */}
-                {!(accepted || lead.status === 'Bekræftet opgave') && (
+                {!isExpired && !(accepted || lead.status === 'Bekræftet opgave') && (
                     <div style={{ padding: '40px 32px', display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'center', backgroundColor: '#fff' }}>
                     <div style={{ textAlign: 'left', maxWidth: '600px', width: '100%', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                         <label style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', cursor: 'pointer' }}>

@@ -4059,7 +4059,7 @@ const Dashboard = () => {
                                                         </div>
 
                                                         <div style={{ marginTop: 'auto', fontSize: '9px', color: '#6b7280', borderTop: '1px solid #e8e6e1', paddingTop: '12px', lineHeight: '1.4' }}>
-                                                            <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i 30 dage fra ovenstående dato.</p>
+                                                            <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i 45 dage fra ovenstående dato.</p>
                                                             <p style={{ margin: 0 }}>Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.</p>
                                                         </div>
                                                     </div>
