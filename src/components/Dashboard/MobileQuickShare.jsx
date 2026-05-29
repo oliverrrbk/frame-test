@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Share2, MessageSquare, Link as LinkIcon, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -27,7 +28,7 @@ const MobileQuickShare = ({ carpenterProfile }) => {
         setIsOpen(false);
     };
 
-    return (
+    return createPortal(
         <div className="md:hidden">
             {/* Floating Action Button */}
             <button
@@ -144,7 +145,8 @@ const MobileQuickShare = ({ carpenterProfile }) => {
                     </>
                 )}
             </AnimatePresence>
-        </div>
+        </div>,
+        document.body
     );
 };
 
