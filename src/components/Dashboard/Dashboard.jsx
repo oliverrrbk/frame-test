@@ -3884,7 +3884,7 @@ const Dashboard = () => {
                                         {quoteBuilder && quoteBuilder.showPreview && createPortal(
                                             <div className="pdf-preview-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
                                                 
-                                                <div className="pdf-preview-container">
+                                                <div className="pdf-preview-container" style={{ zoom: typeof window !== 'undefined' && window.innerWidth < 768 ? window.innerWidth / 794 : 1 }}>
                                                     <div ref={invoiceRef} style={{ width: '210mm', minHeight: '297mm', padding: '25mm', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
                                                         
                                                         {/* Invoice Header */}

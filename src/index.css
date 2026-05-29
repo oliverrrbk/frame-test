@@ -975,18 +975,16 @@ p {
         gap: 12px !important;
     }
     .pdf-preview-wrapper {
-        padding: 20px 0 0 0 !important;
+        padding: 0 !important;
         padding-bottom: 150px !important;
         overscroll-behavior-y: none;
         overflow-x: hidden !important;
         overflow-y: auto !important;
         justify-content: center !important;
+        align-items: flex-start !important;
     }
     .pdf-preview-container {
-        transform-origin: top left;
-        transform: scale(0.35);
-        margin-right: -516px;
-        margin-bottom: -730px;
+        /* Zoom handles scaling natively without transform box bugs */
     }
     .pdf-action-bar {
         position: fixed !important;
