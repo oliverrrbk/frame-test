@@ -276,6 +276,38 @@ const generateShortSummary = (lead) => {
     return text;
 };
 
+const PdfMobileWrapper = ({ children, scale }) => {
+    const [height, setHeight] = useState(1123);
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const ro = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                setHeight(entry.contentRect.height);
+            }
+        });
+        ro.observe(containerRef.current);
+        return () => ro.disconnect();
+    }, []);
+
+    const marginBottom = scale !== 1 ? -(height - (height * scale)) : 0;
+    const marginRight = scale !== 1 ? -(794 - (794 * scale)) : 0;
+
+    return (
+        <div style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            marginBottom: `${marginBottom}px`,
+            marginRight: `${marginRight}px`
+        }}>
+            <div ref={containerRef}>
+                {children}
+            </div>
+        </div>
+    );
+};
+
 const Dashboard = () => {
     const [activeTab, setActiveTab] = useState(() => {
         return localStorage.getItem('dashboard_active_tab') || 'overview';
@@ -3881,10 +3913,12 @@ const Dashboard = () => {
                                             </button>
                                         </div>
 
-                                        {quoteBuilder && quoteBuilder.showPreview && createPortal(
+                                        {quoteBuilder && quoteBuilder.showPreview && (() => {
+                                            const scale = typeof window !== 'undefined' && window.innerWidth < 768 ? (window.innerWidth * 0.85) / 794 : 1;
+                                            return createPortal(
                                             <div className="pdf-preview-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
                                                 
-                                                <div className="pdf-preview-container" style={{ zoom: typeof window !== 'undefined' && window.innerWidth < 768 ? (window.innerWidth * 0.85) / 794 : 1 }}>
+                                                <PdfMobileWrapper scale={scale}>
                                                     <div ref={invoiceRef} style={{ width: '210mm', minHeight: '297mm', padding: '25mm', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
                                                         
                                                         {/* Invoice Header */}
@@ -4186,8 +4220,9 @@ const Dashboard = () => {
                                                     </div>
                                                     
 
-                                                </div>
-                                        , document.body)}
+                                                </PdfMobileWrapper>
+                                        , document.body);
+                                        })}
 
                                     </div>
                                 </div>
