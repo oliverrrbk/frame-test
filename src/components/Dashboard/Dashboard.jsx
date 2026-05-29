@@ -4553,7 +4553,7 @@ const Dashboard = () => {
                                                 
                                                 <div style={{display: 'flex', alignItems: 'center', padding: '0 0 8px 0', borderBottom: '1px solid #e8e6e1', marginBottom: '12px', fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold'}}>
                                                     <span style={{ flex: '1' }}>Materiale</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '195px' }}>
+                                                    <div className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '195px' }}>
                                                         <span style={{ width: '120px' }}>Indkøbspris</span>
                                                         <span>Aktiv</span>
                                                     </div>

@@ -1835,4 +1835,20 @@ button:focus-visible {
     .hide-on-mobile {
         display: none !important;
     }
+    
+    .material-input-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+    }
+    
+    .material-input-row > div:first-child {
+        padding-right: 0 !important;
+        width: 100% !important;
+    }
+    
+    .material-input-row > div:last-child {
+        width: 100% !important;
+        justify-content: flex-start !important;
+    }
 }
