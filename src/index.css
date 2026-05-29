@@ -978,11 +978,14 @@ p {
         padding: 0 !important;
         padding-bottom: 120px !important;
         overscroll-behavior-y: none;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
     }
     .pdf-preview-container {
         transform-origin: top left;
         transform: scale(calc(100vw / 794));
         margin-bottom: calc(-1123px * (1 - (100vw / 794)));
+        margin-right: calc(-794px * (1 - (100vw / 794)));
     }
     .pdf-action-bar {
         bottom: 0 !important;
