@@ -34,6 +34,43 @@ const mapContainerStyle = {
 };
 const defaultCenter = { lat: 56.2639, lng: 9.5018 }; // Midten af Danmark
 
+const FormattedNumberInput = ({ value, onChange, placeholder, style }) => {
+    const [displayValue, setDisplayValue] = useState(value != null ? new Intl.NumberFormat('da-DK').format(value) : '');
+
+    useEffect(() => {
+        setDisplayValue(value != null ? new Intl.NumberFormat('da-DK').format(value) : '');
+    }, [value]);
+
+    const handleChange = (e) => {
+        const raw = e.target.value;
+        setDisplayValue(raw);
+        const clean = raw.replace(/\./g, '').replace(/,/g, '.');
+        const num = parseFloat(clean);
+        if (!isNaN(num)) {
+            onChange(num);
+        } else if (raw === '') {
+            onChange(0);
+        }
+    };
+
+    const handleBlur = () => {
+        if (value != null) {
+            setDisplayValue(new Intl.NumberFormat('da-DK').format(value));
+        }
+    };
+
+    return (
+        <input 
+            type="text" 
+            value={displayValue} 
+            onChange={handleChange} 
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            style={style} 
+        />
+    );
+};
+
 const WindowsChecklist = ({ leadId }) => {
     const [checkedItems, setCheckedItems] = useState(() => {
         try {
@@ -3651,25 +3688,25 @@ const Dashboard = () => {
                                                                 <>
                                                                     <div className="input-group">
                                                                         <label>Arbejdstimer (antal)</label>
-                                                                        <input type="number" value={quoteBuilder.laborHours} onChange={(e) => setQuoteBuilder({...quoteBuilder, laborHours: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                        <FormattedNumberInput value={quoteBuilder.laborHours} onChange={(val) => setQuoteBuilder({...quoteBuilder, laborHours: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                                     </div>
                                                                     <div className="input-group">
                                                                         <label>Timepris (kr)</label>
-                                                                        <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                        <FormattedNumberInput value={quoteBuilder.hourlyRate} onChange={(val) => setQuoteBuilder({...quoteBuilder, hourlyRate: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                                     </div>
                                                                     <div className="input-group">
                                                                         <label>Materialer eks. moms (kr)</label>
-                                                                        <input type="number" value={quoteBuilder.materialCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, materialCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                        <FormattedNumberInput value={quoteBuilder.materialCost} onChange={(val) => setQuoteBuilder({...quoteBuilder, materialCost: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                                     </div>
                                                                 </>
                                                             )}
                                                             <div className="input-group">
                                                                 <label>Kørsel/Øvrigt eks. moms (kr)</label>
-                                                                <input type="number" value={quoteBuilder.drivingCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, drivingCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                <FormattedNumberInput value={quoteBuilder.drivingCost} onChange={(val) => setQuoteBuilder({...quoteBuilder, drivingCost: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                             </div>
                                                             <div className="input-group">
                                                                 <label>Ekstra materialer (smådele) eks. moms</label>
-                                                                <input type="number" value={quoteBuilder.extraMaterialsCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, extraMaterialsCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                <FormattedNumberInput value={quoteBuilder.extraMaterialsCost} onChange={(val) => setQuoteBuilder({...quoteBuilder, extraMaterialsCost: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                             </div>
                                                         </div>
 

@@ -385,6 +385,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                         style={{ padding: '10px 14px', borderBottom: idx === groupedMaterials[section].length - 1 ? 'none' : '1px solid #f1f1ef', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafaf9', alignItems: 'center' }}
                                     >
                                         <textarea 
+                                            className="material-item-name"
                                             value={item.item}
                                             onChange={(e) => {
                                                 handleCellChange(item.originalIndex, 'item', e.target.value);
