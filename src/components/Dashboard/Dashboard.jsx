@@ -2231,7 +2231,7 @@ const Dashboard = () => {
                                 <div className="card-body">
                                     {/* Pipeline Menu with Action Button */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingBottom: '10px', flexWrap: 'wrap', gap: '16px' }}>
-                                    <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                    <div className="desktop-filters" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
                                         {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Udgået opgave', 'Historik']
                                             .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
                                             .map(status => (
@@ -2267,6 +2267,36 @@ const Dashboard = () => {
                                                 </span>
                                             </button>
                                         ))}
+                                    </div>
+                                    <div className="mobile-filters" style={{ width: '100%', position: 'relative' }}>
+                                        <select 
+                                            value={leadFilter}
+                                            onChange={(e) => setLeadFilter(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px 16px',
+                                                borderRadius: '12px',
+                                                border: '1px solid var(--border)',
+                                                backgroundColor: 'var(--bg-card)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '1rem',
+                                                fontWeight: 'bold',
+                                                appearance: 'none',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Udgået opgave', 'Historik']
+                                                .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
+                                                .map(status => (
+                                                    <option key={status} value={status}>
+                                                        {status} ({leadsData.filter(l => (l.status || 'Ny forespørgsel') === status).length})
+                                                    </option>
+                                                ))
+                                            }
+                                        </select>
+                                        <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-secondary)' }}>
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </div>
                                     </div>
                                     <button className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, padding: '10px 20px', borderRadius: '30px' }}>
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>

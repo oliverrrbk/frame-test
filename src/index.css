@@ -843,6 +843,10 @@ button:focus-visible {
     padding: 60px 40px;
 }
 
+.mobile-filters {
+    display: none;
+}
+
 .placeholder-state h2 {
     color: var(--text-primary);
     margin: 0;
@@ -1177,6 +1181,14 @@ button:focus-visible {
         min-height: 100vh;
     }
 
+    .desktop-filters {
+        display: none !important;
+    }
+
+    .mobile-filters {
+        display: block !important;
+    }
+
     .dashboard-content {
         overflow-y: visible;
         padding: 20px 16px;
@@ -1315,10 +1327,17 @@ button:focus-visible {
         padding-bottom: 60px !important;
     }
     
-    /* 2. Progress-trin (Gør dem kompakte så de ikke overlapper) */
     .progress-steps-container {
         margin-bottom: 24px !important;
         padding: 0 4px !important;
+    }
+
+    .desktop-filters {
+        display: none !important;
+    }
+
+    .mobile-filters {
+        display: block !important;
     }
     .progress-step-circle {
         width: 28px !important;
