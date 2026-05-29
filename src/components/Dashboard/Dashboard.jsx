@@ -4087,6 +4087,23 @@ const Dashboard = () => {
                                                                 onClick={async (e) => {
                                                                     e.stopPropagation();
                                                                     setQuoteBuilder(p => ({...p, isGeneratingPdf: true, uploadStepText: '⏳ Tegner PDF...'}));
+                                                                    
+                                                                    const wrapper = invoiceRef.current?.parentElement?.parentElement;
+                                                                    let oldStyles = {};
+                                                                    if (wrapper) {
+                                                                        oldStyles = {
+                                                                            transform: wrapper.style.transform,
+                                                                            marginBottom: wrapper.style.marginBottom,
+                                                                            marginLeft: wrapper.style.marginLeft,
+                                                                            marginRight: wrapper.style.marginRight
+                                                                        };
+                                                                        wrapper.style.transform = 'none';
+                                                                        wrapper.style.marginBottom = '0px';
+                                                                        wrapper.style.marginLeft = '0px';
+                                                                        wrapper.style.marginRight = '0px';
+                                                                        await new Promise(resolve => requestAnimationFrame(resolve));
+                                                                    }
+
                                                                     try {
                                                                         const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
                                                                         const imgData = canvas.toDataURL('image/jpeg', 1.0);
@@ -4129,6 +4146,13 @@ const Dashboard = () => {
                                                                         console.error("Fejl i PDF generering:", err);
                                                                         toast.error("Hov! Der skete en uventet fejl ifm PDF oprettelsen.");
                                                                         setQuoteBuilder(p => ({...p, isGeneratingPdf: false}));
+                                                                    } finally {
+                                                                        if (wrapper && oldStyles) {
+                                                                            wrapper.style.transform = oldStyles.transform || '';
+                                                                            wrapper.style.marginBottom = oldStyles.marginBottom || '';
+                                                                            wrapper.style.marginLeft = oldStyles.marginLeft || '';
+                                                                            wrapper.style.marginRight = oldStyles.marginRight || '';
+                                                                        }
                                                                     }
                                                                 }} 
                                                                 style={{ padding: '16px 32px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', flex: 1, transition: 'background-color 0.2s', fontSize: '1rem', opacity: quoteBuilder.isGeneratingPdf ? 0.7 : 1, boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)' }}
@@ -4144,6 +4168,23 @@ const Dashboard = () => {
                                                                 onClick={async (e) => {
                                                                     e.stopPropagation();
                                                                     setQuoteBuilder(p => ({...p, isGeneratingPdf: true, uploadStepText: '⏳ Tegner PDF...'}));
+                                                                    
+                                                                    const wrapper = invoiceRef.current?.parentElement?.parentElement;
+                                                                    let oldStyles = {};
+                                                                    if (wrapper) {
+                                                                        oldStyles = {
+                                                                            transform: wrapper.style.transform,
+                                                                            marginBottom: wrapper.style.marginBottom,
+                                                                            marginLeft: wrapper.style.marginLeft,
+                                                                            marginRight: wrapper.style.marginRight
+                                                                        };
+                                                                        wrapper.style.transform = 'none';
+                                                                        wrapper.style.marginBottom = '0px';
+                                                                        wrapper.style.marginLeft = '0px';
+                                                                        wrapper.style.marginRight = '0px';
+                                                                        await new Promise(resolve => requestAnimationFrame(resolve));
+                                                                    }
+
                                                                     try {
                                                                         const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
                                                                         const pdf = new jsPDF('p', 'mm', 'a4');
@@ -4196,6 +4237,13 @@ const Dashboard = () => {
                                                                         console.error("Fejl i PDF generering:", err);
                                                                         toast.error("Hov! Der skete en uventet fejl.");
                                                                         setQuoteBuilder(p => ({...p, isGeneratingPdf: false}));
+                                                                    } finally {
+                                                                        if (wrapper && oldStyles) {
+                                                                            wrapper.style.transform = oldStyles.transform || '';
+                                                                            wrapper.style.marginBottom = oldStyles.marginBottom || '';
+                                                                            wrapper.style.marginLeft = oldStyles.marginLeft || '';
+                                                                            wrapper.style.marginRight = oldStyles.marginRight || '';
+                                                                        }
                                                                     }
                                                                 }} 
                                                                 style={{ padding: '12px 24px', backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', transition: 'all 0.2s', fontSize: '0.9rem', width: '100%' }}
