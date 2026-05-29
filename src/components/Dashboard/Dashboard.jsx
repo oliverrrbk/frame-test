@@ -3834,7 +3834,11 @@ const Dashboard = () => {
                                                             <button  
                                                                 className="btn-primary" 
                                                                 style={{ width: '100%', padding: '16px 24px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', border: 'none', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)', cursor: 'pointer' }}
-                                                                onClick={() => setQuoteBuilder({...quoteBuilder, showPreview: true})}
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    setQuoteBuilder({...quoteBuilder, showPreview: true});
+                                                                }}
                                                             >
                                                                 {selectedLead.status === 'Sendt tilbud' ? 'Se PDF & Opdateringsmuligheder' : 'Generer & Gennemse Tilbud'}
                                                             </button>
@@ -3935,7 +3939,9 @@ const Dashboard = () => {
                                             </button>
                                         </div>
 
-                                        {quoteBuilder && quoteBuilder.showPreview && createPortal(
+                                        {quoteBuilder && quoteBuilder.showPreview && (() => {
+                                            const currentTotalExVat = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
+                                            return createPortal(
                                             <div className="pdf-preview-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
                                                 
                                                 <PdfMobileWrapper>
@@ -4027,8 +4033,8 @@ const Dashboard = () => {
                                                                     <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
                                                                         <td style={{ padding: '10px', fontSize: '13px', fontWeight: 'bold' }}>Samlet entreprise på opgaven jf. aftale</td>
                                                                         <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px' }}>1 stk.</td>
-                                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.finalEstimateExVat || 0)} kr.</td>
-                                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.finalEstimateExVat || 0)} kr.</td>
+                                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px' }}>{new Intl.NumberFormat('da-DK').format(currentTotalExVat || 0)} kr.</td>
+                                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold' }}>{new Intl.NumberFormat('da-DK').format(currentTotalExVat || 0)} kr.</td>
                                                                     </tr>
                                                                 )}
                                                             </tbody>
@@ -4039,15 +4045,15 @@ const Dashboard = () => {
                                                             <div style={{ width: '250px' }}>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px' }}>
                                                                     <span style={{ color: '#475569' }}>Subtotal (eks. moms)</span>
-                                                                    <span>{new Intl.NumberFormat('da-DK').format(quoteBuilder.finalEstimateExVat || 0)} kr.</span>
+                                                                    <span>{new Intl.NumberFormat('da-DK').format(currentTotalExVat || 0)} kr.</span>
                                                                 </div>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px' }}>
                                                                     <span style={{ color: '#475569' }}>Moms (25%)</span>
-                                                                    <span>{new Intl.NumberFormat('da-DK').format((quoteBuilder.finalEstimateExVat || 0) * 0.25)} kr.</span>
+                                                                    <span>{new Intl.NumberFormat('da-DK').format((currentTotalExVat || 0) * 0.25)} kr.</span>
                                                                 </div>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: '2px solid #cbd5e1', borderBottom: '2px solid #cbd5e1', marginTop: '8px', fontSize: '16px', fontWeight: 'bold' }}>
                                                                     <span>TOTAL AT BETALE</span>
-                                                                    <span>{new Intl.NumberFormat('da-DK').format((quoteBuilder.finalEstimateExVat || 0) * 1.25)} kr.</span>
+                                                                    <span>{new Intl.NumberFormat('da-DK').format((currentTotalExVat || 0) * 1.25)} kr.</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -4257,7 +4263,7 @@ const Dashboard = () => {
                                                         )}
                                                     </div>
                                                 </div>
-                                        , document.body)}
+                                        , document.body)})()}
 
                                     </div>
                                 </div>
