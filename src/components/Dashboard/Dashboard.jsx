@@ -4969,7 +4969,9 @@ const Dashboard = () => {
                 </AnimatePresence>,
                 document.body
             )}
-            <MobileQuickShare carpenterProfile={carpenterProfile} />
+            {activeTab === 'overview' && (
+                <MobileQuickShare carpenterProfile={carpenterProfile} />
+            )}
         </div>
     );
 };
