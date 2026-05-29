@@ -4068,11 +4068,10 @@ const Dashboard = () => {
                                                 {/* ActionBar fixed til bunden for funktionalitet */}
                                                 <div className="pdf-action-bar">
                                                         <div className="pdf-action-buttons">
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', width: '100%', marginBottom: '4px' }}>
                                                                 <button 
                                                                     disabled={quoteBuilder.isGeneratingPdf}
                                                                     onClick={(e) => { e.stopPropagation(); setQuoteBuilder({...quoteBuilder, showPreview: false}); }} 
-                                                                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #475569', backgroundColor: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}
+                                                                    style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #475569', backgroundColor: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
                                                                 >
                                                                     ← Tilbage og redigér
                                                                 </button>
@@ -4087,7 +4086,6 @@ const Dashboard = () => {
                                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                                                     E-mail forhåndsvisning
                                                                 </button>
-                                                            </div>
                                                             <button 
                                                                 disabled={quoteBuilder.isGeneratingPdf}
                                                                 onClick={async (e) => {
