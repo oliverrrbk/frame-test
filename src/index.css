@@ -846,11 +846,16 @@ p {
         grid-template-columns: 1fr !important;
     }
     .material-row-grid {
-        display: flex !important;
-        flex-wrap: wrap !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 2fr auto !important;
+        gap: 8px !important;
     }
     .material-row-grid > input:first-child {
-        flex: 1 1 100% !important;
+        grid-column: span 4;
+        width: 100%;
+        font-size: 1rem !important;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #e2e8f0 !important;
     }
     .material-add-grid {
         display: flex !important;
@@ -864,6 +869,26 @@ p {
     }
     .material-buttons-grid button {
         width: 100% !important;
+    }
+}
+
+.quote-builder-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+.quote-custom-line-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 8px;
+}
+@media (max-width: 768px) {
+    .quote-builder-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .quote-custom-line-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
     }
 }
 

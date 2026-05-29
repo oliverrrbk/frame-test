@@ -3360,7 +3360,7 @@ const Dashboard = () => {
                                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px', marginTop: '24px' }}
                                         >
                                             <h3 style={{ color: '#1a1a1a', margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <Calculator size={18} style={{ color: '#6b7280' }} /> Grundlag for Prisestimatet
+                                                <Calculator size={18} style={{ color: '#6b7280' }} /> Økonomisk overblik før moms
                                             </h3>
                                             <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: 'bold' }}>
                                                 {isPriceBasisOpen ? 'Skjul ▲' : 'Vis ▼'}
@@ -3378,10 +3378,6 @@ const Dashboard = () => {
                                                             {/* GORGEOUS NUMERICAL BREAKDOWN */}
                                                             {calc && (
                                                                 <div>
-                                                                    <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.6' }}>
-                                                                        <strong>Økonomisk Overblik:</strong><br />
-                                                                        Her er systemets nøjagtige udregning af tidsforbrug og omkostninger, før moms.
-                                                                    </p>
                                                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                                                                         
                                                                         {/* Arbejdstid Card */}
@@ -3459,13 +3455,14 @@ const Dashboard = () => {
                                                                         if (!expl) return null;
                                                                         
                                                                         return (
-                                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                                                                <p style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#1e293b', fontWeight: 'bold' }}>
-                                                                                    Detaljeret Begrundelse for Prisestimatet:
-                                                                                </p>
-                                                                                <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#64748b', lineHeight: '1.6' }}>
-                                                                                    Systemets "tankegang" brudt ned i tømrer-logik, så I har det fulde belæg bag de estimerede tal.
-                                                                                </p>
+                                                                            <details style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', marginTop: '24px' }}>
+                                                                                <summary style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', outline: 'none' }}>
+                                                                                    Detaljeret Begrundelse for Prisestimatet (Log)
+                                                                                </summary>
+                                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '16px' }}>
+                                                                                    <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#64748b', lineHeight: '1.6' }}>
+                                                                                        Systemets "tankegang" brudt ned i tømrer-logik, så I har det fulde belæg bag de estimerede tal.
+                                                                                    </p>
                                                                                 
                                                                                 {(() => {
                                                                                     const activeCategories = Object.values(expl).filter(cat => cat.items.length > 0);
@@ -3510,7 +3507,8 @@ const Dashboard = () => {
                                                                                         </div>
                                                                                     </div>
                                                                                 )}
-                                                                            </div>
+                                                                                </div>
+                                                                            </details>
                                                                         );
                                                                     })()
                                                                 )}
@@ -3598,7 +3596,7 @@ const Dashboard = () => {
                                                                 : "Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig."}
                                                         </p>
                                                         
-                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
+                                                        <div className="quote-builder-grid" style={{ marginTop: '10px' }}>
                                                             {quoteBuilder.isKombi && quoteBuilder.subprojects && quoteBuilder.subprojects.length > 0 ? (
                                                                 <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '8px' }}>
                                                                     <strong style={{ color: '#1a1a1a', fontSize: '0.95rem' }}>Individuel tilpasning pr. underprojekt:</strong>
@@ -3610,7 +3608,7 @@ const Dashboard = () => {
                                                                                     ({sub.laborHours} t / {sub.materialCost.toLocaleString('da-DK')} kr.)
                                                                                 </span>
                                                                             </summary>
-                                                                            <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', borderTop: '1px solid #e8e6e1' }}>
+                                                                            <div className="quote-builder-grid" style={{ padding: '12px 14px', borderTop: '1px solid #e8e6e1' }}>
                                                                                 <div className="input-group">
                                                                                     <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Arbejdstimer (antal)</label>
                                                                                     <input 
@@ -3679,7 +3677,7 @@ const Dashboard = () => {
 
                                                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                             {(quoteBuilder.customLines || []).map((line, idx) => (
-                                                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px', alignItems: 'center' }}>
+                                                                <div key={idx} className="quote-custom-line-grid" style={{ alignItems: 'center' }}>
                                                                     <div className="input-group">
                                                                         <input type="text" placeholder="F.eks. Leje af stillads" value={line.description} onChange={(e) => {
                                                                             const newLines = [...quoteBuilder.customLines];
@@ -3739,13 +3737,15 @@ const Dashboard = () => {
                                                             </div>
                                                         </div>
 
-                                                        <button  
-                                                            className="btn-primary" 
-                                                            style={{ width: '100%', marginTop: '10px', background: '#10b981' }}
-                                                            onClick={() => setQuoteBuilder({...quoteBuilder, showPreview: true})}
-                                                        >
-                                                            {selectedLead.status === 'Sendt tilbud' ? 'Se PDF & Opdateringsmuligheder' : 'Generer & Gennemse'}
-                                                        </button>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '24px' }}>
+                                                            <button  
+                                                                className="btn-primary" 
+                                                                style={{ width: '100%', padding: '16px 24px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', border: 'none', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)', cursor: 'pointer' }}
+                                                                onClick={() => setQuoteBuilder({...quoteBuilder, showPreview: true})}
+                                                            >
+                                                                {selectedLead.status === 'Sendt tilbud' ? 'Se PDF & Opdateringsmuligheder' : 'Generer & Gennemse Tilbud'}
+                                                            </button>
+                                                        </div>
                                                         {selectedLead.status === 'Sendt tilbud' && (
                                                             <div style={{ padding: '12px', background: '#ecfdf5', color: '#065f46', borderRadius: '8px', fontWeight: '500', fontSize: '0.9rem', marginTop: '10px', textAlign: 'center' }}>
                                                                 ✅ Et tilbud (PDF) ligger gemt på sagen. Tryk ovenfor for at ændre det.
