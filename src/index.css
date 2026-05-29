@@ -556,14 +556,16 @@ p {
     text-align: center;
 }
 
-.sidebar-nav button:hover {
-    background-color: var(--bg-hover);
-    color: var(--text-primary);
-}
+@media (hover: hover) {
+    .sidebar-nav button:hover {
+        background-color: var(--bg-hover);
+        color: var(--text-primary);
+    }
 
-.sidebar-nav button:hover svg {
-    background: #ffffff;
-    border-color: #ffffff;
+    .sidebar-nav button:hover svg {
+        background: #ffffff;
+        border-color: #ffffff;
+    }
 }
 
 .sidebar-nav button.active {
@@ -1267,6 +1269,23 @@ button:focus-visible {
         padding-top: max(12px, env(safe-area-inset-top));
         display: flex;
         align-items: center;
+        height: auto;
+        min-height: 70px;
+    }
+
+    .page-title-section {
+        padding-top: max(12px, env(safe-area-inset-top)) !important;
+        padding-bottom: 8px !important;
+        margin-top: 0 !important;
+    }
+
+    .page-title-section h2 {
+        font-size: 1.35rem !important;
+        line-height: 1.2;
+    }
+
+    .page-title-section p {
+        display: none !important;
     }
 
     .settings-grid {

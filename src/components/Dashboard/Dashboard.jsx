@@ -2237,7 +2237,10 @@ const Dashboard = () => {
                                             .map(status => (
                                             <button 
                                                 key={status} 
-                                                onClick={() => setLeadFilter(status)}
+                                                onClick={(e) => {
+                                                    setLeadFilter(status);
+                                                    e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                                                }}
                                                 style={{
                                                     padding: '8px 16px',
                                                     borderRadius: '20px',
@@ -2278,7 +2281,7 @@ const Dashboard = () => {
                                 <div className="input-group">
                                     <input
                                         type="text"
-                                        placeholder={`Søg i "${leadFilter}" på kundenavn, adresse, email, telefon eller opgavetype...`}
+                                        placeholder={window.innerWidth < 768 ? `Søg i "${leadFilter}"...` : `Søg i "${leadFilter}" på kundenavn, adresse, email, telefon eller opgavetype...`}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         style={{
