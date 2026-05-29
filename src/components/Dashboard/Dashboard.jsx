@@ -276,32 +276,54 @@ const generateShortSummary = (lead) => {
     return text;
 };
 
-const PdfMobileWrapper = ({ children, scale }) => {
+const PdfMobileWrapper = ({ children }) => {
     const [height, setHeight] = useState(1123);
+    const [scale, setScale] = useState(1);
     const containerRef = useRef(null);
 
     useEffect(() => {
         if (!containerRef.current) return;
         const ro = new ResizeObserver(entries => {
             for (let entry of entries) {
-                setHeight(entry.contentRect.height);
+                const newHeight = entry.contentRect.height;
+                setHeight(newHeight);
+                
+                if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                    const scaleW = (window.innerWidth * 0.95) / 794;
+                    // Action bar is roughly 150px, top padding is 40px.
+                    const availableHeight = window.innerHeight - 200;
+                    const scaleH = availableHeight / newHeight;
+                    // We want the entire PDF to be visible at once! So we take the minimum of scaleW and scaleH.
+                    setScale(Math.min(scaleW, scaleH));
+                } else {
+                    setScale(1);
+                }
             }
         });
         ro.observe(containerRef.current);
+        
+        // Initial setup
+        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+             const scaleW = (window.innerWidth * 0.95) / 794;
+             const scaleH = (window.innerHeight - 200) / 1123;
+             setScale(Math.min(scaleW, scaleH));
+        }
+        
         return () => ro.disconnect();
     }, []);
 
+    const marginHorizontal = scale !== 1 ? -(794 - (794 * scale)) / 2 : 0;
     const marginBottom = scale !== 1 ? -(height - (height * scale)) : 0;
-    const marginRight = scale !== 1 ? -(794 - (794 * scale)) : 0;
 
     return (
         <div style={{
             transform: `scale(${scale})`,
-            transformOrigin: 'top left',
+            transformOrigin: 'top center',
             marginBottom: `${marginBottom}px`,
-            marginRight: `${marginRight}px`
+            marginLeft: `${marginHorizontal}px`,
+            marginRight: `${marginHorizontal}px`
         }}>
-            <div ref={containerRef}>
+            <div ref={containerRef} style={{ width: '794px', minWidth: '794px', flexShrink: 0 }}>
                 {children}
             </div>
         </div>
@@ -3914,12 +3936,11 @@ const Dashboard = () => {
                                         </div>
 
                                         {quoteBuilder && quoteBuilder.showPreview && (() => {
-                                            const scale = typeof window !== 'undefined' && window.innerWidth < 768 ? (window.innerWidth * 0.85) / 794 : 1;
                                             return createPortal(
                                             <div className="pdf-preview-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
                                                 
-                                                <PdfMobileWrapper scale={scale}>
-                                                    <div ref={invoiceRef} style={{ width: '794px', minHeight: '1123px', padding: '60px', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
+                                                <PdfMobileWrapper>
+                                                    <div ref={invoiceRef} style={{ width: '794px', minWidth: '794px', flexShrink: 0, minHeight: '1123px', padding: '60px', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
                                                         
                                                         {/* Invoice Header */}
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #e8e6e1', paddingBottom: '16px', marginBottom: '24px' }}>
