@@ -1165,7 +1165,7 @@ button:focus-visible {
     .dashboard-main {
         display: block;
         overflow: visible;
-        padding-bottom: 80px;
+        padding-bottom: 20px;
         min-height: 100vh;
     }
 
@@ -1175,39 +1175,46 @@ button:focus-visible {
     }
 
     .dashboard-sidebar {
-        width: 100% !important;
-        height: auto !important;
+        width: 280px !important;
+        height: 100vh !important;
         position: fixed !important;
-        bottom: 0 !important;
-        bottom: env(safe-area-inset-bottom) !important;
+        top: 0 !important;
         left: 0 !important;
-        right: 0 !important;
-        top: auto !important;
-        display: block;
-        border-right: none;
-        border-top: 1px solid var(--border);
+        bottom: auto !important;
+        right: auto !important;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--border);
+        border-top: none;
         background: var(--bg-card);
-        z-index: 9999 !important; /* Ensure it stays on top of everything */
-        transform: translateZ(0); /* Force hardware acceleration, helps iOS fixed pos */
+        z-index: 9999 !important;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .dashboard-sidebar.mobile-open {
+        transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.15);
     }
 
     .dashboard-sidebar:hover {
-        width: 100% !important;
+        width: 280px !important;
     }
 
     .sidebar-header {
-        display: none;
+        display: flex;
+        padding-top: max(24px, env(safe-area-inset-top));
     }
 
     .sidebar-nav {
         display: flex;
-        flex-direction: row;
-        padding: 8px 6px;
-        padding-bottom: max(8px, env(safe-area-inset-bottom));
-        gap: 0px;
-        overflow-x: visible; /* Prevent clipping */
+        flex-direction: column;
+        padding: 16px;
+        padding-bottom: max(24px, env(safe-area-inset-bottom));
+        gap: 6px;
+        overflow-y: auto;
         width: 100%;
-        justify-content: space-around; /* Distribute evenly like Instagram */
+        justify-content: flex-start;
     }
     
     .sidebar-nav::-webkit-scrollbar {
@@ -1215,38 +1222,35 @@ button:focus-visible {
     }
 
     .sidebar-nav button {
-        width: auto !important; /* CRITICAL: overrides the desktop 100% width */
-        flex: 1; /* CRITICAL: make all buttons share space equally */
-        flex-direction: column;
-        padding: 4px 2px;
-        white-space: normal; /* Let text wrap if needed */
-        text-align: center;
-        line-height: 1.1;
-        min-height: auto;
-        font-size: 0.60rem; /* Slightly smaller text for better fit */
-        gap: 2px;
-        flex-shrink: 1;
-        min-width: 0 !important; /* Allow shrinking */
-        justify-content: center;
-        background: transparent;
+        width: 100% !important;
+        flex: none;
+        flex-direction: row;
+        padding: 12px 16px;
+        white-space: nowrap;
+        text-align: left;
+        line-height: normal;
+        min-height: 44px;
+        font-size: 0.95rem;
+        gap: 12px;
+        flex-shrink: 0;
+        justify-content: flex-start;
+        border-radius: 12px;
     }
     
     .notification-badge {
-        right: 50%;
-        top: 4px;
-        transform: translateX(12px); /* Position it at the top right of the icon */
-        padding: 0px 5px;
-        font-size: 0.65rem;
-        min-width: 18px;
-        border: 2px solid var(--bg-card); /* Cutout effect against background */
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 2px 8px;
+        font-size: 0.75rem;
+        border: none;
+        position: absolute;
     }
     
     .sidebar-nav button svg {
-        width: 24px;
-        height: 24px;
-        padding: 4px;
-        background: transparent;
-        border: none;
+        width: 20px;
+        height: 20px;
+        padding: 0;
     }
 
     .sidebar-nav button.active {
@@ -1255,11 +1259,14 @@ button:focus-visible {
     }
 
     .sidebar-booking-card {
-        display: none !important;
+        display: flex !important;
     }
 
     .dashboard-topbar {
         padding: 0 16px;
+        padding-top: max(12px, env(safe-area-inset-top));
+        display: flex;
+        align-items: center;
     }
 
     .settings-grid {
@@ -1267,7 +1274,12 @@ button:focus-visible {
     }
 
     .mobile-menu {
-        display: none;
+        display: block;
+        margin-right: 16px;
+        cursor: pointer;
+        padding: 8px;
+        margin-left: -8px;
+        color: var(--text-primary);
     }
 }
 

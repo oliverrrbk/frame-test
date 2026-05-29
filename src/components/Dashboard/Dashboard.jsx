@@ -259,6 +259,7 @@ const Dashboard = () => {
     const [isPriceBasisOpen, setIsPriceBasisOpen] = useState(false);
     const [isMaterialListOpen, setIsMaterialListOpen] = useState(false);
     const [isQuoteEditorOpen, setIsQuoteEditorOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Håndter åbning af specifik opgave via URL fra e-mail (deep linking)
     useEffect(() => {
@@ -1689,22 +1690,29 @@ const Dashboard = () => {
                 />
             )}
             
-            <aside className="dashboard-sidebar">
+            {isMobileMenuOpen && (
+                <div 
+                    className="mobile-menu-overlay" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9998 }}
+                />
+            )}
+            <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
                     <img src="/clean-transparent.png" alt="Bison Frame" className="brand-icon" style={{ width: 'auto', height: '36px', maxHeight: '36px', objectFit: 'contain' }} />
                     <h2>Bison Frame</h2>
                 </div>
                 <nav className="sidebar-nav">
-                    <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>
+                    <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}>
                         <Home size={20} /> Oversigt
                     </button>
                     {myProfile?.email === 'team@bisoncompany.dk' && (
-                        <button className={activeTab === 'superadmin' ? 'active' : ''} onClick={() => setActiveTab('superadmin')}>
+                        <button className={activeTab === 'superadmin' ? 'active' : ''} onClick={() => { setActiveTab('superadmin'); setIsMobileMenuOpen(false); }}>
                             <ShieldAlert size={20} /> Bizon Admin
                         </button>
                     )}
 
-                    <button className={activeTab === 'leads' ? 'active' : ''} onClick={() => setActiveTab('leads')} style={{ position: 'relative' }}>
+                    <button className={activeTab === 'leads' ? 'active' : ''} onClick={() => { setActiveTab('leads'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
                         <Users size={20} /> Kunder & Leads
                         {(() => {
                             const unreadCount = leadsData.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel' && l.is_read === false).length;
@@ -1718,31 +1726,31 @@ const Dashboard = () => {
                             return null;
                         })()}
                     </button>
-                    <button className={activeTab === 'cases' ? 'active' : ''} onClick={() => setActiveTab('cases')}>
+                    <button className={activeTab === 'cases' ? 'active' : ''} onClick={() => { setActiveTab('cases'); setIsMobileMenuOpen(false); }}>
                         <Briefcase size={20} /> Sager & Ordrestyring
                     </button>
                     {(carpenterProfile?.role !== 'accountant' || carpenterProfile?.permissions?.view_materials) && (
                         <>
-                            <button className={activeTab === 'map' ? 'active' : ''} onClick={() => setActiveTab('map')}>
+                            <button className={activeTab === 'map' ? 'active' : ''} onClick={() => { setActiveTab('map'); setIsMobileMenuOpen(false); }}>
                                 <MapPin size={20} /> Kortvisning
                             </button>
-                            <button className={activeTab === 'materials' ? 'active' : ''} onClick={() => setActiveTab('materials')}>
+                            <button className={activeTab === 'materials' ? 'active' : ''} onClick={() => { setActiveTab('materials'); setIsMobileMenuOpen(false); }}>
                                 <Package size={20} /> Materialer
                             </button>
                         </>
                     )}
                     {(carpenterProfile?.role === 'admin' || carpenterProfile?.permissions?.view_pricing) && (
-                        <button className={activeTab === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>
+                        <button className={activeTab === 'settings' ? 'active' : ''} onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}>
                             <Sliders size={20} /> Prisberegning
                         </button>
                     )}
                     {(carpenterProfile?.role !== 'sales' || carpenterProfile?.permissions?.view_integrations) && (
-                        <button className={activeTab === 'integrations' ? 'active' : ''} onClick={() => setActiveTab('integrations')}>
+                        <button className={activeTab === 'integrations' ? 'active' : ''} onClick={() => { setActiveTab('integrations'); setIsMobileMenuOpen(false); }}>
                             <Link size={20} /> Integrationer
                         </button>
                     )}
                     {carpenterProfile?.role === 'admin' && (
-                        <button className={activeTab === 'team' ? 'active' : ''} onClick={() => setActiveTab('team')}>
+                        <button className={activeTab === 'team' ? 'active' : ''} onClick={() => { setActiveTab('team'); setIsMobileMenuOpen(false); }}>
                             <HardHat size={20} /> Team & Medarbejdere
                         </button>
                     )}
@@ -1778,7 +1786,7 @@ const Dashboard = () => {
 
             <main className="dashboard-main">
                 <header className="dashboard-topbar">
-                    <div className="mobile-menu">
+                    <div className="mobile-menu" onClick={() => setIsMobileMenuOpen(true)}>
                         <Menu />
                     </div>
 
