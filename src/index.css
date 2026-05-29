@@ -975,7 +975,7 @@ p {
         gap: 12px !important;
     }
     .pdf-preview-wrapper {
-        padding: 0 !important;
+        padding: 30px 0 0 0 !important;
         padding-bottom: 150px !important;
         overscroll-behavior-y: none;
         overflow-x: hidden !important;
@@ -993,13 +993,16 @@ p {
         transform: none !important;
         width: 100% !important;
         border-radius: 20px 20px 0 0 !important;
-        padding: 24px 16px 40px 16px !important;
+        padding: 16px 16px 24px 16px !important;
         background: rgba(30, 41, 59, 0.95) !important;
         backdrop-filter: blur(10px);
     }
     .pdf-action-buttons {
         flex-direction: column !important;
         width: 100% !important;
+    }
+    .email-preview-btn {
+        display: none !important;
     }
     .pdf-action-buttons button {
         width: 100% !important;
