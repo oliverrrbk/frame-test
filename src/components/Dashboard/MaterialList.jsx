@@ -342,7 +342,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
 
             {/* MATERIALELISTE GRID */}
             <div style={{ border: '1px solid #e8e6e1', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
-                <div style={{ padding: '16px 20px', backgroundColor: '#fafaf9', borderBottom: '1px solid #e8e6e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="material-list-header" style={{ padding: '16px 20px', backgroundColor: '#fafaf9', borderBottom: '1px solid #e8e6e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <strong style={{ color: '#1a1a1a', fontSize: '1.05rem' }}>Indkøbs- & Materialespecifikation</strong>
                     <div className="material-buttons-grid">
                         <button 
@@ -392,14 +392,16 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                         <input 
                                             type="number" 
                                             value={item.qty}
+                                            placeholder="Antal"
                                             onChange={(e) => handleCellChange(item.originalIndex, 'qty', e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#1a1a1a', textAlign: 'right', fontWeight: 'bold', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.6 : 1 }}
+                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#1a1a1a', textAlign: 'center', fontWeight: 'bold', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.6 : 1 }}
                                         />
                                         <input 
                                             type="text" 
                                             value={item.unit}
+                                            placeholder="Enhed"
                                             onChange={(e) => handleCellChange(item.originalIndex, 'unit', e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#6b7280', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.6 : 1 }}
+                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#6b7280', textAlign: 'center', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.6 : 1 }}
                                         />
                                         <select
                                             value={item.status || 'Ikke bestilt'}
