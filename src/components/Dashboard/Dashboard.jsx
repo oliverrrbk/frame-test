@@ -4057,11 +4057,11 @@ const Dashboard = () => {
                                                             <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i 30 dage fra ovenstående dato.</p>
                                                             <p style={{ margin: 0 }}>Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.</p>
                                                         </div>
-                                                        </div>
                                                     </div>
+                                                </PdfMobileWrapper>
 
-                                                    {/* ActionBar fixed til bunden for funktionalitet */}
-                                                    <div className="pdf-action-bar">
+                                                {/* ActionBar fixed til bunden for funktionalitet */}
+                                                <div className="pdf-action-bar">
                                                         <div className="pdf-action-buttons">
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', width: '100%', marginBottom: '4px' }}>
                                                                 <button 
@@ -4209,9 +4209,7 @@ const Dashboard = () => {
                                                         </>
                                                         )}
                                                     </div>
-                                                    
-
-                                                </PdfMobileWrapper>
+                                            </div>
                                         , document.body);
                                         })}
 
