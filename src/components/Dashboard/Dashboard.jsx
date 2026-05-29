@@ -4267,7 +4267,7 @@ const Dashboard = () => {
                                             Bekræftet opgave
                                         </button>
                                     </div>
-                                    <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f3f1ed', borderRadius: '8px', borderLeft: '3px solid #cbd5e1', fontSize: '0.85rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div className="hide-on-mobile" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f3f1ed', borderRadius: '8px', borderLeft: '3px solid #cbd5e1', fontSize: '0.85rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                                         <span>Opgaver i "Historik" og "Udgået opgave" er automatisk skjult for at holde kortet rent. Zoom ind hvis prikkerne ligger tæt.</span>
                                     </div>
@@ -4519,10 +4519,10 @@ const Dashboard = () => {
                                                         <div className="material-input-row" key={mat.id} style={{ opacity: isItemActive ? 1 : 0.6, background: isItemActive ? 'transparent' : '#f8fafc' }}>
                                                             <div style={{ flex: '1', minWidth: 0, paddingRight: '16px' }}>
                                                                 {cleanName.includes('Sikkerhed') ? (
-                                                                    <div className="tooltip-wrapper" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                                                        <label className="is-security" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', lineHeight: '1.4' }}>
-                                                                            <Shield size={14} className="shield-icon" style={{ flexShrink: 0 }} />
-                                                                            <span>{cleanName}</span>
+                                                                    <div className="tooltip-wrapper" style={{ display: 'inline-flex', alignItems: 'flex-start', gap: '6px', flexWrap: 'wrap' }}>
+                                                                        <label className="is-security" style={{ display: 'inline-flex', alignItems: 'flex-start', gap: '6px', lineHeight: '1.4' }}>
+                                                                            <Shield size={14} className="shield-icon" style={{ flexShrink: 0, marginTop: '3px' }} />
+                                                                            <span style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{cleanName}</span>
                                                                         </label>
                                                                         <Info size={14} className="info-icon" style={{ flexShrink: 0 }} />
                                                                         <div className="tooltip-content">
@@ -4532,7 +4532,7 @@ const Dashboard = () => {
                                                                 ) : (
                                                                     <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', lineHeight: '1.4' }}>
                                                                         {!isItemActive && <span style={{ flexShrink: 0, color: '#ef4444', fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', border: '1px solid currentColor', borderRadius: '4px', padding: '2px 4px', marginTop: '2px' }}>Skjult</span>}
-                                                                        <span>{cleanName}</span>
+                                                                        <span style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{cleanName}</span>
                                                                     </label>
                                                                 )}
                                                             </div>
