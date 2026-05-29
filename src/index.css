@@ -989,7 +989,10 @@ p {
         margin-bottom: -730px;
     }
     .pdf-action-bar {
+        position: fixed !important;
         bottom: 0 !important;
+        left: 0 !important;
+        transform: none !important;
         width: 100% !important;
         border-radius: 20px 20px 0 0 !important;
         padding: 24px 16px 40px 16px !important;
