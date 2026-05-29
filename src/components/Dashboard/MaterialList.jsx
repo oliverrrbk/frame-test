@@ -20,6 +20,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
         unit: 'stk',
         section: 'Hovedmaterialer'
     });
+    const [isAddingMaterial, setIsAddingMaterial] = useState(false);
 
     useEffect(() => {
         if (lead) {
@@ -383,11 +384,21 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                         className="material-row-grid"
                                         style={{ padding: '10px 14px', borderBottom: idx === groupedMaterials[section].length - 1 ? 'none' : '1px solid #f1f1ef', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafaf9', alignItems: 'center' }}
                                     >
-                                        <input 
-                                            type="text" 
+                                        <textarea 
                                             value={item.item}
-                                            onChange={(e) => handleCellChange(item.originalIndex, 'item', e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#1a1a1a', fontWeight: '500', outline: 'none', fontSize: '0.9rem', textDecoration: item.status === 'Leveret' ? 'line-through' : 'none', opacity: item.status === 'Leveret' ? 0.6 : 1 }}
+                                            onChange={(e) => {
+                                                handleCellChange(item.originalIndex, 'item', e.target.value);
+                                                e.target.style.height = 'auto';
+                                                e.target.style.height = e.target.scrollHeight + 'px';
+                                            }}
+                                            ref={(el) => {
+                                                if (el) {
+                                                    el.style.height = 'auto';
+                                                    el.style.height = el.scrollHeight + 'px';
+                                                }
+                                            }}
+                                            rows={1}
+                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#1a1a1a', fontWeight: 'bold', outline: 'none', fontSize: '1.05rem', textDecoration: item.status === 'Leveret' ? 'line-through' : 'none', opacity: item.status === 'Leveret' ? 0.6 : 1, resize: 'none', overflow: 'hidden', padding: 0 }}
                                         />
                                         <input 
                                             type="number" 
@@ -427,49 +438,63 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                 </div>
 
                 {/* TILFØJ NYT MATERIALE BAR */}
-                <form onSubmit={handleAddItem} className="material-add-grid" style={{ padding: '16px 20px', borderTop: '1px solid #e8e6e1', backgroundColor: '#fafaf9', alignItems: 'center' }}>
-                    <input 
-                        type="text"
-                        value={newItem.item}
-                        onChange={(e) => setNewItem({ ...newItem, item: e.target.value })}
-                        placeholder="Tilføj nyt materiale... (fx Reglar 45x95 C18)"
-                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
-                    />
-                    <input 
-                        type="number"
-                        step="any"
-                        value={newItem.qty}
-                        onChange={(e) => setNewItem({ ...newItem, qty: e.target.value })}
-                        placeholder="Mængde"
-                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', textAlign: 'right' }}
-                    />
-                    <input 
-                        type="text"
-                        value={newItem.unit}
-                        onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
-                        placeholder="Enhed (fx stk)"
-                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
-                    />
-                    <select
-                        value={newItem.section}
-                        onChange={(e) => setNewItem({ ...newItem, section: e.target.value })}
-                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', backgroundColor: 'white' }}
-                    >
-                        <option value="Hovedmaterialer">Hovedmat.</option>
-                        <option value="Underkonstruktion">Underkonstr.</option>
-                        <option value="Fastgørelse & Beslag">Fastgørelse</option>
-                        <option value="Underlag & Tilbehør">Underlag</option>
-                        <option value="Afslutning">Afslutning</option>
-                        <option value="Forbyggelse & Værktøj">Forbrug/Værktøj</option>
-                    </select>
-                    <button 
-                        type="submit"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1e293b', color: 'white', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' }}
-                        title="Tilføj materiale"
-                    >
-                        <Plus size={16} />
-                    </button>
-                </form>
+                <div style={{ padding: '16px 20px', backgroundColor: '#fafaf9', borderTop: '1px solid #e8e6e1' }}>
+                    {!isAddingMaterial ? (
+                        <button 
+                            onClick={() => setIsAddingMaterial(true)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: '1px dashed #94a3b8', color: '#475569', padding: '12px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%', justifyContent: 'center' }}
+                        >
+                            <Plus size={16} /> Tilføj Nyt Materiale
+                        </button>
+                    ) : (
+                        <form onSubmit={(e) => { handleAddItem(e); setIsAddingMaterial(false); }} className="material-add-grid" style={{ alignItems: 'center', border: '1px solid #e8e6e1', borderRadius: '12px', backgroundColor: '#ffffff', padding: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <h4 style={{ margin: 0, color: '#1a1a1a', fontSize: '1rem' }}>Tilføj Materiale</h4>
+                                <button type="button" onClick={() => setIsAddingMaterial(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', padding: '4px' }}>&times;</button>
+                            </div>
+                            <input 
+                                type="text"
+                                value={newItem.item}
+                                onChange={(e) => setNewItem({ ...newItem, item: e.target.value })}
+                                placeholder="Tilføj nyt materiale... (fx Reglar 45x95 C18)"
+                                style={{ border: '1px solid #e8e6e1', padding: '10px 12px', borderRadius: '6px', fontSize: '0.95rem', width: '100%' }}
+                            />
+                            <input 
+                                type="number"
+                                step="any"
+                                value={newItem.qty}
+                                onChange={(e) => setNewItem({ ...newItem, qty: e.target.value })}
+                                placeholder="Mængde"
+                                style={{ border: '1px solid #e8e6e1', padding: '10px 12px', borderRadius: '6px', fontSize: '0.95rem', width: '100%' }}
+                            />
+                            <input 
+                                type="text"
+                                value={newItem.unit}
+                                onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
+                                placeholder="Enhed (fx stk)"
+                                style={{ border: '1px solid #e8e6e1', padding: '10px 12px', borderRadius: '6px', fontSize: '0.95rem', width: '100%' }}
+                            />
+                            <select
+                                value={newItem.section}
+                                onChange={(e) => setNewItem({ ...newItem, section: e.target.value })}
+                                style={{ border: '1px solid #e8e6e1', padding: '10px 12px', borderRadius: '6px', fontSize: '0.95rem', backgroundColor: 'white', width: '100%' }}
+                            >
+                                <option value="Hovedmaterialer">Hovedmat.</option>
+                                <option value="Underkonstruktion">Underkonstr.</option>
+                                <option value="Fastgørelse & Beslag">Fastgørelse</option>
+                                <option value="Underlag & Tilbehør">Underlag</option>
+                                <option value="Afslutning">Afslutning</option>
+                                <option value="Forbyggelse & Værktøj">Forbrug/Værktøj</option>
+                            </select>
+                            <button 
+                                type="submit"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', padding: '12px', cursor: 'pointer', fontWeight: 'bold', width: '100%', marginTop: '8px' }}
+                            >
+                                <Plus size={16} /> Tilføj
+                            </button>
+                        </form>
+                    )}
+                </div>
             </div>
         </div>
     );

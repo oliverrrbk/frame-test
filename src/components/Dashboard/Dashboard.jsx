@@ -539,28 +539,21 @@ const Dashboard = () => {
 
             const calc = selectedLead.raw_data.calc_data || {};
 
-            let initialCustomLines = [];
+            let initialCustomLines = (calc.customLines || []).filter(line => 
+                line.description !== 'Ekstra materialer (smådele) & Sikkerhedsbuffer' && 
+                line.description !== 'System-rabat / Afrunding'
+            );
             const activeHourlyRate = calc.hourlyRate || carpenterProfile?.hourly_rate || 500;
             const activeLaborHours = calc.laborHours || 0;
             const activeMaterialCost = calc.materialCost || 0;
             const activeDrivingCost = calc.drivingCost || 0;
             
-            // Udregn differencen mellem de rå materialer/timer og det endelige kundetilbud
-            if (calc.finalEstimateExVat) {
+            let activeExtraMaterialsCost = calc.extraMaterialsCost !== undefined ? calc.extraMaterialsCost : 0;
+            
+            // Udregn differencen mellem de rå materialer/timer og det endelige kundetilbud (bagudkompatibilitet)
+            if (calc.finalEstimateExVat && calc.extraMaterialsCost === undefined) {
                 const baseExVat = (activeLaborHours * activeHourlyRate) + activeMaterialCost + activeDrivingCost;
-                const difference = calc.finalEstimateExVat - baseExVat;
-                
-                if (difference > 0) {
-                    initialCustomLines.push({
-                        description: 'Ekstra materialer (smådele) & Sikkerhedsbuffer',
-                        price: difference
-                    });
-                } else if (difference < 0) {
-                    initialCustomLines.push({
-                        description: 'System-rabat / Afrunding',
-                        price: difference
-                    });
-                }
+                activeExtraMaterialsCost = calc.finalEstimateExVat - baseExVat;
             }
 
             const isKombi = calc.isKombi || cat === 'Kombi-projekt';
@@ -580,6 +573,7 @@ const Dashboard = () => {
                 hourlyRate: activeHourlyRate,
                 materialCost: activeMaterialCost,
                 drivingCost: activeDrivingCost,
+                extraMaterialsCost: activeExtraMaterialsCost,
                 customLines: initialCustomLines, 
                 showPreview: false,
                 isGeneratingPdf: false,
@@ -3673,6 +3667,10 @@ const Dashboard = () => {
                                                                 <label>Kørsel/Øvrigt eks. moms (kr)</label>
                                                                 <input type="number" value={quoteBuilder.drivingCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, drivingCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                             </div>
+                                                            <div className="input-group">
+                                                                <label>Ekstra materialer (smådele) eks. moms</label>
+                                                                <input type="number" value={quoteBuilder.extraMaterialsCost} onChange={(e) => setQuoteBuilder({...quoteBuilder, extraMaterialsCost: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                            </div>
                                                         </div>
 
                                                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -3709,7 +3707,7 @@ const Dashboard = () => {
                                                         <div style={{ padding: '16px', background: '#e8e6e1', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
                                                             <span style={{ fontWeight: 'bold' }}>Total inkl. 25% moms:</span>
                                                             <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1d4ed8' }}>
-                                                                {new Intl.NumberFormat('da-DK').format(((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25)} kr.
+                                                                {new Intl.NumberFormat('da-DK').format(((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25)} kr.
                                                             </span>
                                                         </div>
 
@@ -3923,6 +3921,12 @@ const Dashboard = () => {
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.drivingCost)} kr.</td>
                                                                             <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.drivingCost)} kr.</td>
                                                                         </tr>
+                                                                        <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
+                                                                            <td style={{ padding: '12px', fontSize: '14px' }}>Ekstra materialer (smådele)</td>
+                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 stk.</td>
+                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.extraMaterialsCost || 0)} kr.</td>
+                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.extraMaterialsCost || 0)} kr.</td>
+                                                                        </tr>
                                                                         {(quoteBuilder.customLines || []).map((line, idx) => (
                                                                             <tr key={idx} style={{ borderBottom: '1px solid #e8e6e1' }}>
                                                                                 <td style={{ padding: '12px', fontSize: '14px' }}>{line.description || 'Ekstra ydelser'}</td>
@@ -3938,13 +3942,13 @@ const Dashboard = () => {
                                                                         <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 stk.</td>
                                                                         <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>
                                                                             {(() => {
-                                                                                const subEx = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
+                                                                                const subEx = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
                                                                                 return new Intl.NumberFormat('da-DK').format(subEx);
                                                                             })()} kr.
                                                                         </td>
                                                                         <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>
                                                                             {(() => {
-                                                                                const subEx = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
+                                                                                const subEx = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
                                                                                 return new Intl.NumberFormat('da-DK').format(subEx);
                                                                             })()} kr.
                                                                         </td>
@@ -3956,7 +3960,7 @@ const Dashboard = () => {
                                                         {/* Totals */}
                                                         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                                             {(() => {
-                                                                const subTotalEx = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
+                                                                const subTotalEx = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
                                                                 return (
                                                                     <div style={{ width: '300px' }}>
                                                                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', fontSize: '14px' }}>
@@ -4013,7 +4017,7 @@ const Dashboard = () => {
                                                                         const file = new File([pdfBlob], `Tilbud_${cleanProjectTitle}_${cleanName}_${cleanAddress}.pdf`, { type: 'application/pdf' });
                                                                         const slug = carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst';
                                                                         
-                                                                        const finalPrice = ((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25;
+                                                                        const finalPrice = ((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25;
                                                                         
                                                                         const extraRawData = { 
                                                                             calc_data: {
@@ -4021,6 +4025,7 @@ const Dashboard = () => {
                                                                                 hourlyRate: quoteBuilder.hourlyRate,
                                                                                 materialCost: quoteBuilder.materialCost,
                                                                                 drivingCost: quoteBuilder.drivingCost,
+                                                                                extraMaterialsCost: quoteBuilder.extraMaterialsCost,
                                                                                 customLines: quoteBuilder.customLines,
                                                                             },
                                                                             quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown },
@@ -4066,7 +4071,7 @@ const Dashboard = () => {
                                                                         const file = new File([pdfBlob], `Tilbud_${cleanProjectTitle}_${cleanName}_${cleanAddress}.pdf`, { type: 'application/pdf' });
                                                                         const slug = carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst';
                                                                         
-                                                                        const finalPrice = ((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25;
+                                                                        const finalPrice = ((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25;
                                                                         
                                                                         const extraRawData = { 
                                                                             calc_data: {
@@ -4074,6 +4079,7 @@ const Dashboard = () => {
                                                                                 hourlyRate: quoteBuilder.hourlyRate,
                                                                                 materialCost: quoteBuilder.materialCost,
                                                                                 drivingCost: quoteBuilder.drivingCost,
+                                                                                extraMaterialsCost: quoteBuilder.extraMaterialsCost,
                                                                                 customLines: quoteBuilder.customLines,
                                                                             },
                                                                             quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown },
