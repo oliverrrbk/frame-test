@@ -3919,140 +3919,121 @@ const Dashboard = () => {
                                             <div className="pdf-preview-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
                                                 
                                                 <PdfMobileWrapper scale={scale}>
-                                                    <div ref={invoiceRef} style={{ width: '210mm', minHeight: '297mm', padding: '25mm', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
+                                                    <div ref={invoiceRef} style={{ width: '794px', minHeight: '1123px', padding: '60px', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
                                                         
                                                         {/* Invoice Header */}
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #e8e6e1', paddingBottom: '20px', marginBottom: '30px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #e8e6e1', paddingBottom: '16px', marginBottom: '24px' }}>
                                                             <div>
                                                                 {carpenterProfile?.logo_url ? (
-                                                                    <img src={carpenterProfile.logo_url} alt="Logo" style={{ maxHeight: '60px', marginBottom: '10px' }} crossOrigin="anonymous" />
+                                                                    <img src={carpenterProfile.logo_url} alt="Logo" style={{ maxHeight: '50px', marginBottom: '8px' }} crossOrigin="anonymous" />
                                                                 ) : (
-                                                                    <h1 style={{ margin: 0, fontSize: '24px', color: '#1a1a1a' }}>{carpenterProfile?.company_name || 'Tømrervirksomhed'}</h1>
+                                                                    <h1 style={{ margin: 0, fontSize: '20px', color: '#1a1a1a' }}>{carpenterProfile?.company_name || 'Tømrervirksomhed'}</h1>
                                                                 )}
-                                                                <p style={{ margin: '4px 0', fontSize: '12px', color: '#6b7280' }}>CVR: {carpenterProfile?.cvr || 'Under oprettelse'}</p>
-                                                                <p style={{ margin: '4px 0', fontSize: '12px', color: '#6b7280' }}>{carpenterProfile?.address || ''}</p>
-                                                                <p style={{ margin: '4px 0', fontSize: '12px', color: '#6b7280' }}>{carpenterProfile?.phone || ''} | {carpenterProfile?.email || ''}</p>
+                                                                <p style={{ margin: '2px 0', fontSize: '11px', color: '#6b7280' }}>CVR: {carpenterProfile?.cvr || 'Under oprettelse'}</p>
+                                                                <p style={{ margin: '2px 0', fontSize: '11px', color: '#6b7280' }}>{carpenterProfile?.address || ''}</p>
+                                                                <p style={{ margin: '2px 0', fontSize: '11px', color: '#6b7280' }}>{carpenterProfile?.phone || ''} | {carpenterProfile?.email || ''}</p>
                                                             </div>
                                                             <div style={{ textAlign: 'right' }}>
-                                                                <h2 style={{ margin: 0, fontSize: '28px', color: '#10b981' }}>TILBUD</h2>
-                                                                <p style={{ margin: '4px 0', fontSize: '12px' }}><strong>Dato:</strong> {new Date().toLocaleDateString('da-DK')}</p>
-                                                                <p style={{ margin: '4px 0', fontSize: '12px' }}><strong>Projekt ID:</strong> #{String(selectedLead.id).substring(0, 8)}</p>
+                                                                <h2 style={{ margin: 0, fontSize: '22px', color: '#10b981' }}>TILBUD</h2>
+                                                                <p style={{ margin: '4px 0', fontSize: '11px' }}><strong>Dato:</strong> {new Date().toLocaleDateString('da-DK')}</p>
+                                                                <p style={{ margin: '4px 0', fontSize: '11px' }}><strong>Projekt ID:</strong> #{String(selectedLead.id).substring(0, 8)}</p>
                                                             </div>
                                                         </div>
 
                                                         {/* Customer Details */}
-                                                        <div style={{ marginBottom: '40px' }}>
-                                                            <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#6b7280' }}>Kunde:</h3>
-                                                            <strong style={{ fontSize: '14px', display: 'block' }}>{selectedLead.customer_name}</strong>
-                                                            <span style={{ fontSize: '14px', display: 'block' }}>{selectedLead.customer_address}</span>
-                                                            <span style={{ fontSize: '14px', display: 'block' }}>{selectedLead.customer_phone} | {selectedLead.customer_email}</span>
+                                                        <div style={{ marginBottom: '32px' }}>
+                                                            <h3 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#6b7280' }}>Kunde:</h3>
+                                                            <strong style={{ fontSize: '13px', display: 'block' }}>{selectedLead.customer_name}</strong>
+                                                            <span style={{ fontSize: '13px', display: 'block' }}>{selectedLead.customer_address}</span>
+                                                            <span style={{ fontSize: '13px', display: 'block' }}>{selectedLead.customer_phone} | {selectedLead.customer_email}</span>
                                                         </div>
-
-                                                        <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', borderBottom: '1px solid #cbd5e1', paddingBottom: '10px' }}>
-                                                            Opgave: {categoryNames[selectedLead.project_category] || selectedLead.project_category}
-                                                        </h3>
 
                                                         {/* Custom Message */}
                                                         {quoteBuilder.customMessage && quoteBuilder.customMessage.trim() !== '' && (
-                                                            <div style={{ marginBottom: '30px', padding: '15px', backgroundColor: '#f3f1ed', borderLeft: '4px solid #10b981', borderRadius: '4px' }}>
-                                                                <p style={{ margin: 0, fontSize: '14px', color: '#374151', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                                                            <div style={{ marginBottom: '24px', padding: '12px', backgroundColor: '#f3f1ed', borderLeft: '3px solid #10b981', borderRadius: '4px' }}>
+                                                                <p style={{ margin: 0, fontSize: '13px', color: '#374151', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
                                                                     {quoteBuilder.customMessage}
                                                                 </p>
                                                             </div>
                                                         )}
 
                                                         {/* Line Items Table */}
-                                                        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px' }}>
+                                                        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '32px' }}>
                                                             <thead>
                                                                 <tr style={{ backgroundColor: '#f3f1ed', borderBottom: '2px solid #cbd5e1' }}>
-                                                                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px' }}>Beskrivelse</th>
-                                                                    <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>Antal/Mængde</th>
-                                                                    <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>Enhedspris</th>
-                                                                    <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>Total</th>
+                                                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '12px' }}>Beskrivelse</th>
+                                                                    <th style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>Antal/Mængde</th>
+                                                                    <th style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>Enhedspris</th>
+                                                                    <th style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>Total</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
                                                                 {quoteBuilder.showDetailedBreakdown ? (
                                                                     <>
                                                                         <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                            <td style={{ padding: '12px', fontSize: '14px' }}>Håndværker - Arbejdstid</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{quoteBuilder.laborHours} timer</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{quoteBuilder.hourlyRate} kr.</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.laborHours * quoteBuilder.hourlyRate)} kr.</td>
+                                                                            <td style={{ padding: '10px', fontSize: '12px' }}>Håndværker - Arbejdstid</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{quoteBuilder.laborHours} timer</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{quoteBuilder.hourlyRate} kr.</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.laborHours * quoteBuilder.hourlyRate)} kr.</td>
                                                                         </tr>
                                                                         <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                            <td style={{ padding: '12px', fontSize: '14px' }}>Materialer (ihht. besigtigelse)</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 pck.</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.materialCost)} kr.</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.materialCost)} kr.</td>
+                                                                            <td style={{ padding: '10px', fontSize: '12px' }}>Materialer (ihht. besigtigelse)</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>1 pck.</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.materialCost)} kr.</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.materialCost)} kr.</td>
                                                                         </tr>
                                                                         <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                            <td style={{ padding: '12px', fontSize: '14px' }}>Kørsel, logistik og øvrigt</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 stk.</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.drivingCost)} kr.</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.drivingCost)} kr.</td>
+                                                                            <td style={{ padding: '10px', fontSize: '12px' }}>Kørsel, logistik og øvrigt</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>1 stk.</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.drivingCost)} kr.</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.drivingCost)} kr.</td>
                                                                         </tr>
                                                                         <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                            <td style={{ padding: '12px', fontSize: '14px' }}>Ekstra materialer (smådele)</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 stk.</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.extraMaterialsCost || 0)} kr.</td>
-                                                                            <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.extraMaterialsCost || 0)} kr.</td>
+                                                                            <td style={{ padding: '10px', fontSize: '12px' }}>Ekstra materialer (smådele)</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>1 stk.</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.extraMaterialsCost || 0)} kr.</td>
+                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.extraMaterialsCost || 0)} kr.</td>
                                                                         </tr>
                                                                         {(quoteBuilder.customLines || []).map((line, idx) => (
                                                                             <tr key={idx} style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                                <td style={{ padding: '12px', fontSize: '14px' }}>{line.description || 'Ekstra ydelser'}</td>
-                                                                                <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 stk.</td>
-                                                                                <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(line.price || 0)} kr.</td>
-                                                                                <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{new Intl.NumberFormat('da-DK').format(line.price || 0)} kr.</td>
+                                                                                <td style={{ padding: '10px', fontSize: '12px' }}>{line.description || 'Ekstra ydelser'}</td>
+                                                                                <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>1 stk.</td>
+                                                                                <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(line.price || 0)} kr.</td>
+                                                                                <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(line.price || 0)} kr.</td>
                                                                             </tr>
                                                                         ))}
                                                                     </>
                                                                 ) : (
                                                                     <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                        <td style={{ padding: '12px', fontSize: '14px', fontWeight: 'bold' }}>Samlet entreprise på opgaven jf. aftale</td>
-                                                                        <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>1 stk.</td>
-                                                                        <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>
-                                                                            {(() => {
-                                                                                const subEx = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
-                                                                                return new Intl.NumberFormat('da-DK').format(subEx);
-                                                                            })()} kr.
-                                                                        </td>
-                                                                        <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>
-                                                                            {(() => {
-                                                                                const subEx = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
-                                                                                return new Intl.NumberFormat('da-DK').format(subEx);
-                                                                            })()} kr.
-                                                                        </td>
+                                                                        <td style={{ padding: '10px', fontSize: '13px', fontWeight: 'bold' }}>Samlet entreprise på opgaven jf. aftale</td>
+                                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px' }}>1 stk.</td>
+                                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.finalEstimateExVat || 0)} kr.</td>
+                                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.finalEstimateExVat || 0)} kr.</td>
                                                                     </tr>
                                                                 )}
                                                             </tbody>
                                                         </table>
 
                                                         {/* Totals */}
-                                                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                                            {(() => {
-                                                                const subTotalEx = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
-                                                                return (
-                                                                    <div style={{ width: '300px' }}>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', fontSize: '14px' }}>
-                                                                            <span>Subtotal (eks. moms)</span>
-                                                                            <span>{new Intl.NumberFormat('da-DK').format(subTotalEx)} kr.</span>
-                                                                        </div>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', fontSize: '14px', borderBottom: '2px solid #e8e6e1' }}>
-                                                                            <span>Moms (25%)</span>
-                                                                            <span>{new Intl.NumberFormat('da-DK').format(subTotalEx * 0.25)} kr.</span>
-                                                                        </div>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '12px', fontSize: '18px', fontWeight: 'bold', color: '#1a1a1a' }}>
-                                                                            <span>TOTAL AT BETALE</span>
-                                                                            <span>{new Intl.NumberFormat('da-DK').format(subTotalEx * 1.25)} kr.</span>
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })()}
+                                                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                                                            <div style={{ width: '250px' }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px' }}>
+                                                                    <span style={{ color: '#475569' }}>Subtotal (eks. moms)</span>
+                                                                    <span>{new Intl.NumberFormat('da-DK').format(quoteBuilder.finalEstimateExVat || 0)} kr.</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px' }}>
+                                                                    <span style={{ color: '#475569' }}>Moms (25%)</span>
+                                                                    <span>{new Intl.NumberFormat('da-DK').format((quoteBuilder.finalEstimateExVat || 0) * 0.25)} kr.</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: '2px solid #cbd5e1', borderBottom: '2px solid #cbd5e1', marginTop: '8px', fontSize: '16px', fontWeight: 'bold' }}>
+                                                                    <span>TOTAL AT BETALE</span>
+                                                                    <span>{new Intl.NumberFormat('da-DK').format((quoteBuilder.finalEstimateExVat || 0) * 1.25)} kr.</span>
+                                                                </div>
+                                                            </div>
                                                         </div>
 
-                                                        <div style={{ marginTop: 'auto', fontSize: '10px', color: '#6b7280', borderTop: '1px solid #e8e6e1', paddingTop: '15px', lineHeight: '1.4' }}>
-                                                            <p style={{ margin: '0 0 6px', fontSize: '12px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i 30 dage fra ovenstående dato.</p>
+                                                        <div style={{ marginTop: 'auto', fontSize: '9px', color: '#6b7280', borderTop: '1px solid #e8e6e1', paddingTop: '12px', lineHeight: '1.4' }}>
+                                                            <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i 30 dage fra ovenstående dato.</p>
                                                             <p style={{ margin: 0 }}>Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.</p>
                                                         </div>
                                                         </div>
@@ -4088,23 +4069,12 @@ const Dashboard = () => {
                                                                     setQuoteBuilder(p => ({...p, isGeneratingPdf: true, uploadStepText: '⏳ Tegner PDF...'}));
                                                                     try {
                                                                         const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
-                                                                        const pdf = new jsPDF('p', 'mm', 'a4');
                                                                         const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                                                                        
-                                                                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                                                                        const pdfWidth = 210;
                                                                         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                                                                        let heightLeft = pdfHeight;
-                                                                        let position = 0;
-
-                                                                        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-                                                                        heightLeft -= 297;
-
-                                                                        while (heightLeft > 0) {
-                                                                            position = heightLeft - pdfHeight;
-                                                                            pdf.addPage();
-                                                                            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-                                                                            heightLeft -= 297;
-                                                                        }
+                                                                        
+                                                                        const pdf = new jsPDF('p', 'mm', [210, Math.max(297, pdfHeight)]);
+                                                                        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
                                                                         const pdfBlob = pdf.output('blob');
                                                                         
                                                                         setQuoteBuilder(p => ({...p, uploadStepText: '☁️ Gemmer sikkert i skyen...'}));
