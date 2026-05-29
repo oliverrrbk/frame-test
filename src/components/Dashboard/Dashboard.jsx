@@ -3935,8 +3935,7 @@ const Dashboard = () => {
                                             </button>
                                         </div>
 
-                                        {quoteBuilder && quoteBuilder.showPreview && (() => {
-                                            return createPortal(
+                                        {quoteBuilder && quoteBuilder.showPreview && createPortal(
                                             <div className="pdf-preview-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
                                                 
                                                 <PdfMobileWrapper>
@@ -4208,10 +4207,8 @@ const Dashboard = () => {
                                                             </div>
                                                         </>
                                                         )}
-                                                    </div>
                                             </div>
-                                        , document.body);
-                                        })}
+                                        , document.body)}
 
                                     </div>
                                 </div>
