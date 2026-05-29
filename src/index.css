@@ -782,6 +782,91 @@ p {
     color: var(--text-tertiary);
 }
 
+/* ═══════════════════════════════════════
+   BISON FRAME - DASHBOARD LEAD MODAL
+   ═══════════════════════════════════════ */
+.lead-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+.material-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+.upload-system-grid {
+    display: flex;
+    gap: 10px;
+}
+.upload-system-grid button {
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .lead-details-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+    .material-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .upload-system-grid {
+        flex-direction: column !important;
+    }
+    .upload-system-grid button {
+        width: 100% !important;
+        padding: 12px !important;
+    }
+}
+
+.delivery-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+.material-row-grid {
+    display: grid;
+    grid-template-columns: 1fr 80px 80px 140px 40px;
+    gap: 12px;
+}
+.material-add-grid {
+    display: grid;
+    grid-template-columns: 1fr 100px 100px 120px 50px;
+    gap: 10px;
+}
+.material-buttons-grid {
+    display: flex;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .delivery-info-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .material-row-grid {
+        display: flex !important;
+        flex-wrap: wrap !important;
+    }
+    .material-row-grid > input:first-child {
+        flex: 1 1 100% !important;
+    }
+    .material-add-grid {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .material-add-grid > * {
+        width: 100% !important;
+    }
+    .material-buttons-grid {
+        flex-direction: column !important;
+    }
+    .material-buttons-grid button {
+        width: 100% !important;
+    }
+}
+
 .card-footer {
     padding: 20px 32px;
     background-color: var(--bg-muted);

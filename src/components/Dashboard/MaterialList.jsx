@@ -303,7 +303,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* LEVERINGSINFO */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', backgroundColor: '#fafaf9', padding: '20px', borderRadius: '12px', border: '1px solid #e8e6e1' }}>
+            <div className="delivery-info-grid" style={{ backgroundColor: '#fafaf9', padding: '20px', borderRadius: '12px', border: '1px solid #e8e6e1' }}>
                 <div style={{ gridColumn: 'span 2' }}>
                     <h4 style={{ margin: '0 0 12px 0', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         Leverings- & Fragtoplysninger
@@ -344,7 +344,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
             <div style={{ border: '1px solid #e8e6e1', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
                 <div style={{ padding: '16px 20px', backgroundColor: '#fafaf9', borderBottom: '1px solid #e8e6e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <strong style={{ color: '#1a1a1a', fontSize: '1.05rem' }}>Indkøbs- & Materialespecifikation</strong>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="material-buttons-grid">
                         <button 
                             onClick={handleGenerateEmail}
                             className="btn-secondary"
@@ -380,7 +380,8 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                 {groupedMaterials[section].map((item, idx) => (
                                     <div 
                                         key={item.originalIndex}
-                                        style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 140px 40px', gap: '12px', padding: '10px 14px', borderBottom: idx === groupedMaterials[section].length - 1 ? 'none' : '1px solid #f1f1ef', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafaf9', alignItems: 'center' }}
+                                        className="material-row-grid"
+                                        style={{ padding: '10px 14px', borderBottom: idx === groupedMaterials[section].length - 1 ? 'none' : '1px solid #f1f1ef', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafaf9', alignItems: 'center' }}
                                     >
                                         <input 
                                             type="text" 
@@ -424,7 +425,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                 </div>
 
                 {/* TILFØJ NYT MATERIALE BAR */}
-                <form onSubmit={handleAddItem} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 100px 120px 50px', gap: '10px', padding: '16px 20px', borderTop: '1px solid #e8e6e1', backgroundColor: '#fafaf9', alignItems: 'center' }}>
+                <form onSubmit={handleAddItem} className="material-add-grid" style={{ padding: '16px 20px', borderTop: '1px solid #e8e6e1', backgroundColor: '#fafaf9', alignItems: 'center' }}>
                     <input 
                         type="text"
                         value={newItem.item}

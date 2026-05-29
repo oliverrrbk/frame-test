@@ -262,6 +262,15 @@ const Dashboard = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
+    useEffect(() => {
+        if (selectedLead) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [selectedLead]);
+
     // Håndter åbning af specifik opgave via URL fra e-mail (deep linking)
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -2313,10 +2322,10 @@ const Dashboard = () => {
                                                 left: 0,
                                                 right: 0,
                                                 marginTop: '8px',
-                                                backgroundColor: 'var(--bg-card)',
+                                                backgroundColor: '#ffffff',
                                                 borderRadius: '16px',
                                                 border: '1px solid var(--border)',
-                                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                                                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
                                                 zIndex: 50,
                                                 overflow: 'hidden'
                                             }}>
@@ -2731,7 +2740,7 @@ const Dashboard = () => {
                                             </div>
                                         )}
 
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
+                                        <div className="lead-details-grid">
                                             <div style={{ padding: '16px', backgroundColor: '#f3f1ed', borderRadius: '14px' }}>
                                                 <span style={{ fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kategori</span>
                                                 <p style={{ margin: '4px 0 12px', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem' }}>{categoryNames[selectedLead.project_category] || selectedLead.project_category}</p>
@@ -3735,7 +3744,7 @@ const Dashboard = () => {
                                                             style={{ width: '100%', marginTop: '10px', background: '#10b981' }}
                                                             onClick={() => setQuoteBuilder({...quoteBuilder, showPreview: true})}
                                                         >
-                                                            {selectedLead.status === 'Sendt tilbud' ? 'Se PDF & Opdateringsmuligheder 👉' : 'Generer & Gennemse 👉'}
+                                                            {selectedLead.status === 'Sendt tilbud' ? 'Se PDF & Opdateringsmuligheder' : 'Generer & Gennemse'}
                                                         </button>
                                                         {selectedLead.status === 'Sendt tilbud' && (
                                                             <div style={{ padding: '12px', background: '#ecfdf5', color: '#065f46', borderRadius: '8px', fontWeight: '500', fontSize: '0.9rem', marginTop: '10px', textAlign: 'center' }}>
@@ -3746,7 +3755,7 @@ const Dashboard = () => {
                                                         {selectedLead.status !== 'Sendt tilbud' && (
                                                             <div style={{ marginTop: '24px', borderTop: '1px solid #cbd5e1', paddingTop: '20px' }}>
                                                                 <p style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#6b7280', textAlign: 'center', fontWeight: '500' }}>— Eller brug dit eget vante system —</p>
-                                                                <div style={{ display: 'flex', gap: '10px' }}>
+                                                                <div className="upload-system-grid">
                                                                     <input 
                                                                         type="file" 
                                                                         accept="application/pdf" 
