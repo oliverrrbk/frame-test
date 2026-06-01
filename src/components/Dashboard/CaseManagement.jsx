@@ -11,8 +11,9 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     const [team, setTeam] = useState([]);
 
     // States til delegering
-    const [pmId, setPmId] = useState('');
+    const [pmIds, setPmIds] = useState([]);
     const [assignedWorkers, setAssignedWorkers] = useState([]);
+    const [pmDropdownOpen, setPmDropdownOpen] = useState(false);
 
     // States til to-do
     const [todoList, setTodoList] = useState([]);
@@ -101,9 +102,9 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
         const caseId = selectedCase.id;
 
         // 1. Indlæs Delegering (PM og Workers)
-        const savedPm = selectedCase.raw_data?.assigned_pm || '';
+        const savedPm = selectedCase.raw_data?.assigned_pm || [];
+        setPmIds(Array.isArray(savedPm) ? savedPm : (savedPm ? [savedPm] : []));
         const savedWorkers = selectedCase.raw_data?.assigned_workers || [];
-        setPmId(savedPm);
         setAssignedWorkers(savedWorkers);
 
         // 2. Indlæs To-Do Liste
@@ -111,8 +112,8 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
         if (savedTodo.length > 0) {
             setTodoList(savedTodo);
         } else {
-            // Indlæs standard to-do opskrifter baseret på kategori
-            const defaultTodo = getDefaultChecklist(selectedCase.project_category);
+            // Indlæs standard to-do opskrifter baseret på sagsdetaljerne
+            const defaultTodo = getDefaultChecklist(selectedCase);
             setTodoList(defaultTodo);
         }
 
@@ -132,64 +133,104 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
         setTimeEntries(savedTimes);
     };
 
-    // Standard To-Do opskrifter for faglige anvisninger
-    const getDefaultChecklist = (category) => {
-        const base = [];
+    // Standard To-Do opskrifter for faglige anvisninger, bygget dynamisk ud fra opgaven
+    const getDefaultChecklist = (caseObj) => {
+        const categoryMap = {
+            'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
+            'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
+            'Tagprojekt': 'roof', 'Tag': 'roof', 'Nyt Køkken': 'kitchen', 'Køkken': 'kitchen',
+            'Nye Lofter': 'ceilings', 'Lofter': 'ceilings', 'Ny Facadebeklædning': 'facades',
+            'Facader': 'facades', 'Tilbygning': 'extensions', 'Anneks': 'annex', 'Annekser & Skure': 'annex',
+            'Carport': 'carport', 'Hegn': 'fence'
+        };
+        const rawCat = caseObj.project_category || '';
+        const category = categoryMap[rawCat] || rawCat;
+        const d = caseObj.raw_data?.details || {};
+        
+        let list = [];
+        let step = 1;
+        const add = (text) => list.push({ id: `dyn-${step++}`, text, done: false });
+
+        // Fælles starttrin for alle
+        add('Afsætning og kontrol: Opmåling af arealer, samt kontrol af leverede materialer for fejl/mangler.');
+
+        // Specifikke demonterings-/bortskaffelsestrin
+        if (d.disposal && d.disposal.toLowerCase().includes('ja')) {
+            add(`Demontering & Bortskaffelse: Fjern det gamle materiale (${d.oldMaterial || d.oldFloorType || d.oldRoofType || 'eksisterende'}). Bestil evt. container.`);
+        }
+
         switch (category) {
             case 'terrace':
-                return [
-                    { id: 't1', text: 'Afsætning: Kontroller højder, hjørner og vinkler (3-4-5 metoden)', done: false },
-                    { id: 't2', text: 'Stolper: Udgravning af huller til min. 90 cm dybde (frostfri)', done: false },
-                    { id: 't3', text: 'Fundament: Støbning af stolper eller fastgørelse til jordskruer', done: false },
-                    { id: 't4', text: 'Bjælkelag: Montering af bærende remme og strøer (max 40cm afstand ved komposit, 50cm ved træ)', done: false },
-                    { id: 't5', text: 'Vindspærre: Udrul ukrudtsdug under bjælkelaget', done: false },
-                    { id: 't6', text: 'Udlægning: Lægning af dækbrædder med ensartede fuger (min. 5 mm)', done: false },
-                    { id: 't7', text: 'Montering: Fastgørelse med rustfrie A4 skruer (skjult eller lige linjer)', done: false },
-                    { id: 't8', text: 'Afslutning: Renskæring af kanter og efterslibning af afskæringer', done: false }
-                ];
+                if (d.foundationType === 'skrue') {
+                    add('Fundament: Opmål og markér placering af jordskruer (anbefalet c-c max 2,5m). Skru dem i frostfri dybde og tjek højderne løbende med rotorlaser.');
+                } else {
+                    add('Fundament: Udgrav til stolpehuller (min. 90 cm ned for frostfri dybde). Støb stolperne fast i tørbeton og brug loddestok for at sikre præcision.');
+                }
+                add(`Underkonstruktion: Monter bærende remme (fastgøres med franske skruer) og strøer med vinkelbeslag. Strøafstand afhænger af brædderne (c-c 40 cm for komposit, max 50 cm for hårdttræ).`);
+                add('Vindspærre/Ukrudtsdug: Udrul ukrudtsdug omhyggeligt under bjælkelaget og læg lidt stabilgrus over, så den ikke blafrer i vinden.');
+                add(`Dækbrædder: Udlægning af ${d.terraceWood || d.material || 'terrassebrædder'}. Husk præcise fugeafstande: Brug knudsen-kiler eller tommestok som afstandsklods (min. 5 mm luft til udvidelse).`);
+                add('Fastgørelse: Brug altid rustfrie A4 skruer (eller C4 til trykimp). Sæt en snor ud for hver strø, så skruerne sidder i 100% lige linjer. Sænk skruehovedet præcis i niveau med brættet.');
+                if (d.railing && d.railing.toLowerCase().includes('ja')) {
+                    add('Rækværk: Monter stolper til rækværk. Sørg for at afstive rækværket ned i underkonstruktionen for optimal stabilitet.');
+                }
+                break;
             case 'floor':
-                return [
-                    { id: 'f1', text: 'Nedrivning: Afmonter og bortskaf det gamle gulv/tæppe', done: false },
-                    { id: 'f2', text: 'Klargøring: Støvsug, slib og kontroller undergulv for skævheder (max 2mm pr. 2m)', done: false },
-                    { id: 'f3', text: 'Fugtspærre: Udlæg dampspærre med 20cm overlæg og tape samlinger', done: false },
-                    { id: 'f4', text: 'Underlag: Læg akustikskum / støjdæmpende underlag', done: false },
-                    { id: 'f5', text: 'Gulvlægning: Læg første 3 rækker med kiler mod væggene (10mm ekspansion)', done: false },
-                    { id: 'f6', text: 'Tilpasning: Underfremning af dørkarme og tæt udskæring ved rør', done: false },
-                    { id: 'f7', text: 'Gerigter: Montering af fodlister og fejelister (fastgøres kun i væg, ikke i gulv)', done: false }
-                ];
+                add('Undergulv - Kontrol: Støvsug grundigt. Tjek planhed med en lang retskede – max tolerance er 2mm lunker over et stræk på 2 meter. Opret med selvnivellerende spartel hvis nødvendigt.');
+                add('Underlag & Fugtspærre: Udlæg dampspærre (husk 20 cm overlæg, som skal tapes tæt med dampspærretape). Rul derefter det støjdæmpende underlag ud kant til kant (uden overlæg).');
+                add(`Lægning af brædder/planker: Start lægning af ${d.floorType || d.material || 'det nye gulv'}. VIGTIGT: Husk afstandsklodser – der skal være 10-12 mm luft til ALLE faste vægge og rør, så gulvet kan arbejde.`);
+                add('Tilpasning & Finish: Ved rørgennemføringer bores hul der er 20mm større end røret. Skær et "kile-snit" bagud, læg lim på, og pres det sammen om røret. Husk at underfremme dørkarme (brug fukssvans/multicutter), så gulvet kan glide pænt ind under karmen.');
+                if (d.panels && d.panels.toLowerCase().includes('ja')) {
+                    add('Fodlister: Geringsskær og monter nye fodlister. Skyd dem fast med dykkerpistol (lim evt. hjørnerne). HUSK: Skru/skyd dem KUN fast i væggen, aldrig ned i gulvet!');
+                }
+                break;
             case 'ceilings':
-                return [
-                    { id: 'c1', text: 'Forberedelse: Nedtagning af eksisterende beklædning og opretning', done: false },
-                    { id: 'c2', text: 'Isolering: Kontroller isoleringens tykkelse og stand (efterisoler om nødvendigt)', done: false },
-                    { id: 'c3', text: 'Dampspærre: Monter dampspærrefolie 100% lufttæt med klemlister og tape', done: false },
-                    { id: 'c4', text: 'Forskalling: Monter forskalling 22x95 c-c 30cm ved gips, c-c 60cm ved Troldtekt', done: false },
-                    { id: 'c5', text: 'Loftsplader: Opsætning af loftplader med forskudte samlinger', done: false },
-                    { id: 'c6', text: 'Akustikfuge: Fugning langs vægge med elastisk akustikfuge', done: false }
-                ];
+                add('Forskalling & Tjek: Kontroller eksisterende lofts-konstruktion/spær for råd. Opsæt ny forskalling med snorlige afstande: c-c 30 cm ved gipslofter og c-c 60 cm ved akustiklofter.');
+                const calcSpots = d.spots === 'Ja' ? Math.max(1, Math.round((parseFloat(d.amount) || 0) / 1.75)) : 0;
+                if (calcSpots > 0) {
+                    add(`El-forberedelse: VIGTIGT: Træk tomrør/flexrør og gør klar til elektrikeren (${calcSpots} spots). Skru safebokse fast i forskallingen, og noter deres præcise placeringer på en skitse inden loftet lukkes!`);
+                }
+                add(`Loftmontage: Opsætning af ${d.material || 'loftplader'}. Hvis gips: Husk at forskyde endesamlingerne med mindst 40 cm (ingen krydssamlinger!). Brug de rigtige gipsskruer og skru dem 1 mm under pap-overfladen uden at bryde pappen.`);
+                add('Fugning & Skyggelister: Afslut overgangen til væggene. Ved gips: Ilæg akrylfuge. Ved træ/akustik: Monter skyggelister. Brug dykkerpistol og husk elastisk fuge i geringerne.');
+                break;
             case 'facades':
-                return [
-                    { id: 'fa1', text: 'Demontering: Nedtagning af gammel facadebeklædning og rengøring', done: false },
-                    { id: 'fa2', text: 'Vindspærre: Monter vindspærrefolie (dug) stramt og vindtæt med tape', done: false },
-                    { id: 'fa3', text: 'Afstandslister: Monter lodrette klemlister min. 21x45mm for god ventilation', done: false },
-                    { id: 'fa4', text: 'Facadebeklædning: Opsætning af brædder (vandret/lodret) med rustfrie søm/skruer', done: false },
-                    { id: 'fa5', text: 'Inddækning: Etabler lysninger og zink/alu-inddækninger over døre/vinduer', done: false }
-                ];
-            case 'fence':
-                return [
-                    { id: 'fe1', text: 'Afsætning: Kontroller skellinjer og snoretræk til hegnet', done: false },
-                    { id: 'fe2', text: 'Stolper: Udgravning af stolpehuller c-c 180cm til frostfri dybde', done: false },
-                    { id: 'fe3', text: 'Forankring: Sæt stolper i lod og støb med stolpebeton (2 poser pr. stolpe)', done: false },
-                    { id: 'fe4', text: 'Hegn: Monter klinkebrædder, liste eller færdige lamelmoduler', done: false },
-                    { id: 'fe5', text: 'Afslutning: Skru stolpehatte på for at beskytte mod regnvand', done: false }
-                ];
+                add('Nedrivning & Råddenskab: Fjern den eksisterende beklædning forsigtigt. Undersøg bagvedliggende træværk/vindspærre for råd, svamp eller fugtskader, før du bygger videre.');
+                add('Vindspærre & Lægter: Monter ny vindspærrefolie vindtæt med specialtape. Opsæt derefter lodrette klemlister (min. 21x45 mm trykimp) over vindspærren for at sikre et ordentligt ventileret hulrum bag facaden.');
+                add(`Beklædning: Montering af ${d.facadeWood || d.material || 'facadebrædder'}. Mål ud og slå kridtstreger, så du bevarer vandrette linjer. Husk drypnæse i bunden (skær evt. brædderne i 15 graders smig).`);
+                add('Inddækning & Tætning: Ved vinduer og døre etableres korrekte lysninger. Monter alu/zink-inddækninger øverst, så regnvand ledes ud over facaden og ikke ind bagved.');
+                break;
+            case 'windows':
+            case 'doors':
+                add(`Klargøring af hul: Demonter de gamle elementer forsigtigt (skær fugerne fri først). Klargør murhullet – fjern mørtelrester, støvsug og tjek om der skal lægges en ny fugtspærre (murpap) i bunden.`);
+                add(`Indsættelse og justering: Sæt det nye element (${d.windowAmount || d.doorAmount || d.amount || 'nye'}) i hullet. Brug Knudsen-kiler eller luftpuder. Justér det i 100% lod og vinkel. Diagonalmålene skal være identiske før du skruer fast!`);
+                add('Fastgørelse: Bor for og fastgør med karmskruer/karmplugs. Afstanden mellem skruerne må max være 70 cm, og hjørneskruerne skal sidde ca. 15 cm fra hjørnet for at undgå at karmen buer.');
+                add('Isolering & Fugning: Stop hulrummet til med fugebånd/mineraluld (ikke for hårdt, det skal kunne ånde). Udfør derefter udvendig elastisk fugning eller montering af Illmod-bånd. Indvendig fuge skal laves lufttæt!');
+                add('Afslutning Indvendigt: Opbyg evt. nye lysninger i MDF eller gips. Skær nye gerigter i smig og skyd dem fast. Tjek at vinduet/døren åbner og lukker friktionsfrit.');
+                break;
+            case 'roof':
+                add('Sikkerhed & Stillads: Sørg for korrekt opsat og godkendt stillads med faldsikring, inden I går på taget. Sikkerheden kommer først.');
+                add('Undertag & Lægter: Monter diffusionsåbent undertag stramt og uden folder. Tape alle overlæg. Slå afstandslister på langs ad spærene, og monter derefter taglægter. Tjek lægteafstanden (L-mål) for den specifikke tagsten.');
+                add(`Oplægning: Udlægning af ${d.roofType || d.material || 'tagmaterialet'}. Husk at binde de yderste rækker og sten omkring gennembrydninger (skorsten/ovenlys) forsvarligt fast med bindekroge.`);
+                add('Skotrender, Grater & Rygning: Monter zink-skotrender og klip tagstenene præcist til (brug vinkelsliber på jorden, støv ikke på taget!). Fastgør rygstensbånd og rygsten stramt, så fygesne holdes ude.');
+                add('Tagrender: Monter konsoljern med korrekt fald (ca. 2-3 mm pr. meter) ned mod nedløbet. Saml tagrenderne med lim eller samlestykker, og afslut med nedløbsrør og nedløbsbrønd.');
+                break;
+            case 'kitchen':
+                add('Klargøring & Opmåling: Kontroller rummets krydsmål og vinkler. Find det højeste punkt på gulvet – start altid monteringen af understel/sokkel ud fra dette punkt for at sikre, at køkkenet står i vater.');
+                add('Sokkel & Skabe: Saml skabene (brug lidt trælim i dyvlerne for ekstra stabilitet). Monter under- og overskabe. Spænd dem sammen med samleskruer (skrues bag hængslerne, så de er skjult). Sørg for 100% vater på alle leder.');
+                add('Bordplade: Skær bordpladen til (husk afdækningstape for at undgå flosser). Ved samlinger bruges hundeben og dyvler, samt vandfast D3 trælim eller silikone i samlingen, så den bliver helt usynlig og vandtæt.');
+                add('Udskæring til Vask/Kogeplade: Bor et hul i hjørnerne og skær ud med stiksav. FORSEGL de rå savsnit i bordpladen massivt med silikone for at forhindre fugtskader over tid!');
+                add('Fronter, Hvidevarer & Finish: Monter skuffer, låger og integrerede hvidevarer. Justér alle hængsler, så fugebilledet mellem lågerne er snorlige (typisk 2-3 mm luft). Træk en tynd akrylfuge mod vægge og en silikonefuge bag vasken.');
+                break;
             default:
-                return [
-                    { id: 'g1', text: 'Kontrol og opmåling før opstart', done: false },
-                    { id: 'g2', text: 'Klargøring af arbejdssted og materialemodtagelse', done: false },
-                    { id: 'g3', text: 'Udførelse af konstruktionsarbejde', done: false },
-                    { id: 'g4', text: 'Oprydning, slutkontrol og aflevering', done: false }
-                ];
+                add('Klargøring: Klargøring af arbejdssted. Tildæk gulve og møbler med pap/plast for at undgå støv og skader.');
+                add('Konstruktion: Udførelse af det primære arbejde. Husk at dobbelttjekke alle mål to gange, før du skærer én gang (Measure twice, cut once).');
+                add('KS & Overflader: Gennemgå alle samlinger. Sørg for at skruer er undersænket, samlinger er tætte, og at resultatet står knivskarpt.');
         }
+
+        // Fælles afslutning
+        add('Oprydning: Grov- og finoprydning af pladsen hver dag! Saml affald og feje. Kunden skal kunne bo i huset imens.');
+        add('Afleveringsforretning: Gennemgang af det færdige arbejde med kunden, og udlevering af evt. vedligeholdelsesvejledning.');
+
+        return list;
     };
 
     // Gemmer sagsoplysninger i Supabase/localStorage
@@ -229,7 +270,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     // Delegerings-håndtering
     const handleSaveAssignments = () => {
         saveCaseDataToDb({
-            assigned_pm: pmId,
+            assigned_pm: pmIds,
             assigned_workers: assignedWorkers
         });
         toast.success('Bemandingen er opdateret på sagen!');
@@ -552,7 +593,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                         <div style={{ padding: '16px 20px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
                             <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>
                                 <strong style={{ color: '#1a1a1a', marginRight: '6px' }}>Projektleder:</strong> 
-                                {team.find(t => t.id === pmId)?.owner_name || 'Ikke tilknyttet endnu'}
+                                {pmIds.length === 0 ? 'Ikke tilknyttet endnu' : pmIds.map(id => team.find(t => t.id === id)?.owner_name).filter(Boolean).join(', ')}
                             </div>
                             <div style={{ width: '1px', height: '16px', backgroundColor: '#cbd5e1' }} />
                             <div style={{ fontSize: '0.85rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -570,18 +611,80 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                     ) : (
                         <div style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', position: 'relative' }}>
                                     <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 'bold' }}>Projektleder</span>
-                                    <select 
-                                        value={pmId} 
-                                        onChange={(e) => setPmId(e.target.value)}
-                                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #e8e6e1', fontSize: '0.85rem', minWidth: '180px' }}
+                                    <div 
+                                        onClick={() => setPmDropdownOpen(!pmDropdownOpen)}
+                                        style={{ 
+                                            padding: '8px 12px', 
+                                            borderRadius: '6px', 
+                                            border: '1px solid #e8e6e1', 
+                                            fontSize: '0.85rem', 
+                                            minWidth: '220px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            backgroundColor: '#fff',
+                                            transition: 'border-color 0.2s',
+                                        }}
                                     >
-                                        <option value="">-- Vælg Projektleder --</option>
-                                        {team.filter(t => t.role === 'sales' || t.role === 'admin').map(pm => (
-                                            <option key={pm.id} value={pm.id}>{pm.owner_name}</option>
-                                        ))}
-                                    </select>
+                                        <span style={{ color: pmIds.length ? '#1a1a1a' : '#9ca3af' }}>
+                                            {pmIds.length === 0 ? '-- Vælg Projektleder --' : `${pmIds.length} valgt`}
+                                        </span>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: pmDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                    </div>
+                                    
+                                    {pmDropdownOpen && (
+                                        <div style={{ 
+                                            position: 'absolute', 
+                                            top: '100%', 
+                                            left: 0, 
+                                            marginTop: '4px', 
+                                            width: '100%', 
+                                            backgroundColor: '#fff', 
+                                            border: '1px solid #e8e6e1', 
+                                            borderRadius: '8px', 
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
+                                            zIndex: 100,
+                                            maxHeight: '200px',
+                                            overflowY: 'auto'
+                                        }}>
+                                            {team.filter(t => t.role === 'sales' || t.role === 'admin').map(pm => {
+                                                const isSelected = pmIds.includes(pm.id);
+                                                return (
+                                                    <div 
+                                                        key={pm.id} 
+                                                        onClick={() => {
+                                                            if (isSelected) setPmIds(pmIds.filter(id => id !== pm.id));
+                                                            else setPmIds([...pmIds, pm.id]);
+                                                        }}
+                                                        style={{ 
+                                                            padding: '10px 12px', 
+                                                            cursor: 'pointer', 
+                                                            display: 'flex', 
+                                                            alignItems: 'center', 
+                                                            gap: '8px',
+                                                            backgroundColor: isSelected ? '#eff6ff' : 'transparent',
+                                                            transition: 'background-color 0.1s'
+                                                        }}
+                                                        onMouseEnter={(e) => !isSelected && (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                                                        onMouseLeave={(e) => !isSelected && (e.currentTarget.style.backgroundColor = 'transparent')}
+                                                    >
+                                                        <div style={{ 
+                                                            width: '16px', height: '16px', borderRadius: '4px', border: isSelected ? 'none' : '1px solid #cbd5e1', 
+                                                            backgroundColor: isSelected ? '#3b82f6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                        }}>
+                                                            {isSelected && <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>✓</span>}
+                                                        </div>
+                                                        <span style={{ fontSize: '0.85rem', color: isSelected ? '#1d4ed8' : '#1a1a1a', fontWeight: isSelected ? '500' : 'normal' }}>
+                                                            {pm.owner_name}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                                 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

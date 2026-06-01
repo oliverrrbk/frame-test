@@ -1313,7 +1313,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
 
             // Elektriker- & spot integration
-            const spotCount = d.spots === 'Ja' ? (parseInt(d.spotsAmount) || 0) : 0;
+            const spotCount = d.spots === 'Ja' ? Math.max(1, Math.round(numericAmount / 1.75)) : 0;
             if (spotCount > 0) {
                 laborHours += spotCount * 0.4; // 0.4 timer pr spot til måling/udskæring
                 if (!userSuppliesMaterials) {

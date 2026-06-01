@@ -513,13 +513,6 @@ export const QUESTIONS = {
             type: 'select',
             label: 'Skal der etableres spots eller nye lampesteder?',
             options: ['Nej', 'Ja']
-        },
-        {
-            id: 'spotsAmount',
-            type: 'number',
-            label: 'Hvor mange spots/lampesteder skal der etableres i alt?',
-            condition: (d) => d.spots === 'Ja',
-            placeholder: 'Fx 6'
         }
     ],
     facades: [

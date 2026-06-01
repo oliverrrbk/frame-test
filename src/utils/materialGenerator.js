@@ -162,8 +162,8 @@ export const generateMaterialList = (category, details = {}, amount = 0) => {
                 list.push({ item: 'Skyggelister (Træ/MDF - Inkl. 10% spild)', qty: lbmEdge, unit: 'lbm', section: 'Afslutning' });
                 list.push({ item: 'Akryl/Malerfuge (300ml - Til samlinger og kanter)', qty: Math.ceil(lbmEdge / 10) || 2, unit: 'stk', section: 'Afslutning' });
 
-                if (details.spots === 'Ja' && details.spotsAmount) {
-                    const spotCnt = parseInt(details.spotsAmount);
+                if (details.spots === 'Ja') {
+                    const spotCnt = Math.max(1, Math.round(numAmount / 1.75));
                     list.push({ item: 'Safebox / Spotkasser (Forberedelse til elektriker)', qty: spotCnt, unit: 'stk', section: 'Underkonstruktion' });
                     list.push({ item: 'Flexrør (tomrør til kabeltræk) og kabelclips', qty: Math.ceil(spotCnt * 1.5), unit: 'm', section: 'Underkonstruktion' });
                 }

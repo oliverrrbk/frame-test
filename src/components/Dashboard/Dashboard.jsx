@@ -248,8 +248,9 @@ const generateShortSummary = (lead) => {
         case 'ceilings':
             text += `opsætning af ${amount} m² nye lofter`;
             if (material) text += ` i ${material}.`; else text += `.`;
-            if (d.spots && d.spotsAmount) {
-                text += ` Opgaven inkluderer forberedelse til ${d.spotsAmount} spots.`;
+            if (d.spots === 'Ja') {
+                const calcSpots = Math.max(1, Math.round((parseFloat(d.amount) || 0) / 1.75));
+                text += ` Opgaven inkluderer forberedelse til ${calcSpots} spots.`;
             }
             break;
         case 'extensions':
@@ -2835,9 +2836,20 @@ const Dashboard = () => {
                                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                                                         Opsummering af opgaven
                                                     </span>
-                                                    <p style={{ margin: 0, fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5' }}>
-                                                        {selectedLead.raw_data?.ai_summary || selectedLead.ai_summary || generateShortSummary(selectedLead)}
-                                                    </p>
+                                                    {(() => {
+                                                        const summaryText = selectedLead.raw_data?.ai_summary || selectedLead.ai_summary || generateShortSummary(selectedLead);
+                                                        const summaryBullets = summaryText.split('. ')
+                                                            .filter(sentence => sentence.trim().length > 0)
+                                                            .map(sentence => sentence.trim() + (sentence.endsWith('.') ? '' : '.'));
+                                                        
+                                                        return (
+                                                            <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc', marginLeft: '10px', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5' }}>
+                                                                {summaryBullets.map((bullet, idx) => (
+                                                                    <li key={idx} style={{ marginBottom: '4px' }}>{bullet}</li>
+                                                                ))}
+                                                            </ul>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                             <div style={{ padding: '16px', backgroundColor: selectedLead.status === 'Bekræftet opgave' ? '#ecfdf5' : '#f7f6f3', borderRadius: '14px', border: selectedLead.status === 'Bekræftet opgave' ? '1px solid #10b981' : '1px solid #e8e6e1' }}>
@@ -2987,7 +2999,6 @@ const Dashboard = () => {
                                                         'ceilingHeight': 'Lofthøjde',
                                                         'ceilingInsulation': 'Efterisolering af loft',
                                                         'spots': 'Spots / Lampesteder',
-                                                        'spotsAmount': 'Antal spots',
                                                         'mountingStyle': 'Montagetype',
                                                         'insulation': 'Efterisolering',
                                                         'openings': 'Antal åbninger',

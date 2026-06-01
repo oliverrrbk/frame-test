@@ -249,8 +249,8 @@ export const generateTaskDescription = (category, details) => {
             tasks.push('Malerarbejde: Komplet fuldspartling med armeringstape, filt og to gange maling (Maler altid inkluderet)');
         }
 
-        const spotsAmount = parseInt(details.spotsAmount) || 0;
-        if (details.spots === 'Ja' && spotsAmount > 0) {
+        const spotsAmount = Math.max(1, Math.round((parseFloat(details.amount) || 0) / 1.75));
+        if (details.spots === 'Ja') {
             tasks.push(`Etablering af spots/lampesteder: Præcis opmåling og udskæring til ${spotsAmount} spots inkl. elektrikerforberedelse`);
         }
 
