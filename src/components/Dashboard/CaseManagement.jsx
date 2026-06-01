@@ -38,6 +38,16 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     // States til Mesterens ugentlige medarbejder-tidsstyring
     const [selectedEmployeeForTidslog, setSelectedEmployeeForTidslog] = useState('');
 
+    // Mobil & Worker Check-in states
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+    const isMobileWorker = (profile?.role === 'worker' || profile?.role === 'apprentice') && isMobile;
+    const activeCheckIn = timeEntries.find(t => t.employeeId === profile?.id && t.endTime === null);
+
     // Indlæs data
     useEffect(() => {
         const confirmed = leads.filter(l => l.status === 'Bekræftet opgave');
@@ -446,6 +456,49 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
         setNewTime({ ...newTime, desc: '' });
         saveCaseDataToDb({ time_entries: updated });
         toast.success('Timer registreret på sagen!');
+    };
+
+    const handleCheckIn = () => {
+        const entry = {
+            id: `time-${Date.now()}`,
+            startTime: new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' }),
+            endTime: null,
+            hours: 0,
+            date: new Date().toISOString().substring(0, 10),
+            desc: 'Aktiv tjek-ind (auto)',
+            employeeId: profile?.id,
+            employeeName: profile?.owner_name || 'Ukendt medarbejder'
+        };
+        const updated = [entry, ...timeEntries];
+        setTimeEntries(updated);
+        saveCaseDataToDb({ time_entries: updated });
+        toast.success('Du er nu tjekket ind!', { icon: '🟢' });
+    };
+
+    const handleCheckOut = () => {
+        const nowTime = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+        const entryIndex = timeEntries.findIndex(t => t.employeeId === profile?.id && t.endTime === null);
+        if (entryIndex === -1) return;
+        
+        const entry = { ...timeEntries[entryIndex] };
+        entry.endTime = nowTime;
+        
+        const start = new Date(`${entry.date}T${entry.startTime}`);
+        const end = new Date(`${entry.date}T${entry.endTime}`);
+        let diffHours = (end - start) / (1000 * 60 * 60);
+        if (diffHours < 0) diffHours = 0;
+        if (deductPause) { diffHours -= 0.5; if (diffHours < 0) diffHours = 0; }
+        
+        entry.hours = diffHours;
+        entry.desc = newTime.desc.trim() || 'Arbejde udført (Tjek-ud)';
+        
+        const updated = [...timeEntries];
+        updated[entryIndex] = entry;
+        
+        setTimeEntries(updated);
+        setNewTime({ ...newTime, desc: '' });
+        saveCaseDataToDb({ time_entries: updated });
+        toast.success('Tjekket ud! Timerne er nu låst.', { icon: '🔴' });
     };
 
     // Beregn sagsfremskridt i procent
@@ -1255,10 +1308,10 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
                                                             <strong style={{ fontSize: '0.9rem', color: '#1a1a1a' }}>{entry.employeeName}</strong>
                                                             <span style={{ fontSize: '0.8rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                <Clock size={12} /> {entry.startTime} - {entry.endTime}
+                                                                <Clock size={12} /> {entry.startTime} - {entry.endTime || 'Nu'}
                                                             </span>
-                                                            <span style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '30px', background: '#3b82f6', color: 'white', fontWeight: 'bold' }}>
-                                                                {entry.hours} timer
+                                                            <span style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '30px', background: entry.endTime ? '#3b82f6' : '#10b981', color: 'white', fontWeight: 'bold' }}>
+                                                                {entry.endTime ? `${entry.hours} timer` : 'I gang'}
                                                             </span>
                                                         </div>
                                                         <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>{entry.desc}</span>
@@ -1273,94 +1326,117 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                     </div>
                                 </div>
 
-                                {/* INDTAST NY TIMESEDDEL */}
-                                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '24px' }}>
-                                    <h4 style={{ margin: 0, color: '#1a1a1a' }}>Registrer nye timer</h4>
+                                {/* INDTAST NY TIMESEDDEL ELLER TJEK IND */}
+                                <div style={{ backgroundColor: '#ffffff', padding: isMobileWorker ? '16px' : '24px', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '24px' }}>
                                     
-                                    <form onSubmit={handleAddTimeEntry} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                        
-                                        {(profile?.role === 'worker' || profile?.role === 'apprentice') ? (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Medarbejder (Hvem)</label>
-                                                <div style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #e8e6e1', fontSize: '0.9rem', backgroundColor: '#f3f4f6', color: '#374151', fontWeight: 'bold' }}>
-                                                    {profile.owner_name}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Medarbejder (Hvem)</label>
-                                                <select
-                                                    value={newTime.employeeId}
-                                                    onChange={(e) => setNewTime({ ...newTime, employeeId: e.target.value })}
-                                                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1', fontSize: '0.9rem', backgroundColor: 'white' }}
+                                    {(profile?.role === 'worker' || profile?.role === 'apprentice') ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center' }}>
+                                            <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#1a1a1a' }}>Stempling</h3>
+                                            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
+                                                {activeCheckIn ? `Du har været tjekket ind siden kl. ${activeCheckIn.startTime}` : 'Klar til at arbejde? Tjek ind med det samme.'}
+                                            </p>
+                                            
+                                            {activeCheckIn ? (
+                                                <button 
+                                                    onClick={handleCheckOut}
+                                                    style={{ width: '100%', padding: '24px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '16px', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 8px 16px rgba(239, 68, 68, 0.3)', transition: 'transform 0.1s' }}
+                                                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
+                                                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                                 >
-                                                    <option value="">-- Vælg medarbejder --</option>
-                                                    {team.map(worker => (
-                                                        <option key={worker.id} value={worker.id}>{worker.owner_name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        )}
-
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Starttid</label>
-                                                <input 
-                                                    type="time"
-                                                    value={newTime.startTime}
-                                                    onChange={(e) => setNewTime({ ...newTime, startTime: e.target.value })}
-                                                    style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
-                                                />
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Sluttid</label>
-                                                <input 
-                                                    type="time"
-                                                    value={newTime.endTime}
-                                                    onChange={(e) => setNewTime({ ...newTime, endTime: e.target.value })}
-                                                    style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
-                                                />
-                                            </div>
+                                                    ◼ STOP ARBEJDE
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    onClick={handleCheckIn}
+                                                    style={{ width: '100%', padding: '24px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '16px', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.3)', transition: 'transform 0.1s' }}
+                                                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
+                                                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                >
+                                                    ▶ START ARBEJDE
+                                                </button>
+                                            )}
                                         </div>
+                                    ) : (
+                                        <>
+                                            <h4 style={{ margin: 0, color: '#1a1a1a' }}>Registrer timer (Manuelt)</h4>
+                                            
+                                            <form onSubmit={handleAddTimeEntry} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                                
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Medarbejder (Hvem)</label>
+                                                    <select
+                                                        value={newTime.employeeId}
+                                                        onChange={(e) => setNewTime({ ...newTime, employeeId: e.target.value })}
+                                                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1', fontSize: '0.9rem', backgroundColor: 'white' }}
+                                                    >
+                                                        <option value="">-- Vælg medarbejder --</option>
+                                                        {team.map(worker => (
+                                                            <option key={worker.id} value={worker.id}>{worker.owner_name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
 
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#4b5563', cursor: 'pointer' }}>
-                                            <input 
-                                                type="checkbox"
-                                                checked={deductPause}
-                                                onChange={(e) => setDeductPause(e.target.checked)}
-                                                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                                            />
-                                            Fratræk 30 min. selvbetalt frokostpause
-                                        </label>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Starttid</label>
+                                                        <input 
+                                                            type="time"
+                                                            value={newTime.startTime}
+                                                            onChange={(e) => setNewTime({ ...newTime, startTime: e.target.value })}
+                                                            style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Sluttid</label>
+                                                        <input 
+                                                            type="time"
+                                                            value={newTime.endTime}
+                                                            onChange={(e) => setNewTime({ ...newTime, endTime: e.target.value })}
+                                                            style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
+                                                        />
+                                                    </div>
+                                                </div>
 
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Dato</label>
-                                            <input 
-                                                type="date"
-                                                value={newTime.date}
-                                                onChange={(e) => setNewTime({ ...newTime, date: e.target.value })}
-                                                style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
-                                            />
-                                        </div>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#4b5563', cursor: 'pointer' }}>
+                                                    <input 
+                                                        type="checkbox"
+                                                        checked={deductPause}
+                                                        onChange={(e) => setDeductPause(e.target.checked)}
+                                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                    />
+                                                    Fratræk 30 min. selvbetalt frokostpause
+                                                </label>
 
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Beskrivelse (Hvad har du lavet?)</label>
-                                            <input 
-                                                type="text"
-                                                value={newTime.desc}
-                                                onChange={(e) => setNewTime({ ...newTime, desc: e.target.value })}
-                                                placeholder="F.eks 'Bjælkelag færdiggjort og lagt vinddug'"
-                                                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(12px)', padding: '14px 20px', borderRadius: '16px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)' }} onFocus={(e) => { e.currentTarget.style.borderColor = '#d946ef'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(217, 70, 239, 0.1)'; e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.backdropFilter = 'none'; }} onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)'; }}
-                                            />
-                                        </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Dato</label>
+                                                    <input 
+                                                        type="date"
+                                                        value={newTime.date}
+                                                        onChange={(e) => setNewTime({ ...newTime, date: e.target.value })}
+                                                        style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
+                                                    />
+                                                </div>
 
-                                        <button 
-                                            type="submit"
-                                            style={{ padding: '12px', backgroundColor: '#1e293b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem', cursor: 'pointer' }}
-                                        >
-                                            Registrer timer
-                                        </button>
-                                    </form>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Beskrivelse (Hvad har du lavet?)</label>
+                                                    <input 
+                                                        type="text"
+                                                        value={newTime.desc}
+                                                        onChange={(e) => setNewTime({ ...newTime, desc: e.target.value })}
+                                                        placeholder="F.eks 'Bjælkelag færdiggjort og lagt vinddug'"
+                                                        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(12px)', padding: '14px 20px', borderRadius: '16px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)' }}
+                                                    />
+                                                </div>
+
+                                                <button 
+                                                    type="submit"
+                                                    style={{ padding: '12px', backgroundColor: '#1e293b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem', cursor: 'pointer' }}
+                                                >
+                                                    Registrer timer
+                                                </button>
+                                            </form>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         )}
