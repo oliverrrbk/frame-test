@@ -769,7 +769,7 @@ const Dashboard = () => {
                 company_id: metadata.company_id || null,
                 tier: metadata.tier || 'standard',
                 has_completed_onboarding: false,
-                success_message: 'Tusind tak for din henvendelse! Jeg går tilbuddet igennem hurtigst muligt.'
+                success_message: 'Tusind tak for din henvendelse! Vi går tilbuddet igennem hurtigst muligt.'
             };
             const { data, error } = await supabase.from('carpenters').upsert([newProfile], { onConflict: 'id' }).select().single();
             if (error) {
@@ -3664,7 +3664,7 @@ const Dashboard = () => {
                                                     selectedLead.status === 'Sendt tilbud' && !quoteBuilder.forceEdit ? (
                                                         <div style={{ marginTop: '24px', padding: '40px 20px', backgroundColor: '#ecfdf5', borderRadius: '14px', border: '1px solid #10b981', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                                                             <div style={{ color: '#10b981', marginBottom: '16px' }}><CheckCircle size={48} /></div>
-                                                            <h3 style={{ margin: '0 0 12px', color: '#065f46', fontSize: '1.5rem' }}>Nu har jeg sendt tilbuddet på mail til kunden!</h3>
+                                                            <h3 style={{ margin: '0 0 12px', color: '#065f46', fontSize: '1.5rem' }}>Nu har vi sendt tilbuddet på mail til kunden!</h3>
                                                             <p style={{ margin: '0 0 32px', color: '#047857', fontSize: '1rem', maxWidth: '400px' }}>
                                                                 Kunden afventer nu, og du får direkte besked (samt en ny mail), så snart de accepterer opgaven.
                                                             </p>

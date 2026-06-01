@@ -1783,7 +1783,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     } 
 
     if(d.notes && d.notes.trim() !== "") {
-        bArr.push(`Beregningen er standard - Jeg tjekker dine personlige noter før et tilbud gives.`);
+        bArr.push(`Beregningen er standard - Vi tjekker dine personlige noter før et tilbud gives.`);
     }
 
     // --- OPTIMIZATION 3: MINIMUM TIME BOUNDARY ---

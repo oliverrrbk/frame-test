@@ -274,7 +274,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
             return;
         }
 
-        let emailBody = `Hej,\n\nJeg vil gerne bestille følgende materialer til levering på ${deliveryInfo.address || 'vores byggeplads'}:\n\n`;
+        let emailBody = `Hej,\n\nVi vil gerne bestille følgende materialer til levering på ${deliveryInfo.address || 'vores byggeplads'}:\n\n`;
         emailBody += `Ønsket leveringsdato: ${deliveryInfo.date ? new Date(deliveryInfo.date).toLocaleDateString('da-DK') : 'Hurtigst muligt'}\n`;
         if (deliveryInfo.notes) {
             emailBody += `Bemærkninger: ${deliveryInfo.notes}\n`;

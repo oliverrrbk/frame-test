@@ -264,7 +264,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
             </style>
             <div className="step-header" style={{ textAlign: 'center', marginBottom: '32px' }}>
                 <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>Kontaktoplysninger</h2>
-                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>For at jeg kan kontakte dig med dit personlige overslag, skal jeg bruge et par oplysninger om dig.</p>
+                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>For at vi kan kontakte dig med dit personlige overslag, skal vi bruge et par oplysninger om dig.</p>
             </div>
             
             <div className="premium-contact-card">

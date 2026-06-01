@@ -72,7 +72,7 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
         const initChat = async () => {
             const greeting = {
                 role: 'assistant',
-                content: `Hej! Jeg er den digitale assistent for ${carpenter?.owner_name?.split(' ')[0] || 'tømreren'} fra ${carpenter?.company_name || 'firmaet'}.\n\nMin opgave er at hjælpe dig i mål med dine byggedrømme. For at kunne give dig det bedste vejledende prisoverslag, vil jeg stille dig et par spørgsmål om opgaven. Hvis der er noget, du er i tvivl om undervejs, skal du endelig bare bede mig om at uddybe!\n\nHvad drømmer du om at få lavet?`
+                content: `Hej! Jeg er den digitale assistent for ${carpenter?.owner_name?.split(' ')[0] || 'tømreren'} fra ${carpenter?.company_name || 'firmaet'}.\n\nVores opgave er at hjælpe dig i mål med dine byggedrømme. For at kunne give dig det bedste vejledende prisoverslag, vil vi stille dig et par spørgsmål om opgaven. Hvis der er noget, du er i tvivl om undervejs, skal du endelig bare bede mig om at uddybe!\n\nHvad drømmer du om at få lavet?`
             };
 
             setMessages([greeting]);
@@ -148,7 +148,7 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                     
                     const isComplex = !isStandard && Math.max(0, Number(args.laborHours) || 0) === 0 && Math.max(0, Number(args.materialCost) || 0) === 0;
                     
-                    let finalMsgContent = `Sådan! Jeg har nu alle de detaljer, jeg skal bruge, for at kunne regne det ud for dig.\n\nFor at vi er helt sikre på, at vi taler om det samme, mangler vi blot et par billeder af området.\n\nTryk på knappen herunder, når du er klar til at se dit vejledende overslag! 👇`;
+                    let finalMsgContent = `Sådan! Vi har nu alle de detaljer, vi skal bruge, for at kunne regne det ud for dig.\n\nFor at vi er helt sikre på, at vi taler om det samme, mangler vi blot et par billeder af området.\n\nTryk på knappen herunder, når du er klar til at se dit vejledende overslag! 👇`;
                     
                     if (isComplex) {
                         finalMsgContent = `Tak for snakken! 🛠️\n\nDu har beskrevet et spændende, men komplekst projekt. For at kunne give dig en retvisende og tryg pris på dette, kræver det, at vi kommer ud og besigtiger opgaven fysisk først.\n\nTryk på knappen herunder for at sende dine oplysninger, så kontakter vi dig for at aftale et møde! 👇`;
@@ -310,7 +310,7 @@ const ChatEstimator = ({ carpenter, settingsData, materialsData, onComplete, pre
                                 <p style={{ color: '#475569', fontSize: '0.95rem', margin: 0, textAlign: 'center' }}>
                                     {isComplexProject 
                                         ? "Vi mangler blot dine kontaktoplysninger for at kunne arrangere en besigtigelse."
-                                        : "For at jeg kan vise dig det beregnede overslag, mangler vi blot dine kontaktoplysninger."}
+                                        : "For at vi kan vise dig det beregnede overslag, mangler vi blot dine kontaktoplysninger."}
                                 </p>
                                 <button 
                                     onClick={() => onComplete(estimateData)}
