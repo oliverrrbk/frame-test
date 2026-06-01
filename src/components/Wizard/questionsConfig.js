@@ -265,7 +265,7 @@ export const QUESTIONS = {
             id: 'floorDoorsNear', 
             type: 'select', 
             label: 'Er der indvendige døre i rummet (som grænser helt op til gulvet)?', 
-            tooltip: 'Nyt gulv (og evt. undergulv) ændrer ofte gulvhøjden. Det betyder, at indvendige døre, der støder op til det nye gulv, skal tilpasses i bunden eller udskiftes. Vi vil vurdere dette præcist ved besigtigelsen. Vi har medtaget en standard tilpasning af dørene i prisen, men hvis det ikke kan udføres pænt, kan det kræve udskiftning, hvilket afklares endeligt ved besigtigelsen.',
+            tooltip: 'Nyt gulv (og evt. undergulv) ændrer ofte gulvhøjden. Det betyder, at indvendige døre, der støder op til det nye gulv, skal tilpasses i bunden. Bemærk: Du skal KUN tælle indvendige døre med her. Eventuelle terrassedøre og yderdøre afklares altid direkte ved besigtigelsen, da det afhænger af afstanden mellem dit nuværende gulv og dørtrinnet.',
             options: ['Nej', 'Ja'] 
         },
         { 
