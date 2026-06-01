@@ -4,7 +4,7 @@ import { HardHat, CheckSquare, Camera, Clock, UserPlus, ChevronRight, AlertTrian
 import MaterialList from './MaterialList';
 import toast from 'react-hot-toast';
 
-const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false, selectedLeadId = null }) => {
+const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false, selectedLeadId = null, targetCaseId = null, clearTargetCase = () => {} }) => {
     const [activeCases, setActiveCases] = useState([]);
     const [selectedCase, setSelectedCase] = useState(null);
     const [activeSubTab, setActiveSubTab] = useState('todo'); // 'todo', 'materials', 'logs', 'timesheet'
@@ -85,6 +85,18 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
             loadCaseData();
         }
     }, [selectedCase]);
+
+    // Lyt efter remote targeting fra Dashboard CTA'en
+    useEffect(() => {
+        if (targetCaseId) {
+            const confirmed = leads.filter(l => l.status === 'Bekræftet opgave');
+            const target = confirmed.find(c => c.id === targetCaseId);
+            if (target) {
+                setSelectedCase(target);
+                clearTargetCase(); // Nulstil straks så vi kan navigere tilbage
+            }
+        }
+    }, [targetCaseId, leads, clearTargetCase]);
 
     const fetchTeam = async () => {
         try {
@@ -195,7 +207,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                     add('Fodlister: Geringsskær og monter nye fodlister. Skyd dem fast med dykkerpistol (lim evt. hjørnerne). HUSK: Skru/skyd dem KUN fast i væggen, aldrig ned i gulvet!');
                 }
                 break;
-            case 'ceilings':
+            case 'ceilings': {
                 add('Forskalling & Tjek: Kontroller eksisterende lofts-konstruktion/spær for råd. Opsæt ny forskalling med snorlige afstande: c-c 30 cm ved gipslofter og c-c 60 cm ved akustiklofter.');
                 const calcSpots = d.spots === 'Ja' ? Math.max(1, Math.round((parseFloat(d.amount) || 0) / 1.75)) : 0;
                 if (calcSpots > 0) {
@@ -204,6 +216,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                 add(`Loftmontage: Opsætning af ${d.material || 'loftplader'}. Hvis gips: Husk at forskyde endesamlingerne med mindst 40 cm (ingen krydssamlinger!). Brug de rigtige gipsskruer og skru dem 1 mm under pap-overfladen uden at bryde pappen.`);
                 add('Fugning & Skyggelister: Afslut overgangen til væggene. Ved gips: Ilæg akrylfuge. Ved træ/akustik: Monter skyggelister. Brug dykkerpistol og husk elastisk fuge i geringerne.');
                 break;
+            }
             case 'facades':
                 add('Nedrivning & Råddenskab: Fjern den eksisterende beklædning forsigtigt. Undersøg bagvedliggende træværk/vindspærre for råd, svamp eller fugtskader, før du bygger videre.');
                 add('Vindspærre & Lægter: Monter ny vindspærrefolie vindtæt med specialtape. Opsæt derefter lodrette klemlister (min. 21x45 mm trykimp) over vindspærren for at sikre et ordentligt ventileret hulrum bag facaden.');
