@@ -57,10 +57,55 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
         setMaterials(updated);
     };
 
+    const handleSaveList = async (materialsToSave = materials) => {
+        setIsSaving(true);
+        try {
+            const updatedRawData = {
+                ...(lead.raw_data || {}),
+                material_list: materialsToSave,
+                delivery_info: deliveryInfo
+            };
+
+            // DB Update med in-memory fallback
+            const { error } = await supabase
+                .from('leads')
+                .update({ raw_data: updatedRawData })
+                .eq('id', lead.id);
+
+            if (error) throw error;
+
+            if (onUpdate) {
+                onUpdate({
+                    ...lead,
+                    raw_data: updatedRawData
+                });
+            }
+        } catch (err) {
+            console.error('Kunne ikke gemme materialelisten:', err);
+            // Fallback til localStorage
+            try {
+                const localKey = `lead_material_list_${lead.id}`;
+                localStorage.setItem(localKey, JSON.stringify({ materials: materialsToSave, deliveryInfo }));
+            } catch (localErr) {
+                toast.error('Kunne ikke gemme materialelisten');
+            }
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleDeleteItem = (index) => {
         const updated = materials.filter((_, idx) => idx !== index);
         setMaterials(updated);
+        handleSaveList(updated);
         toast.success('Materiale fjernet fra listen');
+    };
+
+    const handleMarkAllOrdered = () => {
+        const updated = materials.map(m => ({ ...m, status: 'Bestilt' }));
+        setMaterials(updated);
+        handleSaveList(updated);
+        toast.success('Alle materialer markeret som bestilt!');
     };
 
     const handleAddItem = (e) => {
@@ -78,7 +123,9 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
             status: 'Ikke bestilt'
         };
 
-        setMaterials([...materials, added]);
+        const updated = [...materials, added];
+        setMaterials(updated);
+        handleSaveList(updated);
         setNewItem({
             item: '',
             qty: '',
@@ -86,45 +133,6 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
             section: 'Hovedmaterialer'
         });
         toast.success('Materiale tilføjet til listen');
-    };
-
-    const handleSaveList = async () => {
-        setIsSaving(true);
-        try {
-            const updatedRawData = {
-                ...(lead.raw_data || {}),
-                material_list: materials,
-                delivery_info: deliveryInfo
-            };
-
-            // DB Update med in-memory fallback
-            const { error } = await supabase
-                .from('leads')
-                .update({ raw_data: updatedRawData })
-                .eq('id', lead.id);
-
-            if (error) throw error;
-
-            toast.success('Materialelisten er gemt på sagen!');
-            if (onUpdate) {
-                onUpdate({
-                    ...lead,
-                    raw_data: updatedRawData
-                });
-            }
-        } catch (err) {
-            console.error('Kunne ikke gemme materialelisten:', err);
-            // Fallback til localStorage
-            try {
-                const localKey = `lead_material_list_${lead.id}`;
-                localStorage.setItem(localKey, JSON.stringify({ materials, deliveryInfo }));
-                toast.success('Materialelisten gemt lokalt (Local Storage Fallback)');
-            } catch (localErr) {
-                toast.error('Kunne ikke gemme materialelisten');
-            }
-        } finally {
-            setIsSaving(false);
-        }
     };
 
     const handleDownloadPdf = () => {
@@ -310,33 +318,39 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                         Leverings- & Fragtoplysninger
                     </h4>
                 </div>
-                <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Leveringsadresse</label>
+                <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Leveringsadresse</label>
                     <input 
                         type="text"
                         value={deliveryInfo.address}
                         onChange={(e) => setDeliveryInfo({ ...deliveryInfo, address: e.target.value })}
                         placeholder="Vejnavn 42, 8000 Aarhus"
-                        style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
+                        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(12px)', padding: '14px 20px', borderRadius: '16px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)' }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}
                     />
                 </div>
-                <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Ønsket leveringsdato</label>
+                <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Ønsket leveringsdato</label>
                     <input 
                         type="date"
                         value={deliveryInfo.date}
                         onChange={(e) => setDeliveryInfo({ ...deliveryInfo, date: e.target.value })}
-                        style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%' }}
+                        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(12px)', padding: '14px 20px', borderRadius: '16px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)' }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}
                     />
                 </div>
-                <div className="input-group" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Bemærkninger til fragtmanden (fx 'Stilles i carporten')</label>
+                <div className="input-group" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Bemærkninger til fragtmanden (fx 'Stilles i carporten')</label>
                     <textarea 
                         rows={2}
                         value={deliveryInfo.notes}
                         onChange={(e) => setDeliveryInfo({ ...deliveryInfo, notes: e.target.value })}
                         placeholder="Skriv eventuelle anvisninger til lastbilen..."
-                        style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', width: '100%', resize: 'vertical' }}
+                        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(12px)', padding: '14px 20px', borderRadius: '16px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)', resize: 'vertical' }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}
                     />
                 </div>
             </div>
@@ -346,6 +360,13 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                 <div className="material-list-header" style={{ padding: '16px 20px', backgroundColor: '#fafaf9', borderBottom: '1px solid #e8e6e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <strong style={{ color: '#1a1a1a', fontSize: '1.05rem' }}>Indkøbs- & Materialespecifikation</strong>
                     <div className="material-buttons-grid">
+                        <button 
+                            onClick={handleMarkAllOrdered}
+                            className="btn-secondary"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #10b981', backgroundColor: '#ecfdf5', color: '#059669' }}
+                        >
+                            <Check size={16} /> MARKÉR ALLE SOM BESTILT
+                        </button>
                         <button 
                             onClick={handleGenerateEmail}
                             className="btn-secondary"
@@ -382,7 +403,9 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                     <div 
                                         key={item.originalIndex}
                                         className="material-row-grid"
-                                        style={{ padding: '10px 14px', borderBottom: idx === groupedMaterials[section].length - 1 ? 'none' : '1px solid #f1f1ef', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafaf9', alignItems: 'center' }}
+                                        style={{ padding: '12px 16px', borderBottom: idx === groupedMaterials[section].length - 1 ? 'none' : '1px solid #f1f5f9', backgroundColor: '#ffffff', alignItems: 'center', transition: 'background-color 0.2s' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.backdropFilter = 'none'; }}
                                     >
                                         <textarea 
                                             className="material-item-name"
@@ -399,37 +422,41 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                                 }
                                             }}
                                             rows={1}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#1a1a1a', fontWeight: 'bold', outline: 'none', fontSize: '1.05rem', textDecoration: item.status === 'Leveret' ? 'line-through' : 'none', opacity: item.status === 'Leveret' ? 0.6 : 1, resize: 'none', overflow: 'hidden', padding: 0 }}
+                                            style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', fontWeight: '500', outline: 'none', fontSize: '0.95rem', textDecoration: item.status === 'Leveret' ? 'line-through' : 'none', opacity: item.status === 'Leveret' ? 0.5 : 1, resize: 'none', overflow: 'hidden', padding: '4px', borderRadius: '6px', transition: 'border-color 0.2s' }}
+                                            onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                            onBlur={(e) => e.currentTarget.style.borderColor = 'transparent'}
                                         />
                                         <input 
                                             type="number" 
                                             value={item.qty}
                                             placeholder="Antal"
                                             onChange={(e) => handleCellChange(item.originalIndex, 'qty', e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#1a1a1a', textAlign: 'center', fontWeight: 'bold', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.6 : 1 }}
+                                            style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', textAlign: 'center', fontWeight: 'bold', outline: 'none', fontSize: '0.95rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', transition: 'border-color 0.2s' }}
+                                            onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                            onBlur={(e) => e.currentTarget.style.borderColor = 'transparent'}
                                         />
                                         <input 
                                             type="text" 
                                             value={item.unit}
                                             placeholder="Enhed"
                                             onChange={(e) => handleCellChange(item.originalIndex, 'unit', e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', color: '#6b7280', textAlign: 'center', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.6 : 1 }}
+                                            style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#64748b', textAlign: 'center', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', transition: 'border-color 0.2s' }}
+                                            onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                            onBlur={(e) => e.currentTarget.style.borderColor = 'transparent'}
                                         />
-                                        <select
-                                            value={item.status || 'Ikke bestilt'}
-                                            onChange={(e) => handleCellChange(item.originalIndex, 'status', e.target.value)}
-                                            style={{ border: 'none', background: (item.status === 'Leveret') ? '#dcfce7' : (item.status === 'Bestilt' ? '#dbeafe' : '#fee2e2'), color: (item.status === 'Leveret') ? '#166534' : (item.status === 'Bestilt' ? '#1e40af' : '#991b1b'), borderRadius: '6px', padding: '6px 8px', fontSize: '0.8rem', outline: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+                                        <div
+                                            style={{ border: 'none', background: (item.status === 'Leveret') ? '#dcfce7' : (item.status === 'Bestilt' ? '#dbeafe' : '#f1f5f9'), color: (item.status === 'Leveret') ? '#166534' : (item.status === 'Bestilt' ? '#1e40af' : '#475569'), borderRadius: '20px', padding: '4px 10px', fontSize: '0.75rem', outline: 'none', fontWeight: 'bold', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                         >
-                                            <option value="Ikke bestilt">Ikke bestilt</option>
-                                            <option value="Bestilt">Bestilt/På vej</option>
-                                            <option value="Leveret">Leveret plads</option>
-                                        </select>
+                                            {item.status || 'Ikke bestilt'}
+                                        </div>
                                         <button 
                                             onClick={() => handleDeleteItem(item.originalIndex)}
-                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = '#fee2e2'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.backgroundColor = 'transparent'; }}
                                             title="Fjern række"
                                         >
-                                            <Trash2 size={15} />
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 ))}
@@ -448,37 +475,47 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                             <Plus size={16} /> Tilføj Nyt Materiale
                         </button>
                     ) : (
-                        <form onSubmit={(e) => { handleAddItem(e); setIsAddingMaterial(false); }} className="material-add-grid" style={{ alignItems: 'center', border: '1px solid #e8e6e1', borderRadius: '12px', backgroundColor: '#ffffff', padding: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <h4 style={{ margin: 0, color: '#1a1a1a', fontSize: '1rem' }}>Tilføj Materiale</h4>
-                                <button type="button" onClick={() => setIsAddingMaterial(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', padding: '4px' }}>&times;</button>
+                        <form onSubmit={(e) => { handleAddItem(e); setIsAddingMaterial(false); }} className="material-add-grid" style={{ alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '16px', backgroundColor: '#ffffff', padding: '24px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <h4 style={{ margin: 0, color: '#0f172a', fontSize: '1.1rem', fontWeight: 'bold' }}>Tilføj Materiale</h4>
+                                <button type="button" onClick={() => setIsAddingMaterial(false)} style={{ background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.2rem', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#64748b'; }}>&times;</button>
                             </div>
                             <input 
                                 type="text"
                                 value={newItem.item}
                                 onChange={(e) => setNewItem({ ...newItem, item: e.target.value })}
-                                placeholder="Tilføj nyt materiale... (fx Reglar 45x95 C18)"
-                                style={{ border: '1px solid #e8e6e1', padding: '10px 12px', borderRadius: '6px', fontSize: '0.95rem', width: '100%' }}
+                                placeholder="Varenavn (fx Reglar 45x95 C18)..."
+                                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(12px)', padding: '14px 20px', borderRadius: '16px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)' }}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.backdropFilter = 'none'; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)'; }}
                             />
-                            <input 
-                                type="number"
-                                step="any"
-                                value={newItem.qty}
-                                onChange={(e) => setNewItem({ ...newItem, qty: e.target.value })}
-                                placeholder="Mængde"
-                                style={{ border: '1px solid #e8e6e1', padding: '10px 12px', borderRadius: '6px', fontSize: '0.95rem', width: '100%' }}
-                            />
-                            <input 
-                                type="text"
-                                value={newItem.unit}
-                                onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
-                                placeholder="Enhed (fx stk)"
-                                style={{ border: '1px solid #e8e6e1', padding: '10px 12px', borderRadius: '6px', fontSize: '0.95rem', width: '100%' }}
-                            />
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <input 
+                                    type="number"
+                                    step="any"
+                                    value={newItem.qty}
+                                    onChange={(e) => setNewItem({ ...newItem, qty: e.target.value })}
+                                    placeholder="Mængde"
+                                    style={{ flex: 1, minWidth: 0, border: '1px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(12px)', padding: '14px 20px', borderRadius: '16px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)' }}
+                                    onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.backdropFilter = 'none'; }}
+                                    onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)'; }}
+                                />
+                                <input 
+                                    type="text"
+                                    value={newItem.unit}
+                                    onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
+                                    placeholder="Enhed"
+                                    style={{ flex: 1, minWidth: 0, border: '1px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(12px)', padding: '14px 20px', borderRadius: '16px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)' }}
+                                    onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.backdropFilter = 'none'; }}
+                                    onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)'; }}
+                                />
+                            </div>
                             <select
                                 value={newItem.section}
                                 onChange={(e) => setNewItem({ ...newItem, section: e.target.value })}
-                                style={{ border: '1px solid #e8e6e1', padding: '10px 12px', borderRadius: '6px', fontSize: '0.95rem', backgroundColor: 'white', width: '100%' }}
+                                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(12px)', padding: '14px 20px', borderRadius: '16px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)', cursor: 'pointer' }}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.backdropFilter = 'none'; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)'; }}
                             >
                                 <option value="Hovedmaterialer">Hovedmat.</option>
                                 <option value="Underkonstruktion">Underkonstr.</option>
@@ -489,9 +526,11 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                             </select>
                             <button 
                                 type="submit"
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', padding: '12px', cursor: 'pointer', fontWeight: 'bold', width: '100%', marginTop: '8px' }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '12px', padding: '14px', cursor: 'pointer', fontWeight: 'bold', width: '100%', marginTop: '8px', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#2563eb'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#3b82f6'; e.currentTarget.style.transform = 'translateY(0)'; }}
                             >
-                                <Plus size={16} /> Tilføj
+                                <Plus size={18} /> Tilføj Materiale
                             </button>
                         </form>
                     )}

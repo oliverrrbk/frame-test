@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { HardHat, CheckSquare, Camera, Clock, UserPlus, ChevronRight, AlertTriangle, TrendingUp, Plus, Trash2, Calendar, ShieldAlert, MapPin, User } from 'lucide-react';
+import { HardHat, CheckSquare, Camera, Clock, UserPlus, ChevronRight, AlertTriangle, TrendingUp, Plus, Trash2, Calendar, ShieldAlert, MapPin, User, ArrowLeft, Package, DollarSign, PackageCheck, ClipboardList } from 'lucide-react';
 import MaterialList from './MaterialList';
 import toast from 'react-hot-toast';
 
@@ -455,6 +455,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     // Beregn tidsbudget overholdelse (inklusive godkendte aftalesedler)
     const totalActualHours = timeEntries.reduce((sum, item) => sum + item.hours, 0);
     const baseBudgetedHours = parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) || 40; 
+    const baseTotalPrice = parseFloat(selectedCase?.raw_data?.calc_data?.totalPrice) || 0;
     const totalExtraHours = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraHours || 0), 0);
     const totalExtraPrice = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraPrice || 0), 0);
     
@@ -472,6 +473,21 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
             return sum + empEntries.reduce((s, item) => s + item.hours, 0);
         }, 0);
     };
+
+    // Materiale-status beregning
+    const materialListForOverview = selectedCase?.raw_data?.material_list || [];
+    const totalMaterials = materialListForOverview.length;
+    const orderedMaterials = materialListForOverview.filter(m => m.status === 'Bestilt' || m.status === 'Leveret').length;
+    const deliveredMaterials = materialListForOverview.filter(m => m.status === 'Leveret').length;
+    const notOrderedMaterials = totalMaterials - orderedMaterials;
+    const materialProgress = totalMaterials > 0 ? Math.round((orderedMaterials / totalMaterials) * 100) : 0;
+
+    // Økonomi Totaler
+    const totalToBill = baseTotalPrice > 0 ? (baseTotalPrice + totalExtraPrice) : (totalExtraPrice > 0 ? totalExtraPrice : 0);
+    
+    // Timer Totaler
+    const remainingHours = budgetedHours - totalActualHours;
+    const isOvertime = remainingHours < 0;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
@@ -593,9 +609,25 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                         <div>
                             <button 
                                 onClick={() => !isModalView && setSelectedCase(null)} 
-                                style={{ display: isModalView ? 'none' : 'inline-block', background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.85rem', padding: 0, textDecoration: 'underline', marginBottom: '8px' }}
+                                style={{ 
+                                    display: isModalView ? 'none' : 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '6px', 
+                                    background: '#f8fafc', 
+                                    border: '1px solid #e2e8f0', 
+                                    color: '#475569', 
+                                    cursor: 'pointer', 
+                                    fontSize: '0.85rem', 
+                                    padding: '6px 14px', 
+                                    borderRadius: '9999px',
+                                    fontWeight: '500',
+                                    marginBottom: '12px',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#475569'; }}
                             >
-                                ← Tilbage til sagsliste
+                                <ArrowLeft size={16} /> Tilbage til sagsliste
                             </button>
                             <h3 style={{ margin: '0 0 6px 0', fontSize: '1.3rem', fontWeight: 'bold', color: '#1a1a1a' }}>
                                 {selectedCase.raw_data?.project_title || `Sag: ${selectedCase.project_category}`}
@@ -616,6 +648,117 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                         <div style={{ width: `${progressPercent}%`, height: '100%', background: '#10b981' }} />
                                     </div>
                                     <strong style={{ fontSize: '0.9rem', color: '#1a1a1a' }}>{progressPercent}%</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* OVERBLIK / DASHBOARD (NYT DESIGN) */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                        
+                        {/* 1. Tidsregistrering */}
+                        <div 
+                            onClick={() => setActiveSubTab('timesheet')}
+                            style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', flexDirection: 'column' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#10b981'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; e.currentTarget.style.borderColor = '#e8e6e1'; }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Clock size={20} />
+                                </div>
+                                <div>
+                                    <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#1a1a1a', fontWeight: 'bold' }}>Tidsregistrering</h4>
+                                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Status på timebudgettet</span>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
+                                <div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a1a1a' }}>{totalActualHours} <span style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 'normal' }}>/ {budgetedHours} timer</span></div>
+                                </div>
+                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: isOvertime ? '#ef4444' : '#10b981' }}>{Math.round(hourBudgetRatio * 100)}%</span>
+                            </div>
+                            <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px' }}>
+                                <div style={{ width: `${Math.min(100, hourBudgetRatio * 100)}%`, height: '100%', background: isOvertime ? '#ef4444' : '#10b981', transition: 'width 0.5s ease' }} />
+                            </div>
+                            <div style={{ marginTop: 'auto', fontSize: '0.85rem', fontWeight: '500', color: isOvertime ? '#ef4444' : '#059669', display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isOvertime ? '#fef2f2' : '#ecfdf5', padding: '8px 12px', borderRadius: '8px' }}>
+                                {isOvertime ? (
+                                    <>Advarsel: Budgettet er overskredet med {Math.abs(remainingHours)} timer!</>
+                                ) : (
+                                    <>Du har {remainingHours} timer tilbage at gøre godt med.</>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 2. Økonomi / Ekstraarbejde */}
+                        <div 
+                            onClick={() => setActiveSubTab('logs')}
+                            style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', flexDirection: 'column' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#16a34a'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; e.currentTarget.style.borderColor = '#e8e6e1'; }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <DollarSign size={20} />
+                                </div>
+                                <div>
+                                    <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#1a1a1a', fontWeight: 'bold' }}>Økonomi</h4>
+                                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Budget, Ekstraudgifter & Total</span>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Oprindeligt Tilbud:</span>
+                                    <span style={{ fontSize: '0.9rem', color: '#1a1a1a' }}>{baseTotalPrice > 0 ? `${baseTotalPrice.toLocaleString('da-DK')} kr.` : 'Timelønnet'}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Ekstra Aftalesedler:</span>
+                                    <span style={{ fontSize: '0.9rem', color: totalExtraPrice > 0 ? '#166534' : '#6b7280' }}>
+                                        {totalExtraPrice > 0 ? `+${totalExtraPrice.toLocaleString('da-DK')} kr.` : '0 kr.'}
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '8px', marginTop: '4px' }}>
+                                    <span style={{ fontSize: '0.85rem', color: '#1a1a1a', fontWeight: 'bold' }}>Samlet til fakturering:</span>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#1a1a1a' }}>
+                                        {totalToBill > 0 ? `${totalToBill.toLocaleString('da-DK')} kr.` : 'Afventer'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3. Materialer */}
+                        <div 
+                            onClick={() => setActiveSubTab('materials')}
+                            style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', flexDirection: 'column' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; e.currentTarget.style.borderColor = '#e8e6e1'; }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Package size={20} />
+                                </div>
+                                <div>
+                                    <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#1a1a1a', fontWeight: 'bold' }}>Materialer</h4>
+                                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Indkøbs- & leveringsstatus</span>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
+                                <div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a1a1a' }}>{orderedMaterials} <span style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 'normal' }}>/ {totalMaterials} ordrer</span></div>
+                                </div>
+                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: materialProgress === 100 ? '#10b981' : '#3b82f6' }}>{materialProgress}%</span>
+                            </div>
+                            <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px' }}>
+                                <div style={{ width: `${materialProgress}%`, height: '100%', background: materialProgress === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.5s ease' }} />
+                            </div>
+                            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: notOrderedMaterials > 0 ? '#b45309' : '#6b7280' }}>
+                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: notOrderedMaterials > 0 ? '#f59e0b' : '#cbd5e1' }} />
+                                    Mangler bestilling: {notOrderedMaterials}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#166534', fontWeight: '500' }}>
+                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
+                                    Leveret: {deliveredMaterials}
                                 </div>
                             </div>
                         </div>
@@ -760,26 +903,63 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                     )}
 
                     {/* CASE WORKSPACE TABS */}
-                    <div style={{ display: 'flex', borderBottom: '1px solid #e8e6e1' }}>
+                                        {/* MODERN HORIZONTAL TABS (2026 DESIGN) */}
+                    <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingTop: '4px', paddingBottom: '8px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none', marginBottom: '16px', marginTop: '24px' }}>
+                        <style>{`
+                            .modern-tab-scroll::-webkit-scrollbar { display: none; }
+                        `}</style>
                         {[
-                            { id: 'todo', label: 'Bygge To-Do (KS)' },
-                            { id: 'materials', label: 'Materialer' },
-                            { id: 'logs', label: 'Progress Logbog' },
-                            { id: 'timesheet', label: 'Timeregistrering' }
+                            { id: 'todo', label: 'Bygge To-Do (KS)', icon: <CheckSquare size={18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5' },
+                            { id: 'materials', label: 'Materialer & Indkøb', icon: <PackageCheck size={18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff' },
+                            { id: 'logs', label: 'Byggeproces', icon: <ClipboardList size={18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4' },
+                            { id: 'timesheet', label: 'Timeregistrering', icon: <Clock size={18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff' }
                         ].filter(tab => {
                             if (profile?.role === 'worker' || profile?.role === 'apprentice') {
                                 return tab.id !== 'materials';
                             }
                             return true;
-                        }).map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveSubTab(tab.id)}
-                                style={{ padding: '12px 24px', border: 'none', background: 'none', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', color: activeSubTab === tab.id ? '#1a1a1a' : '#6b7280', borderBottom: activeSubTab === tab.id ? '3px solid #10b981' : 'none', transition: 'all 0.2s' }}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
+                        }).map(tab => {
+                            const isActive = activeSubTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveSubTab(tab.id)}
+                                    style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '8px', 
+                                        padding: '12px 20px', 
+                                        border: isActive ? `1px solid ${tab.activeColor}` : '1px solid #e2e8f0', 
+                                        background: isActive ? tab.activeBg : '#ffffff', 
+                                        borderRadius: '30px',
+                                        fontSize: '0.9rem', 
+                                        fontWeight: '600', 
+                                        cursor: 'pointer', 
+                                        color: isActive ? tab.activeColor : '#64748b',
+                                        boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isActive) {
+                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)';
+                                            e.currentTarget.style.borderColor = '#cbd5e1';
+                                            e.currentTarget.style.transform = 'translateY(-1px)';
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isActive) {
+                                            e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.backdropFilter = 'none';
+                                            e.currentTarget.style.borderColor = '#e2e8f0';
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                        }
+                                    }}
+                                >
+                                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{tab.icon}</span>
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* CASE WORKSPACE TABS INDHOLD */}
@@ -853,7 +1033,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                             />
                         )}
 
-                        {/* TAB 3: LIVE PROGRESS LOGBOG */}
+                        {/* TAB 3: LIVE BYGGEPROCES */}
                         {activeSubTab === 'logs' && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
                                 
@@ -1170,7 +1350,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                                 value={newTime.desc}
                                                 onChange={(e) => setNewTime({ ...newTime, desc: e.target.value })}
                                                 placeholder="F.eks 'Bjælkelag færdiggjort og lagt vinddug'"
-                                                style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem' }}
+                                                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(12px)', padding: '14px 20px', borderRadius: '16px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)' }} onFocus={(e) => { e.currentTarget.style.borderColor = '#d946ef'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(217, 70, 239, 0.1)'; e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.backdropFilter = 'none'; }} onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)'; }}
                                             />
                                         </div>
 
