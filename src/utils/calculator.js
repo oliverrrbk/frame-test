@@ -256,9 +256,15 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         let maxPriceExVat = Math.ceil(priceTop / 1000) * 1000;
         let maxPrice = Math.round(maxPriceExVat * 1.25);
         const fmtMax = new Intl.NumberFormat('da-DK').format(maxPrice);
+        const fmtExVat = new Intl.NumberFormat('da-DK').format(maxPriceExVat);
+
+        let finalPriceString = `${fmtMax} kr. inkl. moms`;
+        if (customerDetails && customerDetails.customerType === 'erhverv') {
+            finalPriceString = `${fmtExVat} kr. ekskl. moms (${fmtMax} kr. inkl. moms)`;
+        }
 
         return {
-            priceRange: `${fmtMax} kr. inkl. moms`,
+            priceRange: finalPriceString,
             breakdownArr: combinedBreakdown,
             calcData: {
                 isKombi: true,
@@ -1893,9 +1899,15 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     let maxPrice = Math.round(maxPriceExVat * 1.25);
 
     const fmtMax = new Intl.NumberFormat('da-DK').format(maxPrice);
+    const fmtExVat = new Intl.NumberFormat('da-DK').format(maxPriceExVat);
+
+    let finalPriceString = `${fmtMax} kr. inkl. moms`;
+    if (customerDetails && customerDetails.customerType === 'erhverv') {
+        finalPriceString = `${fmtExVat} kr. ekskl. moms (${fmtMax} kr. inkl. moms)`;
+    }
 
     return {
-        priceRange: `${fmtMax} kr. inkl. moms`,
+        priceRange: finalPriceString,
         breakdownArr: bArr,
         calcData: {
             laborHours: Math.ceil(workHours),

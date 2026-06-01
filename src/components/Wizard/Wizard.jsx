@@ -446,7 +446,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                     .from('leads')
                     .insert([{
                         quote_token: newLeadToken,
-                        customer_name: customerDetails?.fullName || 'Ukendt',
+                        customer_name: customerDetails?.customerType === 'erhverv' ? (customerDetails?.companyName || 'Virksomhed') : (customerDetails?.fullName || 'Ukendt'),
                         customer_email: customerDetails?.email || 'Ukendt',
                         customer_phone: customerDetails?.phone || '',
                         customer_address: `${customerDetails?.street || ''}, ${customerDetails?.zip || ''} ${customerDetails?.city || ''}`,

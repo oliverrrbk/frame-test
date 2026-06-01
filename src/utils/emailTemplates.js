@@ -145,7 +145,7 @@ export const getCustomerEstimateTemplate = (customerName, categoryName, priceEst
         <div style="background-color: #f1f5f9; padding: 24px; border-radius: 8px; margin: 24px 0; border: 1px solid #e2e8f0; text-align: center;">
             <p style="margin: 0 0 8px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Dit vejledende overslag</p>
             <h1 style="margin: 0; color: #0f172a; font-size: 32px; font-weight: 900;">${priceEstimate}</h1>
-            <p style="margin: 8px 0 0 0; color: #64748b; font-size: 13px;">Inkl. moms, arbejdsløn og materialer</p>
+            <p style="margin: 8px 0 0 0; color: #64748b; font-size: 13px;">Dækker arbejdsløn og materialer</p>
         </div>
         
         <p style="color: #334155;">Vores erfaring er, at det endelige, bindende tilbud ofte lander lidt lavere – men med denne pris har du et realistisk og stærkt udgangspunkt.</p>
@@ -180,7 +180,7 @@ export const getCustomerUpdatedEstimateTemplate = (customerName, categoryName, p
         <div style="background-color: #eff6ff; padding: 24px; border-radius: 8px; margin: 24px 0; border: 1px solid #bfdbfe; text-align: center;">
             <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Dit opdaterede overslag</p>
             <h1 style="margin: 0; color: #1e3a8a; font-size: 32px; font-weight: 900;">${priceEstimate}</h1>
-            <p style="margin: 8px 0 0 0; color: #3b82f6; font-size: 13px;">Inkl. moms, arbejdsløn og materialer</p>
+            <p style="margin: 8px 0 0 0; color: #3b82f6; font-size: 13px;">Dækker arbejdsløn og materialer</p>
         </div>
         
         <p style="color: #334155;">Du har altid adgang til din opgave via knappen nedenfor.</p>

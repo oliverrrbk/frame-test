@@ -9,6 +9,9 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
     const [zip, setZip] = useState(prefillData?.zip || '');
     const [city, setCity] = useState(prefillData?.city || '');
     const [phone, setPhone] = useState(prefillData?.phone || '');
+    const [customerType, setCustomerType] = useState(prefillData?.customerType || 'privat');
+    const [companyName, setCompanyName] = useState(prefillData?.companyName || '');
+    const [cvr, setCvr] = useState(prefillData?.cvr || '');
     const [acceptedTerms, setAcceptedTerms] = useState(!!prefillData); // Accept default if prefilled
     
     const nameInputRef = useRef(null);
@@ -95,8 +98,19 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
     const handleCalculate = () => {
+        if (customerType === 'erhverv') {
+            if (companyName.trim().length < 2) {
+                toast.error("Indtast venligst virksomhedens navn.");
+                return;
+            }
+            if (cvr.trim().length !== 8 || !/^\d+$/.test(cvr.trim())) {
+                toast.error("Indtast venligst et gyldigt CVR-nummer (8 cifre).");
+                return;
+            }
+        }
+        
         if (fullName.trim().length < 2) {
-            toast.error("Indtast venligst dit fulde navn.");
+            toast.error(customerType === 'erhverv' ? "Indtast venligst kontaktpersonens navn." : "Indtast venligst dit fulde navn.");
             return;
         }
         if (street.trim().length < 3) {
@@ -125,6 +139,9 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
         }
 
         calculateEstimate({
+            customerType,
+            companyName: customerType === 'erhverv' ? companyName.trim() : '',
+            cvr: customerType === 'erhverv' ? cvr.trim() : '',
             fullName: fullName.trim(),
             email: email.trim(),
             phone: phone.trim(),
@@ -259,6 +276,32 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                     .step-header p {
                         font-size: 1rem !important;
                     }
+                    .customer-type-toggle {
+                        display: flex;
+                        background: #f1f5f9;
+                        padding: 4px;
+                        border-radius: 12px;
+                        margin-bottom: 24px;
+                        border: 1px solid #e2e8f0;
+                    }
+                    .toggle-btn {
+                        flex: 1;
+                        padding: 12px;
+                        text-align: center;
+                        font-weight: 600;
+                        font-size: 0.95rem;
+                        color: #64748b;
+                        background: transparent;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    }
+                    .toggle-btn.active {
+                        background: #ffffff;
+                        color: #0f172a;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                    }
                 }
                 `}
             </style>
@@ -268,9 +311,51 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
             </div>
             
             <div className="premium-contact-card">
+                <div className="customer-type-toggle">
+                    <button 
+                        className={`toggle-btn ${customerType === 'privat' ? 'active' : ''}`}
+                        onClick={() => setCustomerType('privat')}
+                    >
+                        Privatkunde
+                    </button>
+                    <button 
+                        className={`toggle-btn ${customerType === 'erhverv' ? 'active' : ''}`}
+                        onClick={() => setCustomerType('erhverv')}
+                    >
+                        Erhvervskunde
+                    </button>
+                </div>
+
                 <div className="premium-grid">
+                    {customerType === 'erhverv' && (
+                        <div className="premium-grid-dual">
+                            <div>
+                                <label className="premium-label">Virksomhedsnavn <span style={{ color: '#ef4444' }}>*</span></label>
+                                <input 
+                                    type="text" 
+                                    placeholder="Indtast virksomhedens navn" 
+                                    value={companyName} 
+                                    onChange={(e) => setCompanyName(e.target.value)} 
+                                    className="premium-input"
+                                />
+                            </div>
+                            <div>
+                                <label className="premium-label">CVR-nummer <span style={{ color: '#ef4444' }}>*</span></label>
+                                <input 
+                                    type="text" 
+                                    inputMode="numeric"
+                                    placeholder="8 cifre" 
+                                    value={cvr} 
+                                    onChange={(e) => setCvr(e.target.value)} 
+                                    maxLength="8"
+                                    className="premium-input"
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     <div>
-                        <label className="premium-label">Fulde navn <span style={{ color: '#ef4444' }}>*</span></label>
+                        <label className="premium-label">{customerType === 'erhverv' ? 'Kontaktperson' : 'Fulde navn'} <span style={{ color: '#ef4444' }}>*</span></label>
                         <input 
                             type="text" 
                             name="name"

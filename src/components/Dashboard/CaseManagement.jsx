@@ -753,7 +753,14 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                         </h4>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
                                             <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                Kunde: {c.customer_name || 'Privatkunde'}
+                                                {c.raw_data?.customerDetails?.customerType === 'erhverv' ? (
+                                                    <>
+                                                        <span style={{ background: '#e2e8f0', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>Erhverv</span>
+                                                        {c.customer_name || 'Virksomhed'}
+                                                    </>
+                                                ) : (
+                                                    <>Kunde: {c.customer_name || 'Privatkunde'}</>
+                                                )}
                                             </span>
                                             <span style={{ fontSize: '0.825rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 <MapPin size={14} style={{ color: '#94a3b8' }} /> <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.customer_address || '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{c.customer_address || 'Adresse ikke angivet'}</a>
@@ -846,7 +853,14 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '0.9rem' }}>
                                 <MapPin size={14} style={{ color: '#94a3b8' }} /> <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCase.customer_address || '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{selectedCase.customer_address || 'Adresse ikke angivet'}</a> 
                                 <span style={{ color: '#cbd5e1' }}>|</span> 
-                                <strong>Kunde: {selectedCase.customer_name || 'Privatkunde'}</strong>
+                                <strong>
+                                    {selectedCase.raw_data?.customerDetails?.customerType === 'erhverv' ? (
+                                        <><span style={{ background: '#e2e8f0', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', marginRight: '6px' }}>Erhverv</span>
+                                        {selectedCase.customer_name} (CVR: {selectedCase.raw_data?.customerDetails?.cvr}) - Kontakt: {selectedCase.raw_data?.customerDetails?.fullName}</>
+                                    ) : (
+                                        <>Kunde: {selectedCase.customer_name || 'Privatkunde'}</>
+                                    )}
+                                </strong>
                             </div>
                         </div>
                         
@@ -1769,6 +1783,9 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                             <div style={{ textAlign: 'right', color: '#475569', fontSize: '0.95rem', lineHeight: '1.6' }}>
                                 <strong style={{ color: '#0f172a', fontSize: '1.1rem' }}>Faktureres til:</strong><br/>
                                 {selectedCase?.customer_name || 'Ukendt Kunde'}<br/>
+                                {selectedCase?.raw_data?.customerDetails?.customerType === 'erhverv' && (
+                                    <>CVR: {selectedCase.raw_data.customerDetails.cvr}<br/></>
+                                )}
                                 {selectedCase?.customer_address || 'Adresse ikke oplyst'}<br/>
                                 {selectedCase?.customer_email || 'Email ikke oplyst'}<br/>
                                 {selectedCase?.customer_phone || ''}
