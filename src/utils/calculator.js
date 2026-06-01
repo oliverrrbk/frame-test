@@ -1773,12 +1773,30 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
              bArr.push(`Sikkerhedsbuffer tillagt prisen for at dække uforudsete forhindringer/udgifter`);
          }
 
-         // SOP #2: Tilføj 10% forbrugsstoffer (skruer, fuge, lim, afdækning, slitage) lagt på fysiske materialer
+         // SOP #2: Tilføj 10% forbrugsstoffer lagt på fysiske materialer
          if (!userSuppliesMaterials) {
              const physicalMaterialCost = Math.max(0, materialCost - externalLeaseCost);
              const consumablesCost = physicalMaterialCost * 0.10;
              materialCost += consumablesCost;
-             bArr.push(`Tillæg: 10% forbrugsstoffer (skruer, fuge, lim, afdækning, slitage) lagt på fysiske materialer: ${Math.round(consumablesCost)} kr.`);
+             
+             const consumablesMap = {
+                 'floor': 'lim, skruer, underlagstape, kiler, afdækning',
+                 'ceilings': 'gipsskruer, akrylfuge, spartel, armeringstape, afdækning',
+                 'terrace': 'rustfrie skruer, stolpebeton, ukrudtsdug, bits, slitage',
+                 'windows': 'karmskruer, knudsen-kiler, fugebånd, elastisk fuge, afdækning',
+                 'doors': 'karmskruer, knudsen-kiler, fugebånd, elastisk fuge, afdækning',
+                 'facades': 'facadeskruer, beslag, vindspærretape, papsøm, slitage',
+                 'roof': 'papsøm, tagskruer, bindekroge, fugemasse, undertagstape',
+                 'kitchen': 'monteringsskruer, beslag, silikonefuge, D3-trælim, kiler, afdækning',
+                 'extensions': 'skruer, fuge, beslag, dampspærretape, afdækning, slitage',
+                 'annex': 'skruer, beslag, papsøm, lim, afdækning, slitage',
+                 'carport': 'stolpebeton, franske skruer, beslag, tagskruer, slitage',
+                 'fence': 'rustfrie skruer, stolpebeton, beslag, bits, slitage'
+             };
+             const catKey = projectData.category || '';
+             const consumableItems = consumablesMap[catKey] || 'skruer, fuge, beslag, plastkiler, afdækning, slitage';
+             
+             bArr.push(`Tillæg: 10% forbrugsstoffer (${consumableItems}) lagt på fysiske materialer: ${Math.round(consumablesCost)} kr.`);
          }
     } 
 
