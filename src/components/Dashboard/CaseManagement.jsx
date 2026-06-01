@@ -350,16 +350,21 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
         toast.success(isChangeOrder ? 'Aftaleseddel/Ekstraarbejde oprettet!' : 'Logbog opdateret!');
     };
 
-    const handleSimulatePhotoUpload = () => {
-        // Simulerer upload af foto fra byggepladsen
-        const mockPhotos = [
-            'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=400',
-            'https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?auto=format&fit=crop&q=80&w=400'
-        ];
-        // Vælg et tilfældigt byggeplads-billede
-        const chosen = mockPhotos[Math.floor(Math.random() * mockPhotos.length)];
-        setLogPhotos([...logPhotos, chosen]);
-        toast.success('Foto uploadet fra kamerarulle!');
+    const handleRealPhotoUpload = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+        
+        // Convert to local object URLs for preview/storage (since we don't have a real backend storage yet)
+        const newPhotos = files.map(file => URL.createObjectURL(file));
+        setLogPhotos([...logPhotos, ...newPhotos]);
+        toast.success(`${files.length} foto(s) vedhæftet!`);
+        
+        // Reset input so the same files can be selected again if needed
+        e.target.value = null;
+    };
+    
+    const removePhoto = (indexToRemove) => {
+        setLogPhotos(logPhotos.filter((_, idx) => idx !== indexToRemove));
     };
 
     // Timeregistrering-håndtering
@@ -938,18 +943,39 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                             </div>
                                         )}
 
-                                        {/* Foto-upload simulering */}
+                                        {/* Rigtigt Foto-upload */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Vedhæft byggeplads-foto (valgfrit)</label>
-                                            <button
-                                                type="button"
-                                                onClick={handleSimulatePhotoUpload}
-                                                style={{ padding: '10px 14px', border: '1px dashed #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', backgroundColor: '#ffffff', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '500' }}
-                                            >
-                                                <Camera size={16} /> Upload foto fra kamera
-                                            </button>
+                                            
+                                            <label style={{ padding: '10px 14px', border: '1px dashed #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', backgroundColor: '#ffffff', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '500' }}>
+                                                <Camera size={16} /> Upload foto fra kamera/telefon
+                                                <input 
+                                                    type="file" 
+                                                    multiple 
+                                                    accept="image/*" 
+                                                    style={{ display: 'none' }} 
+                                                    onChange={handleRealPhotoUpload}
+                                                />
+                                            </label>
+                                            
                                             {logPhotos.length > 0 && (
-                                                <p style={{ margin: 0, fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>✓ {logPhotos.length} foto(s) klar til indsendelse</p>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                                                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>✓ {logPhotos.length} foto(s) klar til indsendelse</p>
+                                                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                                        {logPhotos.map((photo, idx) => (
+                                                            <div key={idx} style={{ position: 'relative', flexShrink: 0 }}>
+                                                                <img src={photo} alt="Upload preview" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removePhoto(idx)}
+                                                                    style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '10px', padding: 0 }}
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
 
