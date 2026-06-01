@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator } from 'lucide-react';
+import { Home, Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
@@ -17,6 +17,7 @@ import AiTrainingView from './AiTrainingView';
 import TeamManagement from './TeamManagement';
 import CaseManagement from './CaseManagement';
 import MaterialList from './MaterialList';
+import FinanceOverview from './FinanceOverview';
 import OnboardingModal from './OnboardingModal';
 import SetPasswordModal from './SetPasswordModal';
 import SuperAdminView from './SuperAdminView';
@@ -1065,8 +1066,11 @@ const Dashboard = () => {
         if (activeTab === 'leads') setIsLeadsLoading(false);
     };
 
-    const syncToAccounting = async (lead) => {
+    const syncToAccounting = async (lead, action = 'draft', invoiceLines = [], isReverseCharge = false) => {
         if (!carpenterProfile) return;
+
+        // Udregn total beløbet for fakturaen
+        const totalAmountToBill = invoiceLines.reduce((sum, line) => sum + Number(line.priceExVat || 0), 0);
 
         try {
             // Hvis Dinero er forbundet (og ikke 'pending_authorization')
@@ -1075,15 +1079,31 @@ const Dashboard = () => {
                 
                 // Vis loading overlay eller lign. hvis ønsket
                 const { data, error } = await supabase.functions.invoke('dinero-invoice', {
-                    body: { lead: lead }
+                    body: { lead, action, invoiceLines, isReverseCharge }
                 });
 
                 if (error || (data && !data.success)) {
                     console.error("Dinero fejl:", error || data.error);
                     toast.error("Der opstod en fejl ved overførsel til Dinero: " + (error?.message || data?.error));
                 } else {
-                    toast.success(`Fakturakladde oprettet i Dinero! (ID: ${data.invoiceId})`);
-                    const updatedLead = { ...lead, raw_data: { ...(lead.raw_data || {}), synced_to_accounting: true } };
+                    toast.success(data.message || `Fakturakladde oprettet i Dinero! (ID: ${data.invoiceId})`);
+                    
+                    let newRawData = { ...(lead.raw_data || {}) };
+                    if (action === 'book_and_send') {
+                        const history = newRawData.invoice_history || [];
+                        history.push({
+                            id: data.invoiceId,
+                            amount: totalAmountToBill || 0,
+                            date: new Date().toISOString(),
+                            system: 'dinero'
+                        });
+                        newRawData.invoice_history = history;
+                        newRawData.invoiced_amount = (newRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
+                    } else {
+                        newRawData.synced_to_accounting = true;
+                    }
+                    
+                    const updatedLead = { ...lead, raw_data: newRawData };
                     await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
                     setSelectedLead(updatedLead);
                     setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
@@ -1093,15 +1113,31 @@ const Dashboard = () => {
                 console.log('--- E-CONOMIC BACKEND SYNC STARTER ---');
                 
                 const { data, error } = await supabase.functions.invoke('economic-invoice', {
-                    body: { lead: lead }
+                    body: { lead, action, invoiceLines, isReverseCharge }
                 });
 
                 if (error || (data && !data.success)) {
                     console.error("e-conomic fejl:", error || data.error);
                     toast.error("Der opstod en fejl ved overførsel til e-conomic: " + (error?.message || data?.error));
                 } else {
-                    toast.success(`Fakturakladde oprettet i e-conomic! (ID: ${data.invoiceId})`);
-                    const updatedLead = { ...lead, raw_data: { ...(lead.raw_data || {}), synced_to_accounting: true } };
+                    toast.success(data.message || `Fakturakladde oprettet i e-conomic! (ID: ${data.invoiceId})`);
+                    
+                    let newRawData = { ...(lead.raw_data || {}) };
+                    if (action === 'book_and_send') {
+                        const history = newRawData.invoice_history || [];
+                        history.push({
+                            id: data.invoiceId,
+                            amount: totalAmountToBill || 0,
+                            date: new Date().toISOString(),
+                            system: 'economic'
+                        });
+                        newRawData.invoice_history = history;
+                        newRawData.invoiced_amount = (newRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
+                    } else {
+                        newRawData.synced_to_accounting = true;
+                    }
+
+                    const updatedLead = { ...lead, raw_data: newRawData };
                     await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
                     setSelectedLead(updatedLead);
                     setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
@@ -1827,6 +1863,11 @@ const Dashboard = () => {
                     <button className={activeTab === 'cases' ? 'active' : ''} onClick={() => { setActiveTab('cases'); setIsMobileMenuOpen(false); }}>
                         <Briefcase size={20} /> Sager & Ordrestyring
                     </button>
+                    {(carpenterProfile?.role === 'admin' || carpenterProfile?.role === 'accountant') && (
+                        <button className={activeTab === 'finance' ? 'active' : ''} onClick={() => { setActiveTab('finance'); setIsMobileMenuOpen(false); }}>
+                            <Wallet size={20} /> Økonomi & Faktura
+                        </button>
+                    )}
                     {(carpenterProfile?.role !== 'accountant' || carpenterProfile?.permissions?.view_materials) && (
                         <>
                             <button className={activeTab === 'map' ? 'active' : ''} onClick={() => { setActiveTab('map'); setIsMobileMenuOpen(false); }}>
@@ -2314,12 +2355,24 @@ const Dashboard = () => {
                                 clearTargetCase={() => setTargetCaseId(null)}
                                 leads={leadsData} 
                                 profile={carpenterProfile} 
+                                syncToAccounting={syncToAccounting}
                                 onUpdateLead={(updated) => {
                                     setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
                                     if (selectedLead && selectedLead.id === updated.id) {
                                         setSelectedLead(updated);
                                     }
                                 }} 
+                            />
+                        </div>
+                    )}
+                    {activeTab === 'finance' && (
+                        <div className="tab-pane active animate-fadeIn" style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
+                            <FinanceOverview 
+                                cases={leadsData.filter(l => l.status === 'Tilbud Accepteret')}
+                                onOpenCase={(c) => {
+                                    setTargetCaseId(c.id);
+                                    setActiveTab('cases');
+                                }}
                             />
                         </div>
                     )}
@@ -2332,8 +2385,8 @@ const Dashboard = () => {
                                     {/* Pipeline Menu with Action Button */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingBottom: '10px', flexWrap: 'wrap', gap: '16px' }}>
                                     <div className="desktop-filters" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-                                        {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Udgået opgave', 'Historik']
-                                            .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
+                                        {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Sæt i bero', 'Udgået opgave', 'Historik']
+                                            .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Sæt i bero' || status === 'Historik')
                                             .map(status => (
                                             <button 
                                                 key={status} 
@@ -2346,13 +2399,13 @@ const Dashboard = () => {
                                                     borderRadius: '20px',
                                                     border: '1px solid',
                                                     borderColor: leadFilter === status 
-                                                        ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Historik' ? '#6b7280' : '#ef4444') 
+                                                        ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Sæt i bero' ? '#f97316' : status === 'Historik' ? '#6b7280' : '#ef4444') 
                                                         : 'rgba(255,255,255,0.2)',
                                                     backgroundColor: leadFilter === status 
-                                                        ? (status === 'Ny forespørgsel' ? 'rgba(59, 130, 246, 0.1)' : status === 'Sendt tilbud' ? 'rgba(234, 179, 8, 0.1)' : status === 'Bekræftet opgave' ? 'rgba(16, 185, 129, 0.1)' : status === 'Historik' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)') 
+                                                        ? (status === 'Ny forespørgsel' ? 'rgba(59, 130, 246, 0.1)' : status === 'Sendt tilbud' ? 'rgba(234, 179, 8, 0.1)' : status === 'Bekræftet opgave' ? 'rgba(16, 185, 129, 0.1)' : status === 'Sæt i bero' ? 'rgba(249, 115, 22, 0.1)' : status === 'Historik' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)') 
                                                         : 'rgba(255,255,255,0.05)',
                                                     color: leadFilter === status 
-                                                        ? (status === 'Ny forespørgsel' ? '#60a5fa' : status === 'Sendt tilbud' ? '#facc15' : status === 'Bekræftet opgave' ? '#34d399' : status === 'Historik' ? '#9ca3af' : '#f87171') 
+                                                        ? (status === 'Ny forespørgsel' ? '#60a5fa' : status === 'Sendt tilbud' ? '#facc15' : status === 'Bekræftet opgave' ? '#34d399' : status === 'Sæt i bero' ? '#fb923c' : status === 'Historik' ? '#9ca3af' : '#f87171') 
                                                         : 'var(--text-primary)',
                                                     fontWeight: leadFilter === status ? 'bold' : 'normal',
                                                     cursor: 'pointer',
@@ -2362,7 +2415,7 @@ const Dashboard = () => {
                                                 }}
                                             >
                                                 {status}
-                                                <span style={{ marginLeft: '8px', background: leadFilter === status ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Historik' ? '#6b7280' : '#ef4444') : 'rgba(255,255,255,0.2)', color: leadFilter === status ? '#fff' : 'var(--text-secondary)', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem' }}>
+                                                <span style={{ marginLeft: '8px', background: leadFilter === status ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Sæt i bero' ? '#f97316' : status === 'Historik' ? '#6b7280' : '#ef4444') : 'rgba(255,255,255,0.2)', color: leadFilter === status ? '#fff' : 'var(--text-secondary)', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem' }}>
                                                     {leadsData.filter(l => (l.status || 'Ny forespørgsel') === status).length}
                                                 </span>
                                             </button>
@@ -2376,9 +2429,9 @@ const Dashboard = () => {
                                                 padding: '12px 20px',
                                                 borderRadius: '24px',
                                                 border: '1px solid',
-                                                borderColor: leadFilter === 'Ny forespørgsel' ? '#3b82f6' : leadFilter === 'Sendt tilbud' ? '#eab308' : leadFilter === 'Bekræftet opgave' ? '#10b981' : leadFilter === 'Historik' ? '#6b7280' : '#ef4444',
-                                                backgroundColor: leadFilter === 'Ny forespørgsel' ? 'rgba(59, 130, 246, 0.1)' : leadFilter === 'Sendt tilbud' ? 'rgba(234, 179, 8, 0.1)' : leadFilter === 'Bekræftet opgave' ? 'rgba(16, 185, 129, 0.1)' : leadFilter === 'Historik' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                                color: leadFilter === 'Ny forespørgsel' ? '#60a5fa' : leadFilter === 'Sendt tilbud' ? '#facc15' : leadFilter === 'Bekræftet opgave' ? '#34d399' : leadFilter === 'Historik' ? '#9ca3af' : '#f87171',
+                                                borderColor: leadFilter === 'Ny forespørgsel' ? '#3b82f6' : leadFilter === 'Sendt tilbud' ? '#eab308' : leadFilter === 'Bekræftet opgave' ? '#10b981' : leadFilter === 'Sæt i bero' ? '#f97316' : leadFilter === 'Historik' ? '#6b7280' : '#ef4444',
+                                                backgroundColor: leadFilter === 'Ny forespørgsel' ? 'rgba(59, 130, 246, 0.1)' : leadFilter === 'Sendt tilbud' ? 'rgba(234, 179, 8, 0.1)' : leadFilter === 'Bekræftet opgave' ? 'rgba(16, 185, 129, 0.1)' : leadFilter === 'Sæt i bero' ? 'rgba(249, 115, 22, 0.1)' : leadFilter === 'Historik' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                color: leadFilter === 'Ny forespørgsel' ? '#60a5fa' : leadFilter === 'Sendt tilbud' ? '#facc15' : leadFilter === 'Bekræftet opgave' ? '#34d399' : leadFilter === 'Sæt i bero' ? '#fb923c' : leadFilter === 'Historik' ? '#9ca3af' : '#f87171',
                                                 fontSize: '1.05rem',
                                                 fontWeight: 'bold',
                                                 display: 'flex',
@@ -2393,7 +2446,7 @@ const Dashboard = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 {leadFilter}
                                                 <span style={{ 
-                                                    background: leadFilter === 'Ny forespørgsel' ? '#3b82f6' : leadFilter === 'Sendt tilbud' ? '#eab308' : leadFilter === 'Bekræftet opgave' ? '#10b981' : leadFilter === 'Historik' ? '#6b7280' : '#ef4444', 
+                                                    background: leadFilter === 'Ny forespørgsel' ? '#3b82f6' : leadFilter === 'Sendt tilbud' ? '#eab308' : leadFilter === 'Bekræftet opgave' ? '#10b981' : leadFilter === 'Sæt i bero' ? '#f97316' : leadFilter === 'Historik' ? '#6b7280' : '#ef4444', 
                                                     color: '#fff', 
                                                     borderRadius: '10px', 
                                                     padding: '2px 8px', 
@@ -4571,7 +4624,12 @@ const Dashboard = () => {
                                     <div className="input-group">
                                         <label>Materialeavance Multiplikator (eks. 1.15 = 15%)</label>
                                         <input type="number" step="0.01" name="material_markup" value={settingsData.material_markup} onChange={handleChange} />
-                                        <span className="help-text">For at dække tab og administration lægges dette lagt på rene materialepriser.</span>
+                                        <span className="help-text">For at dække svind, skruer/lim og fortjeneste på indkøb af råmaterialer (træ, gips m.v.).</span>
+                                    </div>
+                                    <div className="input-group">
+                                        <label>Materiel/Maskin-avance (eks. 1.05 = 5%)</label>
+                                        <input type="number" step="0.01" name="equipment_markup" value={settingsData.equipment_markup || 1.05} onChange={handleChange} />
+                                        <span className="help-text">Lavere avance for leje af dyrt eksternt materiel (stillads, lift, skurvogn m.v.) for ikke at tabe tilbuddene på grund af overpris.</span>
                                     </div>
                                     <div className="input-group">
                                         <label>Risiko/Projekt-Buffer Multiplikator (eks. 1.25 = 25%)</label>

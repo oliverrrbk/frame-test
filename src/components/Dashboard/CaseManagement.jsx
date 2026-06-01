@@ -4,16 +4,17 @@ import { HardHat, CheckSquare, Camera, Clock, UserPlus, ChevronRight, AlertTrian
 import MaterialList from './MaterialList';
 import toast from 'react-hot-toast';
 
-const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false, selectedLeadId = null, targetCaseId = null, clearTargetCase = () => {} }) => {
+const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false, selectedLeadId = null, targetCaseId = null, clearTargetCase = () => {}, syncToAccounting }) => {
     const [activeCases, setActiveCases] = useState([]);
     const [selectedCase, setSelectedCase] = useState(null);
-    const [activeSubTab, setActiveSubTab] = useState('todo'); // 'todo', 'materials', 'logs', 'timesheet'
+    const [activeSubTab, setActiveSubTab] = useState('todo'); // 'todo', 'materials', 'logs', 'timesheet', 'finance'
     const [team, setTeam] = useState([]);
 
     // States til delegering
     const [pmIds, setPmIds] = useState([]);
     const [assignedWorkers, setAssignedWorkers] = useState([]);
     const [pmDropdownOpen, setPmDropdownOpen] = useState(false);
+    const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
     // States til to-do
     const [todoList, setTodoList] = useState([]);
@@ -29,6 +30,12 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     const [isChangeOrder, setIsChangeOrder] = useState(false);
     const [extraHours, setExtraHours] = useState('');
     const [extraPrice, setExtraPrice] = useState('');
+
+    // States til Fakturering (Finance)
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [invoiceLines, setInvoiceLines] = useState([]);
+    const [isReverseCharge, setIsReverseCharge] = useState(false);
+    const [invoiceActionType, setInvoiceActionType] = useState('draft'); // 'draft' eller 'book_and_send'
 
     // States til timeregistrering
     const [timeEntries, setTimeEntries] = useState([]);
@@ -259,6 +266,35 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     };
 
     // Gemmer sagsoplysninger i Supabase/localStorage
+    const handleStatusChange = async (newStatus) => {
+        if (!selectedCase) return;
+        const confirmMsg = newStatus === 'Udgået opgave' 
+            ? 'Er du sikker på, at du vil annullere sagen?' 
+            : `Er du sikker på, at du vil ændre status til "${newStatus}"?`;
+            
+        if (!window.confirm(confirmMsg)) return;
+
+        const { error } = await supabase
+            .from('leads')
+            .update({ status: newStatus })
+            .eq('id', selectedCase.id);
+
+        if (error) {
+            console.error('Fejl ved opdatering af status:', error);
+            toast.error('Kunne ikke opdatere status');
+        } else {
+            toast.success(`Status ændret til ${newStatus}`);
+            // Opdater lokalt så UI reagerer
+            onUpdateLead(selectedCase.id, { status: newStatus });
+            // Da denne komponent kun viser Bekræftede opgaver, vil sagen forsvinde herfra
+            // hvis den er sat i bero (selvom vi lige har åbnet for at den også kan vise "Sæt i bero").
+            // For at sikre en smooth overgang:
+            if (newStatus === 'Udgået opgave') {
+                clearTargetCase(); // Gå tilbage
+            }
+        }
+    };
+
     const saveCaseDataToDb = async (updatedFields) => {
         try {
             const updatedRawData = {
@@ -471,6 +507,71 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
         toast.success('Timer registreret på sagen!');
     };
 
+    const handleExportLonsystem = () => {
+        // Filtrer underleverandører fra
+        const payrollEntries = timeEntries.filter(entry => {
+            const employee = team?.find(t => t.id === entry.employeeId);
+            return employee?.role !== 'subcontractor';
+        });
+
+        if (payrollEntries.length === 0) {
+            toast.error("Ingen løngivende timer at eksportere (Underleverandører ignoreres).");
+            return;
+        }
+
+        // Simpel CSV format
+        let csvContent = "data:text/csv;charset=utf-8,Dato,Medarbejder,Start,Slut,Timer,Beskrivelse\n";
+        payrollEntries.forEach(row => {
+            const rowStr = `${row.date},"${row.employeeName}",${row.startTime},${row.endTime},${row.hours},"${row.desc}"`;
+            csvContent += rowStr + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Loen_Eksport_${selectedCase?.id}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success("Eksportér fil downloadet. Husk at disse ikke slettes automatisk her.");
+    };
+    const handleOpenInvoiceModal = (action) => {
+        setInvoiceActionType(action);
+        
+        // Generer standard linjer
+        const lines = [];
+        
+        // Linje 1: Oprindeligt tilbud
+        lines.push({
+            id: 'base',
+            description: `Opgave: ${selectedCase?.project_category || 'Tømreropgave'} - Oprindeligt tilbud`,
+            priceExVat: Math.round(baseTotalPrice / 1.25)
+        });
+
+        // Linje 2..N: Aftalesedler
+        const changeOrders = logsList.filter(l => l.isChangeOrder && Number(l.extraPrice) > 0);
+        changeOrders.forEach((co, idx) => {
+            lines.push({
+                id: `co_${idx}`,
+                description: `Ekstraarbejde: ${co.text.substring(0, 50)}${co.text.length > 50 ? '...' : ''}`,
+                priceExVat: Math.round(Number(co.extraPrice) / 1.25)
+            });
+        });
+
+        // Fratræk allerede faktureret som en negativ linje hvis vi vil (eller vi lader bare Mester rette)
+        const invoicedAmount = selectedCase?.raw_data?.invoiced_amount || 0;
+        if (invoicedAmount > 0) {
+            lines.push({
+                id: 'already_invoiced',
+                description: 'Allerede faktureret (Aconto) fratrækkes',
+                priceExVat: -Math.round(invoicedAmount / 1.25)
+            });
+        }
+
+        setInvoiceLines(lines);
+        setShowInvoiceModal(true);
+    };
     const handleCheckIn = () => {
         const entry = {
             id: `time-${Date.now()}`,
@@ -521,7 +622,24 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     // Beregn tidsbudget overholdelse (inklusive godkendte aftalesedler)
     const totalActualHours = timeEntries.reduce((sum, item) => sum + item.hours, 0);
     const baseBudgetedHours = parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) || 40; 
-    const baseTotalPrice = parseFloat(selectedCase?.raw_data?.calc_data?.totalPrice) || 0;
+    const getBasePrice = (lead) => {
+        if (!lead) return 0;
+        if (lead.raw_data?.calc_data?.totalPrice) {
+            return parseFloat(lead.raw_data.calc_data.totalPrice) || 0;
+        }
+        if (lead.raw_data?.actual_quote_price) {
+            return typeof lead.raw_data.actual_quote_price === 'number' 
+                ? lead.raw_data.actual_quote_price 
+                : parseInt(String(lead.raw_data.actual_quote_price).replace(/[^0-9]/g, '')) || 0;
+        } else if (typeof lead.price_estimate === 'number') {
+            return lead.price_estimate;
+        } else {
+            const priceStr = lead.price_estimate || '0';
+            const firstPricePart = priceStr.split('-')[0] || priceStr;
+            return parseInt(firstPricePart.replace(/[^0-9]/g, '')) || 0;
+        }
+    };
+    const baseTotalPrice = getBasePrice(selectedCase);
     const totalExtraHours = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraHours || 0), 0);
     const totalExtraPrice = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraPrice || 0), 0);
     
@@ -554,6 +672,33 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     // Timer Totaler
     const remainingHours = budgetedHours - totalActualHours;
     const isOvertime = remainingHours < 0;
+
+    const handleLineChange = (id, field, value) => {
+        setInvoiceLines(prev => prev.map(line => line.id === id ? { ...line, [field]: value } : line));
+    };
+
+    const handleAddLine = () => {
+        setInvoiceLines(prev => [...prev, { id: `manual_${Date.now()}`, description: '', priceExVat: 0 }]);
+    };
+
+    const handleRemoveLine = (id) => {
+        setInvoiceLines(prev => prev.filter(line => line.id !== id));
+    };
+    const handleConvertToAconto = () => {
+        const total = invoiceLines.reduce((sum, line) => sum + Number(line.priceExVat || 0), 0);
+        const percent = window.prompt("Indtast Aconto procent (fx 30 for 30%):", "30");
+        if (percent && !isNaN(percent)) {
+            const acontoAmount = Math.round(total * (Number(percent) / 100));
+            setInvoiceLines([{
+                id: `aconto_${Date.now()}`,
+                description: `Acontobetaling (${percent}%) vedr. ${selectedCase?.project_category || 'opgave'}`,
+                priceExVat: acontoAmount
+            }]);
+        }
+    };
+
+    const totalInvoiceExVat = invoiceLines.reduce((sum, line) => sum + Number(line.priceExVat || 0), 0);
+    const totalInvoiceVat = Math.round(totalInvoiceExVat * 0.25);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
@@ -707,6 +852,37 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                         
                         {/* Status bar */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            {['admin', 'sales'].includes(profile?.role) && (
+                                <div style={{ position: 'relative' }}>
+                                    <button 
+                                        onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                                        style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', fontSize: '0.85rem', fontWeight: '600', color: '#1e293b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                    >
+                                        Skift Status <ChevronRight size={14} style={{ transform: isStatusDropdownOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                                    </button>
+                                    {isStatusDropdownOpen && (
+                                        <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '8px', zIndex: 50, minWidth: '180px' }}>
+                                            <button 
+                                                onClick={() => { handleStatusChange('Sæt i bero'); setIsStatusDropdownOpen(false); }}
+                                                style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#f97316', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#fff7ed'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                            >
+                                                ⏸️ Sæt i bero
+                                            </button>
+                                            <button 
+                                                onClick={() => { handleStatusChange('Udgået opgave'); setIsStatusDropdownOpen(false); }}
+                                                style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#fef2f2'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                            >
+                                                ❌ Annullér (Udgået)
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <div style={{ textAlign: 'right' }}>
                                 <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '4px' }}>Færdiggørelse:</div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -758,7 +934,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
 
                         {/* 2. Økonomi / Ekstraarbejde */}
                         <div 
-                            onClick={() => setActiveSubTab('logs')}
+                            onClick={() => setActiveSubTab('finance')}
                             style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', flexDirection: 'column' }}
                             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#16a34a'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; e.currentTarget.style.borderColor = '#e8e6e1'; }}
@@ -1276,6 +1452,93 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                             </div>
                         )}
 
+                        {/* TAB: ØKONOMI & FAKTURERING */}
+                        {activeSubTab === 'finance' && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+                                
+                                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <DollarSign size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 style={{ margin: 0, fontSize: '1.2rem', color: '#1a1a1a', fontWeight: 'bold' }}>Økonomi & Fakturering</h4>
+                                            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Send ratefakturaer og endelig regning direkte</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+                                            <span style={{ color: '#475569' }}>Oprindeligt Tilbud (Ekskl. evt. Aftalesedler):</span>
+                                            <strong style={{ color: '#1e293b' }}>{baseTotalPrice.toLocaleString('da-DK')} kr.</strong>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+                                            <span style={{ color: '#475569' }}>Godkendte Aftalesedler (Merpris):</span>
+                                            <strong style={{ color: '#16a34a' }}>+ {totalExtraPrice.toLocaleString('da-DK')} kr.</strong>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', backgroundColor: '#f1f5f9', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
+                                            <span style={{ color: '#1e293b', fontWeight: 'bold', fontSize: '1.1rem' }}>Samlet Opgave-Total:</span>
+                                            <strong style={{ color: '#0f172a', fontSize: '1.2rem' }}>{totalToBill.toLocaleString('da-DK')} kr.</strong>
+                                        </div>
+                                        
+                                        {/* Allerede faktureret */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: '#fff7ed', borderRadius: '8px', borderLeft: '4px solid #f97316', marginTop: '12px' }}>
+                                            <span style={{ color: '#9a3412', fontWeight: 'bold' }}>Allerede faktureret (Aconto):</span>
+                                            <strong style={{ color: '#c2410c' }}>{(selectedCase?.raw_data?.invoiced_amount || 0).toLocaleString('da-DK')} kr.</strong>
+                                        </div>
+                                        
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', backgroundColor: '#ecfdf5', borderRadius: '8px', borderLeft: '4px solid #10b981', marginTop: '4px' }}>
+                                            <span style={{ color: '#065f46', fontWeight: 'bold', fontSize: '1.1rem' }}>Restbeløb til fakturering:</span>
+                                            <strong style={{ color: '#064e3b', fontSize: '1.2rem' }}>
+                                                {Math.max(0, totalToBill - (selectedCase?.raw_data?.invoiced_amount || 0)).toLocaleString('da-DK')} kr.
+                                            </strong>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{ marginTop: '16px', display: 'flex', gap: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '24px' }}>
+                                        <button 
+                                            onClick={() => handleOpenInvoiceModal('draft')}
+                                            style={{ flex: 1, padding: '14px', borderRadius: '10px', backgroundColor: '#f1f5f9', color: '#475569', fontWeight: 'bold', border: '1px solid #cbd5e1', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                        >
+                                            <ClipboardList size={18} /> Opret Fakturakladde
+                                        </button>
+                                        <button 
+                                            onClick={() => handleOpenInvoiceModal('book_and_send')}
+                                            style={{ flex: 2, padding: '14px', borderRadius: '10px', backgroundColor: '#10b981', color: 'white', fontWeight: 'bold', border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 6px rgba(16, 185, 129, 0.2)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                                        >
+                                            <PackageCheck size={18} /> Bogfør & Send Faktura nu
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    <h4 style={{ margin: 0, color: '#1a1a1a' }}>Faktura Historik</h4>
+                                    {(!selectedCase?.raw_data?.invoice_history || selectedCase.raw_data.invoice_history.length === 0) ? (
+                                        <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', color: '#6b7280', fontSize: '0.9rem' }}>
+                                            Ingen fakturaer sendt endnu.
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            {selectedCase.raw_data.invoice_history.map((inv, idx) => (
+                                                <div key={idx} style={{ padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#6b7280' }}>
+                                                        <span>{new Date(inv.date).toLocaleDateString('da-DK')}</span>
+                                                        <span style={{ textTransform: 'capitalize' }}>{inv.system} ID: {inv.id}</span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#1e293b' }}>
+                                                        <span>Bogførte beløb:</span>
+                                                        <span style={{ color: '#10b981' }}>{Number(inv.amount).toLocaleString('da-DK')} kr.</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* TAB 4: TIMEREGISTRERING */}
                         {activeSubTab === 'timesheet' && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
@@ -1301,7 +1564,10 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                             <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#10b981' }}>+ {totalExtraPrice} kr.</div>
                                         </div>
                                         <div style={{ width: '1px', backgroundColor: '#cbd5e1' }}></div>
-                                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
+                                            <button onClick={handleExportLonsystem} style={{ padding: '8px 16px', border: '1px solid #10b981', backgroundColor: '#ecfdf5', color: '#047857', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                                                📥 Eksportér til Lønsystem (CSV)
+                                            </button>
                                             <button onClick={() => window.print()} style={{ padding: '8px 16px', border: '1px solid #cbd5e1', backgroundColor: 'white', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', color: '#334155' }}>
                                                 🖨️ Udskriv Timeseddel
                                             </button>
@@ -1458,6 +1724,180 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
 
                 </div>
             )}
+        {/* MODAL: Bekræft Fakturering */}
+        {/* MODAL: Visuel Fakturakladde Editor (A4 Paper Style) */}
+        {showInvoiceModal && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', overflowY: 'auto' }}>
+                <div style={{ backgroundColor: 'white', borderRadius: '4px', padding: '0', maxWidth: '850px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.1)', maxHeight: '95vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                    
+                    {/* Fixed Toolbar */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 32px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: invoiceActionType === 'book_and_send' ? '#dc2626' : '#0f172a' }}>
+                            {invoiceActionType === 'book_and_send' ? <ShieldAlert size={24} /> : <PackageCheck size={24} />}
+                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>
+                                {invoiceActionType === 'book_and_send' ? 'Advarsel: Du er ved at låse og udsende faktura' : 'Gennemgå og opret fakturakladde'}
+                            </h3>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button 
+                                onClick={handleConvertToAconto}
+                                style={{ padding: '8px 16px', backgroundColor: 'white', color: '#3b82f6', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                            >
+                                Skift til Rate/Aconto %
+                            </button>
+                            <button 
+                                onClick={() => setShowInvoiceModal(false)}
+                                style={{ padding: '8px 16px', backgroundColor: 'transparent', color: '#475569', border: 'none', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer' }}
+                            >
+                                Luk
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Paper Area */}
+                    <div style={{ padding: '60px 80px', backgroundColor: 'white', minHeight: '600px' }}>
+                        
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '60px' }}>
+                            <div>
+                                <h1 style={{ fontSize: '2.5rem', margin: '0 0 8px 0', color: '#0f172a', letterSpacing: '-1px' }}>FAKTURA</h1>
+                                <p style={{ margin: 0, color: '#64748b', fontSize: '1rem' }}>Dato: {new Date().toLocaleDateString('da-DK')}</p>
+                                <p style={{ margin: 0, color: '#64748b', fontSize: '1rem' }}>Fakturanr: {invoiceActionType === 'draft' ? '(Kladde)' : 'Genereres automatisk'}</p>
+                            </div>
+                            <div style={{ textAlign: 'right', color: '#475569', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                                <strong style={{ color: '#0f172a', fontSize: '1.1rem' }}>Faktureres til:</strong><br/>
+                                {selectedCase?.customer_name || 'Ukendt Kunde'}<br/>
+                                {selectedCase?.customer_address || 'Adresse ikke oplyst'}<br/>
+                                {selectedCase?.customer_email || 'Email ikke oplyst'}<br/>
+                                {selectedCase?.customer_phone || ''}
+                            </div>
+                        </div>
+
+                        {/* Editor Table */}
+                        <div style={{ marginBottom: '60px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '2px solid #0f172a' }}>
+                                        <th style={{ padding: '12px 0', textAlign: 'left', color: '#0f172a', fontSize: '0.9rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Beskrivelse</th>
+                                        <th style={{ padding: '12px 0', textAlign: 'right', color: '#0f172a', fontSize: '0.9rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', width: '200px' }}>Netto Pris</th>
+                                        <th style={{ padding: '12px 0', width: '40px' }}></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {invoiceLines.map((line) => (
+                                        <tr key={line.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                            <td style={{ padding: '16px 0' }}>
+                                                <input 
+                                                    type="text" 
+                                                    value={line.description}
+                                                    onChange={(e) => handleLineChange(line.id, 'description', e.target.value)}
+                                                    placeholder="Skriv beskrivelse af arbejdet her..."
+                                                    style={{ width: '100%', padding: '8px', border: '1px dashed transparent', borderRadius: '4px', fontSize: '1.05rem', color: '#334155', backgroundColor: 'transparent', outline: 'none', transition: 'all 0.2s' }}
+                                                    onFocus={(e) => { e.target.style.border = '1px dashed #cbd5e1'; e.target.style.backgroundColor = '#f8fafc'; }}
+                                                    onBlur={(e) => { e.target.style.border = '1px dashed transparent'; e.target.style.backgroundColor = 'transparent'; }}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '16px 0', textAlign: 'right' }}>
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', padding: '6px 8px', borderRadius: '4px', border: '1px dashed transparent', transition: 'all 0.2s' }}>
+                                                    <input 
+                                                        type="number" 
+                                                        value={line.priceExVat}
+                                                        onChange={(e) => handleLineChange(line.id, 'priceExVat', e.target.value)}
+                                                        style={{ width: '100px', border: 'none', backgroundColor: 'transparent', textAlign: 'right', fontSize: '1.05rem', color: '#0f172a', fontWeight: '500', outline: 'none' }}
+                                                    />
+                                                    <span style={{ color: '#64748b', fontSize: '1rem' }}>kr.</span>
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '16px 0', textAlign: 'right' }}>
+                                                <button 
+                                                    onClick={() => handleRemoveLine(line.id)}
+                                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', transition: 'color 0.2s' }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                                                    title="Slet linje"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            <div style={{ marginTop: '16px' }}>
+                                <button 
+                                    onClick={handleAddLine}
+                                    style={{ background: 'none', border: 'none', color: '#3b82f6', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.9rem', padding: '8px', borderRadius: '4px' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                    <Plus size={16} /> Tilføj ekstra linje
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Totals Section */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                            {/* Moms indstillinger */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '16px', backgroundColor: isReverseCharge ? '#fef2f2' : '#f8fafc', borderRadius: '8px', border: `1px solid ${isReverseCharge ? '#fca5a5' : '#e2e8f0'}`, transition: 'all 0.2s' }}>
+                                <input 
+                                    type="checkbox" 
+                                    id="reverseCharge" 
+                                    checked={isReverseCharge}
+                                    onChange={(e) => setIsReverseCharge(e.target.checked)}
+                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                />
+                                <label htmlFor="reverseCharge" style={{ cursor: 'pointer', fontSize: '0.95rem', color: isReverseCharge ? '#991b1b' : '#475569', fontWeight: isReverseCharge ? 'bold' : 'normal' }}>
+                                    Erhvervskunde (Omvendt Betalingspligt - 0% Moms)
+                                </label>
+                            </div>
+
+                            <div style={{ width: '350px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', color: '#475569', fontSize: '1rem' }}>
+                                    <span>Samlet Netto (Ekskl. moms)</span>
+                                    <span>{totalInvoiceExVat.toLocaleString('da-DK')} kr.</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', color: '#475569', fontSize: '1rem', borderBottom: '2px solid #e2e8f0' }}>
+                                    <span>Moms ({isReverseCharge ? '0%' : '25%'})</span>
+                                    <span>{totalInvoiceVat.toLocaleString('da-DK')} kr.</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', color: '#0f172a', fontSize: '1.4rem', fontWeight: 'bold' }}>
+                                    <span>Total (Inkl. moms)</span>
+                                    <span>{(totalInvoiceExVat + totalInvoiceVat).toLocaleString('da-DK')} kr.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Footer */}
+                        <div style={{ marginTop: '80px', paddingTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button 
+                                onClick={() => {
+                                    setShowInvoiceModal(false);
+                                    if (syncToAccounting) {
+                                        syncToAccounting(selectedCase, invoiceActionType, invoiceLines, isReverseCharge);
+                                    } else {
+                                        toast.error("Faktureringsmodulet er ikke tilgængeligt her.");
+                                    }
+                                }}
+                                style={{ padding: '16px 32px', borderRadius: '8px', backgroundColor: invoiceActionType === 'book_and_send' ? '#10b981' : '#0f172a', color: 'white', fontSize: '1.1rem', fontWeight: 'bold', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', transition: 'all 0.2s' }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+                                }}
+                            >
+                                {invoiceActionType === 'book_and_send' ? 'Ja, Bogfør & Udsend Nu' : 'Gem som Kladde i Regnskab'}
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        )}
         </div>
     );
 };

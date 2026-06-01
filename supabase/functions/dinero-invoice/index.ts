@@ -23,10 +23,14 @@ serve(async (req) => {
     if (userError || !user) throw new Error("Bruger ikke logget ind")
 
     const body = await req.json()
-    const { lead } = body
+    const { lead, action = 'draft', invoiceLines = [] } = body
 
     if (!lead) {
       throw new Error("Mangler lead data")
+    }
+    
+    if (!invoiceLines || invoiceLines.length === 0) {
+      throw new Error("Mangler fakturalinjer");
     }
 
     console.log("Starter Dinero overførsel for:", lead.customer_name);
@@ -80,12 +84,6 @@ serve(async (req) => {
     const orgId = orgs[0].id;
     console.log("Bruger organisation ID:", orgId);
 
-    // Udtræk pris og fjern moms (pris er inkl. moms, så vi dividerer med 1.25)
-    let rawPrice = typeof lead.price_estimate === 'number' 
-      ? lead.price_estimate 
-      : parseInt((lead.price_estimate || '0').replace(/[^0-9]/g, '').substring(0, 5)) || 0;
-    const priceExVat = Math.round(rawPrice / 1.25);
-
     // Parse adresse
     let address = lead.customer_address || '';
     let zipCode = '';
@@ -107,7 +105,7 @@ serve(async (req) => {
         street: address,
         zipCode: zipCode,
         city: city,
-        isPerson: true,
+        isPerson: !isReverseCharge,
         countryKey: "DK"
       };
       
@@ -127,28 +125,57 @@ serve(async (req) => {
     console.log("KontaktGuid:", contactGuid);
 
     // 4. Opret Fakturakladde
+    const mappedLines = invoiceLines.map(line => ({
+      Description: line.description,
+      BaseAmountValue: Number(line.priceExVat || 0),
+      Quantity: 1,
+      AccountNumber: 1000,
+      Unit: "parts"
+    }));
+
+    if (isReverseCharge) {
+      mappedLines.push({
+        Description: "Omvendt betalingspligt, køber afregner momsen",
+        BaseAmountValue: 0,
+        Quantity: 1,
+        AccountNumber: 1000,
+        Unit: "parts"
+      });
+    }
+
     const invoiceRes = await fetchDinero('POST', `/${orgId}/invoices`, {
       ContactGuid: contactGuid,
       Currency: "DKK",
       Language: "da-DK",
-      ProductLines: [
-        {
-          Description: `Opgave: ${lead.project_category || 'Tømreropgave'} ${lead.customer_address ? `på ${lead.customer_address}` : ''}`.trim(),
-          BaseAmountValue: priceExVat,
-          Quantity: 1,
-          AccountNumber: 1000,
-          Unit: "parts"
-        }
-      ]
+      ProductLines: mappedLines
     });
 
     console.log("Faktura oprettet:", invoiceRes);
+    
+    let invoiceGuid = invoiceRes.Guid || invoiceRes.invoiceGuid;
+    let message = "Fakturakladde oprettet i Dinero";
+
+    if (action === 'book_and_send' && invoiceGuid) {
+      try {
+        console.log("Bogfører faktura i Dinero...");
+        // Dinero endpoint for at booke: POST /v1/{organizationId}/invoices/{guid}/book
+        await fetchDinero('POST', `/${orgId}/invoices/${invoiceGuid}/book`, {
+          Timestamp: invoiceRes.Timestamp || new Date().toISOString()
+        });
+        message = "Faktura er bogført i Dinero!";
+        
+        // Bemærk: At sende mail kræver e-mailopsætning i Dinero, vi lader booking være nok for nu.
+      } catch (err) {
+        console.warn("Kunne ikke bogføre faktura automatisk i Dinero:", err.message);
+        message = `Fakturakladde oprettet (fejl under automatisk bogføring: ${err.message})`;
+      }
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Fakturakladde oprettet i Dinero",
-        invoiceId: invoiceRes.Guid || invoiceRes.invoiceGuid || "Ukendt ID"
+        message: message,
+        invoiceId: invoiceGuid || "Ukendt ID"
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )

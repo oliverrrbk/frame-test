@@ -934,9 +934,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             // Faste forhindringer (køkkenø, søjler) tilføjelser
             if (d.floorObstacles === 'Ja, det er der (køkkenø, søjler, skorsten eller rør)') {
-                laborHours += 4.0;
-                if (!userSuppliesMaterials) materialCost += 750;
-                bArr.push(`Tillæg: Præcisionsudskæring, tilpasning og finishlister omkring faste elementer (fx køkkenø, søjler eller rør) (+4 timer)`);
+                const obstacleHours = 2.0 + (numericAmount * 0.05);
+                const obstacleMats = 200 + (numericAmount * 15);
+                laborHours += obstacleHours;
+                if (!userSuppliesMaterials) materialCost += obstacleMats * dbSettings.material_markup;
+                bArr.push(`Tillæg: Præcisionsudskæring, tilpasning og finishlister omkring faste elementer (+${obstacleHours.toFixed(1)} timer, skaleret efter areal)`);
             }
 
             // Dørtilpasning
@@ -957,8 +959,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 scaffoldPrice = (indexCat['Leje af rullestillads (lille opgave)'] || 1500);
                 scaffoldText = `leje af rullestillads`;
             } else {
-                scaffoldPrice = (indexCat['Tillæg: Stillads/Lift leje'] || 8000);
-                scaffoldText = `lift/facadestillads-leje`;
+                let baseScaffold = indexCat['Tillæg: Stillads/Lift leje'] || 8000;
+                scaffoldPrice = baseScaffold * Math.max(1, Math.ceil(numericAmount / 15)); // Skalerer med mængden (1 lift pr. 15 vinduer)
+                scaffoldText = `lift/facadestillads-leje (skaleret efter mængde)`;
             }
 
             if (d.floors && d.floors.includes('1. sal')) {
@@ -968,9 +971,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     if (finalScaffoldPrice < 8000) {
                         finalScaffoldPrice = 8000;
                     }
-                    materialCost += finalScaffoldPrice; // INGEN markup på stillads/materiel!
+                    const scaffoldTotal = finalScaffoldPrice * (dbSettings.equipment_markup || 1.05);
+                    materialCost += scaffoldTotal; // Lav markup på stillads/materiel
                     externalLeaseCost += finalScaffoldPrice;
-                    bArr.push(`Tillæg: 1. sal – ekstra tidsforbrug (+20% tid) samt ${scaffoldText} (min. 8.000 kr): ${finalScaffoldPrice} kr.`);
+                    bArr.push(`Tillæg: 1. sal – ekstra tidsforbrug (+20% tid) samt ${scaffoldText} (min. 8.000 kr): ${scaffoldTotal.toLocaleString('da-DK', {maximumFractionDigits: 0})} kr. inkl. ${(dbSettings.equipment_markup * 100 - 100).toFixed(0) || 5}% avance`);
                 }
             } else if (d.floors && (d.floors.includes('2. sal') || d.floors.includes('3 etager'))) {
                 laborHours += initialInstallHours * 0.4;
@@ -979,17 +983,19 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     if (finalScaffoldPrice < 8000) {
                         finalScaffoldPrice = 8000;
                     }
-                    materialCost += finalScaffoldPrice; // Lift/Stillads til 2. sal er ca. 50% dyrere
+                    const scaffoldTotal = finalScaffoldPrice * (dbSettings.equipment_markup || 1.05);
+                    materialCost += scaffoldTotal; // Lift/Stillads til 2. sal er ca. 50% dyrere
                     externalLeaseCost += finalScaffoldPrice;
-                    bArr.push(`Tillæg: 2. sal eller højere – ekstra tidsforbrug (+40% tid) samt højde-${scaffoldText} (min. 8.000 kr): ${finalScaffoldPrice} kr.`);
+                    bArr.push(`Tillæg: 2. sal eller højere – ekstra tidsforbrug (+40% tid) samt højde-${scaffoldText} (min. 8.000 kr): ${scaffoldTotal.toLocaleString('da-DK', {maximumFractionDigits: 0})} kr. inkl. ${(dbSettings.equipment_markup * 100 - 100).toFixed(0) || 5}% avance`);
                 }
             }
 
             if (d._heavyWindowCount > 0 && !userSuppliesMaterials) {
                 let liftPrice = d._heavyWindowCount * (indexCat['Leje af glasløfter/sugekop (pr. tungt vindue)'] || 750);
-                materialCost += liftPrice; // INGEN markup på materielleje!
+                const liftTotal = liftPrice * (dbSettings.equipment_markup || 1.05);
+                materialCost += liftTotal; // Lav markup på materielleje
                 externalLeaseCost += liftPrice;
-                bArr.push(`Tillæg: Maskinleje (glasløfter/sugekop) til montering af ${d._heavyWindowCount} tunge partier: ${liftPrice} kr.`);
+                bArr.push(`Tillæg: Maskinleje (glasløfter/sugekop) til montering af ${d._heavyWindowCount} tunge partier: ${liftTotal.toLocaleString('da-DK', {maximumFractionDigits: 0})} kr. inkl. ${(dbSettings.equipment_markup * 100 - 100).toFixed(0) || 5}% avance`);
             }
         }
 
@@ -1014,9 +1020,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Tagterrasse plastfødder (pr m2 overslag)'] || 90) * dbSettings.material_markup;
                 }
                 if (!userSuppliesMaterials) {
-                    // SOP #2 + #4: Maskinleje (Materialehejs) til at få brædder op på taget. Uden material_markup!
+                    // SOP #2 + #4: Maskinleje (Materialehejs) til at få brædder op på taget. Lav equipment_markup
                     const hejsPrice = (indexCat['Leje af materialehejs (Tagterrasse)'] || 1500);
-                    materialCost += hejsPrice;
+                    const hejsTotal = hejsPrice * (dbSettings.equipment_markup || 1.05);
+                    materialCost += hejsTotal;
                     externalLeaseCost += hejsPrice;
                 }
                 bArr.push(`Tillæg: Tagterrasse-montering (inkl. materialehejs og skånsom opklodsning)`);
@@ -1111,10 +1118,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 if (roofGrundplanM2 > 40 && scaffoldCost < 10000) {
                     scaffoldCost = 10000;
                 }
-                // SOP #4: Markup-Separation. Stillads er ekstern maskinleje og skal ikke have material_markup!
-                materialCost += scaffoldCost;
+                // SOP #4: Markup-Separation. Stillads er ekstern maskinleje og skal have equipment_markup
+                const scaffoldTotal = scaffoldCost * (dbSettings.equipment_markup || 1.05);
+                materialCost += scaffoldTotal;
                 externalLeaseCost += scaffoldCost;
-                bArr.push(`Tillæg: Omfattende stillads/materiel-leje (skaleret efter m2, min. 10.000 kr ved tag > 40 m²): ${Math.round(scaffoldCost)} kr. (Uden avance) og forøget arbejdstid pga. husets plan/hældning`);
+                bArr.push(`Tillæg: Omfattende stillads/materiel-leje (skaleret efter m2, min. 10.000 kr ved tag > 40 m²): ${Math.round(scaffoldTotal)} kr. (Inkl. ${(dbSettings.equipment_markup * 100 - 100).toFixed(0) || 5}% avance) og forøget arbejdstid pga. husets plan/hældning`);
             }
 
             if (d.oldRoofType) {
@@ -1390,15 +1398,15 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             
             if (d.floors === '1½-plan / 2-plan / Mere') {
                 if (!userSuppliesMaterials) {
-                    let facadeScaffold = indexCat['Tillæg: Facadestilladsleje'] || 15000;
-                    if (facadeScaffold < 8000) {
-                        facadeScaffold = 8000;
-                    }
-                    materialCost += facadeScaffold; // NO markup
-                    externalLeaseCost += facadeScaffold;
+                    let facadeScaffold = indexCat['Tillæg: Facadestilladsleje (pr m2)'] || 150; // Omregnet til per m2 for at kunne skalere
+                    let scaffoldCost = facadeScaffold * numericAmount;
+                    if (scaffoldCost < 8000) scaffoldCost = 8000; // Minimumspris
+                    const scaffoldTotal = scaffoldCost * (dbSettings.equipment_markup || 1.05);
+                    materialCost += scaffoldTotal; // equipment markup
+                    externalLeaseCost += scaffoldCost;
                 }
                 laborHours += initialInstallHours * 0.25;
-                bArr.push(`Tillæg: Facadestilladsleje samt forsinket arbejdsgang pga. husets højde (flere etager) (Uden avance)`);
+                bArr.push(`Tillæg: Facadestilladsleje skaleret efter areal (Inkl. avance) samt forsinket arbejdsgang pga. husets højde (flere etager)`);
             }
         }
         

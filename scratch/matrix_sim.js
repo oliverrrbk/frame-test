@@ -22,14 +22,14 @@ const dbMaterials = {
 
 const main = async () => {
     const facadeProject = {
-        category: 'facades',
+        category: 'floor',
         details: {
-            amount: 80,
-            material: 'Trykimprægneret',
-            oldFacadeMaterial: 'Ingen (Nybyg / Råt træskelet)',
-            mountingStyle: 'Lodret (fx Listebeklædning - tager lidt længere tid)',
-            openings: 0,
-            floors: '1½-plan / 2-plan / Mere'
+            amount: 50,
+            material: 'Massivt træ',
+            floorFoundation: 'Strøer / Trækonstruktion',
+            floorPattern: 'Ja, i mønster (fx Sildeben / Chevron)',
+            underfloorHeating: 'Ja, med sporplader',
+            floorObstacles: 'Ja, det er der (køkkenø, søjler, skorsten eller rør)'
         }
     };
 

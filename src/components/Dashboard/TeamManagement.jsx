@@ -7,6 +7,7 @@ const roles = [
     { value: 'sales', label: 'Projektleder', desc: 'Ser kun egne leads og opretter tilbud.' },
     { value: 'worker', label: 'Tømrersvend', desc: 'Kan registrere timer og se checklister.' },
     { value: 'apprentice', label: 'Tømrerlærling', desc: 'Registrerer egne timer på sager.' },
+    { value: 'subcontractor', label: 'Underleverandør (B2B)', desc: 'Ekstern partner. Timer ignoreres ved løn-eksport.' },
     { value: 'accountant', label: 'Bogholder / Sekretær', desc: 'Godkender timer og ser økonomisk bogføring.' },
     { value: 'admin', label: 'Mester (Administrator)', desc: 'Fuld adgang til priser og systemindstillinger.' }
 ];
@@ -17,6 +18,7 @@ const getRoleLabel = (role) => {
         case 'sales': return 'Projektleder';
         case 'worker': return 'Tømrersvend';
         case 'apprentice': return 'Tømrerlærling';
+        case 'subcontractor': return 'Underleverandør';
         case 'accountant': return 'Bogholder';
         default: return role;
     }
