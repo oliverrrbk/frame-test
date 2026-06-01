@@ -275,33 +275,32 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                     }
                     .step-header p {
                         font-size: 1rem !important;
-                    }
-                    .customer-type-toggle {
-                        display: flex;
-                        background: #f1f5f9;
-                        padding: 4px;
-                        border-radius: 12px;
-                        margin-bottom: 24px;
-                        border: 1px solid #e2e8f0;
-                    }
-                    .toggle-btn {
-                        flex: 1;
-                        padding: 12px;
-                        text-align: center;
-                        font-weight: 600;
-                        font-size: 0.95rem;
-                        color: #64748b;
-                        background: transparent;
-                        border: none;
-                        border-radius: 8px;
-                        cursor: pointer;
-                        transition: all 0.2s ease;
-                    }
-                    .toggle-btn.active {
-                        background: #ffffff;
-                        color: #0f172a;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                    }
+                }
+                .customer-type-toggle {
+                    display: flex;
+                    background: #f1f5f9;
+                    padding: 4px;
+                    border-radius: 12px;
+                    margin-bottom: 24px;
+                    border: 1px solid #e2e8f0;
+                }
+                .toggle-btn {
+                    flex: 1;
+                    padding: 12px;
+                    text-align: center;
+                    font-weight: 600;
+                    font-size: 0.95rem;
+                    color: #64748b;
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                .toggle-btn.active {
+                    background: #ffffff;
+                    color: #0f172a;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 }
                 `}
             </style>
