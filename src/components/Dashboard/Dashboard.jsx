@@ -12,6 +12,7 @@ import Wizard from '../Wizard/Wizard';
 import { getFeedbackTemplate, getCustomerOfferSentTemplate, getCustomerRequestReceivedTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
 import { generateHumanQuoteText } from '../../utils/quoteTextGenerator';
 import { parseBreakdownToExplanation } from '../../utils/explanationGenerator';
+import { generateTaskDescription } from '../../utils/taskDescription';
 import AiTrainingView from './AiTrainingView';
 import TeamManagement from './TeamManagement';
 import CaseManagement from './CaseManagement';
@@ -2837,15 +2838,33 @@ const Dashboard = () => {
                                                         Opsummering af opgaven
                                                     </span>
                                                     {(() => {
-                                                        const summaryText = selectedLead.raw_data?.ai_summary || selectedLead.ai_summary || generateShortSummary(selectedLead);
-                                                        const summaryBullets = summaryText.split('. ')
-                                                            .filter(sentence => sentence.trim().length > 0)
-                                                            .map(sentence => sentence.trim() + (sentence.endsWith('.') ? '' : '.'));
+                                                        const catMap = {
+                                                            'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
+                                                            'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
+                                                            'Tagprojekt': 'roof', 'Tag': 'roof', 'Nyt Køkken': 'kitchen', 'Køkken': 'kitchen',
+                                                            'Nye Lofter': 'ceilings', 'Lofter': 'ceilings', 'Ny Facadebeklædning': 'facades',
+                                                            'Facader': 'facades', 'Tilbygning': 'extensions', 'Anneks': 'annex', 'Annekser & Skure': 'annex',
+                                                            'Carport': 'carport', 'Hegn': 'fence'
+                                                        };
+                                                        const rawCat = selectedLead.project_category || '';
+                                                        const normalizedCat = catMap[rawCat] || rawCat;
+                                                        
+                                                        const detailedTasks = generateTaskDescription(normalizedCat, selectedLead.raw_data?.details || {});
+                                                        
+                                                        let summaryBullets = [];
+                                                        if (detailedTasks && detailedTasks.length > 0) {
+                                                            summaryBullets = detailedTasks;
+                                                        } else {
+                                                            const summaryText = selectedLead.raw_data?.ai_summary || selectedLead.ai_summary || generateShortSummary(selectedLead);
+                                                            summaryBullets = summaryText.split('. ')
+                                                                .filter(sentence => sentence.trim().length > 0)
+                                                                .map(sentence => sentence.trim() + (sentence.endsWith('.') ? '' : '.'));
+                                                        }
                                                         
                                                         return (
                                                             <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc', marginLeft: '10px', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5' }}>
                                                                 {summaryBullets.map((bullet, idx) => (
-                                                                    <li key={idx} style={{ marginBottom: '4px' }}>{bullet}</li>
+                                                                    <li key={idx} style={{ marginBottom: '6px' }}>{bullet}</li>
                                                                 ))}
                                                             </ul>
                                                         );
