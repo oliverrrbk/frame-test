@@ -925,7 +925,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                                                 value={extraHours}
                                                                 onChange={(e) => setExtraHours(e.target.value)}
                                                                 placeholder="F.eks. 4"
-                                                                style={{ border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                                                                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
                                                             />
                                                         </div>
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -935,7 +935,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
                                                                 value={extraPrice}
                                                                 onChange={(e) => setExtraPrice(e.target.value)}
                                                                 placeholder="F.eks. 2500"
-                                                                style={{ border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
+                                                                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
                                                             />
                                                         </div>
                                                     </div>
