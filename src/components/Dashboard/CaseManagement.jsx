@@ -23,7 +23,9 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     const [logsList, setLogsList] = useState([]);
     const [newLogText, setNewLogText] = useState('');
     const [logStatus, setLogStatus] = useState('green'); // 'green', 'yellow', 'red'
-    const [logPhotos, setLogPhotos] = useState([]);
+    const [logPhotos, setLogPhotos] = useState([]); // Previews (blob URLs)
+    const [logFiles, setLogFiles] = useState([]); // Actual File objects
+    const [isUploadingLog, setIsUploadingLog] = useState(false);
     const [isChangeOrder, setIsChangeOrder] = useState(false);
     const [extraHours, setExtraHours] = useState('');
     const [extraPrice, setExtraPrice] = useState('');
@@ -321,11 +323,43 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     };
 
     // Logbog-håndtering
-    const handleAddLog = (e) => {
+    const handleAddLog = async (e) => {
         e.preventDefault();
         if (!newLogText.trim()) return;
 
+        setIsUploadingLog(true);
         const currentAuthor = team.find(t => t.id === profile.id)?.owner_name || profile.owner_name || 'Mester';
+        
+        let uploadedPhotoUrls = [];
+        try {
+            if (logFiles.length > 0) {
+                toast.loading('Uploader fotos...', { id: 'upload-toast' });
+                
+                for (let i = 0; i < logFiles.length; i++) {
+                    const file = logFiles[i];
+                    const fileExt = file.name.split('.').pop() || 'jpg';
+                    const fileName = `log_${selectedCase.id}_${Date.now()}_${i}.${fileExt}`;
+                    
+                    const { error: uploadError } = await supabase.storage
+                        .from('uploads')
+                        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+                        
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('uploads')
+                        .getPublicUrl(fileName);
+                        
+                    uploadedPhotoUrls.push(publicUrl);
+                }
+                toast.dismiss('upload-toast');
+            }
+        } catch (error) {
+            console.error("Fejl ved upload af fotos til logbog:", error);
+            toast.error('Der skete en fejl under upload af fotos. Prøv igen.');
+            setIsUploadingLog(false);
+            return;
+        }
 
         const newLog = {
             id: `log-${Date.now()}`,
@@ -333,7 +367,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
             text: newLogText.trim(),
             author: currentAuthor,
             date: new Date().toISOString(),
-            photos: logPhotos,
+            photos: uploadedPhotoUrls,
             isChangeOrder: isChangeOrder,
             extraHours: isChangeOrder ? (parseFloat(extraHours) || 0) : 0,
             extraPrice: isChangeOrder ? (parseFloat(extraPrice) || 0) : 0
@@ -343,10 +377,12 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
         setLogsList(updated);
         setNewLogText('');
         setLogPhotos([]);
+        setLogFiles([]);
         setIsChangeOrder(false);
         setExtraHours('');
         setExtraPrice('');
         saveCaseDataToDb({ logs: updated });
+        setIsUploadingLog(false);
         toast.success(isChangeOrder ? 'Aftaleseddel/Ekstraarbejde oprettet!' : 'Logbog opdateret!');
     };
 
@@ -354,10 +390,12 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
         
-        // Convert to local object URLs for preview/storage (since we don't have a real backend storage yet)
+        // Convert to local object URLs for preview
         const newPhotos = files.map(file => URL.createObjectURL(file));
         setLogPhotos([...logPhotos, ...newPhotos]);
-        toast.success(`${files.length} foto(s) vedhæftet!`);
+        setLogFiles([...logFiles, ...files]);
+        
+        toast.success(`${files.length} foto(s) vedhæftet og klar til upload!`);
         
         // Reset input so the same files can be selected again if needed
         e.target.value = null;
@@ -365,6 +403,7 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
     
     const removePhoto = (indexToRemove) => {
         setLogPhotos(logPhotos.filter((_, idx) => idx !== indexToRemove));
+        setLogFiles(logFiles.filter((_, idx) => idx !== indexToRemove));
     };
 
     // Timeregistrering-håndtering
@@ -981,9 +1020,10 @@ const CaseManagement = ({ leads = [], profile, onUpdateLead, isModalView = false
 
                                         <button 
                                             type="submit"
-                                            style={{ padding: '12px', backgroundColor: '#1e293b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem', cursor: 'pointer' }}
+                                            disabled={isUploadingLog}
+                                            style={{ padding: '12px', backgroundColor: isUploadingLog ? '#94a3b8' : '#1e293b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem', cursor: isUploadingLog ? 'not-allowed' : 'pointer' }}
                                         >
-                                            Gem i logbog
+                                            {isUploadingLog ? 'Gemmer i logbog...' : 'Gem i logbog'}
                                         </button>
                                     </form>
                                 </div>
