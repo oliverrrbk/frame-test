@@ -2672,7 +2672,7 @@ const Dashboard = () => {
                             )}
 
                             {selectedLead && createPortal(
-                                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setSelectedLead(null)}>
+                                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px', overscrollBehavior: 'none', touchAction: 'none' }} onClick={() => setSelectedLead(null)}>
                                     <div style={{ 
                                         backgroundColor: 'var(--bg-card)', 
                                         backdropFilter: 'blur(24px)', 
@@ -2681,6 +2681,8 @@ const Dashboard = () => {
                                         maxWidth: '1100px', 
                                         maxHeight: '90vh', 
                                         overflowY: 'auto', 
+                                        WebkitOverflowScrolling: 'touch',
+                                        overscrollBehavior: 'contain',
                                         padding: '32px', 
                                         position: 'relative'
                                     }} onClick={(e) => e.stopPropagation()}>
@@ -2718,16 +2720,16 @@ const Dashboard = () => {
                                         </div>
 
                                         {/* Tjekket top-menu for integrationer med ensartede knapper */}
-                                        <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', marginBottom: '32px' }}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'stretch', marginBottom: '32px' }}>
                                             {selectedLead.status === 'Bekræftet opgave' && ['admin', 'accountant'].includes(carpenterProfile?.role) && (
                                                 <>
                                                     {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && (
                                                         selectedLead.raw_data?.synced_to_accounting ? (
-                                                            <a href={carpenterProfile?.economic_api_key ? 'https://secure.e-conomic.com/sales/invoices/drafts' : 'https://app.dinero.dk/'} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#dcfce7', color: '#166534', border: '1px solid #22c55e', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', transition: 'all 0.2s' }}>
+                                                            <a href={carpenterProfile?.economic_api_key ? 'https://secure.e-conomic.com/sales/invoices/drafts' : 'https://app.dinero.dk/'} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', background: '#dcfce7', color: '#166534', border: '1px solid #22c55e', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', transition: 'all 0.2s' }}>
                                                                 <ExternalLink size={18}/> Åbn Regnskab
                                                             </a>
                                                         ) : (
-                                                            <button onClick={() => syncToAccounting(selectedLead)} style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s' }}>
+                                                            <button onClick={() => syncToAccounting(selectedLead)} style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s' }}>
                                                                 <FileText size={18}/> Regnskab
                                                             </button>
                                                         )
@@ -2735,15 +2737,15 @@ const Dashboard = () => {
 
                                                     {carpenterProfile?.ordrestyring_token && (
                                                         selectedLead.ordrestyring_case_id ? (
-                                                            <a href={ (String(selectedLead.ordrestyring_case_id).length >= 4 || Number(selectedLead.ordrestyring_case_id) > 1000) ? `https://system.ordrestyring.dk/cases?id=${selectedLead.ordrestyring_case_id}` : `https://system.ordrestyring.dk/cases` } target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
+                                                            <a href={ (String(selectedLead.ordrestyring_case_id).length >= 4 || Number(selectedLead.ordrestyring_case_id) > 1000) ? `https://system.ordrestyring.dk/cases?id=${selectedLead.ordrestyring_case_id}` : `https://system.ordrestyring.dk/cases` } target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
                                                                 <ExternalLink size={18} /> Åbn Ordrestyring
                                                             </a>
                                                         ) : selectedLead.raw_data?.synced_to_management ? (
-                                                            <a href={`https://system.ordrestyring.dk/cases`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
+                                                            <a href={`https://system.ordrestyring.dk/cases`} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
                                                                 <ExternalLink size={18} /> Åbn Ordrestyring
                                                             </a>
                                                         ) : (
-                                                            <button onClick={() => syncToOrdrestyring(selectedLead)} style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
+                                                            <button onClick={() => syncToOrdrestyring(selectedLead)} style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
                                                                 <UploadCloud size={18} /> Ordrestyring
                                                             </button>
                                                         )
@@ -2751,15 +2753,15 @@ const Dashboard = () => {
 
                                                     {carpenterProfile?.apacta_api_key && (
                                                         selectedLead.apacta_case_id ? (
-                                                            <a href={`https://control-panel.apacta.com/projects/${selectedLead.apacta_case_id}`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
+                                                            <a href={`https://control-panel.apacta.com/projects/${selectedLead.apacta_case_id}`} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
                                                                 <ExternalLink size={18} /> Åbn Apacta
                                                             </a>
                                                         ) : selectedLead.raw_data?.synced_to_management ? (
-                                                            <a href={`https://control-panel.apacta.com/projects`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
+                                                            <a href={`https://control-panel.apacta.com/projects`} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
                                                                 <ExternalLink size={18} /> Åbn Apacta
                                                             </a>
                                                         ) : (
-                                                            <button onClick={() => syncToApacta(selectedLead)} style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
+                                                            <button onClick={() => syncToApacta(selectedLead)} style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
                                                                 <UploadCloud size={18} /> Apacta
                                                             </button>
                                                         )
@@ -2767,11 +2769,11 @@ const Dashboard = () => {
 
                                                     {carpenterProfile?.minuba_api_key && (
                                                         selectedLead.minuba_case_id ? (
-                                                            <a href={`https://app.minuba.dk/`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
+                                                            <a href={`https://app.minuba.dk/`} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
                                                                 <ExternalLink size={18} /> Åbn Minuba
                                                             </a>
                                                         ) : (
-                                                            <button onClick={() => syncToMinuba(selectedLead)} style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
+                                                            <button onClick={() => syncToMinuba(selectedLead)} style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
                                                                 <UploadCloud size={18} /> Overfør til Minuba
                                                             </button>
                                                         )
@@ -2780,7 +2782,7 @@ const Dashboard = () => {
                                             )}
                                             
                                             {selectedLead.raw_data?.quote_pdf_url && (
-                                                <a href={selectedLead.raw_data.quote_pdf_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#f3f1ed', border: '1px solid #e8e6e1', color: '#374151', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                                                <a href={selectedLead.raw_data.quote_pdf_url} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', background: '#f3f1ed', border: '1px solid #e8e6e1', color: '#374151', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
                                                     <FileText size={18} /> PDF-tilbud
                                                 </a>
                                             )}
@@ -2791,7 +2793,7 @@ const Dashboard = () => {
                                                         navigator.clipboard.writeText(url);
                                                         toast.success('Link til interaktivt tilbud kopieret til udklipsholderen!');
                                                     }}
-                                                    style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#eff6ff', border: '1px solid #e8e6e1', color: '#1d4ed8', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                    style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', background: '#eff6ff', border: '1px solid #e8e6e1', color: '#1d4ed8', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
                                                 >
                                                     <Globe size={18} /> Kopiér Web-Link
                                                 </button>
@@ -3045,7 +3047,21 @@ const Dashboard = () => {
                                                         'length': 'Længde i meter',
                                                         'height': 'Højde i meter',
                                                         'width': 'Bredde i meter',
-                                                        'isKombi': 'Kombi-projekt'
+                                                        'isKombi': 'Kombi-projekt',
+                                                        'vaporAndInsulation': 'Dampspærre og isolering',
+                                                        'spotsAmount': 'Antal spots',
+                                                        'elevation': 'Terrassetype (højde)',
+                                                        'roofTerraceFeet': 'Tagterrassefødder',
+                                                        'awning': 'Markise',
+                                                        'awningType': 'Markisetype',
+                                                        'railing': 'Rækværk/Gelænder',
+                                                        'railingMaterial': 'Rækværksmateriale',
+                                                        'railingMeters': 'Meter rækværk',
+                                                        'terraceComplexity': 'Specialvinkler / Trapper',
+                                                        'floorDoorsCount': 'Antal indvendige døre',
+                                                        'windowsConfig': 'Vinduesspecifikationer',
+                                                        'extensions': 'Kviste',
+                                                        'extensionsAmount': 'Antal kviste'
                                                     };
 
                                                     const valueTranslationMap = {
@@ -3064,7 +3080,14 @@ const Dashboard = () => {
                                                         'tiles': 'Tegl',
                                                         'concrete': 'Beton',
                                                         'steel': 'Stål',
-                                                        'composite': 'Komposit'
+                                                        'composite': 'Komposit',
+                                                        'ground': 'Jordniveau',
+                                                        'elevated': 'Hævet terrasse',
+                                                        'roof': 'Tagterrasse / Tag',
+                                                        'zinc': 'Zink',
+                                                        'copper': 'Kobber',
+                                                        'eternit': 'Eternit',
+                                                        'wood': 'Træ'
                                                     };
 
                                                     const translateValue = (val) => {
@@ -5156,7 +5179,7 @@ const Dashboard = () => {
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button 
                                 onClick={() => setShowDeleteConfirm(false)}
-                                style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e8e6e1', background: 'rgba(255, 255, 255, 0.4)', color: '#6b7280', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                                style={{ flex: '1 1 140px', padding: '12px', borderRadius: '8px', border: '1px solid #e8e6e1', background: 'rgba(255, 255, 255, 0.4)', color: '#6b7280', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
                             >
                                 Fortryd
                             </button>
@@ -5172,7 +5195,7 @@ const Dashboard = () => {
                                         setSelectedLead(null);
                                     }
                                 }}
-                                style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                                style={{ flex: '1 1 140px', padding: '12px', borderRadius: '8px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
                             >
                                 Ja, slet sag
                             </button>
