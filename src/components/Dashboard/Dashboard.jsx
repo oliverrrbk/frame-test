@@ -2033,7 +2033,7 @@ const Dashboard = () => {
 
                     <div className="user-profile flex items-center gap-3 relative" style={{ marginLeft: 'auto' }}>
                         
-                        {(isDev || myProfile?.email === 'team@bisoncompany.dk' || myProfile?.email?.toLowerCase().includes('massbyg') || myProfile?.company_name?.toLowerCase().includes('massbyg')) && (
+                        {(isDev || ['team@bisoncompany.dk', 'mbc@bisoncompany.dk'].includes(myProfile?.email) || myProfile?.email?.toLowerCase().includes('madsbyg') || myProfile?.company_name?.toLowerCase().includes('mads') || myProfile?.company_name?.toLowerCase().includes('massbyg')) && (
                             <div style={{ marginRight: '16px', position: 'relative' }}>
                                 <button 
                                     onClick={() => setIsSimulatorOpen(!isSimulatorOpen)}
