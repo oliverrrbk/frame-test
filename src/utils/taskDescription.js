@@ -1,6 +1,6 @@
 import { QUESTIONS } from '../components/Wizard/questionsConfig.js';
 
-export const generateTaskDescription = (category, details) => {
+export const generateTaskDescription = (category, details, customerType = 'privat') => {
     if (!details || ['special', 'extensions', 'carport', 'kitchen'].includes(category)) return [];
     let tasks = [];
     
@@ -350,7 +350,11 @@ export const generateTaskDescription = (category, details) => {
     }
     
     // 5. Kørsel og Oprydning (Standard på tværs af alle beregnede fag)
-    tasks.push('Kørsel, logistik, professionelt værktøj samt løbende og afsluttende oprydning (vi efterlader altid dit hjem pænt og ryddeligt)');
+    if (customerType === 'erhverv') {
+        tasks.push('Kørsel, logistik, professionelt værktøj samt løbende og afsluttende oprydning (vi efterlader altid jeres arbejdsplads/bygning pæn og ryddelig)');
+    } else {
+        tasks.push('Kørsel, logistik, professionelt værktøj samt løbende og afsluttende oprydning (vi efterlader altid dit hjem pænt og ryddeligt)');
+    }
     return tasks;
 };
 
@@ -518,7 +522,7 @@ export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter 
     }
 
     // Task List Section
-    const taskList = generateTaskDescription(category, details);
+    const taskList = generateTaskDescription(category, details, projectData.customerDetails?.customerType);
     if (taskList.length > 0) {
         finalHtml += `
             <div style="background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; padding: 24px; margin-bottom: 24px;">

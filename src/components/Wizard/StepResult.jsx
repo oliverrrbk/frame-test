@@ -221,8 +221,22 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                         marginBottom: '32px'
                     }}>
                         <span style={{ display: 'block', fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Forventet prisramme</span>
-                        <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>{priceRange}</h1>
-                        <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Vejledende pris inkl. moms. Et endeligt tilbud fra os vil oftest lande lidt lavere.</p>
+                        {priceRange.includes(' ekskl. moms (') ? (
+                            <>
+                                <h1 style={{ fontSize: 'clamp(2rem, 6vw, 3rem)', fontWeight: '900', margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
+                                    {priceRange.split(' (')[0]}
+                                </h1>
+                                <h2 style={{ fontSize: 'clamp(1.2rem, 4vw, 1.8rem)', fontWeight: '700', margin: '0 0 16px 0', color: 'var(--text-secondary)' }}>
+                                    ({priceRange.split(' (')[1]}
+                                </h2>
+                                <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Vejledende pris ekskl. moms. Et endeligt tilbud fra os vil oftest lande lidt lavere.</p>
+                            </>
+                        ) : (
+                            <>
+                                <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: '900', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>{priceRange}</h1>
+                                <p style={{ fontSize: '1.05rem', margin: 0, color: '#64748b', maxWidth: '450px', marginInline: 'auto', lineHeight: '1.5' }}>Vejledende pris inkl. moms. Et endeligt tilbud fra os vil oftest lande lidt lavere.</p>
+                            </>
+                        )}
                     </div>
                 )}
 
@@ -255,14 +269,14 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     let taskList = [];
                     if (isKombi && Array.isArray(projectData.projects)) {
                         projectData.projects.forEach(p => {
-                            const subTasks = generateTaskDescription(p.category, p.details);
+                            const subTasks = generateTaskDescription(p.category, p.details, projectData.customerDetails?.customerType);
                             taskList.push(...subTasks);
                         });
                         taskList = Array.from(new Set(taskList)); // Deduplicate task items!
                     } else if (projectData.category === 'special' && Array.isArray(projectData.details?.aiBreakdown)) {
                         taskList = projectData.details.aiBreakdown.map(itemObj => itemObj.item);
                     } else {
-                        taskList = generateTaskDescription(projectData.category, projectData.details);
+                        taskList = generateTaskDescription(projectData.category, projectData.details, projectData.customerDetails?.customerType);
                     }
 
                     if (taskList.length > 0) {
