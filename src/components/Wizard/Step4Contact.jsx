@@ -275,6 +275,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                     }
                     .step-header p {
                         font-size: 1rem !important;
+                    }
                 }
                 .customer-type-toggle {
                     display: flex;
