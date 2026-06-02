@@ -171,7 +171,7 @@ const QuoteAcceptPage = () => {
                                 sendEmail({
                                     to: lead.customer_email,
                                     subject: `Dit tilbud fra ${carpenterName} er bekræftet!`,
-                                    html: getCustomerOfferAcceptedTemplate(customerName, categoryName, carpenter, lead.raw_data?.quote_pdf_url),
+                                    html: getCustomerOfferAcceptedTemplate(customerName, categoryName, carpenter, lead.raw_data?.quote_pdf_url, lead.case_number || String(lead.id).substring(0,8)),
                                     fromName: senderName,
                                     replyTo: carpenter.email
                                 });

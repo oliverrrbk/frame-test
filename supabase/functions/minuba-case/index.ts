@@ -105,7 +105,7 @@ serve(async (req) => {
 
     // 2. Opret Projekt/Ordre i Minuba
     const projectPayload = {
-      name: `${lead.project_category || 'Bison Frame Opgave'} - ${lead.customer_name || 'Kunde'}`,
+      name: `Sag ${lead.case_number || String(lead.id).substring(0,8)}: ${lead.project_category || 'Bison Frame Opgave'} - ${lead.customer_name || 'Kunde'}`,
       description: `Tilbudspris (Ekskl. moms): ${lead.raw_data?.actual_quote_price || lead.price_estimate || '0'} kr.\nAdresse: ${lead.customer_address}`,
       clientId: contactId,
       orderTypeId: "00000000-0000-0000-0000-000000000000" // Minuba kræver muligvis orderTypeId

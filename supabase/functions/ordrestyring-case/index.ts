@@ -54,7 +54,7 @@ serve(async (req) => {
     const baseUrl = "https://v2.api.ordrestyring.dk";
 
     // Unikt kundenummer
-    const customerNumber = `BF-${lead.id.toString().slice(0, 8)}-${Date.now().toString().slice(-4)}`;
+    const customerNumber = `BF-${lead.case_number || lead.id.toString().slice(0, 8)}-${Date.now().toString().slice(-4)}`;
 
     // Parse adresse for postnummer og by
     let zip = "0000";

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown } from 'lucide-react';
+import { Home, Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
@@ -17,9 +17,6 @@ import AiTrainingView from './AiTrainingView';
 import TeamManagement from './TeamManagement';
 import CaseManagement from './CaseManagement';
 import MaterialList from './MaterialList';
-import WorkerTimesheet from './WorkerTimesheet';
-import AdminTimesheet from './AdminTimesheet';
-import ProjectManagerOverview from './ProjectManagerOverview';
 import FinanceOverview from './FinanceOverview';
 import OnboardingModal from './OnboardingModal';
 import SetPasswordModal from './SetPasswordModal';
@@ -27,7 +24,6 @@ import SuperAdminView from './SuperAdminView';
 import MyProfileView from './MyProfileView';
 import SubscriptionSettings from './SubscriptionSettings';
 import DashboardOverview from './DashboardOverview';
-import WorkerOverview from './WorkerOverview';
 import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 
@@ -407,10 +403,6 @@ const Dashboard = () => {
     // myProfile er den person, der fysisk er logget ind (f.eks. Oliver)
     const [myProfile, setMyProfile] = useState(null);
     
-    // Test Simulator: Rolle-simulering for localhost
-    const [simulatedRole, setSimulatedRole] = useState(null);
-    const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
-    
     // carpenterProfile er firmaet (Mester), som dataene tilhører
     const [carpenterProfile, setCarpenterProfile] = useState(null);
     
@@ -737,8 +729,6 @@ const Dashboard = () => {
                     profile.dinero_api_key = adminSecrets.dinero_api_key;
                     setCarpenterProfile(profile);
                 }
-            } else if (profile.role === 'worker' || profile.role === 'apprentice') {
-                // Lad dem blive på 'overview'
             }
 
             // Tjek Onboarding (Vis kun hvis de mangler det, og det er ejeren selv)
@@ -1058,24 +1048,17 @@ const Dashboard = () => {
         }
         workingLeads = workingLeads.filter(l => l.status !== 'Slettet');
         
-        // --- Granulær Data-filtrering (Kun for ægte auth) ---
-        // Hvis vi er i udviklingsmiljø, henter vi altid ALLE leads, så rolle-simulatoren kan filtrere dynamisk
-        const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        // --- Granulær Data-filtrering ---
+        const userRole = profile?.role;
+        const userPermissions = profile?.permissions || {};
+        const isSelf = !impersonateId; // Kun filtrer hvis brugeren kigger på sit eget firmas data (ikke impersonate admin bypass hvis det findes)
         
-        if (!isDev) {
-            const userRole = profile?.role;
-            const userPermissions = profile?.permissions || {};
-            const isSelf = !impersonateId;
-            
-            if (isSelf && userRole !== 'admin' && !userPermissions.view_all_leads) {
-                if (userRole === 'accountant') {
-                    const confirmedStatuses = ['Accepteret', 'Vundet', 'Afsluttet'];
-                    workingLeads = workingLeads.filter(l => confirmedStatuses.includes(l.status));
-                } else if (userRole === 'sales') {
-                    workingLeads = workingLeads.filter(l => (l.raw_data?.assigned_pm || []).includes(userId) || l.assigned_to === userId);
-                } else if (userRole === 'worker' || userRole === 'apprentice') {
-                    workingLeads = workingLeads.filter(l => (l.raw_data?.assigned_workers || []).includes(userId));
-                }
+        if (isSelf && userRole !== 'admin' && !userPermissions.view_all_leads) {
+            if (userRole === 'accountant') {
+                const confirmedStatuses = ['Accepteret', 'Vundet', 'Afsluttet'];
+                workingLeads = workingLeads.filter(l => confirmedStatuses.includes(l.status));
+            } else if (userRole === 'sales') {
+                workingLeads = workingLeads.filter(l => l.assigned_to === userId);
             }
         }
         
@@ -1357,7 +1340,7 @@ const Dashboard = () => {
                 if (lead.id === leadId) {
                     const updatedLead = { ...lead, ...updates };
                     // Kør regnskabsintegrationen, hvis ordren er Vundet og brugeren har rettigheder
-                    const hasSyncPermission = ['admin', 'accountant'].includes(effectiveRole);
+                    const hasSyncPermission = ['admin', 'accountant'].includes(carpenterProfile?.role);
                     if (newStatus === 'Vundet' && hasSyncPermission) {
                         syncToAccounting(updatedLead);
                     }
@@ -1515,7 +1498,7 @@ const Dashboard = () => {
         }
         
         setIsSaving(false);
-        if(!error) toast.success('Profil og URL-link opdateret succesfuldt!');
+        if(!error) toast.success('Profil og URL-link opdateret succesfuldt! 🚀');
         else toast.error('Fejl: URL-linket er desværre allerede taget af et andet firma.');
     };
 
@@ -1730,36 +1713,8 @@ const Dashboard = () => {
 
     const maxChartVal = Math.max(...chartData.map(d => d.value), 10000);
     
-    const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const effectiveRole = simulatedRole || myProfile?.role || 'admin';
-
     // --- SØGEFUNKTION & FILTRERING ---
-    const roleFilteredLeads = leadsData.filter(l => {
-        // Rolle-baseret filtrering til Simulator (lokal)
-        if (isDev && effectiveRole !== 'admin') {
-            if (effectiveRole === 'accountant') {
-                const confirmedStatuses = ['Accepteret', 'Vundet', 'Afsluttet'];
-                if (!confirmedStatuses.includes(l.status)) return false;
-            } else if (effectiveRole === 'sales') {
-                if (simulatedRole) {
-                    return ['Bekræftet opgave', 'Historik'].includes(l.status);
-                }
-                const pmData = l.raw_data?.assigned_pm;
-                const pmArray = Array.isArray(pmData) ? pmData : (pmData ? [pmData] : []);
-                if (!pmArray.includes(myProfile?.id) && l.assigned_to !== myProfile?.id) return false;
-            } else if (effectiveRole === 'worker' || effectiveRole === 'apprentice') {
-                if (simulatedRole) {
-                    return l.status === 'Bekræftet opgave'; // Lad Simulatoren se alle bekræftede sager
-                }
-                const workerData = l.raw_data?.assigned_workers;
-                const workerArray = Array.isArray(workerData) ? workerData : (workerData ? [workerData] : []);
-                if (!workerArray.includes(myProfile?.id)) return false;
-            }
-        }
-        return true;
-    });
-
-    const filteredLeads = roleFilteredLeads.filter(l => {
+    const filteredLeads = leadsData.filter(l => {
         const currentStatus = l.status || 'Ny forespørgsel';
         const matchesStatus = currentStatus === leadFilter;
         if (!searchQuery) return matchesStatus;
@@ -1772,9 +1727,8 @@ const Dashboard = () => {
         const phoneMatch = String(l.customer_phone || '').toLowerCase().includes(query);
         const emailMatch = l.customer_email?.toLowerCase().includes(query);
         const categoryMatch = categoryName.toLowerCase().includes(query);
-        const caseMatch = String(l.case_number || l.id).toLowerCase().includes(query);
         
-        return matchesStatus && (nameMatch || addressMatch || phoneMatch || emailMatch || categoryMatch || caseMatch);
+        return matchesStatus && (nameMatch || addressMatch || phoneMatch || emailMatch || categoryMatch);
     });
     // ---------------------------------------
 
@@ -1892,64 +1846,49 @@ const Dashboard = () => {
                         </button>
                     )}
 
-                    {['admin'].includes(effectiveRole) && (
-                        <button className={activeTab === 'leads' ? 'active' : ''} onClick={() => { setActiveTab('leads'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
-                            <Users size={20} /> Kunder & Leads
-                            {(() => {
-                                const unreadCount = leadsData.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel' && l.is_read === false).length;
-                                if (unreadCount > 0) {
-                                    return (
-                                        <span className="notification-badge">
-                                            {unreadCount}
-                                        </span>
-                                    );
-                                }
-                                return null;
-                            })()}
-                        </button>
-                    )}
-
-                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
-                        <button className={activeTab === 'cases' ? 'active' : ''} onClick={() => { setActiveTab('cases'); setIsMobileMenuOpen(false); }}>
-                            <Briefcase size={20} /> {['worker', 'apprentice'].includes(effectiveRole) ? 'Mine opgaver' : 'Sager & Ordrestyring'}
-                        </button>
-                    )}
-                    {['worker', 'apprentice', 'sales'].includes(effectiveRole) && (
-                        <button className={activeTab === 'worker_timesheet' ? 'active' : ''} onClick={() => { setActiveTab('worker_timesheet'); setIsMobileMenuOpen(false); }}>
-                            <Clock size={20} /> Timeregistrering
-                        </button>
-                    )}
-                    {['admin', 'accountant'].includes(effectiveRole) && (
-                        <>
+                    <button className={activeTab === 'leads' ? 'active' : ''} onClick={() => { setActiveTab('leads'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
+                        <Users size={20} /> Kunder & Leads
+                        {(() => {
+                            const unreadCount = leadsData.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel' && l.is_read === false).length;
+                            if (unreadCount > 0) {
+                                return (
+                                    <span className="notification-badge">
+                                        {unreadCount}
+                                    </span>
+                                );
+                            }
+                            return null;
+                        })()}
+                    </button>
+                    <button className={activeTab === 'cases' ? 'active' : ''} onClick={() => { setActiveTab('cases'); setIsMobileMenuOpen(false); }}>
+                        <Briefcase size={20} /> Sager & Ordrestyring
+                    </button>
+                    {(carpenterProfile?.role === 'admin' || carpenterProfile?.role === 'accountant') && (
                         <button className={activeTab === 'finance' ? 'active' : ''} onClick={() => { setActiveTab('finance'); setIsMobileMenuOpen(false); }}>
                             <Wallet size={20} /> Økonomi & Faktura
                         </button>
-                        <button className={activeTab === 'admin_timesheet' ? 'active' : ''} onClick={() => { setActiveTab('admin_timesheet'); setIsMobileMenuOpen(false); }}>
-                            <FileText size={20} /> Løn & Timer
-                        </button>
+                    )}
+                    {(carpenterProfile?.role !== 'accountant' || carpenterProfile?.permissions?.view_materials) && (
+                        <>
+                            <button className={activeTab === 'map' ? 'active' : ''} onClick={() => { setActiveTab('map'); setIsMobileMenuOpen(false); }}>
+                                <MapPin size={20} /> Kortvisning
+                            </button>
+                            <button className={activeTab === 'materials' ? 'active' : ''} onClick={() => { setActiveTab('materials'); setIsMobileMenuOpen(false); }}>
+                                <Package size={20} /> Materialer
+                            </button>
                         </>
                     )}
-                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
-                        <button className={activeTab === 'map' ? 'active' : ''} onClick={() => { setActiveTab('map'); setIsMobileMenuOpen(false); }}>
-                            <MapPin size={20} /> Kortvisning
-                        </button>
-                    )}
-                    {['admin', 'sales'].includes(effectiveRole) && (
-                        <button className={activeTab === 'materials' ? 'active' : ''} onClick={() => { setActiveTab('materials'); setIsMobileMenuOpen(false); }}>
-                            <Package size={20} /> Materialer
-                        </button>
-                    )}
-                    {['admin'].includes(effectiveRole) && (
+                    {(carpenterProfile?.role === 'admin' || carpenterProfile?.permissions?.view_pricing) && (
                         <button className={activeTab === 'settings' ? 'active' : ''} onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}>
                             <Sliders size={20} /> Prisberegning
                         </button>
                     )}
-                    {['admin', 'accountant'].includes(effectiveRole) && (
+                    {(carpenterProfile?.role !== 'sales' || carpenterProfile?.permissions?.view_integrations) && (
                         <button className={activeTab === 'integrations' ? 'active' : ''} onClick={() => { setActiveTab('integrations'); setIsMobileMenuOpen(false); }}>
                             <Link size={20} /> Integrationer
                         </button>
                     )}
-                    {['admin', 'accountant'].includes(effectiveRole) && (
+                    {carpenterProfile?.role === 'admin' && (
                         <button className={activeTab === 'team' ? 'active' : ''} onClick={() => { setActiveTab('team'); setIsMobileMenuOpen(false); }}>
                             <HardHat size={20} /> Team & Medarbejdere
                         </button>
@@ -1957,57 +1896,30 @@ const Dashboard = () => {
                     
                     <div style={{ marginTop: 'auto' }}></div>
                     
-                    {['admin', 'sales'].includes(effectiveRole) && (
-                        <div className="sidebar-booking-card" style={{ padding: '16px', background: 'var(--surface-bg)', borderRadius: '12px', border: '1px solid var(--border-light)', marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Link size={16} color="#10b981" />
-                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>Dit Overslagslink</span>
-                            </div>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>Dette er linket du sender til kunderne.</p>
-                            <button 
-                                onClick={() => {
-                                    const baseUrl = window.location.origin.includes('localhost') ? window.location.origin : 'https://bisonframe.dk';
-                                    navigator.clipboard.writeText(`${baseUrl}/${carpenterProfile?.slug || 't'}`);
-                                    toast.success('Overslagslink kopieret!');
-                                }}
-                                style={{ 
-                                    background: '#10b981', color: 'white', border: 'none', padding: '8px', borderRadius: '6px', 
-                                    fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.2s',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-                                }}
-                                onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
-                                onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
-                            >
-                                Kopiér Link
-                            </button>
+                    {/* Share Booking Link Card in Sidebar */}
+                    <div className="sidebar-booking-card" style={{ padding: '16px', background: 'var(--surface-bg)', borderRadius: '12px', border: '1px solid var(--border-light)', marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Link size={16} color="#10b981" />
+                            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>Dit Overslagslink</span>
                         </div>
-                    )}
-                    
-                    <button 
-                        className="sidebar-logout-btn" 
-                        onClick={() => { supabase.auth.signOut(); setIsProfileMenuOpen(false); }}
-                        style={{
-                            marginTop: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
-                            color: '#ef4444',
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '0.95rem',
-                            fontWeight: '600',
-                            borderRadius: '8px',
-                            width: '100%',
-                            textAlign: 'left',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseOver={(e) => { e.currentTarget.style.background = '#fef2f2'; }}
-                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                    >
-                        <LogOut size={20} /> Log ud
-                    </button>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>Dette er linket du sender til kunderne.</p>
+                        <button 
+                            onClick={() => {
+                                const baseUrl = window.location.origin.includes('localhost') ? window.location.origin : 'https://bisonframe.dk';
+                                navigator.clipboard.writeText(`${baseUrl}/${carpenterProfile?.slug || 't'}`);
+                                toast.success('Overslagslink kopieret!');
+                            }}
+                            style={{ 
+                                background: '#10b981', color: 'white', border: 'none', padding: '8px', borderRadius: '6px', 
+                                fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.2s',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
+                        >
+                            Kopiér Link
+                        </button>
+                    </div>
                 </nav>
             </aside>
 
@@ -2032,99 +1944,6 @@ const Dashboard = () => {
                     )}
 
                     <div className="user-profile flex items-center gap-3 relative" style={{ marginLeft: 'auto' }}>
-                        
-                        {(isDev || myProfile?.email === 'team@bisoncompany.dk' || myProfile?.email?.toLowerCase().includes('massbyg') || myProfile?.company_name?.toLowerCase().includes('massbyg')) && (
-                            <div style={{ marginRight: '16px', position: 'relative' }}>
-                                <button 
-                                    onClick={() => setIsSimulatorOpen(!isSimulatorOpen)}
-                                    style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: '8px', 
-                                        padding: '8px 16px', 
-                                        borderRadius: '12px', 
-                                        background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-                                        color: 'white',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        cursor: 'pointer',
-                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                                    }}
-                                >
-                                    <RefreshCw size={14} style={{ opacity: 0.8 }} />
-                                    <span style={{ fontSize: '0.85rem', fontWeight: '600', letterSpacing: '0.02em' }}>
-                                        {simulatedRole === 'sales' ? 'Projektleder' : 
-                                         simulatedRole === 'worker' ? 'Svend' : 
-                                         simulatedRole === 'apprentice' ? 'Lærling' : 
-                                         simulatedRole === 'accountant' ? 'Bogholder' : 'Admin (Dig)'}
-                                    </span>
-                                    <ChevronDown size={14} style={{ opacity: 0.7, transform: isSimulatorOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                                </button>
-                                
-                                {isSimulatorOpen && (
-                                    <>
-                                        <div 
-                                            style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
-                                            onClick={() => setIsSimulatorOpen(false)}
-                                        />
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '100%',
-                                            right: '0',
-                                            marginTop: '8px',
-                                            background: 'rgba(255, 255, 255, 0.95)',
-                                            backdropFilter: 'blur(16px)',
-                                            borderRadius: '16px',
-                                            border: '1px solid rgba(0,0,0,0.05)',
-                                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                                            padding: '8px',
-                                            width: '200px',
-                                            zIndex: 9999,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '4px'
-                                        }}>
-                                            <div style={{ padding: '8px 12px', fontSize: '0.7rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Simuler rolle</div>
-                                            
-                                            {[
-                                                { value: null, label: 'Admin (Dig)', icon: Shield },
-                                                { value: 'sales', label: 'Projektleder', icon: Briefcase },
-                                                { value: 'worker', label: 'Svend', icon: HardHat },
-                                                { value: 'apprentice', label: 'Lærling', icon: User },
-                                                { value: 'accountant', label: 'Bogholder', icon: Calculator }
-                                            ].map((role) => (
-                                                <button
-                                                    key={role.value || 'admin'}
-                                                    onClick={() => { setSimulatedRole(role.value); setIsSimulatorOpen(false); }}
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '10px',
-                                                        width: '100%',
-                                                        padding: '10px 12px',
-                                                        borderRadius: '10px',
-                                                        border: 'none',
-                                                        background: simulatedRole === role.value ? '#f1f5f9' : 'transparent',
-                                                        color: simulatedRole === role.value ? '#3b82f6' : '#475569',
-                                                        fontSize: '0.9rem',
-                                                        fontWeight: simulatedRole === role.value ? '600' : '500',
-                                                        cursor: 'pointer',
-                                                        textAlign: 'left',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                    onMouseOver={(e) => { e.currentTarget.style.background = simulatedRole === role.value ? '#f1f5f9' : '#f8fafc'; e.currentTarget.style.color = '#0f172a'; }}
-                                                    onMouseOut={(e) => { e.currentTarget.style.background = simulatedRole === role.value ? '#f1f5f9' : 'transparent'; e.currentTarget.style.color = simulatedRole === role.value ? '#3b82f6' : '#475569'; }}
-                                                >
-                                                    <role.icon size={16} />
-                                                    {role.label}
-                                                    {simulatedRole === role.value && <Check size={14} style={{ marginLeft: 'auto' }} />}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        )}
-
                         <button 
                             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                             style={{ 
@@ -2223,7 +2042,7 @@ const Dashboard = () => {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', 
                                     fontSize: '36px', margin: '0 auto 24px auto'
                                 }}>
-                                    <CheckCircle size={40} strokeWidth={2} />
+                                    🚀
                                 </div>
                                 <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a1a1a', marginBottom: '12px', marginTop: 0 }}>
                                     Succes! Data er overført
@@ -2308,38 +2127,13 @@ const Dashboard = () => {
                         <SuperAdminView />
                     )}
                     {activeTab === 'overview' && (
-                        ['worker', 'apprentice', 'sales'].includes(effectiveRole) ? (
-                            <WorkerOverview
-                                leadsData={roleFilteredLeads}
-                                myProfile={{ ...myProfile, role: effectiveRole }}
-                                setActiveTab={setActiveTab}
-                                setTargetCaseId={setTargetCaseId}
-                                simulatedRole={simulatedRole}
-                            />
-                        ) : (
-                            <DashboardOverview 
-                                leadsData={roleFilteredLeads} 
-                                carpenterProfile={{ ...carpenterProfile, role: effectiveRole }} 
-                                myProfile={{ ...myProfile, role: effectiveRole }} 
-                                setActiveTab={setActiveTab} 
-                                setSelectedLead={setSelectedLead}
-                                setTargetCaseId={setTargetCaseId}
-                            />
-                        )
+                        <DashboardOverview leadsData={leadsData} carpenterProfile={carpenterProfile} myProfile={myProfile} />
                     )}
 
-                    {activeTab === 'worker_timesheet' && ['worker', 'apprentice', 'sales'].includes(effectiveRole) && (
-                        <WorkerTimesheet 
-                            leadsData={roleFilteredLeads} 
-                            myProfile={{ ...myProfile, role: effectiveRole }} 
-                            simulatedRole={simulatedRole}
-                        />
-                    )}
-
-                    {activeTab === 'team' && ['admin', 'sales', 'accountant'].includes(effectiveRole) && (
+                    {activeTab === 'team' && carpenterProfile?.role === 'admin' && (
                         <div className="tab-pane active" style={{ height: '100%', overflowY: 'auto', paddingRight: '10px' }}>
                             {carpenterProfile?.tier === 'enterprise' ? (
-                                <TeamManagement profile={{ ...carpenterProfile, role: effectiveRole }} leadsData={filteredLeads} />
+                                <TeamManagement profile={carpenterProfile} leadsData={leadsData} />
                             ) : (
                                 <div className="settings-card" style={{ maxWidth: '600px', margin: '60px auto' }}>
                                     <div className="card-body" style={{ padding: '40px', textAlign: 'center' }}>
@@ -2560,8 +2354,7 @@ const Dashboard = () => {
                                 targetCaseId={targetCaseId}
                                 clearTargetCase={() => setTargetCaseId(null)}
                                 leads={leadsData} 
-                                profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.id }} 
-                                simulatedRole={simulatedRole}
+                                profile={carpenterProfile} 
                                 syncToAccounting={syncToAccounting}
                                 onUpdateLead={(updated) => {
                                     setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
@@ -2573,24 +2366,18 @@ const Dashboard = () => {
                         </div>
                     )}
                     {activeTab === 'finance' && (
-                        <div className="tab-pane active " style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
+                        <div className="tab-pane active animate-fadeIn" style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
                             <FinanceOverview 
-                                cases={leadsData.filter(l => ['Bekræftet opgave', 'Sæt i bero', 'Historik'].includes(l.status))}
-                                carpenterProfile={carpenterProfile}
-                                onSendToAccounting={syncToAccounting}
-                            />
-                        </div>
-                    )}
-                    {activeTab === 'admin_timesheet' && (
-                        <div className="tab-pane active " style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
-                            <AdminTimesheet 
-                                leadsData={leadsData} 
-                                profile={myProfile} 
+                                cases={leadsData.filter(l => l.status === 'Tilbud Accepteret')}
+                                onOpenCase={(c) => {
+                                    setTargetCaseId(c.id);
+                                    setActiveTab('cases');
+                                }}
                             />
                         </div>
                     )}
                     {activeTab === 'leads' && (
-                        <div className="space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
                             <div className="settings-card">
                                 
                                 
@@ -2599,7 +2386,7 @@ const Dashboard = () => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingBottom: '10px', flexWrap: 'wrap', gap: '16px' }}>
                                     <div className="desktop-filters" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
                                         {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Sæt i bero', 'Udgået opgave', 'Historik']
-                                            .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Sæt i bero' || status === 'Historik')
+                                            .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Sæt i bero' || status === 'Historik')
                                             .map(status => (
                                             <button 
                                                 key={status} 
@@ -2686,7 +2473,7 @@ const Dashboard = () => {
                                                 overflow: 'hidden'
                                             }}>
                                                 {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Udgået opgave', 'Historik']
-                                                    .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
+                                                    .filter(status => carpenterProfile?.role !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
                                                     .map(status => (
                                                         <button
                                                             key={status}
@@ -2846,7 +2633,7 @@ const Dashboard = () => {
                                                     </select>
                                                 </div>
 
-                                                {effectiveRole === 'admin' && teamMembers.length > 0 && (
+                                                {carpenterProfile?.role === 'admin' && teamMembers.length > 0 && (
                                                     <div className="input-group">
                                                         <select
                                                             value={lead.assigned_to || ''}
@@ -2865,7 +2652,7 @@ const Dashboard = () => {
                                                         >
                                                             <option value="">Ikke tildelt</option>
                                                             {teamMembers.map(member => (
-                                                                <option key={member.id} value={member.id}>👤 {member.owner_name || member.company_name || member.email || 'Ukendt'} ({member.role})</option>
+                                                                <option key={member.id} value={member.id}>👤 {member.owner_name} ({member.role})</option>
                                                             ))}
                                                         </select>
                                                     </div>
@@ -2877,7 +2664,7 @@ const Dashboard = () => {
                                                 {/* Integrationsknapper vist dynamisk hvis de er valgt i indstillinger */}
                                                 {lead.status === 'Bekræftet opgave' && (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                                                        {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(effectiveRole) && (
+                                                        {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(carpenterProfile?.role) && (
                                                             <button 
                                                                 onClick={(e) => { e.stopPropagation(); syncToAccounting(lead); }}
                                                                 style={{ padding: '8px', borderRadius: '8px', border: '1px solid #10b981', backgroundColor: '#ecfdf5', color: '#059669', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
@@ -2885,7 +2672,7 @@ const Dashboard = () => {
                                                                 <FileText size={16} /> Regnskabsprogram
                                                             </button>
                                                         )}
-                                                        {carpenterProfile?.ordrestyring_token && ['admin', 'accountant'].includes(effectiveRole) && (
+                                                        {carpenterProfile?.ordrestyring_token && ['admin', 'accountant'].includes(carpenterProfile?.role) && (
                                                             lead.ordrestyring_case_id ? (
                                                                 <a 
                                                                     href={
@@ -2909,7 +2696,7 @@ const Dashboard = () => {
                                                                 </button>
                                                             )
                                                         )}
-                                                        {carpenterProfile?.apacta_api_key && ['admin', 'accountant'].includes(effectiveRole) && (
+                                                        {carpenterProfile?.apacta_api_key && ['admin', 'accountant'].includes(carpenterProfile?.role) && (
                                                             lead.apacta_case_id ? (
                                                                 <a 
                                                                     href={`https://control-panel.apacta.com/projects/${lead.apacta_case_id}`}
@@ -2987,7 +2774,7 @@ const Dashboard = () => {
 
                                         {/* Tjekket top-menu for integrationer med ensartede knapper */}
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'stretch', marginBottom: '32px' }}>
-                                            {selectedLead.status === 'Bekræftet opgave' && ['admin', 'accountant'].includes(effectiveRole) && (
+                                            {selectedLead.status === 'Bekræftet opgave' && ['admin', 'accountant'].includes(carpenterProfile?.role) && (
                                                 <>
                                                     {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && (
                                                         selectedLead.raw_data?.synced_to_accounting ? (
@@ -3179,9 +2966,7 @@ const Dashboard = () => {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <span style={{ fontSize: '0.85rem', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                            {['Sendt tilbud', 'Bekræftet opgave'].includes(selectedLead.status) ? 'Tilbud sendt til kunde' : 'Overslag sendt til kunde'}
-                                                        </span>
+                                                        <span style={{ fontSize: '0.85rem', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overslag sendt til kunde</span>
                                                         <div style={{ margin: '12px 0 0', color: '#1e3a8a', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                                             {selectedLead.raw_data?.calc_data?.finalEstimateIncVat ? (() => {
                                                                 const incVat = selectedLead.raw_data.calc_data.finalEstimateIncVat;
@@ -4308,7 +4093,7 @@ const Dashboard = () => {
                                                             <div style={{ textAlign: 'right' }}>
                                                                 <h2 style={{ margin: 0, fontSize: '22px', color: '#10b981' }}>TILBUD</h2>
                                                                 <p style={{ margin: '4px 0', fontSize: '11px' }}><strong>Dato:</strong> {new Date().toLocaleDateString('da-DK')}</p>
-                                                                <p style={{ margin: '4px 0', fontSize: '11px' }}><strong>Sagsnummer:</strong> {selectedLead.case_number || String(selectedLead.id).substring(0, 8)}</p>
+                                                                <p style={{ margin: '4px 0', fontSize: '11px' }}><strong>Projekt ID:</strong> #{String(selectedLead.id).substring(0, 8)}</p>
                                                             </div>
                                                         </div>
 
@@ -4618,63 +4403,57 @@ const Dashboard = () => {
                     )}
                     
                     {activeTab === 'map' && (
-                        <div className="space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+                        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
                             <div className="settings-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 
                                 <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                     <div className="glass-panel" style={{ padding: '20px', marginBottom: '20px' }}>
-                                    {['admin', 'sales'].includes(effectiveRole) ? (
-                                        <>
-                                            <h4 style={{ margin: '0 0 16px', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>Filtrér visningen på kortet</h4>
-                                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                                <button 
-                                                    onClick={() => setMapFilters(p => ({...p, showNew: !p.showNew}))}
-                                                    style={{ 
-                                                        display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px', 
-                                                        border: `1px solid ${mapFilters.showNew ? '#3b82f6' : '#e2e8f0'}`,
-                                                        backgroundColor: mapFilters.showNew ? '#eff6ff' : '#f8fafc',
-                                                        color: mapFilters.showNew ? '#1d4ed8' : '#64748b',
-                                                        fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
-                                                    }}
-                                                >
-                                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: mapFilters.showNew ? '#3b82f6' : '#cbd5e1' }} />
-                                                    Nye forespørgsler
-                                                </button>
-                                                <button 
-                                                    onClick={() => setMapFilters(p => ({...p, showSent: !p.showSent}))}
-                                                    style={{ 
-                                                        display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px', 
-                                                        border: `1px solid ${mapFilters.showSent ? '#eab308' : '#e2e8f0'}`,
-                                                        backgroundColor: mapFilters.showSent ? '#fefce8' : '#f8fafc',
-                                                        color: mapFilters.showSent ? '#a16207' : '#64748b',
-                                                        fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
-                                                    }}
-                                                >
-                                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: mapFilters.showSent ? '#eab308' : '#cbd5e1' }} />
-                                                    Sendt tilbud
-                                                </button>
-                                                <button 
-                                                    onClick={() => setMapFilters(p => ({...p, showConfirmed: !p.showConfirmed}))}
-                                                    style={{ 
-                                                        display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px', 
-                                                        border: `1px solid ${mapFilters.showConfirmed ? '#10b981' : '#e2e8f0'}`,
-                                                        backgroundColor: mapFilters.showConfirmed ? '#ecfdf5' : '#f8fafc',
-                                                        color: mapFilters.showConfirmed ? '#047857' : '#64748b',
-                                                        fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
-                                                    }}
-                                                >
-                                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: mapFilters.showConfirmed ? '#10b981' : '#cbd5e1' }} />
-                                                    Bekræftet opgave
-                                                </button>
-                                            </div>
-                                            <div className="hide-on-mobile" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f3f1ed', borderRadius: '8px', borderLeft: '3px solid #cbd5e1', fontSize: '0.85rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                                                <span>Opgaver i "Historik" og "Udgået opgave" er automatisk skjult for at holde kortet rent. Zoom ind hvis prikkerne ligger tæt.</span>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <h4 style={{ margin: '0 0 16px', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>Dine aktive byggepladser</h4>
-                                    )}
+                                        <h4 style={{ margin: '0 0 16px', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>Filtrér visningen på kortet</h4>
+                                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                        <button 
+                                            onClick={() => setMapFilters(p => ({...p, showNew: !p.showNew}))}
+                                            style={{ 
+                                                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px', 
+                                                border: `1px solid ${mapFilters.showNew ? '#3b82f6' : '#e2e8f0'}`,
+                                                backgroundColor: mapFilters.showNew ? '#eff6ff' : '#f8fafc',
+                                                color: mapFilters.showNew ? '#1d4ed8' : '#64748b',
+                                                fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
+                                            }}
+                                        >
+                                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: mapFilters.showNew ? '#3b82f6' : '#cbd5e1' }} />
+                                            Nye forespørgsler
+                                        </button>
+                                        <button 
+                                            onClick={() => setMapFilters(p => ({...p, showSent: !p.showSent}))}
+                                            style={{ 
+                                                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px', 
+                                                border: `1px solid ${mapFilters.showSent ? '#eab308' : '#e2e8f0'}`,
+                                                backgroundColor: mapFilters.showSent ? '#fefce8' : '#f8fafc',
+                                                color: mapFilters.showSent ? '#a16207' : '#64748b',
+                                                fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
+                                            }}
+                                        >
+                                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: mapFilters.showSent ? '#eab308' : '#cbd5e1' }} />
+                                            Sendt tilbud
+                                        </button>
+                                        <button 
+                                            onClick={() => setMapFilters(p => ({...p, showConfirmed: !p.showConfirmed}))}
+                                            style={{ 
+                                                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px', 
+                                                border: `1px solid ${mapFilters.showConfirmed ? '#10b981' : '#e2e8f0'}`,
+                                                backgroundColor: mapFilters.showConfirmed ? '#ecfdf5' : '#f8fafc',
+                                                color: mapFilters.showConfirmed ? '#047857' : '#64748b',
+                                                fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
+                                            }}
+                                        >
+                                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: mapFilters.showConfirmed ? '#10b981' : '#cbd5e1' }} />
+                                            Bekræftet opgave
+                                        </button>
+                                    </div>
+                                    <div className="hide-on-mobile" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f3f1ed', borderRadius: '8px', borderLeft: '3px solid #cbd5e1', fontSize: '0.85rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                        <span>Opgaver i "Historik" og "Udgået opgave" er automatisk skjult for at holde kortet rent. Zoom ind hvis prikkerne ligger tæt.</span>
+                                    </div>
                                 </div>
                             
                             <div style={{ flex: 1, border: '1px solid #e8e6e1', borderRadius: '14px', overflow: 'hidden', marginTop: '16px', position: 'relative', zIndex: 0 }}>
@@ -4694,76 +4473,41 @@ const Dashboard = () => {
                                           mapTypeControl: false,
                                       }}
                                     >
-                                        {(() => {
-                                            const visibleLeads = leadsData.filter(l => {
-                                                if (['worker', 'apprentice'].includes(effectiveRole)) {
-                                                    if (simulatedRole) {
-                                                        return ['Bekræftet opgave', 'Historik'].includes(l.status);
-                                                    }
-                                                    const workers = l.raw_data?.assigned_workers || [];
-                                                    const pm = l.raw_data?.assigned_pm;
-                                                    return (workers.includes(myProfile?.id) || pm === myProfile?.id) && ['Bekræftet opgave', 'Historik'].includes(l.status);
-                                                } else {
-                                                    if (l.status === 'Udgået opgave' || l.status === 'Historik' || l.status === 'Slettet') return false;
-                                                    if (l.status === 'Ny forespørgsel' && !mapFilters.showNew) return false;
-                                                    if (l.status === 'Sendt tilbud' && !mapFilters.showSent) return false;
-                                                    if (l.status === 'Bekræftet opgave' && !mapFilters.showConfirmed) return false;
-                                                    return true;
-                                                }
-                                            });
-
-                                            return visibleLeads.map(lead => {
-                                                const coords = geocodedLeads[lead.id];
-                                                if (!coords) return null; // Har ikke fundet koordinater på adressen
-                                                
-                                                // Vælg farveikon baseret på status
-                                                let iconUrl = 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
-                                                if (lead.status === 'Sendt tilbud') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
-                                                else if (lead.status === 'Bekræftet opgave') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
-                                                else if (lead.status === 'Historik') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/ltblue-dot.png'; // Grå/lyseblå pin for historik
-                                                
-                                                return (
-                                                    <Marker 
-                                                        key={lead.id} 
-                                                        position={coords}
-                                                        title={lead.customer_name}
-                                                        icon={{ url: iconUrl }}
-                                                        onClick={() => {
-                                                            if (['worker', 'apprentice'].includes(effectiveRole)) {
-                                                                setTargetCaseId(lead.id);
-                                                                setActiveTab('cases');
-                                                            } else {
-                                                                handleSelectLead(lead);
-                                                                setActiveTab('leads');
-                                                            }
-                                                        }}
-                                                    />
-                                                );
-                                            });
-                                        })()}
+                                        {leadsData.filter(l => {
+                                            if (l.status === 'Udgået opgave' || l.status === 'Historik' || l.status === 'Slettet') return false;
+                                            if (l.status === 'Ny forespørgsel' && !mapFilters.showNew) return false;
+                                            if (l.status === 'Sendt tilbud' && !mapFilters.showSent) return false;
+                                            if (l.status === 'Bekræftet opgave' && !mapFilters.showConfirmed) return false;
+                                            return true;
+                                        }).map(lead => {
+                                            const coords = geocodedLeads[lead.id];
+                                            if (!coords) return null; // Har ikke fundet koordinater på adressen
+                                            
+                                            // Vælg farveikon baseret på status
+                                            let iconUrl = 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+                                            if (lead.status === 'Sendt tilbud') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
+                                            else if (lead.status === 'Bekræftet opgave') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
+                                            
+                                            return (
+                                                <Marker 
+                                                    key={lead.id} 
+                                                    position={coords}
+                                                    title={lead.customer_name}
+                                                    icon={{ url: iconUrl }}
+                                                    onClick={() => {
+                                                        handleSelectLead(lead);
+                                                        setActiveTab('leads');
+                                                    }}
+                                                />
+                                            );
+                                        })}
                                     </GoogleMap>
                                 )}
                             </div>
                             
-                            {(() => {
-                                const visibleLeadsForCount = leadsData.filter(l => {
-                                    if (['worker', 'apprentice'].includes(effectiveRole)) {
-                                        if (simulatedRole) {
-                                            return ['Bekræftet opgave', 'Historik'].includes(l.status);
-                                        }
-                                        const workers = l.raw_data?.assigned_workers || [];
-                                        const pm = l.raw_data?.assigned_pm;
-                                        return (workers.includes(myProfile?.id) || pm === myProfile?.id) && ['Bekræftet opgave', 'Historik'].includes(l.status);
-                                    } else {
-                                        return l.status !== 'Udgået opgave' && l.status !== 'Historik' && l.status !== 'Slettet';
-                                    }
-                                });
-                                return (
-                                    <div style={{ marginTop: '16px', display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                                        <span><strong style={{color: '#10b981'}}>{visibleLeadsForCount.filter(l => geocodedLeads[l.id]).length}</strong> / {visibleLeadsForCount.length} aktive adresser fundet på kortet.</span>
-                                    </div>
-                                );
-                            })()}
+                            <div style={{ marginTop: '16px', display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                <span><strong style={{color: '#10b981'}}>{leadsData.filter(l => l.status !== 'Udgået opgave' && l.status !== 'Historik' && l.status !== 'Slettet' && geocodedLeads[l.id]).length}</strong> / {leadsData.filter(l => l.status !== 'Udgået opgave' && l.status !== 'Historik' && l.status !== 'Slettet').length} aktive adresser fundet på kortet.</span>
+                            </div>
                                 </div> {/* Close card-body */}
                             </div> {/* Close settings-card */}
                         </div>
@@ -4919,7 +4663,7 @@ const Dashboard = () => {
                         </div>
                     )}
                     {activeTab === 'materials' && !isMaterialsLoading && materialsData.length > 0 && (
-                        <div className="space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
                             <div className="settings-card">
                                 
                                 <div className="card-body">
@@ -5035,7 +4779,7 @@ const Dashboard = () => {
                     
                     {/* INTEGRATIONER */}
                     {activeTab === 'integrations' && (
-                        <div className="space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
                             <div className="settings-card">
                                 
                                 <div className="card-body">

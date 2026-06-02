@@ -88,7 +88,7 @@ serve(async (req) => {
 
     // 2. Opret Projekt (Sag) i Apacta
     const projectPayload = {
-      name: `${lead.project_category || 'Bison Frame Opgave'} - ${lead.customer_name || 'Kunde'}`,
+      name: `Sag ${lead.case_number || String(lead.id).substring(0,8)}: ${lead.project_category || 'Bison Frame Opgave'} - ${lead.customer_name || 'Kunde'}`,
       contact_id: contactId,
       description: `Tilbudspris (Ekskl. moms): ${lead.raw_data?.actual_quote_price || lead.price_estimate || '0'} kr.\nAdresse: ${lead.customer_address}`,
       street_name: lead.customer_address || ""

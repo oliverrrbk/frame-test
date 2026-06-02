@@ -358,11 +358,11 @@ export const getAdminNewSignupTemplate = (companyName, cvr, ownerName, email, ph
     return getBaseTemplate("Ny Tømrer Oprettet", content, `Ny bruger: ${companyName}`);
 };
 
-export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null, isUpdate = false) => {
+export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null, isUpdate = false, caseNumber = null) => {
     const signatureName = getCarpenterSenderName(carpenter);
 
     const title = isUpdate ? "Dit opdaterede tilbud er klar!" : "Dit tilbud er klar!";
-    const headerTitle = isUpdate ? "Opdateret tilbud" : "Dit tilbud er klar";
+    const headerTitle = isUpdate ? `Opdateret tilbud${caseNumber ? ` (Sag ${caseNumber})` : ''}` : `Dit tilbud er klar${caseNumber ? ` (Sag ${caseNumber})` : ''}`;
     const subtext = isUpdate ? "Vi har opdateret dit tilbud med de seneste ændringer." : "Vi har sendt et tilbud til dig.";
 
     const content = `
@@ -394,7 +394,7 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
     return getBaseTemplate(headerTitle, content, subtext, carpenter);
 };
 
-export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, carpenter, quoteUrl) => {
+export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, carpenter, quoteUrl, caseNumber = null) => {
     const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
     const signatureName = getCarpenterSenderName(carpenter);
     
@@ -433,7 +433,7 @@ export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, car
         <p style="color: #334155; margin-bottom: 0;">Med venlig hilsen,</p>
         <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
     `;
-    return getBaseTemplate("Dit tilbud er bekræftet", content, "Tillykke! Din opgave er bekræftet og sat i gang.", carpenter);
+    return getBaseTemplate(`Dit tilbud er bekræftet${caseNumber ? ` (Sag ${caseNumber})` : ''}`, content, "Tillykke! Din opgave er bekræftet og sat i gang.", carpenter);
 };
 
 export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, categoryName, appUrl = 'https://app.bisonframe.dk', carpenter = null, leadId = null) => {

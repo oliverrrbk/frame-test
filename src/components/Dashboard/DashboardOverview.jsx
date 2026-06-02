@@ -10,7 +10,10 @@ import {
     Briefcase,
     Calendar,
     Link,
-    Copy
+    Copy,
+    ArrowRight,
+    MapPin,
+    Phone
 } from 'lucide-react';
 import {
     AreaChart,
@@ -36,7 +39,7 @@ import { da } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import CalculatorWorkflowSteps from './CalculatorWorkflowSteps';
 
-export default function DashboardOverview({ leadsData, carpenterProfile, myProfile }) {
+export default function DashboardOverview({ leadsData, carpenterProfile, myProfile, setActiveTab, setSelectedLead, setTargetCaseId }) {
     const [timeframe, setTimeframe] = useState('30d'); // '7d', '30d', 'ytd', 'all'
     const [selectedMetric, setSelectedMetric] = useState('won_revenue'); 
 
@@ -216,6 +219,108 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                 </div>
             </div>
             
+            {/* NY SEKTION: AKTIVE SAGER I DRIFT */}
+            <div style={{ marginTop: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px', padding: '0 8px' }}>
+                    <div>
+                        <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Briefcase size={20} color="#f59e0b" /> Sager i drift
+                        </h3>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Dine igangværende byggepladser og accepterede tilbud.</p>
+                    </div>
+                    {setActiveTab && (
+                        <button 
+                            onClick={() => setActiveTab('cases')}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            onMouseOver={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                            onMouseOut={(e) => e.currentTarget.style.textDecoration = 'none'}
+                        >
+                            Se alle sager <ArrowRight size={16} />
+                        </button>
+                    )}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                    {leadsData
+                        .filter(l => l.status === 'Bekræftet opgave')
+                        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+                        .slice(0, 4)
+                        .map((lead, idx) => {
+                            const isConfirmed = lead.status === 'Bekræftet opgave';
+                            const title = `Sag ${lead.case_number || String(lead.id).substring(0,8)} - ${lead.raw_data?.project_title || lead.project_category || 'Projekt'}`;
+                            const customerName = lead.customer_name || lead.raw_data?.customerDetails?.name || 'Ukendt kunde';
+                            const address = lead.customer_address || lead.raw_data?.customerDetails?.address || 'Ukendt adresse';
+                            
+                            return (
+                                <div key={lead.id || idx} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', transition: 'transform 0.2s', cursor: 'pointer' }}
+                                     onClick={() => { 
+                                         if (isConfirmed) {
+                                             if (setTargetCaseId) setTargetCaseId(lead.id);
+                                             if (setActiveTab) setActiveTab('cases');
+                                         } else {
+                                             if (setSelectedLead) setSelectedLead(lead);
+                                             if (setActiveTab) setActiveTab('leads');
+                                         }
+                                     }}
+                                     onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                     onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <h4 style={{ margin: '0 0 4px', fontSize: '1.1rem', color: 'var(--text-primary)' }}>{title}</h4>
+                                            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                {customerName}
+                                            </p>
+                                        </div>
+                                        <div style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', background: isConfirmed ? '#10b98120' : '#f59e0b20', color: isConfirmed ? '#10b981' : '#f59e0b' }}>
+                                            {lead.status}
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                                            <MapPin size={14} style={{ flexShrink: 0, marginTop: '2px' }} /> 
+                                            <a 
+                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'inherit', textDecoration: 'underline' }}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {address}
+                                            </a>
+                                        </div>
+                                        {lead.customer_phone && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <Phone size={14} style={{ flexShrink: 0 }} />
+                                                <a 
+                                                    href={`tel:${lead.customer_phone}`} 
+                                                    style={{ color: 'inherit', textDecoration: 'underline' }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    {lead.customer_phone}
+                                                </a>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end' }}>
+                                        <span style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            {isConfirmed ? 'Gå til sag' : 'Se tilbud'} <ArrowRight size={14} />
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                    })}
+                    
+                    {leadsData.filter(l => ['Sendt tilbud', 'Bekræftet opgave'].includes(l.status || '')).length === 0 && (
+                        <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', background: 'var(--surface-bg)', borderRadius: '12px', border: '1px dashed var(--border-light)' }}>
+                            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Ingen igangværende sager lige nu.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <CalculatorWorkflowSteps />
 
             {/* Main Layout: Sidebar & Graph Combined */}
