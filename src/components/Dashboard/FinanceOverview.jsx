@@ -67,7 +67,7 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
     );
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
+        <div className="dashboard-workspace finance-overview" style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
             {activeInvoiceCase ? (
                 <InvoiceEditor 
                     lead={activeInvoiceCase} 

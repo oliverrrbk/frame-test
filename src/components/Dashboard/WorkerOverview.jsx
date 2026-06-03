@@ -187,7 +187,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
     }, [leadsData, myProfile, timeframe]);
 
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
+        <div className="dashboard-workspace worker-overview" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
             
             {/* Header */}
             <div style={{ padding: '0 8px' }}>

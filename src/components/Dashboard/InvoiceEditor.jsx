@@ -93,7 +93,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting }) =
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-in' }}>
+        <div className="dashboard-workspace invoice-editor-view" style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-in' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}>
                     <ArrowLeft size={20} color="#475569" />
@@ -411,8 +411,8 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting }) =
 
             {/* Faktura Preview Fullscreen Modal */}
             {showPreview && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
-                    <div style={{ width: '95%', maxWidth: '1200px', height: '95vh', background: '#e2e8f0', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+                <div className="dashboard-modal-overlay invoice-preview-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+                    <div className="dashboard-modal-panel invoice-preview-panel" style={{ width: '95%', maxWidth: '1200px', height: '95vh', background: '#e2e8f0', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
                         
                         {/* FULL SCREEN HEADER */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', borderBottom: '1px solid #cbd5e1', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', zIndex: 10 }}>

@@ -897,7 +897,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const totalInvoiceVat = isReverseCharge ? 0 : Math.round(totalInvoiceExVat * 0.25);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+        <div className="dashboard-workspace case-management-view" style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
             
             {/* OVERBYGNING ELLER MODAL LUK-KNAP */}
             {!selectedCase ? (
@@ -1370,7 +1370,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     
                     {/* CASE WORKSPACE TABS */}
                                         {/* MODERN HORIZONTAL TABS (2026 DESIGN) */}
-                    <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingTop: '4px', paddingBottom: '8px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none', marginBottom: '16px', marginTop: '24px' }}>
+                    <div className="case-workspace-tabs modern-tab-scroll" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingTop: '4px', paddingBottom: '8px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none', marginBottom: '16px', marginTop: '24px' }}>
                         <style>{`
                             .modern-tab-scroll::-webkit-scrollbar { display: none; }
                         `}</style>
@@ -1865,8 +1865,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         {/* MODAL: Bekræft Fakturering */}
         {/* MODAL: Visuel Fakturakladde Editor (A4 Paper Style) */}
         {showInvoiceModal && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', overflowY: 'auto' }}>
-                <div style={{ backgroundColor: 'white', borderRadius: '4px', padding: '0', maxWidth: '850px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.1)', maxHeight: '95vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div className="dashboard-modal-overlay invoice-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', overflowY: 'auto' }}>
+                <div className="dashboard-modal-panel invoice-modal-panel" style={{ backgroundColor: 'white', borderRadius: '4px', padding: '0', maxWidth: '850px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.1)', maxHeight: '95vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                     
                     {/* Fixed Toolbar */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 32px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 10 }}>
