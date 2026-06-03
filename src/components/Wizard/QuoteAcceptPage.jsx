@@ -110,12 +110,10 @@ const QuoteAcceptPage = () => {
                 user_agent: navigator.userAgent
             };
 
-            // Vi antager auto-sync bliver skudt afsted
+            // Klargør raw_data med audit trail (sync flags sættes nu kun asynkront ved reel succes)
             const newRawData = { 
                 ...(lead?.raw_data || {}), 
-                audit_trail: auditTrail,
-                synced_to_accounting: true,
-                synced_to_management: true
+                audit_trail: auditTrail
             };
 
             if (isUUID) {
@@ -140,13 +138,42 @@ const QuoteAcceptPage = () => {
             setAccepted(true);
             
             // Auto-Sync til alle mulige integrationer i baggrunden
-            // Vi forsøger at kalde dem alle. De funktioner tømreren ikke har aktiveret, vil fejle lydløst (hvilket er tilsigtet).
             const leadForSync = { ...lead, status: 'Bekræftet opgave', raw_data: newRawData };
-            supabase.functions.invoke('economic-invoice', { body: { lead: leadForSync } }).catch(() => {});
-            supabase.functions.invoke('dinero-invoice', { body: { lead: leadForSync } }).catch(() => {});
-            supabase.functions.invoke('ordrestyring-case', { body: { lead: leadForSync } }).catch(() => {});
-            supabase.functions.invoke('apacta-case', { body: { lead: leadForSync } }).catch(() => {});
-            supabase.functions.invoke('minuba-case', { body: { lead: leadForSync } }).catch(() => {});
+            
+            const handleSync = async (funcName, syncField) => {
+                try {
+                    const { data, error } = await supabase.functions.invoke(funcName, { body: { lead: leadForSync } });
+                    if (error) throw error;
+                    if (data && data.success) {
+                        // Sæt sync-flag i databasen for at vise admin at det lykkedes
+                        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(lead_id);
+                        const fetchRes = isUUID 
+                            ? await supabase.rpc('get_lead_by_token', { token_val: lead_id }) 
+                            : await supabase.from('leads').select('raw_data').eq('id', lead_id).single();
+                            
+                        const currentRaw = isUUID ? (fetchRes.data?.[0]?.raw_data || {}) : (fetchRes.data?.raw_data || {});
+                        
+                        const updateData = { ...currentRaw, [syncField]: true };
+                        if (data.invoiceId) updateData.invoice_id = data.invoiceId;
+                        
+                        if (isUUID) {
+                            await supabase.rpc('update_lead_by_token', { token_val: lead_id, new_raw_data: updateData });
+                        } else {
+                            await supabase.from('leads').update({ raw_data: updateData }).eq('id', lead_id);
+                        }
+                    } else if (data && !data.success) {
+                        console.error(`Sync fejlede for ${funcName}:`, data.error);
+                    }
+                } catch (err) {
+                    console.error(`Netværksfejl ved kald til ${funcName}:`, err);
+                }
+            };
+
+            handleSync('economic-invoice', 'synced_to_accounting');
+            handleSync('dinero-invoice', 'synced_to_accounting');
+            handleSync('ordrestyring-case', 'synced_to_management');
+            handleSync('apacta-case', 'synced_to_management');
+            handleSync('minuba-case', 'synced_to_management');
             
             
             // Send bekræftelses-emails

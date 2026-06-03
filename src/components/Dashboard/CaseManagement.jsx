@@ -892,7 +892,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     const totalInvoiceExVat = invoiceLines.reduce((sum, line) => sum + Number(line.priceExVat || 0), 0);
-    const totalInvoiceVat = Math.round(totalInvoiceExVat * 0.25);
+    const totalInvoiceVat = isReverseCharge ? 0 : Math.round(totalInvoiceExVat * 0.25);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
@@ -1750,7 +1750,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 {/* INDTAST NY TIMESEDDEL (MANUELT) */}
                                 <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(16px)', padding: isMobile ? '24px' : '32px', borderRadius: '24px', border: '1px solid rgba(255, 255, 255, 0.5)', boxShadow: '0 10px 40px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '24px', position: 'sticky', top: '24px' }}>
                                     
-                                    {(profile?.role !== 'worker' && profile?.role !== 'apprentice' || true) && (
+                                    {profile && (
                                         <>
                                             <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 {editingTimeId ? <Edit2 size={20} color="#3b82f6" /> : <Plus size={20} color="#3b82f6" />}

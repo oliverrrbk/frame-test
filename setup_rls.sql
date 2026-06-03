@@ -37,6 +37,7 @@ ON leads FOR SELECT
 USING (
   auth.uid() = carpenter_id 
   OR auth.uid() = assigned_to 
+  OR coalesce(leads.raw_data->'assigned_workers', '[]'::jsonb) @> to_jsonb(auth.uid()::text)
   OR EXISTS (
     SELECT 1 FROM carpenters c 
     WHERE c.id = auth.uid() 
@@ -51,7 +52,12 @@ USING (
 -- En bruger må opdatere leads, hvis han ejer firmaet ELLER er tildelt leadet ELLER er bogholder
 CREATE POLICY "Tømrere kan opdatere deres egne leads" 
 ON leads FOR UPDATE 
-USING (auth.uid() = carpenter_id OR auth.uid() = assigned_to OR EXISTS (SELECT 1 FROM carpenters c WHERE c.id = auth.uid() AND c.role = 'accountant' AND c.company_id = leads.carpenter_id));
+USING (
+  auth.uid() = carpenter_id 
+  OR auth.uid() = assigned_to 
+  OR coalesce(leads.raw_data->'assigned_workers', '[]'::jsonb) @> to_jsonb(auth.uid()::text)
+  OR EXISTS (SELECT 1 FROM carpenters c WHERE c.id = auth.uid() AND c.role = 'accountant' AND c.company_id = leads.carpenter_id)
+);
 
 -- KUN ejeren må slette leads (Sælgere må ikke slette)
 CREATE POLICY "Tømrere kan slette deres egne leads" 

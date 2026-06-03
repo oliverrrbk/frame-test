@@ -23,7 +23,7 @@ serve(async (req) => {
     if (userError || !user) throw new Error("Bruger ikke logget ind")
 
     const body = await req.json()
-    const { lead, action = 'draft', invoiceLines = [] } = body
+    const { lead, action = 'draft', invoiceLines = [], isReverseCharge = false } = body
 
     if (!lead) {
       throw new Error("Mangler lead data")

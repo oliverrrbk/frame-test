@@ -65,7 +65,7 @@ export const fetchCalibrationFactor = async (carpenterId, category) => {
             sampleSize: indN,
             globalSampleSize: globN,
             individualFactor: indFactor,
-            globalFactor,
+            globalFactor: globFactor,
         };
     } catch (err) {
         console.warn('Calibration fetch failed, using factor 1.0', err);

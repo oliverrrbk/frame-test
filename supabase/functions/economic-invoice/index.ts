@@ -187,7 +187,8 @@ serve(async (req) => {
       try {
         console.log("Bogfører faktura i e-conomic...");
         const bookRes = await fetchEconomic('POST', '/invoices/booked', {
-          draftInvoice: { draftInvoiceNumber: invoiceRes.draftInvoiceNumber }
+          draftInvoice: { draftInvoiceNumber: invoiceRes.draftInvoiceNumber },
+          sendBy: "e-conomic"
         });
         bookedInvoiceNumber = bookRes.bookedInvoiceNumber;
         message = "Faktura er bogført og klargjort i e-conomic!";

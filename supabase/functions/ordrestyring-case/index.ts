@@ -135,6 +135,9 @@ serve(async (req) => {
         }
     }
 
+    // TODO: På sigt bør dette omskrives fra V2 REST til GraphQL mutations, 
+    // så vi kan oprette opgaver, budgetlinjer og tildele specifikke medarbejdere (assignees) 
+    // direkte på sagen. V2 REST tillader kun oprettelse af basis-sagen.
     // 2. Opret Sag (Case)
     const casePayload = {
       customer_number: customerNumber,
