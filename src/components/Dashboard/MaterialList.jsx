@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { jsPDF } from 'jspdf';
-import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck } from 'lucide-react';
+import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck, Upload, FileText, ExternalLink, Calculator, Send, AlertTriangle, CheckCircle, Package, ArrowRight, Printer, Info, CreditCard, Minus, MapPin } from 'lucide-react';
 import { generateMaterialList } from '../../utils/materialGenerator';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -25,6 +26,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
         unit: 'stk',
         section: 'Hovedmaterialer'
     });
+    const [listToDelete, setListToDelete] = useState(null);
 
     useEffect(() => {
         if (lead) {
@@ -112,14 +114,44 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
 
     const handleToggleListOrdered = (listId) => {
         const listMaterials = materials.filter(m => m.listId === listId);
-        const isAllOrdered = listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret');
-        
-        const newStatus = isAllOrdered ? 'Ikke bestilt' : 'Bestilt';
-        
-        const updated = materials.map(m => m.listId === listId ? { ...m, status: newStatus } : m);
+        if (listMaterials.length === 0) return;
+        const isAllOrdered = listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret');
+        const updated = materials.map(m => {
+            if (m.listId === listId) {
+                return { ...m, status: isAllOrdered ? 'Ikke bestilt' : 'Bestilt' };
+            }
+            return m;
+        });
         setMaterials(updated);
         handleSaveList(updated);
         toast.success(isAllOrdered ? 'Bestilling annulleret' : 'Materialerne er markeret som bestilt!');
+    };
+
+    const handleMarkListDelivered = (listId) => {
+        const listMaterials = materials.filter(m => m.listId === listId);
+        if (listMaterials.length === 0) return;
+        const isAllDelivered = listMaterials.every(m => m.status === 'Leveret');
+        const updated = materials.map(m => {
+            if (m.listId === listId) {
+                return { ...m, status: isAllDelivered ? 'Bestilt' : 'Leveret' };
+            }
+            return m;
+        });
+        setMaterials(updated);
+        handleSaveList(updated);
+        toast.success(isAllDelivered ? 'Levering annulleret' : 'Alle materialer er markeret som leveret!');
+    };
+
+    const cycleItemStatus = (originalIndex) => {
+        const item = materials[originalIndex];
+        let newStatus = 'Bestilt';
+        if (item.status === 'Bestilt') newStatus = 'Leveret';
+        else if (item.status === 'Leveret') newStatus = 'Ikke bestilt';
+        
+        const updated = [...materials];
+        updated[originalIndex] = { ...item, status: newStatus };
+        setMaterials(updated);
+        handleSaveList(updated);
     };
 
     const formatPrice = (val) => {
@@ -167,14 +199,21 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
         toast.success('Ny materialeliste oprettet');
     };
 
-    const handleDeleteList = (e, listId) => {
+    const handleDeleteListClick = (e, listId) => {
         e.stopPropagation();
         if (listId === 'default') return;
-        if (confirm('Er du sikker på, at du vil slette denne ekstra materialeliste og alle dens varer?')) {
-            setMaterialListsMeta(prev => prev.filter(l => l.id !== listId));
-            setMaterials(prev => prev.filter(m => m.listId !== listId));
-            // User can manually save via "Gem alle lister" afterwards, or we can trigger handleSaveList if we refactor it.
-        }
+        setListToDelete(listId);
+    };
+
+    const confirmDeleteList = () => {
+        if (!listToDelete) return;
+        const newMeta = materialListsMeta.filter(l => l.id !== listToDelete);
+        const newMaterials = materials.filter(m => m.listId !== listToDelete);
+        setMaterialListsMeta(newMeta);
+        setMaterials(newMaterials);
+        handleSaveList(newMaterials, newMeta);
+        setListToDelete(null);
+        toast.success('Materialelisten blev slettet');
     };
 
     const handleUpdateListMeta = (listId, field, value) => {
@@ -350,8 +389,14 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
     };
 
     // Budget Calculations
-    const originalBudget = parseFloat(lead.raw_data?.calc_data?.materialCost) || 0;
-    const totalSpent = materialListsMeta.reduce((sum, list) => sum + (parseFloat(list.price) || 0), 0);
+    const defaultMarkup = profile?.settings?.material_markup || 1.15;
+    const originalBudget = lead.raw_data?.calc_data?.materialCostBase !== undefined 
+        ? parseFloat(lead.raw_data.calc_data.materialCostBase)
+        : Math.round((parseFloat(lead.raw_data?.calc_data?.materialCost) || 0) / defaultMarkup);
+    const supplierInvoices = lead.raw_data?.supplier_invoices || [];
+    const totalSpent = supplierInvoices
+        .filter(inv => inv.category === 'Materialer' || !inv.category)
+        .reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
     const budgetRemaining = originalBudget - totalSpent;
     const isOverBudget = budgetRemaining < 0;
 
@@ -366,7 +411,9 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
             {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
                     <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Materialebudget</h4>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
+                            Materialebudget <span style={{ textTransform: 'none', fontWeight: 'normal', opacity: 0.8, fontSize: '0.75rem' }}>(ekskl. moms)</span>
+                        </h4>
                         <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
                             {originalBudget.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
                         </div>
@@ -519,7 +566,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                     transition: 'background-color 0.2s'
                                 }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
                                     <div style={{ 
                                         width: '40px', height: '40px', 
                                         borderRadius: '12px', 
@@ -530,7 +577,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                     }}>
                                         {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                                     </div>
-                                    <div>
+                                    <div style={{ flex: 1, minWidth: '300px' }}>
                                         <input 
                                             type="text"
                                             value={list.name}
@@ -548,7 +595,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                                 borderRadius: '6px',
                                                 outline: 'none',
                                                 transition: 'border-color 0.2s, background-color 0.2s',
-                                                width: '250px'
+                                                width: '100%'
                                             }}
                                             onFocus={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
                                         />
@@ -581,15 +628,20 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                                     placeholder="Indtast pris..."
                                                     value={formatPrice(list.price)}
                                                     onChange={(e) => handleUpdateListMeta(list.id, 'price', parsePrice(e.target.value))}
-                                                    onBlur={() => handleSaveList()}
+                                                    onBlur={(e) => {
+                                                        const newVal = parsePrice(e.target.value);
+                                                        const newMeta = materialListsMeta.map(l => l.id === list.id ? { ...l, price: newVal } : l);
+                                                        handleSaveList(materials, newMeta);
+                                                    }}
                                                     style={{ width: '100px', border: '1px solid transparent', background: '#f8fafc', fontSize: '0.95rem', fontWeight: 'bold', color: '#0f172a', outline: 'none', textAlign: 'right', padding: '4px 8px', borderRadius: '8px', transition: 'all 0.2s' }}
                                                     onFocus={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
                                                 />
                                                 <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                                            </div>
                                             
                                     {list.id !== 'default' && profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
                                         <button 
-                                            onClick={(e) => handleDeleteList(e, list.id)}
+                                            onClick={(e) => handleDeleteListClick(e, list.id)}
                                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginLeft: '8px' }}
                                             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.transform = 'scale(1.05)'; }}
                                             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; e.currentTarget.style.transform = 'scale(1)'; }}
@@ -598,7 +650,6 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                             <Trash2 size={18} />
                                         </button>
                                     )}
-                                </div>
                                         </div>
                                     )}
                                 </div>
@@ -610,28 +661,38 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                     
                                     {/* ACTIONS FOR THIS LIST */}
                                     {profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
-                                        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            gap: '8px', 
+                                            marginBottom: '24px', 
+                                            flexWrap: 'wrap',
+                                            backgroundColor: '#f8fafc',
+                                            padding: '8px',
+                                            borderRadius: '16px',
+                                            border: '1px solid #f1f5f9'
+                                        }}>
                                             <button 
                                                 onClick={() => handleToggleListOrdered(list.id)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '1px solid #fca5a5' : '1px solid #10b981', backgroundColor: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#fef2f2' : '#ecfdf5', color: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#dc2626' : '#059669', transition: 'all 0.2s' }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#fee2e2' : '#d1fae5'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#fef2f2' : '#ecfdf5'; }}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#fee2e2' : '#eff6ff', color: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#dc2626' : '#2563eb', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                                             >
-                                                {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret') ? <><Trash2 size={16} /> Fortryd Bestilling</> : <><Check size={16} /> Markér liste som bestilt</>}
+                                                {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret') ? <><Trash2 size={16} /> Fortryd Bestilling</> : <><Check size={16} /> Markér bestilt</>}
                                             </button>
                                             <button 
-                                                onClick={() => handleGenerateEmail(list.id, list.name)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #cbd5e1', backgroundColor: '#eff6ff', color: '#1d4ed8', transition: 'all 0.2s' }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
+                                                onClick={() => handleMarkListDelivered(list.id)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret')) ? '#f0fdf4' : '#10b981', color: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret')) ? '#166534' : '#ffffff', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                                             >
-                                                <Mail size={16} /> Bestillings-Email
+                                                {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret') ? <><Trash2 size={16} /> Fortryd Levering</> : <><Truck size={16} /> Markér alle leveret</>}
                                             </button>
+                                            <div style={{ flex: 1 }} />
                                             <button 
                                                 onClick={() => handleDownloadPdf(list.id, list.name)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#1e293b', transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', color: '#475569', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#0f172a'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#475569'; }}
                                             >
                                                 <Download size={16} /> Download PDF
                                             </button>
@@ -651,16 +712,32 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                                         {section}
                                                         <div style={{ height: '1px', flex: 1, backgroundColor: '#e2e8f0' }}></div>
                                                     </h5>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                         {secItems.map((item, localIdx) => {
                                                             const originalIndex = materials.findIndex(m => m === item);
                                                             return (
                                                                 <div 
                                                                     key={originalIndex}
                                                                     className="material-row-grid"
-                                                                    style={{ padding: '12px 16px', borderBottom: localIdx === secItems.length - 1 ? 'none' : '1px solid #f1f5f9', backgroundColor: '#ffffff', alignItems: 'center', transition: 'background-color 0.2s' }}
-                                                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
-                                                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
+                                                                    style={{ 
+                                                                        padding: '12px 16px', 
+                                                                        backgroundColor: '#ffffff', 
+                                                                        borderRadius: '12px',
+                                                                        border: '1px solid #f1f5f9',
+                                                                        alignItems: 'center', 
+                                                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                                                                    }}
+                                                                    onMouseEnter={(e) => { 
+                                                                        e.currentTarget.style.transform = 'translateY(-2px)'; 
+                                                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.06)';
+                                                                        e.currentTarget.style.borderColor = '#e2e8f0';
+                                                                    }}
+                                                                    onMouseLeave={(e) => { 
+                                                                        e.currentTarget.style.transform = 'translateY(0)'; 
+                                                                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)';
+                                                                        e.currentTarget.style.borderColor = '#f1f5f9';
+                                                                    }}
                                                                 >
                                                                     <textarea 
                                                                         className="material-item-name"
@@ -694,11 +771,17 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                                                         style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#64748b', textAlign: 'center', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', transition: 'border-color 0.2s' }}
                                                                         onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
                                                                     />
-                                                                    <div
-                                                                        style={{ border: 'none', background: (item.status === 'Leveret') ? '#dcfce7' : (item.status === 'Bestilt' ? '#dbeafe' : '#f1f5f9'), color: (item.status === 'Leveret') ? '#166534' : (item.status === 'Bestilt' ? '#1e40af' : '#475569'), borderRadius: '20px', padding: '4px 10px', fontSize: '0.75rem', outline: 'none', fontWeight: 'bold', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                                    <button
+                                                                        onClick={() => cycleItemStatus(originalIndex)}
+                                                                        style={{ border: 'none', background: (item.status === 'Leveret') ? '#dcfce7' : (item.status === 'Bestilt' ? '#dbeafe' : '#f1f5f9'), color: (item.status === 'Leveret') ? '#166534' : (item.status === 'Bestilt' ? '#1e40af' : '#475569'), borderRadius: '20px', padding: '6px 14px', fontSize: '0.75rem', outline: 'none', fontWeight: 'bold', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer', transition: 'all 0.2s', minWidth: '95px' }}
+                                                                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'; e.currentTarget.style.filter = 'brightness(0.95)'; }}
+                                                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.filter = 'none'; }}
                                                                     >
-                                                                        {item.status || 'Ikke bestilt'}
-                                                                    </div>
+                                                                        {item.status === 'Leveret' && <Truck size={14} />}
+                                                                        {item.status === 'Bestilt' && <Check size={14} />}
+                                                                        {(!item.status || item.status !== 'Leveret' && item.status !== 'Bestilt') && <div style={{width: 4, height: 4, borderRadius: '50%', backgroundColor: '#94a3b8'}}/>}
+                                                                        {item.status || 'Bestil'}
+                                                                    </button>
                                                                     <button 
                                                                         onClick={() => handleDeleteItem(originalIndex)}
                                                                         style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
@@ -830,6 +913,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                 >
                     <FolderPlus size={20} /> Opret Ny Materialeliste
                 </button>
+
             </div>
 
             {/* GLOBAL GEM KNAP */}
@@ -843,6 +927,42 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                     {isSaving ? <><Loader2 size={18} className="animate-spin" /> Gemmer...</> : <><Save size={18} /> GEM ALLE LISTER PÅ SAGEN</>}
                 </button>
             </div>
+
+            {/* SLET LISTE MODAL */}
+            {listToDelete && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out' }}>
+                    <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '440px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', animation: 'fadeInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                            <div style={{ padding: '12px', backgroundColor: '#fee2e2', color: '#ef4444', borderRadius: '50%' }}>
+                                <Trash2 size={28} />
+                            </div>
+                            <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a' }}>Slet materialeliste?</h2>
+                        </div>
+                        <p style={{ color: '#64748b', fontSize: '1rem', lineHeight: '1.5', marginBottom: '32px' }}>
+                            Er du sikker på, at du vil slette denne ekstra materialeliste og <strong>alle dens varer</strong>? Handlingen kan ikke fortrydes.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button 
+                                onClick={() => setListToDelete(null)}
+                                style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', transition: 'all 0.2s' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'white'; }}
+                            >
+                                Annullér
+                            </button>
+                            <button 
+                                onClick={confirmDeleteList}
+                                style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: '#ef4444', color: 'white', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dc2626'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                            >
+                                Ja, Slet Liste
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
             
             <style dangerouslySetInnerHTML={{__html: `
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

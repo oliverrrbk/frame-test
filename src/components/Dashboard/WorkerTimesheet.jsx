@@ -109,6 +109,7 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
     // CRUD States
     const [isAdding, setIsAdding] = useState(false);
     const [editingEntry, setEditingEntry] = useState(null);
+    const [deletingEntry, setDeletingEntry] = useState(null);
     const [formData, setFormData] = useState({ 
         date: new Date().toISOString().substring(0, 10), 
         leadId: '', 
@@ -235,8 +236,13 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
         });
     }, [leadsData, myProfile, simulatedRole]);
 
-    const handleDeleteEntry = async (entry) => {
-        if (!window.confirm('Er du sikker på, at du vil slette denne registrering?')) return;
+    const handleDeleteEntry = (entry) => {
+        setDeletingEntry(entry);
+    };
+
+    const confirmDeleteEntry = async () => {
+        const entry = deletingEntry;
+        if (!entry) return;
         
         if (entry.leadId === 'internal') {
             const currentEntries = (myProfile.raw_data?.time_entries || []).filter(t => t.id !== entry.id);
@@ -508,6 +514,42 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
                     </div>
                 )}
             </div>
+
+            {/* MODAL TIL SLETNING AF TIMER */}
+            {deletingEntry && createPortal(
+                <div className="dashboard-modal-overlay delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+                    <div className="dashboard-modal-panel" style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                            <Trash2 size={32} color="#ef4444" />
+                        </div>
+                        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.25rem', color: '#0f172a', fontWeight: 'bold' }}>
+                            Slet timeregistrering?
+                        </h3>
+                        <p style={{ margin: '0 0 32px 0', color: '#64748b', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                            Er du sikker på, at du vil slette denne registrering? Dette kan ikke fortrydes.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                            <button 
+                                onClick={() => setDeletingEntry(null)}
+                                style={{ flex: 1, padding: '12px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
+                                onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
+                            >
+                                Annuller
+                            </button>
+                            <button 
+                                onClick={confirmDeleteEntry}
+                                style={{ flex: 1, padding: '12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#dc2626'}
+                                onMouseLeave={e => e.currentTarget.style.background = '#ef4444'}
+                            >
+                                Ja, slet
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
 
             {/* MODAL TIL OPRET / REDIGER */}
             {showModal && createPortal(

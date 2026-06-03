@@ -2282,3 +2282,12 @@ button:focus-visible {
         font-size: 0.9rem !important;
     }
 }
+
+/* Hide scrollbar for dashboard-sidebar */
+.dashboard-sidebar::-webkit-scrollbar {
+    display: none;
+}
+.dashboard-sidebar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}

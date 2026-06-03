@@ -429,75 +429,92 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                         Dine Projekter
                     </h3>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px', width: '100%' }}>
                         {activeWorkerCases.length === 0 ? (
-                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', borderRadius: '12px', padding: '24px', border: '1px dashed var(--border-light)' }}>
+                            <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', borderRadius: '12px', padding: '24px', border: '1px dashed var(--border-light)' }}>
                                 <p style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: '0.95rem', textAlign: 'center' }}>
                                     Du er ikke tilknyttet nogle projekter endnu.
                                 </p>
                             </div>
                         ) : (
                             activeWorkerCases.map((lead, idx) => {
-                                const title = `Sag ${lead.case_number || String(lead.id).substring(0,8)} - ${lead.customer_name || 'Ukendt'}`;
-                                const address = lead.customer_address || 'Adresse ikke angivet';
+                                const title = lead.raw_data?.project_title || lead.project_category || 'Projekt';
+                                const caseNo = lead.case_number || String(lead.id).substring(0,6);
+                                const customerName = lead.customer_name || lead.raw_data?.customerDetails?.name || 'Ukendt kunde';
+                                const address = lead.customer_address || lead.raw_data?.customerDetails?.address || 'Adresse ikke angivet';
+                                const customerPhone = lead.customer_phone || lead.raw_data?.customerDetails?.phone || lead.raw_data?.customerDetails?.telephone || null;
+                                const isArchived = lead.status === 'Historik';
                                 
                                 return (
-                                    <div 
-                                        key={lead.id || idx} 
-                                        onClick={() => {
-                                            if (setTargetCaseId) setTargetCaseId(lead.id);
-                                            if (setActiveTab) setActiveTab('cases');
-                                        }}
-                                        style={{ 
-                                            padding: '16px', 
-                                            background: 'var(--bg-primary)', 
-                                            borderRadius: '12px', 
-                                            border: '1px solid var(--border-light)',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '8px'
-                                        }}
-                                        onMouseOver={(e) => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                                        onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border-light)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                    <div key={lead.id || idx} className="glass-panel" style={{ padding: '0', display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer', border: '1px solid var(--border-light)', overflow: 'hidden' }}
+                                         onClick={() => { 
+                                             if (setTargetCaseId) setTargetCaseId(lead.id);
+                                             if (setActiveTab) setActiveTab('cases');
+                                         }}
+                                         onMouseOver={(e) => {
+                                             e.currentTarget.style.transform = 'translateY(-4px)';
+                                             e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.06)';
+                                             e.currentTarget.style.borderColor = isArchived ? 'rgba(100, 116, 139, 0.3)' : 'rgba(16, 185, 129, 0.3)';
+                                         }}
+                                         onMouseOut={(e) => {
+                                             e.currentTarget.style.transform = 'translateY(0)';
+                                             e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)';
+                                             e.currentTarget.style.borderColor = 'var(--border-light)';
+                                         }}
                                     >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)', fontWeight: '600' }}>{title}</h4>
-                                                {lead.status === 'Historik' ? (
-                                                    <span style={{ fontSize: '0.7rem', fontWeight: 'bold', background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '12px', border: '1px solid #e2e8f0', textTransform: 'uppercase' }}>Afsluttet</span>
-                                                ) : (
-                                                    <span style={{ fontSize: '0.7rem', fontWeight: 'bold', background: '#ecfdf5', color: '#10b981', padding: '2px 8px', borderRadius: '12px', border: '1px solid #a7f3d0', textTransform: 'uppercase' }}>Aktiv</span>
-                                                )}
+                                        {/* Card Header */}
+                                        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'rgba(248, 250, 252, 0.5)' }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px' }}>SAG #{caseNo}</div>
+                                                <h4 style={{ margin: '0', fontSize: '1.15rem', color: 'var(--text-primary)', fontWeight: '700', lineHeight: '1.2' }}>{title}</h4>
                                             </div>
-                                            <ArrowRight size={16} style={{ color: lead.status === 'Historik' ? '#94a3b8' : '#10b981' }} />
+                                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: isArchived ? '#94a3b8' : '#10b981', boxShadow: isArchived ? '0 0 0 4px rgba(148,163,184,0.1)' : '0 0 0 4px rgba(16,185,129,0.1)' }} title={isArchived ? "Afsluttet" : "Aktiv"} />
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                                                <MapPin size={14} style={{ flexShrink: 0, marginTop: '2px' }} /> 
-                                                <a 
-                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer" 
-                                                    style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'inherit', textDecoration: 'underline' }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    {address}
-                                                </a>
-                                            </div>
-                                            {lead.customer_phone && (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <Phone size={14} style={{ flexShrink: 0 }} />
+                                        
+                                        {/* Card Body */}
+                                        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                        <Briefcase size={12} />
+                                                    </div>
+                                                    <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{customerName}</span>
+                                                </div>
+                                                
+                                                {customerPhone && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                            <Phone size={12} />
+                                                        </div>
+                                                        <a 
+                                                            href={`tel:${customerPhone}`} 
+                                                            onClick={(e) => e.stopPropagation()} 
+                                                            style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: '500' }}
+                                                            onMouseOver={(e) => { e.currentTarget.style.color = '#10b981'; e.currentTarget.style.textDecoration = 'underline'; }}
+                                                            onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.textDecoration = 'none'; }}
+                                                        >
+                                                            {customerPhone}
+                                                        </a>
+                                                    </div>
+                                                )}
+
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                                                        <MapPin size={12} />
+                                                    </div>
                                                     <a 
-                                                        href={`tel:${lead.customer_phone}`} 
-                                                        style={{ color: 'inherit', textDecoration: 'underline' }}
+                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer" 
+                                                        style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: '500', lineHeight: '1.4' }}
                                                         onClick={(e) => e.stopPropagation()}
+                                                        onMouseOver={(e) => { e.currentTarget.style.color = '#10b981'; e.currentTarget.style.textDecoration = 'underline'; }}
+                                                        onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.textDecoration = 'none'; }}
                                                     >
-                                                        {lead.customer_phone}
+                                                        {address}
                                                     </a>
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                     </div>
                                 )

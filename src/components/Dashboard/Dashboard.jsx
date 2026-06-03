@@ -648,6 +648,18 @@ const Dashboard = () => {
             );
             const activeHourlyRate = calc.hourlyRate || carpenterProfile?.hourly_rate || 500;
             const activeLaborHours = calc.laborHours || 0;
+            // NYT: Dekonstruering af materialepris
+            const defaultMarkup = settingsData?.material_markup || 1.15;
+            let activeMaterialCostBase = calc.materialCostBase;
+            let activeMaterialMarkup = calc.materialMarkup;
+            
+            if (activeMaterialCostBase === undefined) {
+                // Legacy support: Regn baglæns fra AI'ens estimerede pris, da den allerede indeholder avance
+                const costInclMarkup = calc.materialCost || 0;
+                activeMaterialCostBase = Math.round(costInclMarkup / defaultMarkup);
+                activeMaterialMarkup = defaultMarkup;
+            }
+            
             const activeMaterialCost = calc.materialCost || 0;
             const activeDrivingCost = calc.drivingCost || 0;
             
@@ -662,18 +674,28 @@ const Dashboard = () => {
             const isKombi = calc.isKombi || cat === 'Kombi-projekt';
             let initialSubprojects = [];
             if (isKombi && Array.isArray(calc.projects)) {
-                initialSubprojects = calc.projects.map(p => ({
-                    id: p.id,
-                    category: p.category,
-                    title: categoryNames[p.category] || p.category,
-                    laborHours: p.result?.calcData?.laborHours || 0,
-                    materialCost: p.result?.calcData?.materialCost || 0
-                }));
+                initialSubprojects = calc.projects.map(p => {
+                    const subCost = p.result?.calcData?.materialCost || p.materialCost || 0;
+                    const subCostBase = p.materialCostBase !== undefined ? p.materialCostBase : Math.round(subCost / defaultMarkup);
+                    const subMarkup = p.materialMarkup !== undefined ? p.materialMarkup : defaultMarkup;
+                    
+                    return {
+                        id: p.id,
+                        category: p.category,
+                        title: categoryNames[p.category] || p.category,
+                        laborHours: p.result?.calcData?.laborHours || p.laborHours || 0,
+                        materialCost: subCost,
+                        materialCostBase: subCostBase,
+                        materialMarkup: subMarkup
+                    };
+                });
             }
 
             setQuoteBuilder({
                 laborHours: activeLaborHours,
                 hourlyRate: activeHourlyRate,
+                materialCostBase: activeMaterialCostBase,
+                materialMarkup: activeMaterialMarkup,
                 materialCost: activeMaterialCost,
                 drivingCost: activeDrivingCost,
                 extraMaterialsCost: activeExtraMaterialsCost,
@@ -2605,6 +2627,16 @@ const Dashboard = () => {
                                 cases={leadsData.filter(l => ['Bekræftet opgave', 'Sæt i bero', 'Historik'].includes(l.status))}
                                 carpenterProfile={carpenterProfile}
                                 onSendToAccounting={syncToAccounting}
+                                onOpenCase={(caseId) => {
+                                    setTargetCaseId(caseId);
+                                    setActiveTab('cases');
+                                }}
+                                onUpdateLead={(updated) => {
+                                    setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
+                                    if (selectedLead && selectedLead.id === updated.id) {
+                                        setSelectedLead(updated);
+                                    }
+                                }}
                             />
                         </div>
                     )}
@@ -4064,13 +4096,36 @@ const Dashboard = () => {
                                                                                     />
                                                                                 </div>
                                                                                 <div className="input-group">
-                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Materialer eks. moms (kr)</label>
+                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Internt Indkøbsbudget (kr)</label>
                                                                                     <input 
                                                                                         type="number" 
-                                                                                        value={sub.materialCost} 
+                                                                                        value={sub.materialCostBase} 
                                                                                         onChange={(e) => {
                                                                                             const val = Number(e.target.value);
-                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, materialCost: val } : item);
+                                                                                            const newSales = Math.round(val * sub.materialMarkup);
+                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, materialCostBase: val, materialCost: newSales } : item);
+                                                                                            const newTotalMaterials = updatedSubs.reduce((sum, item) => sum + item.materialCost, 0);
+                                                                                            const newTotalBase = updatedSubs.reduce((sum, item) => sum + item.materialCostBase, 0);
+                                                                                            setQuoteBuilder({
+                                                                                                ...quoteBuilder,
+                                                                                                subprojects: updatedSubs,
+                                                                                                materialCostBase: newTotalBase,
+                                                                                                materialCost: newTotalMaterials
+                                                                                            });
+                                                                                        }} 
+                                                                                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
+                                                                                    />
+                                                                                </div>
+                                                                                <div className="input-group">
+                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Materiale-avance (%)</label>
+                                                                                    <input 
+                                                                                        type="number" 
+                                                                                        value={Math.round((sub.materialMarkup - 1) * 100)} 
+                                                                                        onChange={(e) => {
+                                                                                            const pct = Number(e.target.value);
+                                                                                            const factor = 1 + (pct / 100);
+                                                                                            const newSales = Math.round(sub.materialCostBase * factor);
+                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, materialMarkup: factor, materialCost: newSales } : item);
                                                                                             const newTotalMaterials = updatedSubs.reduce((sum, item) => sum + item.materialCost, 0);
                                                                                             setQuoteBuilder({
                                                                                                 ...quoteBuilder,
@@ -4080,6 +4135,12 @@ const Dashboard = () => {
                                                                                         }} 
                                                                                         style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
                                                                                     />
+                                                                                </div>
+                                                                                <div className="input-group" style={{ backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                                                                    <label style={{ fontSize: '0.8rem', color: '#0f172a', marginBottom: '2px', display: 'block', fontWeight: 'bold' }}>Salgspris (kr)</label>
+                                                                                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#0f172a' }}>
+                                                                                        {sub.materialCost.toLocaleString('da-DK')} kr.
+                                                                                    </div>
                                                                                 </div>
                                                                             </div>
                                                                         </details>
@@ -4099,9 +4160,34 @@ const Dashboard = () => {
                                                                         <label>Timepris (kr)</label>
                                                                         <FormattedNumberInput value={quoteBuilder.hourlyRate} onChange={(val) => setQuoteBuilder({...quoteBuilder, hourlyRate: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                                     </div>
-                                                                    <div className="input-group">
-                                                                        <label>Materialer eks. moms (kr)</label>
-                                                                        <FormattedNumberInput value={quoteBuilder.materialCost} onChange={(val) => setQuoteBuilder({...quoteBuilder, materialCost: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', alignItems: 'end' }}>
+                                                                        <div className="input-group">
+                                                                            <label>Internt Indkøbsbudget (kr)</label>
+                                                                            <FormattedNumberInput value={quoteBuilder.materialCostBase} onChange={(val) => {
+                                                                                const newSales = Math.round(val * quoteBuilder.materialMarkup);
+                                                                                setQuoteBuilder({...quoteBuilder, materialCostBase: val, materialCost: newSales});
+                                                                            }} style={{ border: '1px solid #e8e6e1', padding: '12px 16px', borderRadius: '8px', width: '100%', fontSize: '0.95rem' }} />
+                                                                        </div>
+                                                                        <div className="input-group">
+                                                                            <label>Materiale-avance (%)</label>
+                                                                            <input 
+                                                                                type="number" 
+                                                                                value={Math.round((quoteBuilder.materialMarkup - 1) * 100)} 
+                                                                                onChange={(e) => {
+                                                                                    const pct = Number(e.target.value);
+                                                                                    const factor = 1 + (pct / 100);
+                                                                                    const newSales = Math.round(quoteBuilder.materialCostBase * factor);
+                                                                                    setQuoteBuilder({...quoteBuilder, materialMarkup: factor, materialCost: newSales});
+                                                                                }} 
+                                                                                style={{ border: '1px solid #e8e6e1', padding: '12px 16px', borderRadius: '8px', width: '100%', fontSize: '0.95rem' }} 
+                                                                            />
+                                                                        </div>
+                                                                        <div className="input-group">
+                                                                            <label style={{ fontWeight: 'bold' }}>Salgspris til kunden</label>
+                                                                            <div style={{ backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '8px', width: '100%', display: 'flex', alignItems: 'center', fontSize: '0.95rem', fontWeight: 'bold', color: '#0f172a', height: '46px' }}>
+                                                                                {quoteBuilder.materialCost.toLocaleString('da-DK')} kr.
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </>
                                                             )}
@@ -4506,10 +4592,13 @@ const Dashboard = () => {
                                                                             calc_data: {
                                                                                 laborHours: quoteBuilder.laborHours,
                                                                                 hourlyRate: quoteBuilder.hourlyRate,
+                                                                                materialCostBase: quoteBuilder.materialCostBase,
+                                                                                materialMarkup: quoteBuilder.materialMarkup,
                                                                                 materialCost: quoteBuilder.materialCost,
                                                                                 drivingCost: quoteBuilder.drivingCost,
                                                                                 extraMaterialsCost: quoteBuilder.extraMaterialsCost,
                                                                                 customLines: quoteBuilder.customLines,
+                                                                                projects: quoteBuilder.subprojects,
                                                                             },
                                                                             quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown },
                                                                             custom_message: quoteBuilder.customMessage
@@ -4598,10 +4687,13 @@ const Dashboard = () => {
                                                                             calc_data: {
                                                                                 laborHours: quoteBuilder.laborHours,
                                                                                 hourlyRate: quoteBuilder.hourlyRate,
+                                                                                materialCostBase: quoteBuilder.materialCostBase,
+                                                                                materialMarkup: quoteBuilder.materialMarkup,
                                                                                 materialCost: quoteBuilder.materialCost,
                                                                                 drivingCost: quoteBuilder.drivingCost,
                                                                                 extraMaterialsCost: quoteBuilder.extraMaterialsCost,
                                                                                 customLines: quoteBuilder.customLines,
+                                                                                projects: quoteBuilder.subprojects,
                                                                             },
                                                                             quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown },
                                                                             custom_message: quoteBuilder.customMessage

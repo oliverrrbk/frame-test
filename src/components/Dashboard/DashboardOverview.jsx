@@ -111,10 +111,9 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
         }
 
         return {
-            new_leads: { label: 'Nye Forespørgsler', value: newLeads, suffix: '', format: 'number', icon: Inbox, color: '#3b82f6' },
-            est_value: { label: 'I Alt Estimeret Værdi', value: estValue, suffix: ' DKK', format: 'currency', icon: DollarSign, color: '#8b5cf6' },
-            active_cases: { label: 'Aktive Sager', value: activeCases, suffix: '', format: 'number', icon: Briefcase, color: '#f59e0b' },
-            won_revenue: { label: 'Vundet Omsætning', value: wonRevenue, suffix: ' DKK', format: 'currency', icon: CheckCircle, color: '#10b981' },
+            new_leads: { label: 'Nye Forespørgsler', value: newLeads, suffix: '', format: 'number', icon: Inbox, color: '#3b82f6', tab: 'leads' },
+            active_cases: { label: 'Aktive Sager', value: activeCases, suffix: '', format: 'number', icon: Briefcase, color: '#f59e0b', tab: 'cases' },
+            won_revenue: { label: 'Omsætning', value: wonRevenue, suffix: ' DKK', format: 'currency', icon: CheckCircle, color: '#10b981' },
             time_saved: { label: 'Tid Besparet', value: timeSaved, suffix: ' timer', format: 'number', icon: Clock, color: '#f97316' },
             conversion_rate: { label: 'Konverteringsrate', value: conversionRate, suffix: '%', format: 'number', icon: TrendingUp, color: '#14b8a6' },
             avg_response: { label: 'Gns. Svartid', value: avgResponseHours.toFixed(1), suffix: ' timer', format: 'number', icon: Clock, color: '#6b7280' }
@@ -151,7 +150,6 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
 
             let value = 0;
             if (selectedMetric === 'new_leads') value = periodLeads.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel').length;
-            if (selectedMetric === 'est_value') value = periodLeads.reduce((acc, l) => acc + calcLeadValue(l), 0);
             if (selectedMetric === 'active_cases') value = periodLeads.filter(l => ['Sendt tilbud', 'Bekræftet opgave'].includes(l.status || '')).length;
             if (selectedMetric === 'won_revenue') value = wonPeriodLeads.reduce((acc, l) => acc + calcWonRevenue(l), 0);
             if (selectedMetric === 'time_saved') value = periodLeads.length * 1.5;
@@ -176,226 +174,277 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
     const ActiveIcon = metrics[selectedMetric].icon;
 
     return (
-        <div className="overview-container" style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
+        <div className="overview-container" style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px', animation: 'fadeIn 0.5s ease-out', paddingBottom: '40px' }}>
             
-            {/* Header */}
-            <div style={{ padding: '0 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            {/* Header & Quick Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                    <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.5rem' }}>Velkommen tilbage, {(myProfile?.owner_name || carpenterProfile?.company_name || 'Mester').split(' ')[0]}!</h2>
-                    <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.1rem' }}>Her er dit data-drevne overblik.</p>
+                    <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.75rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
+                        Velkommen tilbage, {(myProfile?.owner_name || carpenterProfile?.company_name || 'Mester').split(' ')[0]}!
+                    </h2>
+                    <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.05rem' }}>
+                        Her er dit visuelle overblik for forretningen lige nu.
+                    </p>
                 </div>
-            </div>
-
-            {/* Quick Share Link Banner */}
-            <div className="glass-panel" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Link size={24} />
-                    </div>
-                    <div>
-                        <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', color: 'var(--text-primary)' }}>Dit overslagslink er klar!</h3>
-                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Del dette link med dine kunder, så de kan beregne et vejledende overslag direkte på din profil.</p>
-                    </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', padding: '6px 6px 6px 16px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.95rem', userSelect: 'all' }}>bisonframe.dk/{carpenterProfile?.slug || 't'}</span>
+                
+                {/* Thin, compact link banner */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '8px 12px 8px 16px', borderRadius: '999px' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Link size={14} color="#10b981" /> Dit tilbudslink:
+                    </span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '0.9rem', userSelect: 'all' }}>bisonframe.dk/{carpenterProfile?.slug || 't'}</span>
                     <button 
                         onClick={() => {
                             const baseUrl = window.location.origin.includes('localhost') ? window.location.origin : 'https://bisonframe.dk';
                             navigator.clipboard.writeText(`${baseUrl}/${carpenterProfile?.slug || 't'}`);
-                            toast.success('Overslagslink kopieret til udklipsholder!');
+                            toast.success('Kopieret til udklipsholder!');
                         }}
-                        style={{ 
-                            background: '#10b981', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', 
-                            fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
-                            display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
-                        }}
+                        style={{ background: '#10b981', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px' }}
                         onMouseOver={(e) => { e.currentTarget.style.background = '#059669'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                         onMouseOut={(e) => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.transform = 'translateY(0)'; }}
                     >
-                        <Copy size={16} />
-                        Kopiér Link
+                        <Copy size={12} /> Kopiér
                     </button>
                 </div>
             </div>
-            
-            {/* NY SEKTION: AKTIVE SAGER I DRIFT */}
-            <div style={{ marginTop: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px', padding: '0 8px' }}>
+
+            {/* NY SEKTION: Top-Level KPI Kort */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                {[
+                    metrics.won_revenue,
+                    metrics.active_cases,
+                    metrics.new_leads,
+                    metrics.conversion_rate
+                ].map((m, i) => (
+                    <div 
+                        key={i} 
+                        className="glass-panel" 
+                        style={{ 
+                            padding: '24px', 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '12px', 
+                            borderTop: `4px solid ${m.color}`, 
+                            position: 'relative', 
+                            overflow: 'hidden',
+                            cursor: m.tab ? 'pointer' : 'default',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                        onClick={() => {
+                            if (m.tab && setActiveTab) setActiveTab(m.tab);
+                        }}
+                        onMouseOver={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.06)';
+                        }}
+                        onMouseOut={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)';
+                        }}
+                    >
+                        {/* Baggrundsikon (subtilt) */}
+                        <m.icon size={120} style={{ position: 'absolute', right: '-20px', bottom: '-20px', color: m.color, opacity: 0.04, transform: 'rotate(-15deg)' }} />
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ padding: '6px', borderRadius: '8px', background: `${m.color}15`, color: m.color }}>
+                                <m.icon size={18} />
+                            </div>
+                            <h3 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                {m.label}
+                            </h3>
+                        </div>
+                        <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                            {m.format === 'currency' ? m.value.toLocaleString('da-DK') : m.value}
+                            <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>{m.suffix}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* NY SEKTION: SAGER I DRIFT (GRID LAYOUT) */}
+            <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
                     <div>
-                        <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Briefcase size={20} color="#f59e0b" /> Sager i drift
+                        <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
+                            Sager i drift (Igangværende)
                         </h3>
-                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Dine igangværende byggepladser og accepterede tilbud.</p>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Overblik over byggepladser med accepterede tilbud.</p>
                     </div>
                     {setActiveTab && (
                         <button 
                             onClick={() => setActiveTab('cases')}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            onMouseOver={(e) => e.currentTarget.style.textDecoration = 'underline'}
-                            onMouseOut={(e) => e.currentTarget.style.textDecoration = 'none'}
+                            style={{ background: 'white', border: '1px solid var(--border-light)', padding: '8px 16px', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}
+                            onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--text-primary)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border-light)'; e.currentTarget.style.transform = 'translateY(0)'; }}
                         >
-                            Se alle sager <ArrowRight size={16} />
+                            Se alle <ArrowRight size={14} />
                         </button>
                     )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
                     {leadsData
                         .filter(l => l.status === 'Bekræftet opgave')
                         .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-                        .slice(0, 4)
+                        .slice(0, 6)
                         .map((lead, idx) => {
-                            const isConfirmed = lead.status === 'Bekræftet opgave';
-                            const title = `Sag ${lead.case_number || String(lead.id).substring(0,8)} - ${lead.raw_data?.project_title || lead.project_category || 'Projekt'}`;
+                            const title = lead.raw_data?.project_title || lead.project_category || 'Projekt';
+                            const caseNo = lead.case_number || String(lead.id).substring(0,6);
                             const customerName = lead.customer_name || lead.raw_data?.customerDetails?.name || 'Ukendt kunde';
                             const address = lead.customer_address || lead.raw_data?.customerDetails?.address || 'Ukendt adresse';
+                            const customerPhone = lead.customer_phone || lead.raw_data?.customerDetails?.phone || lead.raw_data?.customerDetails?.telephone || null;
                             
+                            // Ægte progress baseret på checklist
+                            let progress = 0;
+                            const savedTodo = lead.raw_data?.checklist || [];
+                            if (savedTodo.length > 0) {
+                                let completed = 0;
+                                let total = 0;
+                                if (savedTodo.some(t => !t.subTasks)) {
+                                    // legacy flat
+                                    total = savedTodo.length;
+                                    completed = savedTodo.filter(t => t.done).length;
+                                } else {
+                                    // nested
+                                    total = savedTodo.reduce((acc, step) => acc + (step.subTasks || []).length, 0);
+                                    completed = savedTodo.reduce((acc, step) => acc + (step.subTasks || []).filter(s => s.done).length, 0);
+                                }
+                                progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+                            }
+
                             return (
-                                <div key={lead.id || idx} className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', transition: 'transform 0.2s', cursor: 'pointer' }}
+                                <div key={lead.id || idx} className="glass-panel" style={{ padding: '0', display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer', border: '1px solid var(--border-light)', overflow: 'hidden' }}
                                      onClick={() => { 
-                                         if (isConfirmed) {
-                                             if (setTargetCaseId) setTargetCaseId(lead.id);
-                                             if (setActiveTab) setActiveTab('cases');
-                                         } else {
-                                             if (setSelectedLead) setSelectedLead(lead);
-                                             if (setActiveTab) setActiveTab('leads');
-                                         }
+                                         if (setTargetCaseId) setTargetCaseId(lead.id);
+                                         if (setActiveTab) setActiveTab('cases');
                                      }}
-                                     onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                     onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                     onMouseOver={(e) => {
+                                         e.currentTarget.style.transform = 'translateY(-4px)';
+                                         e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.06)';
+                                         e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                                     }}
+                                     onMouseOut={(e) => {
+                                         e.currentTarget.style.transform = 'translateY(0)';
+                                         e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)';
+                                         e.currentTarget.style.borderColor = 'var(--border-light)';
+                                     }}
                                 >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    {/* Card Header */}
+                                    <div style={{ padding: '20px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'rgba(248, 250, 252, 0.5)' }}>
                                         <div>
-                                            <h4 style={{ margin: '0 0 4px', fontSize: '1.1rem', color: 'var(--text-primary)' }}>{title}</h4>
-                                            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                {customerName}
-                                            </p>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px' }}>SAG #{caseNo}</div>
+                                            <h4 style={{ margin: '0', fontSize: '1.15rem', color: 'var(--text-primary)', fontWeight: '700', lineHeight: '1.2' }}>{title}</h4>
                                         </div>
-                                        <div style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', background: isConfirmed ? '#10b98120' : '#f59e0b20', color: isConfirmed ? '#10b981' : '#f59e0b' }}>
-                                            {lead.status}
-                                        </div>
+                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 0 4px rgba(16,185,129,0.1)' }} title="Aktiv på byggepladsen" />
                                     </div>
                                     
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                                            <MapPin size={14} style={{ flexShrink: 0, marginTop: '2px' }} /> 
-                                            <a 
-                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer" 
-                                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'inherit', textDecoration: 'underline' }}
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                {address}
-                                            </a>
-                                        </div>
-                                        {lead.customer_phone && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Phone size={14} style={{ flexShrink: 0 }} />
+                                    {/* Card Body */}
+                                    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                    <Briefcase size={12} />
+                                                </div>
+                                                <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{customerName}</span>
+                                            </div>
+                                            
+                                            {customerPhone && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                        <Phone size={12} />
+                                                    </div>
+                                                    <a 
+                                                        href={`tel:${customerPhone}`} 
+                                                        onClick={(e) => e.stopPropagation()} 
+                                                        style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: '500' }}
+                                                        onMouseOver={(e) => { e.currentTarget.style.color = '#10b981'; e.currentTarget.style.textDecoration = 'underline'; }}
+                                                        onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.textDecoration = 'none'; }}
+                                                    >
+                                                        {customerPhone}
+                                                    </a>
+                                                </div>
+                                            )}
+
+                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                                                    <MapPin size={12} />
+                                                </div>
                                                 <a 
-                                                    href={`tel:${lead.customer_phone}`} 
-                                                    style={{ color: 'inherit', textDecoration: 'underline' }}
-                                                    onClick={(e) => e.stopPropagation()}
+                                                    href={`https://maps.google.com/?q=${encodeURIComponent(address)}`} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer" 
+                                                    onClick={(e) => e.stopPropagation()} 
+                                                    style={{ color: 'var(--text-secondary)', textDecoration: 'none', lineHeight: '1.4', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical' }}
+                                                    onMouseOver={(e) => { e.currentTarget.style.color = '#10b981'; e.currentTarget.style.textDecoration = 'underline'; }}
+                                                    onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.textDecoration = 'none'; }}
                                                 >
-                                                    {lead.customer_phone}
+                                                    {address}
                                                 </a>
                                             </div>
-                                        )}
-                                    </div>
-                                    
-                                    <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end' }}>
-                                        <span style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            {isConfirmed ? 'Gå til sag' : 'Se tilbud'} <ArrowRight size={14} />
-                                        </span>
+                                        </div>
+
+                                        {/* Progress Bar Mini */}
+                                        <div style={{ marginTop: '4px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 'bold' }}>
+                                                <span>Færdiggørelse</span>
+                                                <span style={{ color: 'var(--text-primary)' }}>{progress}%</span>
+                                            </div>
+                                            <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
+                                                <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg, #34d399 0%, #10b981 100%)', borderRadius: '3px' }} />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             );
                     })}
                     
-                    {leadsData.filter(l => ['Sendt tilbud', 'Bekræftet opgave'].includes(l.status || '')).length === 0 && (
-                        <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', background: 'var(--surface-bg)', borderRadius: '12px', border: '1px dashed var(--border-light)' }}>
-                            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Ingen igangværende sager lige nu.</p>
+                    {leadsData.filter(l => l.status === 'Bekræftet opgave').length === 0 && (
+                        <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', background: 'var(--surface-bg)', borderRadius: '16px', border: '2px dashed var(--border-light)' }}>
+                            <Briefcase size={48} color="var(--border-light)" style={{ marginBottom: '16px' }} />
+                            <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.2rem' }}>Ingen igangværende sager</h3>
+                            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Når kunder accepterer dine tilbud, dukker sagerne op her.</p>
                         </div>
                     )}
                 </div>
             </div>
 
-            <CalculatorWorkflowSteps />
-
-            {/* Main Layout: Sidebar & Graph Combined */}
-            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', minHeight: '600px', overflow: 'hidden' }}>
-                
-                {/* Left Area - Metric Selection (Acts like tabs) */}
-                <div className="overview-metrics-sidebar">
-                    <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--border-light)' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>Nøgletal</h3>
+            {/* SEKTION: GRAF (Fuld bredde) */}
+            <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+                    <div>
+                        <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 'bold' }}>
+                            <div style={{ padding: '10px', borderRadius: '10px', background: `${activeColor}15`, color: activeColor }}>
+                                <ActiveIcon size={22} />
+                            </div>
+                            {metrics[selectedMetric].label} Over Tid
+                        </h3>
+                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '1rem' }}>Viser udviklingen for {metrics[selectedMetric].label.toLowerCase()} i den valgte periode.</p>
                     </div>
-                    <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {Object.entries(metrics).map(([key, m]) => {
-                            const isSelected = selectedMetric === key;
-                            const Icon = m.icon;
-                            return (
-                                <div 
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'flex-end' }}>
+                        {/* Selector for metrik */}
+                        <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', overflowX: 'auto', maxWidth: '100%' }}>
+                            {['won_revenue', 'new_leads'].map(key => (
+                                <button
                                     key={key}
                                     onClick={() => setSelectedMetric(key)}
                                     style={{
-                                        padding: '14px 16px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        background: isSelected ? 'var(--bg-active)' : 'transparent',
-                                        borderRadius: '12px',
-                                        position: 'relative',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        gap: '16px'
-                                    }}
-                                    onMouseOver={(e) => {
-                                        if (!isSelected) e.currentTarget.style.background = 'var(--bg-hover)';
-                                    }}
-                                    onMouseOut={(e) => {
-                                        if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                        padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: selectedMetric === key ? '600' : '500',
+                                        color: selectedMetric === key ? metrics[key].color : 'var(--text-secondary)',
+                                        background: selectedMetric === key ? 'white' : 'transparent', border: 'none', cursor: 'pointer',
+                                        boxShadow: selectedMetric === key ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s', whiteSpace: 'nowrap'
                                     }}
                                 >
-                                    {/* Subtle left indicator for selected state */}
-                                    {isSelected && (
-                                        <div style={{ position: 'absolute', left: 0, top: '10%', bottom: '10%', width: '4px', borderRadius: '0 4px 4px 0', background: m.color }} />
-                                    )}
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ padding: '8px', borderRadius: '8px', background: isSelected ? `${m.color}20` : 'rgba(0,0,0,0.03)', color: isSelected ? m.color : 'var(--text-tertiary)', transition: 'all 0.2s' }}>
-                                            <Icon size={18} />
-                                        </div>
-                                        <h3 style={{ margin: 0, fontSize: '0.95rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isSelected ? 600 : 500, transition: 'all 0.2s' }}>{m.label}</h3>
-                                    </div>
-                                    <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: isSelected ? '700' : '600', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', letterSpacing: '-0.02em', textAlign: 'right' }}>
-                                        {m.format === 'currency' ? m.value.toLocaleString('da-DK') : m.value}
-                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '4px', fontWeight: 500 }}>{m.suffix}</span>
-                                    </p>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Right Area - Chart */}
-                <div className="overview-chart-area">
-                    <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-                        <div>
-                            <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ padding: '8px', borderRadius: '8px', background: `${activeColor}15`, color: activeColor }}>
-                                    <ActiveIcon size={20} />
-                                </div>
-                                {metrics[selectedMetric].label} Over Tid
-                            </h3>
-                            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Viser udviklingen for {metrics[selectedMetric].label.toLowerCase()} i den valgte periode.</p>
+                                    {metrics[key].label}
+                                </button>
+                            ))}
                         </div>
 
-                        <div className="timeframe-filters">
+                        {/* Selector for tidsramme */}
+                        <div className="timeframe-filters" style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px' }}>
                             {[
-                                { id: '7d', label: 'Seneste 7 dage' },
-                                { id: '30d', label: 'Seneste 30 dage' },
+                                { id: '7d', label: '7 dage' },
+                                { id: '30d', label: '30 dage' },
                                 { id: 'ytd', label: 'År til dato' },
                                 { id: 'all', label: 'Altid' }
                             ].map(tf => (
@@ -403,15 +452,9 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                                     key={tf.id}
                                     onClick={() => setTimeframe(tf.id)}
                                     style={{
-                                        padding: '8px 16px',
-                                        borderRadius: '8px',
-                                        fontSize: '0.9rem',
-                                        fontWeight: timeframe === tf.id ? '600' : '500',
+                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: timeframe === tf.id ? '600' : '500',
                                         color: timeframe === tf.id ? 'white' : 'var(--text-secondary)',
-                                        background: timeframe === tf.id ? '#1a1a1a' : 'transparent',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s ease'
+                                        background: timeframe === tf.id ? '#1e293b' : 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.2s'
                                     }}
                                 >
                                     {tf.label}
@@ -419,51 +462,56 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                             ))}
                         </div>
                     </div>
+                </div>
 
-                    <div style={{ flex: 1, width: '100%', minHeight: '400px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor={activeColor} stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor={activeColor} stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
-                                <XAxis 
-                                    dataKey="date" 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }}
-                                    dy={10}
-                                />
-                                <YAxis 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }}
-                                    tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}
-                                    dx={-10}
-                                    domain={[0, dataMax => Math.max(dataMax, 5)]}
-                                />
-                                <Tooltip 
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }}
-                                    itemStyle={{ color: activeColor, fontWeight: 'bold' }}
-                                    formatter={(value) => [metrics[selectedMetric].format === 'currency' ? value.toLocaleString('da-DK') + ' DKK' : value + metrics[selectedMetric].suffix, metrics[selectedMetric].label]}
-                                />
-                                <Area 
-                                    type="monotone" 
-                                    dataKey="value" 
-                                    stroke={activeColor} 
-                                    strokeWidth={3}
-                                    fillOpacity={1} 
-                                    fill="url(#colorValue)" 
-                                    animationDuration={1000}
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
+                <div style={{ width: '100%', height: '350px', background: 'rgba(255,255,255,0.3)', borderRadius: '16px', padding: '16px 0 0 0' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+                            <defs>
+                                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={activeColor} stopOpacity={0.4}/>
+                                    <stop offset="95%" stopColor={activeColor} stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                            <XAxis 
+                                dataKey="date" 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 600 }}
+                                dy={15}
+                                minTickGap={20}
+                            />
+                            <YAxis 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 600 }}
+                                tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}
+                                dx={-10}
+                                domain={[0, dataMax => Math.max(dataMax, 5)]}
+                            />
+                            <Tooltip 
+                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', padding: '12px 16px' }}
+                                itemStyle={{ color: activeColor, fontWeight: 'bold', fontSize: '1.1rem' }}
+                                labelStyle={{ color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}
+                                formatter={(value) => [metrics[selectedMetric].format === 'currency' ? value.toLocaleString('da-DK') + ' DKK' : value + metrics[selectedMetric].suffix, metrics[selectedMetric].label]}
+                            />
+                            <Area 
+                                type="monotone" 
+                                dataKey="value" 
+                                stroke={activeColor} 
+                                strokeWidth={4}
+                                fillOpacity={1} 
+                                fill="url(#colorValue)" 
+                                animationDuration={1500}
+                                animationEasing="ease-out"
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
+
+            <CalculatorWorkflowSteps />
         </div>
     );
 }

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
-import { HardHat, CheckSquare, Camera, Clock, UserPlus, ChevronRight, AlertTriangle, TrendingUp, Plus, Trash2, Calendar, ShieldAlert, MapPin, User, ArrowLeft, Package, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, ChevronDown } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { HardHat, CheckSquare, Camera, Clock, UserPlus, ChevronRight, AlertTriangle, TrendingUp, Plus, Trash2, Calendar, ShieldAlert, MapPin, User, ArrowLeft, Package, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, ChevronDown, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool } from 'lucide-react';
 import MaterialList from './MaterialList';
+import AftalesedlerTab from './AftalesedlerTab';
+import BilagManager from './BilagManager';
 import toast from 'react-hot-toast';
 
 const CustomSelect = ({ value, onChange, options, placeholder }) => {
@@ -20,6 +23,7 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
 
     const selectedOption = options.find(o => o.value === value) || options.flatMap(o => o.options || []).find(o => o.value === value);
     const label = selectedOption ? selectedOption.label : placeholder;
+    const Icon = selectedOption?.icon;
 
     return (
         <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
@@ -27,22 +31,26 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
                 onClick={() => setIsOpen(!isOpen)}
                 style={{ 
                     padding: '12px 16px', 
-                    borderRadius: '12px', 
+                    borderRadius: '10px', 
                     border: isOpen ? '2px solid #3b82f6' : '1px solid #cbd5e1', 
                     backgroundColor: '#fff', 
                     cursor: 'pointer',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    fontSize: '0.95rem',
-                    fontWeight: '400',
+                    fontSize: '1rem',
+                    fontWeight: '500',
                     color: value ? '#1e293b' : '#94a3b8',
                     transition: 'all 0.2s',
-                    boxShadow: isOpen ? '0 0 0 4px rgba(59, 130, 246, 0.1)' : 'none'
+                    boxShadow: isOpen ? '0 0 0 4px rgba(59, 130, 246, 0.1)' : 'none',
+                    boxSizing: 'border-box'
                 }}
             >
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
-                <ChevronDown size={18} style={{ color: '#64748b', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                    {Icon && <span style={{ display: 'flex', alignItems: 'center', color: selectedOption.color || '#64748b' }}>{Icon}</span>}
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+                </div>
+                <ChevronDown size={18} style={{ color: '#64748b', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }} />
             </div>
 
             {isOpen && (
@@ -57,9 +65,10 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
                     boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', 
                     border: '1px solid #e2e8f0',
                     zIndex: 100000,
-                    maxHeight: '250px',
+                    maxHeight: '300px',
                     overflowY: 'auto',
-                    padding: '8px 0'
+                    padding: '8px 0',
+                    animation: 'fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}>
                     {options.map((opt, i) => {
                         if (opt.isGroup) {
@@ -72,10 +81,18 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
                                         <div 
                                             key={subOpt.value}
                                             onClick={() => { onChange(subOpt.value); setIsOpen(false); }}
-                                            style={{ padding: '10px 16px', fontSize: '0.95rem', cursor: 'pointer', backgroundColor: value === subOpt.value ? '#f1f5f9' : 'transparent', color: value === subOpt.value ? '#3b82f6' : '#1e293b', fontWeight: value === subOpt.value ? '600' : '400' }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = value === subOpt.value ? '#f1f5f9' : '#f8fafc'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = value === subOpt.value ? '#f1f5f9' : 'transparent'}
+                                            style={{ 
+                                                padding: '10px 16px', fontSize: '0.95rem', cursor: 'pointer', 
+                                                backgroundColor: value === subOpt.value ? (subOpt.activeBg || '#f1f5f9') : 'transparent', 
+                                                color: value === subOpt.value ? (subOpt.color || '#3b82f6') : '#1e293b', 
+                                                fontWeight: value === subOpt.value ? '600' : '500',
+                                                display: 'flex', alignItems: 'center', gap: '8px',
+                                                transition: 'all 0.1s'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = value === subOpt.value ? (subOpt.activeBg || '#f1f5f9') : '#f8fafc'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = value === subOpt.value ? (subOpt.activeBg || '#f1f5f9') : 'transparent'}
                                         >
+                                            {subOpt.icon && <span style={{ display: 'flex', alignItems: 'center', color: subOpt.color || '#64748b' }}>{subOpt.icon}</span>}
                                             {subOpt.label}
                                         </div>
                                     ))}
@@ -87,10 +104,18 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
                             <div 
                                 key={opt.value}
                                 onClick={() => { onChange(opt.value); setIsOpen(false); }}
-                                style={{ padding: '10px 16px', fontSize: '0.95rem', cursor: 'pointer', backgroundColor: value === opt.value ? '#f1f5f9' : 'transparent', color: value === opt.value ? '#3b82f6' : '#1e293b', fontWeight: value === opt.value ? '600' : '400' }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = value === opt.value ? '#f1f5f9' : '#f8fafc'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = value === opt.value ? '#f1f5f9' : 'transparent'}
+                                style={{ 
+                                    padding: '10px 16px', fontSize: '0.95rem', cursor: 'pointer', 
+                                    backgroundColor: value === opt.value ? (opt.activeBg || '#f1f5f9') : 'transparent', 
+                                    color: value === opt.value ? (opt.color || '#3b82f6') : '#1e293b', 
+                                    fontWeight: value === opt.value ? '600' : '500',
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    transition: 'all 0.1s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = value === opt.value ? (opt.activeBg || '#f1f5f9') : '#f8fafc'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = value === opt.value ? (opt.activeBg || '#f1f5f9') : 'transparent'}
                             >
+                                {opt.icon && <span style={{ display: 'flex', alignItems: 'center', color: opt.color || '#64748b' }}>{opt.icon}</span>}
                                 {opt.label}
                             </div>
                         );
@@ -103,7 +128,8 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
 
 export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onUpdateLead, isModalView = false, selectedLeadId = null }) {
     const [activeCases, setActiveCases] = useState([]);
-    const [selectedCase, setSelectedCase] = useState(null);
+    const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
+    const selectedCase = activeCases.find(c => c.id === selectedCaseIdState) || null;
     const [activeSubTab, setActiveSubTab] = useState(['worker', 'apprentice', 'sales'].includes(profile?.role) ? 'timesheet' : 'todo'); // 'todo', 'materials', 'logs', 'timesheet', 'finance'
     const [team, setTeam] = useState([]);
 
@@ -127,9 +153,6 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [logPhotos, setLogPhotos] = useState([]); // Previews (blob URLs)
     const [logFiles, setLogFiles] = useState([]); // Actual File objects
     const [isUploadingLog, setIsUploadingLog] = useState(false);
-    const [isChangeOrder, setIsChangeOrder] = useState(false);
-    const [extraHours, setExtraHours] = useState('');
-    const [extraPrice, setExtraPrice] = useState('');
 
     // States til Fakturering (Finance)
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -137,11 +160,13 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [isReverseCharge, setIsReverseCharge] = useState(false);
     const [invoiceActionType, setInvoiceActionType] = useState('draft'); // 'draft' eller 'book_and_send'
 
+
     // States til timeregistrering
     const [timeEntries, setTimeEntries] = useState([]);
     const [newTime, setNewTime] = useState({ startTime: '07:00', endTime: '15:00', date: new Date().toISOString().substring(0, 10), desc: '', employeeId: '' });
     const [deductPause, setDeductPause] = useState(true);
     const [editingTimeId, setEditingTimeId] = useState(null);
+    const [deletingTimeEntryId, setDeletingTimeEntryId] = useState(null);
 
     // States til Mesterens ugentlige medarbejder-tidsstyring
     const [selectedEmployeeForTidslog, setSelectedEmployeeForTidslog] = useState('');
@@ -180,10 +205,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
         // Hvis det er modal-visning (vi har åbnet en sag direkte i lead detail modalen)
         if (isModalView && selectedLeadId) {
-            const current = confirmed.find(c => c.id === selectedLeadId);
-            if (current) {
-                setSelectedCase(current);
-            }
+            setSelectedCaseIdState(selectedLeadId);
         }
 
         if (profile) {
@@ -191,25 +213,19 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         }
     }, [leads, isModalView, selectedLeadId, profile, simulatedRole]);
 
+    // Fra Dashboard (Active Tab)
+    useEffect(() => {
+        if (targetCaseId && !isModalView) {
+            setSelectedCaseIdState(targetCaseId);
+            clearTargetCase();
+        }
+    }, [targetCaseId, activeCases, isModalView, clearTargetCase]);
     // Indlæs sags-data når en sag vælges
     useEffect(() => {
-        if (selectedCase) {
+        if (selectedCaseIdState) {
             loadCaseData();
         }
-    }, [selectedCase]);
-
-    // Lyt efter remote targeting fra Dashboard CTA'en
-    useEffect(() => {
-        if (targetCaseId) {
-            const confirmed = leads.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status));
-            const target = confirmed.find(c => c.id === targetCaseId);
-            if (target) {
-                setSelectedCase(target);
-                clearTargetCase(); // Nulstil straks så vi kan navigere tilbage
-            }
-        }
-    }, [targetCaseId, leads, clearTargetCase]);
-
+    }, [selectedCaseIdState]);
     const fetchTeam = async () => {
         try {
             const companyId = profile.company_id || profile.id;
@@ -264,9 +280,18 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         // 2. Indlæs To-Do Liste
         const savedTodo = selectedCase.raw_data?.checklist || [];
         if (savedTodo.length > 0) {
-            setTodoList(savedTodo);
+            if (savedTodo.some(t => !t.subTasks)) {
+                const legacyNested = [{
+                    id: 'legacy-step-1',
+                    text: 'Gammel To-Do Liste (Importeret)',
+                    isExpanded: true,
+                    subTasks: savedTodo.map((old, i) => ({ id: old.id || `leg-${i}`, text: old.text, done: !!old.done }))
+                }];
+                setTodoList(legacyNested);
+            } else {
+                setTodoList(savedTodo);
+            }
         } else {
-            // Indlæs standard to-do opskrifter baseret på sagsdetaljerne
             const defaultTodo = getDefaultChecklist(selectedCase);
             setTodoList(defaultTodo);
         }
@@ -288,7 +313,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     // Standard To-Do opskrifter for faglige anvisninger, bygget dynamisk ud fra opgaven
-    const getDefaultChecklist = (caseObj) => {
+        const getDefaultChecklist = (caseObj) => {
         const categoryMap = {
             'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
             'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
@@ -303,87 +328,213 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         
         let list = [];
         let step = 1;
-        const add = (text) => list.push({ id: `dyn-${step++}`, text, done: false });
+        let subStepCounter = 1;
 
-        // Fælles starttrin for alle
-        add('Afsætning og kontrol: Opmåling af arealer, samt kontrol af leverede materialer for fejl/mangler.');
+        const addMainStep = (title, subTasksArray) => {
+            list.push({
+                id: `step-${step++}`,
+                text: title,
+                isExpanded: false,
+                subTasks: subTasksArray.map(subText => ({
+                    id: `sub-${subStepCounter++}`,
+                    text: subText,
+                    done: false
+                }))
+            });
+        };
 
-        // Specifikke demonterings-/bortskaffelsestrin
-        if (d.disposal && d.disposal.toLowerCase().includes('ja')) {
-            add(`Demontering & Bortskaffelse: Fjern det gamle materiale (${d.oldMaterial || d.oldFloorType || d.oldRoofType || 'eksisterende'}). Bestil evt. container.`);
-        }
-
-        switch (category) {
-            case 'terrace':
-                if (d.foundationType === 'skrue') {
-                    add('Fundament: Opmål og markér placering af jordskruer (anbefalet c-c max 2,5m). Skru dem i frostfri dybde og tjek højderne løbende med rotorlaser.');
-                } else {
-                    add('Fundament: Udgrav til stolpehuller (min. 90 cm ned for frostfri dybde). Støb stolperne fast i tørbeton og brug loddestok for at sikre præcision.');
-                }
-                add(`Underkonstruktion: Monter bærende remme (fastgøres med franske skruer) og strøer med vinkelbeslag. Strøafstand afhænger af brædderne (c-c 40 cm for komposit, max 50 cm for hårdttræ).`);
-                add('Vindspærre/Ukrudtsdug: Udrul ukrudtsdug omhyggeligt under bjælkelaget og læg lidt stabilgrus over, så den ikke blafrer i vinden.');
-                add(`Dækbrædder: Udlægning af ${d.terraceWood || d.material || 'terrassebrædder'}. Husk præcise fugeafstande: Brug knudsen-kiler eller tommestok som afstandsklods (min. 5 mm luft til udvidelse).`);
-                add('Fastgørelse: Brug altid rustfrie A4 skruer (eller C4 til trykimp). Sæt en snor ud for hver strø, så skruerne sidder i 100% lige linjer. Sænk skruehovedet præcis i niveau med brættet.');
-                if (d.railing && d.railing.toLowerCase().includes('ja')) {
-                    add('Rækværk: Monter stolper til rækværk. Sørg for at afstive rækværket ned i underkonstruktionen for optimal stabilitet.');
-                }
-                break;
-            case 'floor':
-                add('Undergulv - Kontrol: Støvsug grundigt. Tjek planhed med en lang retskede – max tolerance er 2mm lunker over et stræk på 2 meter. Opret med selvnivellerende spartel hvis nødvendigt.');
-                add('Underlag & Fugtspærre: Udlæg dampspærre (husk 20 cm overlæg, som skal tapes tæt med dampspærretape). Rul derefter det støjdæmpende underlag ud kant til kant (uden overlæg).');
-                add(`Lægning af brædder/planker: Start lægning af ${d.floorType || d.material || 'det nye gulv'}. VIGTIGT: Husk afstandsklodser – der skal være 10-12 mm luft til ALLE faste vægge og rør, så gulvet kan arbejde.`);
-                add('Tilpasning & Finish: Ved rørgennemføringer bores hul der er 20mm større end røret. Skær et "kile-snit" bagud, læg lim på, og pres det sammen om røret. Husk at underfremme dørkarme (brug fukssvans/multicutter), så gulvet kan glide pænt ind under karmen.');
-                if (d.panels && d.panels.toLowerCase().includes('ja')) {
-                    add('Fodlister: Geringsskær og monter nye fodlister. Skyd dem fast med dykkerpistol (lim evt. hjørnerne). HUSK: Skru/skyd dem KUN fast i væggen, aldrig ned i gulvet!');
-                }
-                break;
-            case 'ceilings': {
-                add('Forskalling & Tjek: Kontroller eksisterende lofts-konstruktion/spær for råd. Opsæt ny forskalling med snorlige afstande: c-c 30 cm ved gipslofter og c-c 60 cm ved akustiklofter.');
-                const calcSpots = d.spots === 'Ja' ? Math.max(1, Math.round((parseFloat(d.amount) || 0) / 1.75)) : 0;
-                if (calcSpots > 0) {
-                    add(`El-forberedelse: VIGTIGT: Træk tomrør/flexrør og gør klar til elektrikeren (${calcSpots} spots). Skru safebokse fast i forskallingen, og noter deres præcise placeringer på en skitse inden loftet lukkes!`);
-                }
-                add(`Loftmontage: Opsætning af ${d.material || 'loftplader'}. Hvis gips: Husk at forskyde endesamlingerne med mindst 40 cm (ingen krydssamlinger!). Brug de rigtige gipsskruer og skru dem 1 mm under pap-overfladen uden at bryde pappen.`);
-                add('Fugning & Skyggelister: Afslut overgangen til væggene. Ved gips: Ilæg akrylfuge. Ved træ/akustik: Monter skyggelister. Brug dykkerpistol og husk elastisk fuge i geringerne.');
-                break;
+        if (category === 'terrace') {
+            addMainStep('Trin 1: Opmåling og Klargøring', [
+                'Gennemgå tegningerne med kunden og kontrollér placering og ønsket højde.',
+                'Sæt af med snore (galger). Tjek at krydsmål/diagonalmål er 100% identiske, så terrassen er helt i vinkel.',
+                'Tjek materialelevering: Mangler der strøer, brædder eller specifikke rustfri skruer før I kan gå i gang?',
+                'Mål ud til stolper/skruer (anbefalet max c-c 2,5 m mellem bærende stolper/remme afhængig af dimension).'
+            ]);
+            
+            let fundSubTasks = [];
+            if (d.foundationType === 'skrue') {
+                fundSubTasks.push('Etablering af fundament: Markér til jordskruer og skru dem i frostfri dybde.');
+            } else {
+                fundSubTasks.push('Etablering af fundament: Udgrav stolpehuller til 90 cm (frostfri dybde).');
+                fundSubTasks.push('Sæt stolper i tørbeton og brug rotorlaser / slangevaterpas, så alle toppe har præcis samme niveau.');
             }
-            case 'facades':
-                add('Nedrivning & Råddenskab: Fjern den eksisterende beklædning forsigtigt. Undersøg bagvedliggende træværk/vindspærre for råd, svamp eller fugtskader, før du bygger videre.');
-                add('Vindspærre & Lægter: Monter ny vindspærrefolie vindtæt med specialtape. Opsæt derefter lodrette klemlister (min. 21x45 mm trykimp) over vindspærren for at sikre et ordentligt ventileret hulrum bag facaden.');
-                add(`Beklædning: Montering af ${d.facadeWood || d.material || 'facadebrædder'}. Mål ud og slå kridtstreger, så du bevarer vandrette linjer. Husk drypnæse i bunden (skær evt. brædderne i 15 graders smig).`);
-                add('Inddækning & Tætning: Ved vinduer og døre etableres korrekte lysninger. Monter alu/zink-inddækninger øverst, så regnvand ledes ud over facaden og ikke ind bagved.');
-                break;
-            case 'windows':
-            case 'doors':
-                add(`Klargøring af hul: Demonter de gamle elementer forsigtigt (skær fugerne fri først). Klargør murhullet – fjern mørtelrester, støvsug og tjek om der skal lægges en ny fugtspærre (murpap) i bunden.`);
-                add(`Indsættelse og justering: Sæt det nye element (${d.windowAmount || d.doorAmount || d.amount || 'nye'}) i hullet. Brug Knudsen-kiler eller luftpuder. Justér det i 100% lod og vinkel. Diagonalmålene skal være identiske før du skruer fast!`);
-                add('Fastgørelse: Bor for og fastgør med karmskruer/karmplugs. Afstanden mellem skruerne må max være 70 cm, og hjørneskruerne skal sidde ca. 15 cm fra hjørnet for at undgå at karmen buer.');
-                add('Isolering & Fugning: Stop hulrummet til med fugebånd/mineraluld (ikke for hårdt, det skal kunne ånde). Udfør derefter udvendig elastisk fugning eller montering af Illmod-bånd. Indvendig fuge skal laves lufttæt!');
-                add('Afslutning Indvendigt: Opbyg evt. nye lysninger i MDF eller gips. Skær nye gerigter i smig og skyd dem fast. Tjek at vinduet/døren åbner og lukker friktionsfrit.');
-                break;
-            case 'roof':
-                add('Sikkerhed & Stillads: Sørg for korrekt opsat og godkendt stillads med faldsikring, inden I går på taget. Sikkerheden kommer først.');
-                add('Undertag & Lægter: Monter diffusionsåbent undertag stramt og uden folder. Tape alle overlæg. Slå afstandslister på langs ad spærene, og monter derefter taglægter. Tjek lægteafstanden (L-mål) for den specifikke tagsten.');
-                add(`Oplægning: Udlægning af ${d.roofType || d.material || 'tagmaterialet'}. Husk at binde de yderste rækker og sten omkring gennembrydninger (skorsten/ovenlys) forsvarligt fast med bindekroge.`);
-                add('Skotrender, Grater & Rygning: Monter zink-skotrender og klip tagstenene præcist til (brug vinkelsliber på jorden, støv ikke på taget!). Fastgør rygstensbånd og rygsten stramt, så fygesne holdes ude.');
-                add('Tagrender: Monter konsoljern med korrekt fald (ca. 2-3 mm pr. meter) ned mod nedløbet. Saml tagrenderne med lim eller samlestykker, og afslut med nedløbsrør og nedløbsbrønd.');
-                break;
-            case 'kitchen':
-                add('Klargøring & Opmåling: Kontroller rummets krydsmål og vinkler. Find det højeste punkt på gulvet – start altid monteringen af understel/sokkel ud fra dette punkt for at sikre, at køkkenet står i vater.');
-                add('Sokkel & Skabe: Saml skabene (brug lidt trælim i dyvlerne for ekstra stabilitet). Monter under- og overskabe. Spænd dem sammen med samleskruer (skrues bag hængslerne, så de er skjult). Sørg for 100% vater på alle leder.');
-                add('Bordplade: Skær bordpladen til (husk afdækningstape for at undgå flosser). Ved samlinger bruges hundeben og dyvler, samt vandfast D3 trælim eller silikone i samlingen, så den bliver helt usynlig og vandtæt.');
-                add('Udskæring til Vask/Kogeplade: Bor et hul i hjørnerne og skær ud med stiksav. FORSEGL de rå savsnit i bordpladen massivt med silikone for at forhindre fugtskader over tid!');
-                add('Fronter, Hvidevarer & Finish: Monter skuffer, låger og integrerede hvidevarer. Justér alle hængsler, så fugebilledet mellem lågerne er snorlige (typisk 2-3 mm luft). Træk en tynd akrylfuge mod vægge og en silikonefuge bag vasken.');
-                break;
-            default:
-                add('Klargøring: Klargøring af arbejdssted. Tildæk gulve og møbler med pap/plast for at undgå støv og skader.');
-                add('Konstruktion: Udførelse af det primære arbejde. Husk at dobbelttjekke alle mål to gange, før du skærer én gang (Measure twice, cut once).');
-                add('KS & Overflader: Gennemgå alle samlinger. Sørg for at skruer er undersænket, samlinger er tætte, og at resultatet står knivskarpt.');
-        }
+            fundSubTasks.push('Montér bærende remme og fastgør dem med franske skruer / bræddebolte.');
+            fundSubTasks.push('Montér strøer med bjælkesko/vinkelbeslag. Husk strøafstand: Max c-c 50 cm for træ, max c-c 40 cm for komposit!');
+            fundSubTasks.push('Rul ukrudtsdug ud under bjælkelaget og smid evt. lidt stabilgrus eller sten på, så den ikke blafrer i vinden.');
+            fundSubTasks.push('Husk at overholde et lille fald (ca. 1 cm pr. meter) væk fra husmuren, hvis underkonstruktionen er tæt.');
+            
+            addMainStep('Trin 2: Fundament og Underkonstruktion', fundSubTasks);
 
-        // Fælles afslutning
-        add('Oprydning: Grov- og finoprydning af pladsen hver dag! Saml affald og feje. Kunden skal kunne bo i huset imens.');
-        add('Afleveringsforretning: Gennemgang af det færdige arbejde med kunden, og udlevering af evt. vedligeholdelsesvejledning.');
+            addMainStep('Trin 3: Montering af Terrassebrædder', [
+                'Sortering: Kig brædderne igennem, og læg dem med flosser/bomkanter til side til senere tilskæring.',
+                `Start monteringen af ${d.terraceWood || d.material || 'terrassebrædder'} fra den mest synlige forkant og arbejd jer ind mod huset.`,
+                'Husk fugeafstand: Brug afstandsklodser/kiler (min. 5-7 mm luft), så træet kan arbejde (udvide/trække sig sammen).',
+                'Snorlige skruelinjer: Sæt en snor ud for hver strø, så skruerne sidder i en 100% snorlig linje.',
+                'Sænk skruehovederne præcist i niveau med brættet – skru dem ikke for dybt, da der så samles vand og smuds.'
+            ]);
+
+            let finishSubTasks = [
+                'Tilskæring af kanter: Kør den afsluttende kant helt lige med en dyksav på skinne.',
+                'Montér evt. et dækbræt (skørt) rundt i kanten for at skjule underkonstruktionen.',
+                'Tjek hele fladen igennem for skarpe splinter eller skruer, der stikker op. Slib evt. endetræet.',
+                'Oprydning: Fej hele terrassen, saml stumper, skruer og plastik sammen.',
+                'Afleveringsforretning med kunden.'
+            ];
+            if (d.railing && d.railing.toLowerCase().includes('ja')) {
+                finishSubTasks.splice(2, 0, 'Montér stolper og rækværk. Sørg for at afstive rækværket ned i underkonstruktionen for optimal stabilitet.');
+            }
+            addMainStep('Trin 4: Finish og Slutkontrol', finishSubTasks);
+        }
+        else if (category === 'floor') {
+            addMainStep('Trin 1: Forberedelse & Undergulv', [
+                'Opmåling: Kontrollér fugt i beton/undergulv med fugtmåler, hvis påkrævet.',
+                'Rengøring: Støvsug undergulvet HELT rent for småsten, mørtelrester og snavs.',
+                'Planhedskontrol: Tjek med 2-meter retskede. Max tolerance er typisk 2 mm lunker pr. 2 meter. Opret med selvnivellerende spartel, hvis gulvet svinger mere end dette!',
+                'Tjek dørkarme: Skær bunden af indvendige dørkarme af med en multicutter/fukssvans, så det nye gulv kan glide pænt ind under.'
+            ]);
+            addMainStep('Trin 2: Underlag & Fugtspærre', [
+                'Dampspærre (hvis krævet over beton/krybekælder): Udlæg plastfolie med 20 cm overlæg. Tape alle samlinger 100% tæt med dampspærretape. Træk folien et par cm op ad væggen.',
+                'Trinformsdæmpning/Underlag: Rul underlaget ud (kant mod kant – IKKE overlæg, medmindre producenten foreskriver det).',
+                'Tape underlaget sammen, så det ikke rykker sig under lægningen.'
+            ]);
+            addMainStep('Trin 3: Lægning af Gulvet', [
+                'Retningsvalg: Gulvet lægges typisk i lysets indfaldsretning.',
+                `Start lægning af ${d.floorType || d.material || 'det nye gulv'} ind mod væggen (Husk 10-15 mm ekspansionsfuge til ALLE faste bygningsdele!).`,
+                'Forskydning: Sørg for at endesamlingerne er forskudt med minimum 40 cm fra række til række.',
+                'Rørgennemføringer: Bor hul 20 mm større end røret. Skær et "kile-snit" ud bag røret, lim kilen på plads bag efter og sæt en pæn roset på.'
+            ]);
+            let finishSubTasks = [
+                'Fjern alle afstandsklodser fra kanterne.',
+                'Montér overgangslister (T-lister/Niveaulister) ved dørtrin og mellem rum.',
+                'Rengøring, støvsugning og afleveringsforretning med kunden.'
+            ];
+            if (d.panels && d.panels.toLowerCase().includes('ja')) {
+                finishSubTasks.splice(1, 0, 'Montering af fodlister: Geringsskær hjørner og skyd listerne fast med dykkerpistol. VIGTIGT: Skru KUN i væggen, aldrig i gulvet!');
+            }
+            addMainStep('Trin 4: Afslutning (Lister & Overgange)', finishSubTasks);
+        }
+        else if (category === 'ceilings') {
+            addMainStep('Trin 1: Klargøring & Forskalling', [
+                'Kontrollér den eksisterende konstruktion/spær for råd, fugt og skævheder.',
+                'Sæt ny forskalling op. Afstand afhænger af materialet: Gips er typisk c-c 30 cm, akustik/træpaneler c-c 40 eller 60 cm.',
+                'Tjek med retskede eller rotorlaser at forskallingen danner en 100% plan flade. Brug evt. justerbrikker (Knudsen kiler).'
+            ]);
+            let elSubTasks = [
+                'Dampspærre (hvis mod kold tagkonstruktion): Udlæg dampspærre, tape alle samlinger tæt, og klem den mod væggen med fuge.'
+            ];
+            const calcSpots = d.spots === 'Ja' ? Math.max(1, Math.round((parseFloat(d.amount) || 0) / 1.75)) : 0;
+            if (calcSpots > 0) {
+                elSubTasks.push(`Træk tomrør/flexrør og gør klar til elektrikeren (${calcSpots} spots).`);
+                elSubTasks.push('Skru safebokse fast i forskallingen, og noter deres præcise placeringer på en skitse inden loftet lukkes!');
+            }
+            addMainStep('Trin 2: Dampspærre og Forberedelse af El', elSubTasks);
+
+            addMainStep('Trin 3: Montering af Loftplader', [
+                'Start monteringen. Hvis gips: forskyd endesamlingerne med mindst 40 cm (ingen krydssamlinger!).',
+                `Fastgør ${d.material || 'loftplader'}. Hvis gips: Skruerne skrues ca. 1 mm ned uden at bryde pappet!`,
+                'Ved Akustik/Træ: Brug dykkerpistol eller clips skjult i fer/not. Sørg for luft ind mod vægge til udvidelse.'
+            ]);
+            addMainStep('Trin 4: Fugning & Finish', [
+                'Akrylfugning (ved gipslofter): Læg en akrylfuge i kanten mod væggen (slipfuge).',
+                'Montering af skyggelister (ved træ/akustik): Geringsskær hjørner, påfør lidt lim i smiget, og skyd dem fast.',
+                'Grovoprydning, fejning og afleveringsforretning med kunden.'
+            ]);
+        }
+        else if (category === 'windows' || category === 'doors') {
+            addMainStep('Trin 1: Demontering & Klargøring af Hul', [
+                'Afdækning indvendigt for at fange støv.',
+                'Skær den gamle fuge fri med en multicutter/bajonetsav, og vip forsigtigt elementet ud.',
+                'Klargør murhullet: Bank løse mørtelrester væk, fjern gamle kiler og støvsug bunden.',
+                'Læg evt. et stykke murpap (fugtspærre) i bunden af hullet, hvis det er nødvendigt mod fugtoptrængen.'
+            ]);
+            addMainStep('Trin 2: Isætning & Justering', [
+                `Sæt det nye element (${d.windowAmount || d.doorAmount || d.amount || 'nye element'}) ind i hullet.`,
+                'Placér blivende opklodsninger (plastkiler) tæt ved hjørner og under lodposter, så de bærer rudens vægt.',
+                'Brug montageluftpuder (Winbags) til at centrere elementet, så der er lige stor fuge hele vejen rundt.',
+                'Kontrollér at vinduet/døren er 100% i lod og vater, og at diagonalmålene er identiske.'
+            ]);
+            addMainStep('Trin 3: Fastgørelse', [
+                'Forbor gennem karmen og brug karmskruer (uden dybler i træ, med plugs i beton/mursten).',
+                'Fastgørelsespunkter: Max 10-15 cm fra indvendige hjørner, og herefter med max 70 cm mellemrum.',
+                'Tjek at rammen kan åbne, lukke og vippe friktionsfrit før I fuger.'
+            ]);
+            addMainStep('Trin 4: Isolering & Fugning', [
+                'Stop fugebånd/mineraluld ind i hulrummet (ikke for hårdt, det skal bevare sin isoleringsevne).',
+                'Udvendigt: Læg bagstop ind og træk en pæn, elastisk fuge – eller montér Illmod-bånd.',
+                'Indvendigt: Udfør lufttæt fuge (skal altid være tættere indvendigt end udvendigt for at undgå kondens).',
+                'Afslutning: Indvendig opsætning af lysninger/gerigter, og udvendig afrensning.'
+            ]);
+        }
+        else if (category === 'facades') {
+            addMainStep('Trin 1: Demontering & Kontrol', [
+                'Etabler sikker arbejdsplatform/stillads.',
+                'Riv eksisterende facade ned og kør på genbrugspladsen.',
+                'Vigtig kvalitetskontrol: Gennemgå det bagvedliggende skelet og remme for råd eller svamp. Udskift skadet træ.'
+            ]);
+            addMainStep('Trin 2: Vindspærre & Afstandslister', [
+                'Montering af diffusionsåben vindspærre. Alle samlinger tape tæt med specialtape.',
+                'Klem vindspærren fast med lodrette klemlister for at sikre et ventileret hulrum bag facaden!',
+                'Montering af vandrette lægter (eller lodrette alt afhængigt af, om brædderne skal vende lodret eller vandret).',
+                'Montering af muse-net i bunden af ventilationen.'
+            ]);
+            addMainStep('Trin 3: Montering af Beklædning', [
+                'Slå kridtstreger/brug laser for at sikre at den første række sidder i 100% vater.',
+                'Skær drypnæse (15 graders smig) på bunden af brædderne for vandafledning.',
+                `Fastgørelse af ${d.facadeWood || d.material || 'facadebrædder'}: Brug de rigtige skruer/søm (C4 eller A4).`,
+                'Overhold altid foreskrevet afstand / "luft" mellem brædderne ved klink- eller listedækning.'
+            ]);
+            addMainStep('Trin 4: Inddækninger & Finish', [
+                'Færdiggørelse af lysninger omkring vinduer og døre.',
+                'Montering af evt. alu-vandnæser over vinduer.',
+                'Slib evt. oprifter, fjern stillads, ryd op og gennemgå facaden med kunden.'
+            ]);
+        }
+        else if (category === 'roof') {
+            addMainStep('Trin 1: Sikkerhed, Stillads & Demontering', [
+                'Opsætning og godkendelse af stillads med tagfod/rækværk før arbejde påbegyndes.',
+                'Nedtagning af det gamle tag (inkl. fjernelse af gamle lægter).',
+                'Undersøgelse af eksisterende spær for råd. Oprensning af spærtoppe for evt. søm.'
+            ]);
+            addMainStep('Trin 2: Undertag, Klemlister og Lægter', [
+                'Opretning: Tjek spærene, og påfor evt. spærtræ, så tagfladen bliver plan uden lunker.',
+                'Rul diffusionsåbent undertag stramt ud (vandret nedefra og op). Tape overlæg.',
+                'Søm lodrette klemlister fast på spærene (sikrer ventilation mellem undertag og tagsten).',
+                'Montering af taglægter. Mål ud og følg nøje den lægteafstand (L-mål), der passer til den valgte tagsten!'
+            ]);
+            addMainStep('Trin 3: Klargøring til Blikkenslager & Oplægning', [
+                'Opbyg og nedsænk evt. skotrendebrædder, og klargør til blikkenslagerens zink-arbejde.',
+                'Monter rendejern (eller gør sternen klar til blikkenslagerens montering af tagrender).',
+                'Afdæk midlertidigt for regn ved åbne konstruktioner indtil blikket er monteret.',
+                `Hejs tagstenene (${d.roofType || d.material || 'tagmaterialet'}) op og fordel dem over tagfladen for jævn vægtbelastning.`,
+                'Bind/klips stenene fast efter gældende regler (ofte hver 2. sten eller de to yderste rækker).'
+            ]);
+            addMainStep('Trin 4: Rygning & Finish', [
+                'Tilskær tagsten mod skotrender (brug vinkelsliber på jorden eller støvfrit).',
+                'Montér rygningsbånd (tætner for flyvesne og slagregn).',
+                'Læg rygsten og fastgør dem stramt med rygningsbeslag.',
+                'Grovoprydning omkring huset, nedtagning af stillads og aflevering.'
+            ]);
+        }
+        else {
+            addMainStep('Trin 1: Opmåling & Klargøring', [
+                'Gennemgang af tegninger, byggetilladelser og kontrolmål på pladsen.',
+                'Klargøring af arbejdssted: Afdækning af gulve, møbler eller bede for at undgå skader.',
+                'Kontrol af leverede materialer: Mangler der noget fra pluklisten før I kan gå i gang?'
+            ]);
+            addMainStep('Trin 2: Konstruktion & Udførelse', [
+                'Etablering af sikker byggeplads (evt. stillads eller afspærring).',
+                'Udførelse af det primære konstruktionsarbejde jf. mesters anvisning.',
+                'Tømrer-reglen: "Measure twice, cut once" – dobbelttjek alle specielle mål, før der skæres.'
+            ]);
+            addMainStep('Trin 3: Kvalitetssikring & Finish', [
+                'Gennemgang af alle samlinger og bærende dele.',
+                'Visuel kontrol: Er alle synlige skruer undersænket pænt, og står overfladerne knivskarpt?'
+            ]);
+            addMainStep('Trin 4: Oprydning & Aflevering', [
+                'Grov- og finoprydning af pladsen hver dag. Kunden skal kunne bo og færdes trygt i huset!',
+                'Gennemgang af det færdige arbejde sammen med kunden (Afleveringsforretning).'
+            ]);
+        }
 
         return list;
     };
@@ -409,7 +560,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             toast.success(`Status ændret til ${newStatus}`);
             // Opdater lokalt så UI reagerer
             const updatedCase = { ...selectedCase, status: newStatus };
-            setSelectedCase(updatedCase);
+            // Vi trigger en state-opdatering for at tvinge et re-render, 
+            // men da vi nu henter selectedCase fra leads prop automatisk, behøver vi ikke setSelectedCase.
+            // Dog er new_time osv. stadig til stede, men vi overlader det egentlige gem til onUpdateLead nedstrøms
+            // for at opdatere `leads` i `Dashboard`.
             if (onUpdateLead) onUpdateLead(updatedCase);
             // Da denne komponent kun viser Bekræftede opgaver, vil sagen forsvinde herfra
             // hvis den er sat i bero (selvom vi lige har åbnet for at den også kan vise "Sæt i bero").
@@ -435,7 +589,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             if (error) throw error;
 
             const updatedCase = { ...selectedCase, raw_data: updatedRawData };
-            setSelectedCase(updatedCase);
+            // (Samme som ovenfor)
             if (onUpdateLead) onUpdateLead(updatedCase);
         } catch (err) {
             console.error('Kunne ikke gemme sagsdata:', err);
@@ -447,7 +601,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                 ...selectedCase,
                 raw_data: { ...(selectedCase.raw_data || {}), ...updatedFields }
             };
-            setSelectedCase(updatedCase);
+            // (Samme som ovenfor)
             if (onUpdateLead) onUpdateLead(updatedCase);
             toast.success('Gemt lokalt (Local Storage Fallback)');
         }
@@ -475,12 +629,18 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     // To-Do / Checklist-håndtering
-    const handleTodoToggle = (todoId) => {
-        const updated = todoList.map(item => {
-            if (item.id === todoId) {
-                return { ...item, done: !item.done };
+    const handleTodoToggle = (mainId, subId) => {
+        const updated = todoList.map(step => {
+            if (step.id === mainId) {
+                const updatedSub = step.subTasks.map(sub => {
+                    if (sub.id === subId) {
+                        return { ...sub, done: !sub.done };
+                    }
+                    return sub;
+                });
+                return { ...step, subTasks: updatedSub };
             }
-            return item;
+            return step;
         });
         setTodoList(updated);
         saveCaseDataToDb({ checklist: updated });
@@ -490,24 +650,65 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         e.preventDefault();
         if (!newTodoText.trim()) return;
 
-        const newTodo = {
-            id: `custom-${Date.now()}`,
+        const newMain = {
+            id: `custom-main-${Date.now()}`,
             text: newTodoText.trim(),
-            done: false
+            isExpanded: true,
+            subTasks: []
         };
 
-        const updated = [...todoList, newTodo];
+        const updated = [...todoList, newMain];
         setTodoList(updated);
         setNewTodoText('');
         saveCaseDataToDb({ checklist: updated });
-        toast.success('Opgave tilføjet til tjeklisten!');
+        toast.success('Nyt hovedtrin tilføjet!');
     };
 
-    const handleDeleteTodo = (todoId) => {
-        const updated = todoList.filter(item => item.id !== todoId);
+    const handleAddSubTask = (mainId, text) => {
+        if (!text.trim()) return;
+        const updated = todoList.map(step => {
+            if (step.id === mainId) {
+                return {
+                    ...step,
+                    subTasks: [...step.subTasks, { id: `custom-sub-${Date.now()}`, text: text.trim(), done: false }]
+                };
+            }
+            return step;
+        });
         setTodoList(updated);
         saveCaseDataToDb({ checklist: updated });
-        toast.success('Opgave slettet');
+        toast.success('Underpunkt tilføjet');
+    };
+
+    const handleDeleteSubTask = (mainId, subId) => {
+        const updated = todoList.map(step => {
+            if (step.id === mainId) {
+                return {
+                    ...step,
+                    subTasks: step.subTasks.filter(sub => sub.id !== subId)
+                };
+            }
+            return step;
+        });
+        setTodoList(updated);
+        saveCaseDataToDb({ checklist: updated });
+        toast.success('Underpunkt slettet');
+    };
+
+    const handleToggleExpand = (mainId) => {
+        setTodoList(todoList.map(step => step.id === mainId ? { ...step, isExpanded: !step.isExpanded } : step));
+    };
+    
+    const speakText = (text) => {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'da-DK';
+            utterance.rate = 0.9;
+            window.speechSynthesis.speak(utterance);
+        } else {
+            toast.error('Oplæsning understøttes desværre ikke af din browser.');
+        }
     };
 
     // Logbog-håndtering
@@ -555,10 +756,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             text: newLogText.trim(),
             author: currentAuthor,
             date: new Date().toISOString(),
-            photos: uploadedPhotoUrls,
-            isChangeOrder: isChangeOrder,
-            extraHours: isChangeOrder ? (parseFloat(extraHours) || 0) : 0,
-            extraPrice: isChangeOrder ? (parseFloat(extraPrice) || 0) : 0
+            photos: uploadedPhotoUrls
         };
 
         const updated = [newLog, ...logsList];
@@ -566,12 +764,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         setNewLogText('');
         setLogPhotos([]);
         setLogFiles([]);
-        setIsChangeOrder(false);
-        setExtraHours('');
-        setExtraPrice('');
         saveCaseDataToDb({ logs: updated });
         setIsUploadingLog(false);
-        toast.success(isChangeOrder ? 'Aftaleseddel/Ekstraarbejde oprettet!' : 'Logbog opdateret!');
+        toast.success('Dagens arbejde gemt!');
     };
 
     const handleRealPhotoUpload = (e) => {
@@ -686,12 +881,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     const handleDeleteTime = (entryId) => {
-        if (window.confirm('Er du sikker på, at du vil slette denne timeregistrering?')) {
-            const updated = timeEntries.filter(t => t.id !== entryId);
-            setTimeEntries(updated);
-            saveCaseDataToDb({ time_entries: updated });
-            toast.success('Timeregistrering slettet.');
-        }
+        setDeletingTimeEntryId(entryId);
+    };
+
+    const confirmDeleteTime = () => {
+        if (!deletingTimeEntryId) return;
+        const updated = timeEntries.filter(t => t.id !== deletingTimeEntryId);
+        setTimeEntries(updated);
+        saveCaseDataToDb({ time_entries: updated });
+        toast.success('Timeregistrering slettet.');
+        setDeletingTimeEntryId(null);
     };
 
     const handleExportLonsystem = () => {
@@ -736,14 +935,33 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             priceExVat: Math.round(baseTotalPrice / 1.25)
         });
 
-        // Linje 2..N: Aftalesedler
+        // Linje 2..N: Byggeproces (Logbog) ekstraarbejde
         const changeOrders = logsList.filter(l => l.isChangeOrder && Number(l.extraPrice) > 0);
         changeOrders.forEach((co, idx) => {
             lines.push({
                 id: `co_${idx}`,
-                description: `Ekstraarbejde: ${co.text.substring(0, 50)}${co.text.length > 50 ? '...' : ''}`,
+                description: `Ekstraarbejde (Logbog): ${co.text.substring(0, 50)}${co.text.length > 50 ? '...' : ''}`,
                 priceExVat: Math.round(Number(co.extraPrice) / 1.25)
             });
+        });
+
+        // Linje ..N: Nye Aftalesedler
+        const extraAgreements = selectedCase?.raw_data?.extra_agreements || [];
+        const approvedAgreements = extraAgreements.filter(a => a.status === 'Godkendt');
+        approvedAgreements.forEach((agr, idx) => {
+            if (agr.priceType === 'fast_pris' && Number(agr.amount) > 0) {
+                lines.push({
+                    id: `agr_${idx}`,
+                    description: `Aftaleseddel: ${agr.title}`,
+                    priceExVat: Math.round(Number(agr.amount) / 1.25)
+                });
+            } else if (agr.priceType === 'efter_regning') {
+                lines.push({
+                    id: `agr_regning_${idx}`,
+                    description: `Aftaleseddel (Efter regning): ${agr.title}`,
+                    priceExVat: 0 // Manual input needed for these
+                });
+            }
         });
 
         // Fratræk allerede faktureret som en negativ linje hvis vi vil (eller vi lader bare Mester rette)
@@ -804,8 +1022,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     // Beregn sagsfremskridt i procent
-    const completedTodos = todoList.filter(t => t.done).length;
-    const progressPercent = todoList.length > 0 ? Math.round((completedTodos / todoList.length) * 100) : 0;
+    const completedTodos = todoList.reduce((acc, step) => acc + (step.subTasks || []).filter(s => s.done).length, 0);
+    const totalTodos = todoList.reduce((acc, step) => acc + (step.subTasks || []).length, 0);
+    const progressPercent = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
     // Beregn tidsbudget overholdelse (inklusive godkendte aftalesedler)
     const totalActualHours = timeEntries
@@ -849,7 +1068,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     // Materiale-status beregning
-    const originalBudget = parseFloat(selectedCase?.raw_data?.calc_data?.materialCost) || 0;
+    const defaultMarkup = profile?.settings?.material_markup || 1.15;
+    const originalBudget = selectedCase?.raw_data?.calc_data?.materialCostBase !== undefined
+        ? parseFloat(selectedCase.raw_data.calc_data.materialCostBase)
+        : Math.round((parseFloat(selectedCase?.raw_data?.calc_data?.materialCost) || 0) / defaultMarkup);
     const materialListsMeta = selectedCase?.raw_data?.material_lists_meta || [];
     const totalSpent = materialListsMeta.reduce((sum, list) => sum + (parseFloat(list.price) || 0), 0);
     const budgetRemaining = originalBudget - totalSpent;
@@ -898,6 +1120,49 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     return (
         <div className="dashboard-workspace case-management-view" style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+            <style>{`
+                .case-tab-content {
+                    animation: fadeIn 0.4s ease-out;
+                }
+                .glass-panel-tab {
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(10px);
+                    border-radius: 16px;
+                    border: 1px solid rgba(226, 232, 240, 0.8);
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+                    padding: 24px;
+                }
+                .hover-lift {
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                }
+                .hover-lift:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                }
+                .log-card {
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    border-radius: 12px;
+                    padding: 16px;
+                    background-color: #ffffff;
+                    border: 1px solid #e2e8f0;
+                }
+                .log-card:hover {
+                    transform: translateX(4px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                    border-color: #cbd5e1;
+                }
+                .timesheet-row {
+                    transition: all 0.2s ease;
+                }
+                .timesheet-row:hover {
+                    background-color: #f1f5f9 !important;
+                    border-radius: 8px;
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
             
             {/* OVERBYGNING ELLER MODAL LUK-KNAP */}
             {!selectedCase ? (
@@ -935,7 +1200,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 return (
                                     <div 
                                         key={c.id} 
-                                        onClick={() => setSelectedCase(c)}
+                                        onClick={() => setSelectedCaseIdState(c.id)}
                                         style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}
                                         className="hover:scale-[1.01] hover:shadow-lg"
                                     >
@@ -1033,7 +1298,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                         <div>
                             <button 
-                                onClick={() => !isModalView && setSelectedCase(null)} 
+                                onClick={() => !isModalView && setSelectedCaseIdState(null)} 
                                 style={{ 
                                     display: isModalView ? 'none' : 'flex', 
                                     alignItems: 'center', 
@@ -1181,10 +1446,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 <div>
                                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a1a1a' }}>{orderedMaterials} <span style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 'normal' }}>/ {totalMaterials} ordrer</span></div>
                                 </div>
-                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: materialProgress === 100 ? '#10b981' : '#3b82f6' }}>{materialProgress}%</span>
+                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: deliveredMaterials > 0 ? '#10b981' : '#3b82f6' }}>{materialProgress}%</span>
                             </div>
                             <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px' }}>
-                                <div style={{ width: `${materialProgress}%`, height: '100%', background: materialProgress === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.5s ease' }} />
+                                <div style={{ width: `${materialProgress}%`, height: '100%', background: deliveredMaterials > 0 ? '#10b981' : '#3b82f6', transition: 'width 0.5s ease' }} />
                             </div>
                             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: notOrderedMaterials > 0 ? '#b45309' : '#6b7280' }}>
@@ -1375,11 +1640,13 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             .modern-tab-scroll::-webkit-scrollbar { display: none; }
                         `}</style>
                         {[
-                            { id: 'todo', label: 'Bygge To-Do (KS)', icon: <CheckSquare size={18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5' },
-                            { id: 'materials', label: 'Materialer & Indkøb', icon: <PackageCheck size={18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff' },
-                            { id: 'logs', label: 'Byggeproces', icon: <ClipboardList size={18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4' },
-                            { id: 'timesheet', label: 'Timeregistrering', icon: <Clock size={18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff' }
-                        ].map(tab => {
+                            { id: 'todo', label: 'Bygge To-Do (KS)', icon: <CheckSquare size={18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: true },
+                            { id: 'materials', label: 'Materialer & Indkøb', icon: <PackageCheck size={18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: true },
+                            { id: 'logs', label: 'Byggeproces', icon: <ClipboardList size={18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
+                            { id: 'timesheet', label: 'Timeregistrering', icon: <Clock size={18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
+                            { id: 'invoices', label: 'Bilag', icon: <Receipt size={18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
+                            { id: 'extra-work', label: 'Aftalesedler', icon: <PenTool size={18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' }
+                        ].filter(tab => tab.show).map(tab => {
                             const isActive = activeSubTab === tab.id;
                             return (
                                 <button
@@ -1436,49 +1703,233 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     </span>
                                 </div>
 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {todoList.map((todo, idx) => (
-                                        <div 
-                                            key={todo.id}
-                                            style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', backgroundColor: todo.done ? '#f9fafb' : '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', opacity: todo.done ? 0.7 : 1, transition: 'all 0.15s' }}
-                                        >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, cursor: 'pointer' }} onClick={() => handleTodoToggle(todo.id)}>
-                                                <div style={{ width: '22px', height: '22px', borderRadius: '6px', border: todo.done ? 'none' : '2px solid #cbd5e1', backgroundColor: todo.done ? '#10b981' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.1s' }}>
-                                                    {todo.done && <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.8rem' }}>✓</span>}
-                                                </div>
-                                                <span style={{ fontSize: '0.925rem', color: '#1a1a1a', textDecoration: todo.done ? 'line-through' : 'none', fontWeight: '500' }}>
-                                                    <span style={{ color: '#6b7280', marginRight: '6px' }}>Trin {idx + 1}:</span>
-                                                    {todo.text}
-                                                </span>
-                                            </div>
-                                            
-                                            {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                                                <button 
-                                                    onClick={() => handleDeleteTodo(todo.id)}
-                                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    {todoList.map((step, idx) => {
+                                        const subs = step.subTasks || [];
+                                        const completedSub = subs.filter(s => s.done).length;
+                                        const totalSub = subs.length;
+                                        const isAllDone = totalSub > 0 && completedSub === totalSub;
+                                        
+                                        return (
+                                            <div 
+                                                key={step.id} 
+                                                style={{ 
+                                                    display: 'flex', 
+                                                    flexDirection: 'column', 
+                                                    backgroundColor: isAllDone ? 'rgba(240, 253, 244, 0.5)' : '#ffffff', 
+                                                    border: isAllDone ? '1px solid #6ee7b7' : '1px solid #e2e8f0', 
+                                                    borderRadius: '16px', 
+                                                    overflow: 'hidden',
+                                                    boxShadow: isAllDone ? '0 4px 14px rgba(16, 185, 129, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.03)',
+                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    transform: 'translateZ(0)'
+                                                }}
+                                            >
+                                                {/* Header / Accordion trigger */}
+                                                <div 
+                                                    onClick={() => handleToggleExpand(step.id)}
+                                                    onMouseEnter={(e) => {
+                                                        if (!isAllDone) e.currentTarget.style.backgroundColor = '#f8fafc';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (!isAllDone) e.currentTarget.style.backgroundColor = 'transparent';
+                                                    }}
+                                                    style={{ 
+                                                        display: 'flex', 
+                                                        justifyContent: 'space-between', 
+                                                        alignItems: 'center', 
+                                                        padding: '18px 24px', 
+                                                        backgroundColor: isAllDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent', 
+                                                        cursor: 'pointer', 
+                                                        transition: 'background-color 0.2s ease',
+                                                    }}
                                                 >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                        <div style={{ 
+                                                            display: 'flex', 
+                                                            alignItems: 'center', 
+                                                            justifyContent: 'center', 
+                                                            width: '28px', 
+                                                            height: '28px', 
+                                                            borderRadius: '50%', 
+                                                            backgroundColor: isAllDone ? '#10b981' : '#f1f5f9', 
+                                                            color: isAllDone ? '#fff' : '#475569', 
+                                                            fontSize: '0.85rem', 
+                                                            fontWeight: 'bold',
+                                                            boxShadow: isAllDone ? '0 2px 8px rgba(16, 185, 129, 0.4)' : 'inset 0 1px 3px rgba(0,0,0,0.05)',
+                                                            transition: 'all 0.3s'
+                                                        }}>
+                                                            {isAllDone ? '✓' : (idx + 1)}
+                                                        </div>
+                                                        <h5 style={{ margin: 0, fontSize: '1.1rem', color: isAllDone ? '#065f46' : '#0f172a', fontWeight: '700', letterSpacing: '-0.01em' }}>
+                                                            {step.text}
+                                                        </h5>
+                                                        <span style={{ 
+                                                            fontSize: '0.8rem', 
+                                                            color: isAllDone ? '#059669' : '#64748b', 
+                                                            marginLeft: '4px',
+                                                            backgroundColor: isAllDone ? '#d1fae5' : '#f1f5f9',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '12px',
+                                                            fontWeight: '600'
+                                                        }}>
+                                                            {completedSub} / {totalSub}
+                                                        </span>
+                                                    </div>
+                                                    <ChevronDown 
+                                                        size={20} 
+                                                        style={{ 
+                                                            color: isAllDone ? '#10b981' : '#94a3b8', 
+                                                            transform: step.isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', 
+                                                            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
+                                                        }} 
+                                                    />
+                                                </div>
+                                                
+                                                {/* Udklappet indhold */}
+                                                <div 
+                                                    style={{ 
+                                                        maxHeight: step.isExpanded ? '2000px' : '0', 
+                                                        opacity: step.isExpanded ? 1 : 0, 
+                                                        overflow: 'hidden', 
+                                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
+                                                    }}
+                                                >
+                                                    <div style={{ padding: '0 24px 20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        <div style={{ height: '1px', backgroundColor: isAllDone ? 'rgba(16, 185, 129, 0.2)' : '#f1f5f9', marginBottom: '8px' }}></div>
+                                                        {subs.map((sub, sIdx) => (
+                                                            <div 
+                                                                key={sub.id} 
+                                                                onMouseEnter={(e) => {
+                                                                    if (!sub.done) {
+                                                                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.04)';
+                                                                        e.currentTarget.style.transform = 'translateY(-1px)';
+                                                                    }
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    if (!sub.done) {
+                                                                        e.currentTarget.style.backgroundColor = '#ffffff';
+                                                                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)';
+                                                                        e.currentTarget.style.transform = 'translateY(0)';
+                                                                    }
+                                                                }}
+                                                                style={{ 
+                                                                    display: 'flex', 
+                                                                    alignItems: 'flex-start', 
+                                                                    justifyContent: 'space-between', 
+                                                                    padding: '14px 16px', 
+                                                                    backgroundColor: sub.done ? 'rgba(248, 250, 252, 0.7)' : '#ffffff', 
+                                                                    border: '1px solid', 
+                                                                    borderColor: sub.done ? '#e2e8f0' : '#f1f5f9', 
+                                                                    borderRadius: '10px', 
+                                                                    opacity: sub.done ? 0.75 : 1, 
+                                                                    boxShadow: sub.done ? 'none' : '0 2px 6px rgba(0,0,0,0.02)',
+                                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' 
+                                                                }}
+                                                            >
+                                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1 }}>
+                                                                    <div 
+                                                                        onClick={() => handleTodoToggle(step.id, sub.id)}
+                                                                        style={{ 
+                                                                            width: '24px', 
+                                                                            height: '24px', 
+                                                                            borderRadius: '6px', 
+                                                                            border: sub.done ? 'none' : '2px solid #cbd5e1', 
+                                                                            backgroundColor: sub.done ? '#10b981' : '#fff', 
+                                                                            display: 'flex', 
+                                                                            alignItems: 'center', 
+                                                                            justifyContent: 'center', 
+                                                                            transition: 'all 0.15s', 
+                                                                            cursor: 'pointer', 
+                                                                            flexShrink: 0, 
+                                                                            marginTop: '1px',
+                                                                            boxShadow: sub.done ? '0 2px 6px rgba(16, 185, 129, 0.4)' : 'inset 0 1px 2px rgba(0,0,0,0.05)'
+                                                                        }}
+                                                                    >
+                                                                        {sub.done && <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}>✓</span>}
+                                                                    </div>
+                                                                    <span 
+                                                                        onClick={() => handleTodoToggle(step.id, sub.id)}
+                                                                        style={{ 
+                                                                            fontSize: '0.95rem', 
+                                                                            color: sub.done ? '#64748b' : '#1e293b', 
+                                                                            textDecoration: sub.done ? 'line-through' : 'none', 
+                                                                            cursor: 'pointer', 
+                                                                            flex: 1, 
+                                                                            lineHeight: '1.5',
+                                                                            transition: 'color 0.2s'
+                                                                        }}
+                                                                    >
+                                                                        {sub.text}
+                                                                    </span>
+                                                                </div>
+                                                                
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, marginLeft: '12px' }}>
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); speakText(sub.text); }}
+                                                                        title="Læs op"
+                                                                        style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                                                                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                                                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                                                    >
+                                                                        🔊
+                                                                    </button>
+                                                                    
+                                                                    {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                                                                        <button 
+                                                                            onClick={(e) => { e.stopPropagation(); handleDeleteSubTask(step.id, sub.id); }}
+                                                                            title="Slet"
+                                                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                                                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                                        >
+                                                                            <Trash2 size={16} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        
+                                                        {/* Tilføj underpunkt knap (kun for admin/mester) */}
+                                                        {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                                                            <div style={{ marginTop: '8px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0' }}>
+                                                                <input 
+                                                                    type="text"
+                                                                    placeholder="+ Tilføj et underpunkt (tryk Enter for at gemme)..."
+                                                                    style={{ width: '100%', border: '1px solid #e2e8f0', padding: '10px 14px', borderRadius: '6px', fontSize: '0.9rem', backgroundColor: '#f8fafc' }}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.preventDefault();
+                                                                            handleAddSubTask(step.id, e.target.value);
+                                                                            e.target.value = '';
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
 
-                                {/* TILFØJ CUSTOM OPGAVE */}
+                                {/* TILFØJ CUSTOM HOVEDTRIN */}
                                 {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                                    <form onSubmit={handleAddTodo} style={{ display: 'flex', gap: '12px', borderTop: '1px solid #f1f1ef', paddingTop: '20px' }}>
+                                    <form onSubmit={handleAddTodo} style={{ display: 'flex', gap: '12px', borderTop: '1px solid #f1f1ef', paddingTop: '20px', marginTop: '10px' }}>
                                         <input 
                                             type="text"
                                             value={newTodoText}
                                             onChange={(e) => setNewTodoText(e.target.value)}
-                                            placeholder="Tilføj et specifikt ekstra bygge-trin på denne sag..."
-                                            style={{ flex: 1, border: '1px solid #e8e6e1', padding: '12px 16px', borderRadius: '8px', fontSize: '0.9rem' }}
+                                            placeholder="Tilføj et helt nyt bygge-trin på denne sag..."
+                                            style={{ flex: 1, border: '1px solid #e8e6e1', padding: '12px 16px', borderRadius: '8px', fontSize: '0.95rem' }}
                                         />
                                         <button 
                                             type="submit"
-                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#1e293b', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                            style={{ backgroundColor: '#1a1a1a', color: '#fff', border: 'none', padding: '0 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}
                                         >
-                                            <Plus size={16} /> Tilføj trin
+                                            Tilføj trin
                                         </button>
                                     </form>
                                 )}
@@ -1496,10 +1947,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
                         {/* TAB 3: LIVE BYGGEPROCES */}
                         {activeSubTab === 'logs' && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+                            <div className="case-tab-content" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
                                 
                                 {/* TIMELINE LOG */}
-                                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <h4 style={{ margin: 0, color: '#1a1a1a' }}>Projektets byggeproces</h4>
                                     
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', borderLeft: '2px solid #e2e8f0', paddingLeft: '16px', marginLeft: '8px' }}>
@@ -1507,7 +1958,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             <p style={{ color: '#6b7280', fontSize: '0.9rem', fontStyle: 'italic' }}>Ingen log-opdateringer endnu.</p>
                                         ) : (
                                             logsList.map(log => (
-                                                <div key={log.id} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <div key={log.id} className="log-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                     {/* Status farve boble */}
                                                     <div style={{ position: 'absolute', left: '-23px', top: '2px', width: '12px', height: '12px', borderRadius: '50%', background: log.status === 'red' ? '#ef4444' : (log.status === 'yellow' ? '#f59e0b' : '#10b981'), border: '2px solid white', boxShadow: '0 0 4px rgba(0,0,0,0.1)' }} />
                                                     
@@ -1548,7 +1999,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
                                 {/* NYT LOGBOGS INDLÆG */}
                                 {profile?.role !== 'apprentice' && (
-                                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '24px' }}>
+                                <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '24px' }}>
                                     <h4 style={{ margin: 0, color: '#1a1a1a' }}>Skriv status fra pladsen</h4>
                                     
                                     <form onSubmit={handleAddLog} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -1564,6 +2015,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     <button
                                                         key={s.id}
                                                         type="button"
+                                                        className="hover-lift"
                                                         onClick={() => setLogStatus(s.id)}
                                                         style={{ padding: '8px', border: logStatus === s.id ? `2px solid ${s.color}` : '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', background: logStatus === s.id ? 'white' : '#fafafa', fontWeight: 'bold', color: '#1e293b' }}
                                                     >
@@ -1584,51 +2036,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             />
                                         </div>
 
-                                        {/* Aftaleseddel Checkbox (Kun for Ledelse/PM) */}
-                                        {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', backgroundColor: isChangeOrder ? '#fff1f2' : '#f8fafc', borderRadius: '8px', border: isChangeOrder ? '1px solid #fecdd3' : '1px solid #e2e8f0' }}>
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', color: isChangeOrder ? '#be123c' : '#1e293b' }}>
-                                                    <input 
-                                                        type="checkbox"
-                                                        checked={isChangeOrder}
-                                                        onChange={(e) => setIsChangeOrder(e.target.checked)}
-                                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                                                    />
-                                                    Opret som Aftaleseddel (Ekstraarbejde)
-                                                </label>
-                                                
-                                                {isChangeOrder && (
-                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '4px' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                            <label style={{ fontSize: '0.75rem', color: '#9f1239' }}>Estimeret ekstra tid (Timer)</label>
-                                                            <input 
-                                                                type="number"
-                                                                value={extraHours}
-                                                                onChange={(e) => setExtraHours(e.target.value)}
-                                                                placeholder="F.eks. 4"
-                                                                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
-                                                            />
-                                                        </div>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                            <label style={{ fontSize: '0.75rem', color: '#9f1239' }}>Ekstra materialekost (Kr.)</label>
-                                                            <input 
-                                                                type="number"
-                                                                value={extraPrice}
-                                                                onChange={(e) => setExtraPrice(e.target.value)}
-                                                                placeholder="F.eks. 2500"
-                                                                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
 
                                         {/* Rigtigt Foto-upload */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Vedhæft byggeplads-foto (valgfrit)</label>
                                             
-                                            <label style={{ padding: '10px 14px', border: '1px dashed #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', backgroundColor: '#ffffff', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '500' }}>
+                                            <label className="hover-lift" style={{ padding: '10px 14px', border: '1px dashed #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', backgroundColor: '#ffffff', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '500' }}>
                                                 <Camera size={16} /> Upload foto fra kamera/telefon
                                                 <input 
                                                     type="file" 
@@ -1663,9 +2076,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         <button 
                                             type="submit"
                                             disabled={isUploadingLog}
+                                            className="hover-lift"
                                             style={{ padding: '12px', backgroundColor: isUploadingLog ? '#94a3b8' : '#1e293b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem', cursor: isUploadingLog ? 'not-allowed' : 'pointer' }}
                                         >
-                                            {isUploadingLog ? 'Gemmer i logbog...' : 'Gem i logbog'}
+                                            {isUploadingLog ? 'Gemmer dagens arbejde...' : 'Gem dagens arbejde'}
                                         </button>
                                     </form>
                                 </div>
@@ -1675,11 +2089,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
                         {/* TAB 4: TIMEREGISTRERING */}
                         {activeSubTab === 'timesheet' && (
-                            <div style={{ display: 'grid', gridTemplateColumns: (!['worker', 'apprentice'].includes(profile?.role)) ? '1fr 340px' : '1fr', gap: '24px', alignItems: 'start', maxWidth: (!['worker', 'apprentice'].includes(profile?.role)) ? 'none' : '500px', margin: (!['worker', 'apprentice'].includes(profile?.role)) ? '0' : '0 auto' }}>
+                            <div className="case-tab-content" style={{ display: 'grid', gridTemplateColumns: (!['worker', 'apprentice'].includes(profile?.role)) ? '1fr 340px' : '1fr', gap: '24px', alignItems: 'start', maxWidth: (!['worker', 'apprentice'].includes(profile?.role)) ? 'none' : '500px', margin: (!['worker', 'apprentice'].includes(profile?.role)) ? '0' : '0 auto' }}>
                                 
                                 {/* TIMEOUT OVERSIGT */}
                                 {(!['worker', 'apprentice'].includes(profile?.role)) && (
-                                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <h4 style={{ margin: 0, color: '#1a1a1a' }}>Registrerede arbejdstimer på sagen</h4>
                                         <div style={{ fontSize: '0.9rem', color: '#6b7280' }}>
@@ -1716,7 +2130,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             timeEntries.map(entry => (
                                                 <div 
                                                     key={entry.id} 
-                                                    style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', backgroundColor: '#fafaf9', border: '1px solid #e2e8f0', borderRadius: '10px' }}
+                                                    className="timesheet-row log-card"
+                                                    style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}
                                                 >
                                                     <div>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
@@ -1857,6 +2272,29 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 </div>
                             </div>
                         )}
+
+                        {/* TAB 5: LEVERANDØRBILAG */}
+                        {activeSubTab === 'invoices' && (
+                            <div className="case-tab-content">
+                                <BilagManager 
+                                    lead={selectedCase} 
+                                    profile={profile} 
+                                    onUpdateLead={onUpdateLead} 
+                                />
+                            </div>
+                        )}
+
+                        {/* TAB 6: AFTALESEDLER (EKSTRAARBEJDE) */}
+                        {activeSubTab === 'extra-work' && (
+                            <div className="case-tab-content">
+                                <AftalesedlerTab 
+                                    selectedCase={selectedCase} 
+                                    profile={profile} 
+                                    onUpdateCase={onUpdateLead}
+                                />
+                            </div>
+                        )}
+
 
                     </div>
 
@@ -2035,9 +2473,44 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             </button>
                         </div>
                     </div>
-
                 </div>
             </div>
+        )}
+            
+        {/* MODAL TIL SLETNING AF TIMER */}
+        {deletingTimeEntryId && createPortal(
+            <div className="dashboard-modal-overlay delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+                <div className="dashboard-modal-panel" style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                        <Trash2 size={32} color="#ef4444" />
+                    </div>
+                    <h3 style={{ margin: '0 0 12px 0', fontSize: '1.25rem', color: '#0f172a', fontWeight: 'bold' }}>
+                        Slet timeregistrering?
+                    </h3>
+                    <p style={{ margin: '0 0 32px 0', color: '#64748b', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                        Er du sikker på, at du vil slette denne registrering? Dette kan ikke fortrydes.
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                        <button 
+                            onClick={() => setDeletingTimeEntryId(null)}
+                            style={{ flex: 1, padding: '12px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
+                        >
+                            Annuller
+                        </button>
+                        <button 
+                            onClick={confirmDeleteTime}
+                            style={{ flex: 1, padding: '12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#dc2626'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#ef4444'}
+                        >
+                            Ja, slet
+                        </button>
+                    </div>
+                </div>
+            </div>,
+            document.body
         )}
         </div>
     );

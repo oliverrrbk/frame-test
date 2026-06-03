@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import InvoiceEditor from './InvoiceEditor';
 
-const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounting }) => {
+const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounting, onUpdateLead }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeInvoiceCase, setActiveInvoiceCase] = useState(null);
 
@@ -33,7 +33,14 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
 
             // Aftalesedler (Merpris)
             const logsList = c.raw_data?.case_logs || [];
-            const extraPrice = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraPrice || 0), 0);
+            const logExtra = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraPrice || 0), 0);
+            
+            const extraAgreements = c.raw_data?.extra_agreements || [];
+            const agrExtra = extraAgreements
+                .filter(a => a.status === 'Godkendt' && a.priceType === 'fast_pris')
+                .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+            const extraPrice = logExtra + agrExtra;
             
             const caseTotal = basePrice + extraPrice;
             const invoiced = c.raw_data?.invoiced_amount || 0;
@@ -74,6 +81,8 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                     onBack={() => setActiveInvoiceCase(null)} 
                     carpenterProfile={carpenterProfile}
                     onSendToAccounting={onSendToAccounting}
+                    onOpenCase={onOpenCase}
+                    onUpdateLead={onUpdateLead}
                 />
             ) : (
                 <>
@@ -150,7 +159,7 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                                         <th style={{ padding: '16px 24px', textAlign: 'right', color: '#475569', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Sagens Total</th>
                                         <th style={{ padding: '16px 24px', textAlign: 'right', color: '#475569', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Allerede Faktureret</th>
                                         <th style={{ padding: '16px 24px', textAlign: 'right', color: '#e11d48', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Manglende Beløb</th>
-                                        <th style={{ padding: '16px 24px', textAlign: 'center', width: '120px' }}>Handling</th>
+                                        <th style={{ padding: '16px 24px', textAlign: 'center', whiteSpace: 'nowrap' }}>Handling</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -164,11 +173,19 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                                         </tr>
                                     ) : (
                                         filteredPending.map((c, idx) => (
-                                            <tr key={c.id} style={{ borderBottom: idx < filteredPending.length - 1 ? '1px solid #e2e8f0' : 'none', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                            <tr 
+                                                key={c.id} 
+                                                onClick={() => { if(onOpenCase) onOpenCase(c.id); }}
+                                                style={{ borderBottom: idx < filteredPending.length - 1 ? '1px solid #e2e8f0' : 'none', transition: 'all 0.2s', cursor: 'pointer' }} 
+                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)'; }} 
+                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                                            >
                                                 <td style={{ padding: '16px 24px' }}>
-                                                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.05rem', marginBottom: '4px' }}>{c.customer_name}</div>
+                                                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.05rem', marginBottom: '4px' }}>
+                                                        Sag {c.case_number || String(c.id).substring(0,8)} - {c.project_category}
+                                                    </div>
                                                     <div style={{ color: '#64748b', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <PackageCheck size={14} /> {c.project_category} {c.finance.extraPrice > 0 && <span style={{ color: '#10b981', fontSize: '0.8rem', padding: '2px 6px', backgroundColor: '#ecfdf5', borderRadius: '4px' }}>+ Aftalesedler</span>}
+                                                        <PackageCheck size={14} /> {c.customer_name} {c.finance.extraPrice > 0 && <span style={{ color: '#10b981', fontSize: '0.8rem', padding: '2px 6px', backgroundColor: '#ecfdf5', borderRadius: '4px' }}>+ Aftalesedler</span>}
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: '16px 24px', textAlign: 'right', color: '#334155', fontWeight: '500' }}>
@@ -182,10 +199,10 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                                                 </td>
                                                 <td style={{ padding: '16px 24px', textAlign: 'center' }}>
                                                     <button 
-                                                        onClick={() => setActiveInvoiceCase(c)}
-                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#334155'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f172a'}
+                                                        onClick={(e) => { e.stopPropagation(); setActiveInvoiceCase(c); }}
+                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#334155'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#0f172a'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                                                     >
                                                         Opret Faktura <ArrowRight size={16} />
                                                     </button>
