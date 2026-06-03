@@ -39,10 +39,7 @@ BEGIN
         -- og udtræk og merge KUN de felter, der er sikre at opdatere fra kunde-siden.
         raw_data || jsonb_strip_nulls(jsonb_build_object(
           'audit_trail', new_raw_data->'audit_trail',
-          'audit_trail_opened', new_raw_data->'audit_trail_opened',
-          'synced_to_accounting', new_raw_data->'synced_to_accounting',
-          'synced_to_management', new_raw_data->'synced_to_management',
-          'invoice_id', new_raw_data->'invoice_id'
+          'audit_trail_opened', new_raw_data->'audit_trail_opened'
         ))
       ELSE raw_data
     END,

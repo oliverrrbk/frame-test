@@ -1069,7 +1069,7 @@ const Dashboard = () => {
             
             if (isSelf && userRole !== 'admin' && !userPermissions.view_all_leads) {
                 if (userRole === 'accountant') {
-                    const confirmedStatuses = ['Accepteret', 'Vundet', 'Afsluttet'];
+                    const confirmedStatuses = ['Bekræftet opgave', 'Sæt i bero', 'Historik'];
                     workingLeads = workingLeads.filter(l => confirmedStatuses.includes(l.status));
                 } else if (userRole === 'sales') {
                     workingLeads = workingLeads.filter(l => (l.raw_data?.assigned_pm || []).includes(userId) || l.assigned_to === userId);
@@ -1083,8 +1083,40 @@ const Dashboard = () => {
         if (activeTab === 'leads') setIsLeadsLoading(false);
     };
 
-    const syncToAccounting = async (lead, action = 'draft', invoiceLines = [], isReverseCharge = false) => {
+    const syncToAccounting = async (lead, action = 'draft', invoiceLines = [], isReverseCharge = false, customerOverride = null) => {
         if (!carpenterProfile) return;
+
+        const buildInvoiceLead = (sourceLead, override) => {
+            if (!override) return sourceLead;
+
+            const clean = (value) => String(value || '').trim();
+            const cityLine = [clean(override.zip), clean(override.city)].filter(Boolean).join(' ');
+            const invoiceAddress = [clean(override.address), cityLine].filter(Boolean).join(', ') || sourceLead.customer_address;
+            const customerDetails = {
+                ...(sourceLead.raw_data?.customerDetails || {}),
+                fullName: clean(override.fullName) || sourceLead.customer_name,
+                cvr: clean(override.cvr),
+                email: clean(override.email) || sourceLead.customer_email,
+                phone: clean(override.phone) || sourceLead.customer_phone,
+                address: clean(override.address) || sourceLead.customer_address,
+                zip: clean(override.zip),
+                city: clean(override.city)
+            };
+
+            return {
+                ...sourceLead,
+                customer_name: customerDetails.fullName,
+                customer_email: customerDetails.email,
+                customer_phone: customerDetails.phone,
+                customer_address: invoiceAddress,
+                raw_data: {
+                    ...(sourceLead.raw_data || {}),
+                    customerDetails
+                }
+            };
+        };
+
+        const leadForInvoice = buildInvoiceLead(lead, customerOverride);
 
         // Udregn total beløbet for fakturaen
         const totalAmountToBill = invoiceLines.reduce((sum, line) => sum + Number(line.priceExVat || 0), 0);
@@ -1096,7 +1128,7 @@ const Dashboard = () => {
                 
                 // Vis loading overlay eller lign. hvis ønsket
                 const { data, error } = await supabase.functions.invoke('dinero-invoice', {
-                    body: { lead, action, invoiceLines, isReverseCharge }
+                    body: { lead: leadForInvoice, action, invoiceLines, isReverseCharge }
                 });
 
                 if (error || (data && !data.success)) {
@@ -1105,7 +1137,7 @@ const Dashboard = () => {
                 } else {
                     toast.success(data.message || `Fakturakladde oprettet i Dinero! (ID: ${data.invoiceId})`);
                     
-                    let newRawData = { ...(lead.raw_data || {}) };
+                    let newRawData = { ...(leadForInvoice.raw_data || {}) };
                     if (action === 'book_and_send') {
                         const history = newRawData.invoice_history || [];
                         history.push({
@@ -1120,7 +1152,7 @@ const Dashboard = () => {
                         newRawData.synced_to_accounting = true;
                     }
                     
-                    const updatedLead = { ...lead, raw_data: newRawData };
+                    const updatedLead = { ...leadForInvoice, raw_data: newRawData };
                     await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
                     setSelectedLead(updatedLead);
                     setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
@@ -1130,7 +1162,7 @@ const Dashboard = () => {
                 console.log('--- E-CONOMIC BACKEND SYNC STARTER ---');
                 
                 const { data, error } = await supabase.functions.invoke('economic-invoice', {
-                    body: { lead, action, invoiceLines, isReverseCharge }
+                    body: { lead: leadForInvoice, action, invoiceLines, isReverseCharge }
                 });
 
                 if (error || (data && !data.success)) {
@@ -1139,7 +1171,7 @@ const Dashboard = () => {
                 } else {
                     toast.success(data.message || `Fakturakladde oprettet i e-conomic! (ID: ${data.invoiceId})`);
                     
-                    let newRawData = { ...(lead.raw_data || {}) };
+                    let newRawData = { ...(leadForInvoice.raw_data || {}) };
                     if (action === 'book_and_send') {
                         const history = newRawData.invoice_history || [];
                         history.push({
@@ -1154,7 +1186,7 @@ const Dashboard = () => {
                         newRawData.synced_to_accounting = true;
                     }
 
-                    const updatedLead = { ...lead, raw_data: newRawData };
+                    const updatedLead = { ...leadForInvoice, raw_data: newRawData };
                     await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
                     setSelectedLead(updatedLead);
                     setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
@@ -1356,11 +1388,6 @@ const Dashboard = () => {
             setLeadsData(prev => prev.map(lead => {
                 if (lead.id === leadId) {
                     const updatedLead = { ...lead, ...updates };
-                    // Kør regnskabsintegrationen, hvis ordren er Vundet og brugeren har rettigheder
-                    const hasSyncPermission = ['admin', 'accountant'].includes(effectiveRole);
-                    if (newStatus === 'Vundet' && hasSyncPermission) {
-                        syncToAccounting(updatedLead);
-                    }
                     return updatedLead;
                 }
                 return lead;
@@ -1738,7 +1765,7 @@ const Dashboard = () => {
         // Rolle-baseret filtrering til Simulator (lokal)
         if (isDev && effectiveRole !== 'admin') {
             if (effectiveRole === 'accountant') {
-                const confirmedStatuses = ['Accepteret', 'Vundet', 'Afsluttet'];
+                const confirmedStatuses = ['Bekræftet opgave', 'Sæt i bero', 'Historik'];
                 if (!confirmedStatuses.includes(l.status)) return false;
             } else if (effectiveRole === 'sales') {
                 if (simulatedRole) {

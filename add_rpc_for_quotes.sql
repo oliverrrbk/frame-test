@@ -19,10 +19,22 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
+  -- Sikkerhed: Tillad KUN overgang til specifikke tilladte statusser via public token
+  IF new_status IS NOT NULL AND new_status NOT IN ('Bekræftet opgave') THEN
+    RAISE EXCEPTION 'Ugyldig statusændring via public token';
+  END IF;
+
   UPDATE leads 
   SET 
     status = COALESCE(new_status, status), 
-    raw_data = COALESCE(new_raw_data, raw_data),
+    raw_data = CASE
+      WHEN new_raw_data IS NOT NULL THEN
+        raw_data || jsonb_strip_nulls(jsonb_build_object(
+          'audit_trail', new_raw_data->'audit_trail',
+          'audit_trail_opened', new_raw_data->'audit_trail_opened'
+        ))
+      ELSE raw_data
+    END,
     opened_at = COALESCE(new_opened_at, opened_at)
   WHERE quote_token = token_val;
 END;

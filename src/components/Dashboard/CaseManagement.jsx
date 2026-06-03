@@ -408,7 +408,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         } else {
             toast.success(`Status ændret til ${newStatus}`);
             // Opdater lokalt så UI reagerer
-            onUpdateLead(selectedCase.id, { status: newStatus });
+            const updatedCase = { ...selectedCase, status: newStatus };
+            setSelectedCase(updatedCase);
+            if (onUpdateLead) onUpdateLead(updatedCase);
             // Da denne komponent kun viser Bekræftede opgaver, vil sagen forsvinde herfra
             // hvis den er sat i bero (selvom vi lige har åbnet for at den også kan vise "Sæt i bero").
             // For at sikre en smooth overgang:
