@@ -2534,13 +2534,18 @@ button:focus-visible {
     }
 
     .timesheet-table td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 0 !important;
-        text-align: right !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        padding: 12px 0 !important;
+        text-align: left !important;
         border-bottom: 1px solid #f1f5f9;
         font-size: 0.95rem !important;
+        width: 100% !important;
+        max-width: none !important;
+        white-space: normal !important;
+        overflow: visible !important;
+        gap: 6px;
     }
 
     .timesheet-table td:last-child {
@@ -2555,17 +2560,15 @@ button:focus-visible {
     .timesheet-table td::before {
         content: attr(data-label);
         font-weight: 700;
-        color: #64748b;
+        color: #94a3b8;
         text-transform: uppercase;
         font-size: 0.75rem;
         letter-spacing: 0.05em;
         text-align: left;
-        flex-shrink: 0;
-        margin-right: 16px;
     }
 
     .timesheet-table td > div {
-        justify-content: flex-end !important;
+        justify-content: flex-start !important;
         width: 100%;
     }
 }
