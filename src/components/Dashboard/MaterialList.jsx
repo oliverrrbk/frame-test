@@ -754,7 +754,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                                                         }}
                                                                         ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
                                                                         rows={1}
-                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', fontWeight: '500', outline: 'none', fontSize: '0.95rem', textDecoration: item.status === 'Leveret' ? 'line-through' : 'none', opacity: item.status === 'Leveret' ? 0.5 : 1, resize: 'none', overflow: 'hidden', padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden', transition: 'border-color 0.2s' }}
+                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', fontWeight: '500', outline: 'none', fontSize: '0.95rem', textDecoration: item.status === 'Leveret' ? 'line-through' : 'none', opacity: item.status === 'Leveret' ? 0.5 : 1, resize: 'none', overflow: 'hidden', padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'border-color 0.2s' }}
                                                                         onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
                                                                         onBlur={(e) => { e.currentTarget.style.borderColor = 'transparent'; handleSaveList(); }}
                                                                     />
@@ -764,7 +764,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                                                         placeholder="Antal"
                                                                         onChange={(e) => handleCellChange(originalIndex, 'qty', e.target.value)}
                                                                         onBlur={() => handleSaveList()}
-                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', textAlign: 'center', fontWeight: 'bold', outline: 'none', fontSize: '0.95rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden', transition: 'border-color 0.2s' }}
+                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', textAlign: 'center', fontWeight: 'bold', outline: 'none', fontSize: '0.95rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'border-color 0.2s' }}
                                                                         onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
                                                                     />
                                                                     <input 
@@ -773,7 +773,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                                                         placeholder="Enhed"
                                                                         onChange={(e) => handleCellChange(originalIndex, 'unit', e.target.value)}
                                                                         onBlur={() => handleSaveList()}
-                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#64748b', textAlign: 'center', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden', transition: 'border-color 0.2s' }}
+                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#64748b', textAlign: 'center', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'border-color 0.2s' }}
                                                                         onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
                                                                     />
                                                                     {!isLead && (<button
