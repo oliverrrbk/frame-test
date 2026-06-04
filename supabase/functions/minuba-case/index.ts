@@ -46,31 +46,28 @@ serve(async (req) => {
       throw new Error("Mangler Minuba API-nøgle")
     }
 
-    let minubaToken = finalApiKey;
-    let minubaClientId = "";
+    let accessToken = "";
     
     try {
         const parsedKey = JSON.parse(finalApiKey);
-        if (parsedKey.api_key) {
-            minubaToken = parsedKey.api_key;
-            if (parsedKey.client_id) {
-                minubaClientId = parsedKey.client_id;
-            }
+        if (parsedKey.access_token) {
+            accessToken = parsedKey.access_token;
+        } else if (parsedKey.api_key) {
+            accessToken = parsedKey.api_key;
         }
     } catch(e) {
         // Not JSON, fallback
-        minubaToken = finalApiKey;
+        accessToken = finalApiKey;
     }
 
     console.log("Starter Minuba overførsel for:", lead.customer_name);
 
     const baseUrl = "https://app.minuba.dk/api";
     
-    // Auth header fallback: Basic clientId:Token
-    const authString = minubaClientId ? `${minubaClientId}:${minubaToken}` : `${minubaToken}:`;
+    // Auth header fallback: OAuth2 Bearer token
     const authHeaders = {
       'Content-Type': 'application/json',
-      'Authorization': `Basic ${btoa(authString)}`
+      'Authorization': `Bearer ${accessToken}`
     };
 
     // 1. Opret Kontakt/Kunde i Minuba

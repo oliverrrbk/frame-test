@@ -5455,71 +5455,23 @@ const Dashboard = () => {
                                             Forbind Minuba for automatisk at oprette kunder og opgaver (sager), når et tilbud bekræftes. Tryk på knappen for at godkende adgangen.
                                         </p>
                                         
-                                        <div className="input-group" style={{ marginBottom: '16px' }}>
-                                            <input 
-                                                type="password" 
-                                                value={(() => {
-                                                    try {
-                                                        const parsed = JSON.parse(carpenterProfile?.minuba_api_key);
-                                                        return parsed.api_key || carpenterProfile?.minuba_api_key || '';
-                                                    } catch (e) {
-                                                        return carpenterProfile?.minuba_api_key || '';
-                                                    }
-                                                })()} 
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setCarpenterProfile(prev => {
-                                                        try {
-                                                            const parsed = JSON.parse(prev.minuba_api_key || '{}');
-                                                            return { ...prev, minuba_api_key: JSON.stringify({ ...parsed, api_key: val }) };
-                                                        } catch (e) {
-                                                            return { ...prev, minuba_api_key: JSON.stringify({ api_key: val }) };
-                                                        }
-                                                    });
+                                        {carpenterProfile?.minuba_api_key === 'pending_authorization' ? (
+                                            <div style={{ padding: '16px', background: '#ecfdf5', color: '#047857', borderRadius: '8px', textAlign: 'center', marginBottom: '16px' }}>
+                                                Venter på godkendelse fra Minuba...
+                                            </div>
+                                        ) : !carpenterProfile?.minuba_api_key ? (
+                                            <button 
+                                                className="primary-btn" 
+                                                style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
+                                                onClick={() => {
+                                                    const clientId = 'clientId_N1xLuFzSOtsKKEsnOuvV4dweJQ8s2p1v';
+                                                    const redirectUri = encodeURIComponent('https://bisonframe.dk/dashboard?integration=minuba');
+                                                    window.location.href = `https://app.minuba.dk/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}`;
                                                 }}
-                                                placeholder="Indsæt personlig API-nøgle fra Minuba" 
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1', marginBottom: '8px' }}
-                                            />
-                                            <input 
-                                                type="text" 
-                                                value={(() => {
-                                                    try {
-                                                        const parsed = JSON.parse(carpenterProfile?.minuba_api_key);
-                                                        return parsed.client_id || '';
-                                                    } catch (e) {
-                                                        return '';
-                                                    }
-                                                })()} 
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setCarpenterProfile(prev => {
-                                                        try {
-                                                            const parsed = JSON.parse(prev.minuba_api_key || '{}');
-                                                            return { ...prev, minuba_api_key: JSON.stringify({ ...parsed, client_id: val }) };
-                                                        } catch (e) {
-                                                            return { ...prev, minuba_api_key: JSON.stringify({ client_id: val, api_key: prev.minuba_api_key }) };
-                                                        }
-                                                    });
-                                                }}
-                                                placeholder="Indsæt Client ID (f.eks. clientId_...)" 
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e8e6e1' }}
-                                            />
-                                        </div>
-                                        <button 
-                                            className="primary-btn" 
-                                            style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
-                                            onClick={async () => {
-                                                if (!carpenterProfile?.minuba_api_key) return;
-                                                const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.company_id || carpenterProfile.id, minuba_api_key: carpenterProfile.minuba_api_key });
-                                                if (!error) {
-                                                    toast.success("Minuba API-nøgle gemt succesfuldt i databasen! ✅");
-                                                } else {
-                                                    toast.error("Fejl ved gemning: " + error.message);
-                                                }
-                                            }}
-                                        >
-                                            Tryk her for at Gemme API-nøglen
-                                        </button>
+                                            >
+                                                Forbind til Minuba
+                                            </button>
+                                        ) : null}
                                         
                                         {carpenterProfile?.minuba_api_key && carpenterProfile.minuba_api_key !== 'pending_authorization' && (
                                             <>
