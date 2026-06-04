@@ -2394,3 +2394,22 @@ button:focus-visible {
         display: none !important;
     }
 }
+
+.quote-triple-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    align-items: end;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.quote-triple-grid input {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+@media (max-width: 768px) {
+    .quote-triple-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+}

@@ -3272,11 +3272,31 @@ const Dashboard = () => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
                                                                         if ('speechSynthesis' in window) {
-                                                                            window.speechSynthesis.cancel();
-                                                                            const utterance = new SpeechSynthesisUtterance(summaryBullets.join('. '));
-                                                                            utterance.lang = 'da-DK';
-                                                                            window.speechSynthesis.speak(utterance);
-                                                                            toast.success('Læser op...');
+                                                                            const synth = window.speechSynthesis;
+                                                                            const btn = e.currentTarget;
+                                                                            if (synth.speaking || synth.pending) {
+                                                                                synth.cancel();
+                                                                                btn.innerHTML = '🔊 Læs højt';
+                                                                                btn.style.background = '#faf5ff';
+                                                                                btn.style.color = '#7e22ce';
+                                                                                btn.style.borderColor = '#d8b4fe';
+                                                                            } else {
+                                                                                synth.cancel();
+                                                                                const utterance = new SpeechSynthesisUtterance(summaryBullets.join('. '));
+                                                                                utterance.lang = 'da-DK';
+                                                                                utterance.onend = () => {
+                                                                                    btn.innerHTML = '🔊 Læs højt';
+                                                                                    btn.style.background = '#faf5ff';
+                                                                                    btn.style.color = '#7e22ce';
+                                                                                    btn.style.borderColor = '#d8b4fe';
+                                                                                };
+                                                                                utterance.onerror = utterance.onend;
+                                                                                synth.speak(utterance);
+                                                                                btn.innerHTML = '🛑 Stop Oplæsning';
+                                                                                btn.style.background = '#fef2f2';
+                                                                                btn.style.color = '#ef4444';
+                                                                                btn.style.borderColor = '#fecaca';
+                                                                            }
                                                                         } else {
                                                                             toast.error('Oplæsning understøttes desværre ikke i din browser.');
                                                                         }
@@ -3946,67 +3966,40 @@ const Dashboard = () => {
                                                                         </p>
                                                                     </div>
                                                                 ) : (
-                                                                    (() => {
-                                                                        const expl = parseBreakdownToExplanation(calc, bArr);
-                                                                        if (!expl) return null;
-                                                                        
-                                                                        return (
-                                                                            <details style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', marginTop: '24px', wordBreak: 'break-word', overflowWrap: 'break-word', overflow: 'hidden' }}>
-                                                                                <summary style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                                    Detaljeret Begrundelse (Log)
-                                                                                </summary>
-                                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '16px' }}>
-                                                                                
-                                                                                {(() => {
-                                                                                    const activeCategories = Object.values(expl).filter(cat => cat.items.length > 0);
-                                                                                    return activeCategories.map((cat, idx) => (
-                                                                                        <div key={idx} style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
-                                                                                            <h4 style={{ margin: '0 0 6px 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: 'bold' }}>{idx + 1}. {cat.title}</h4>
-                                                                                            <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.85rem' }}>{cat.description}</p>
-                                                                                            <ul style={{ margin: 0, padding: 0, listStyleType: 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                                                                {cat.items.map((item, i) => (
-                                                                                                    <li key={i} style={{ display: 'flex', flexDirection: 'column', padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
-                                                                                                        {item.includes(':') ? (
-                                                                                                            <>
-                                                                                                                <strong style={{ color: '#0f172a', fontSize: '0.9rem', marginBottom: '4px' }}>{item.split(':')[0]}</strong>
-                                                                                                                <span style={{ color: '#475569', fontSize: '0.85rem' }}>{item.split(':').slice(1).join(':').trim()}</span>
-                                                                                                            </>
-                                                                                                        ) : (
-                                                                                                            <span style={{ color: '#475569', fontSize: '0.85rem' }}>{item}</span>
-                                                                                                        )}
-                                                                                                    </li>
-                                                                                                ))}
-                                                                                            </ul>
-                                                                                        </div>
-                                                                                    ));
-                                                                                })()}
-                                                                                
-                                                                                {calc && (
-                                                                                    <div style={{ marginTop: '16px', padding: '20px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '2px solid #bbf7d0' }}>
-                                                                                        <h4 style={{ margin: '0 0 8px 0', color: '#166534', fontSize: '1.05rem', fontWeight: 'bold' }}>Samlet Investering (Ekskl. moms)</h4>
-                                                                                        <p style={{ margin: '0 0 12px 0', color: '#166534', fontSize: '0.9rem' }}>Beregningen er opsat ud fra følgende summer:</p>
-                                                                                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#15803d', lineHeight: '1.6', fontSize: '0.95rem', marginBottom: '16px' }}>
-                                                                                            <li><strong>Arbejdsløn:</strong> ~{(calc.totalLaborCost || 0).toLocaleString('da-DK')} kr.</li>
-                                                                                            <li><strong>Materialer:</strong> ~{(calc.materialCost || 0).toLocaleString('da-DK')} kr.</li>
-                                                                                            {((calc.drivingCost || 0) + (calc.externalLeaseCost || 0) > 0) && (
-                                                                                                <li><strong>Kørsel & Maskinleje:</strong> ~{((calc.drivingCost || 0) + (calc.externalLeaseCost || 0)).toLocaleString('da-DK')} kr.</li>
-                                                                                            )}
-                                                                                            {(calc.hiddenBuffer > 0) && (
-                                                                                                <li><strong>Logistik & Buffer:</strong> ~{(calc.hiddenBuffer || 0).toLocaleString('da-DK')} kr.</li>
-                                                                                            )}
-                                                                                        </ul>
-                                                                                        <div style={{ borderTop: '2px dashed #bbf7d0', paddingTop: '16px', color: '#166534', fontSize: '1.1rem', fontWeight: 'bold' }}>
-                                                                                            Systemet runder afslutningsvist overslaget op til nærmeste pæne hele tusinde – i dette scenarie lander den på præcis {Math.ceil(calc.strictPrice / 1000) * 1000} kr.
-                                                                                        </div>
-                                                                                        <div style={{ marginTop: '12px', fontSize: '0.85rem', color: '#dc2626', fontWeight: 'bold' }}>
-                                                                                            Vigtigt: Alle ovenstående beløb og summer er angivet eksklusive moms. Kørsel og logistik indeholder slidtage på biler samt din indtastede risikobuffer.
-                                                                                        </div>
-                                                                                    </div>
-                                                                                )}
+                                                                    <details style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', marginTop: '24px', overflow: 'hidden' }}>
+                                                                        <summary style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                            Detaljeret Begrundelse (Log)
+                                                                        </summary>
+                                                                        {calc && (
+                                                                            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                                                <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                                                    <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>Arbejdsløn (Timer)</div>
+                                                                                    <div style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 'bold' }}>~{(calc.totalLaborCost || 0).toLocaleString('da-DK')} kr.</div>
+                                                                                    <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '2px' }}>({calc.totalLaborHours} timer á {settingsData.hourly_rate} kr.)</div>
                                                                                 </div>
-                                                                            </details>
-                                                                        );
-                                                                    })()
+                                                                                <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                                                    <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>Materialer (Indkøb inkl. avance)</div>
+                                                                                    <div style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 'bold' }}>~{(calc.materialCost || 0).toLocaleString('da-DK')} kr.</div>
+                                                                                </div>
+                                                                                {((calc.drivingCost || 0) + (calc.externalLeaseCost || 0) > 0) && (
+                                                                                <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                                                    <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>Kørsel & Maskinleje</div>
+                                                                                    <div style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 'bold' }}>~{((calc.drivingCost || 0) + (calc.externalLeaseCost || 0)).toLocaleString('da-DK')} kr.</div>
+                                                                                </div>
+                                                                                )}
+                                                                                {(calc.hiddenBuffer > 0) && (
+                                                                                <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                                                    <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>Logistik & Risiko-buffer</div>
+                                                                                    <div style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 'bold' }}>~{(calc.hiddenBuffer || 0).toLocaleString('da-DK')} kr.</div>
+                                                                                </div>
+                                                                                )}
+                                                                                <div style={{ padding: '12px', backgroundColor: '#f0fdf4', border: '2px solid #bbf7d0', borderRadius: '8px', marginTop: '4px' }}>
+                                                                                    <div style={{ fontSize: '0.85rem', color: '#166534', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>System-afrunding (Tilbud)</div>
+                                                                                    <div style={{ fontSize: '1.2rem', color: '#15803d', fontWeight: 'bold' }}>{Math.ceil(calc.strictPrice / 1000) * 1000} kr.</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </details>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -4031,8 +4024,8 @@ const Dashboard = () => {
                                                  </div>
 
                                                  {isMaterialListOpen && (
-                                                     <div style={{ marginBottom: '24px', padding: '24px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1' }}>
-                                                         <MaterialList 
+                                                     <div style={{ marginBottom: '24px', padding: '24px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column' }}>
+                                                         <MaterialList isLead={true} 
                                                              lead={selectedLead} 
                                                              profile={carpenterProfile} 
                                                              onUpdate={(updated) => {
@@ -4040,6 +4033,12 @@ const Dashboard = () => {
                                                                  setSelectedLead(updated);
                                                              }} 
                                                          />
+                                                         <button 
+                                                             onClick={() => setIsMaterialListOpen(false)}
+                                                             style={{ width: '100%', marginTop: '24px', padding: '16px', backgroundColor: '#cbd5e1', color: '#1e293b', border: 'none', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', transition: 'background-color 0.2s' }}
+                                                         >
+                                                             ▲ Luk materialeliste
+                                                         </button>
                                                      </div>
                                                  )}
                                              </>
@@ -4188,7 +4187,7 @@ const Dashboard = () => {
                                                                         <label>Timepris (kr)</label>
                                                                         <FormattedNumberInput value={quoteBuilder.hourlyRate} onChange={(val) => setQuoteBuilder({...quoteBuilder, hourlyRate: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                                     </div>
-                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', alignItems: 'end' }}>
+                                                                    <div className="quote-triple-grid">
                                                                         <div className="input-group">
                                                                             <label>Internt Indkøbsbudget (kr)</label>
                                                                             <FormattedNumberInput value={quoteBuilder.materialCostBase} onChange={(val) => {

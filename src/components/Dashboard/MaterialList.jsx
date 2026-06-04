@@ -6,7 +6,7 @@ import { generateMaterialList } from '../../utils/materialGenerator';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
-const MaterialList = ({ lead, profile, onUpdate }) => {
+const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
     const [materials, setMaterials] = useState([]);
     const [materialListsMeta, setMaterialListsMeta] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
@@ -408,7 +408,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
             
 
             {/* BUDGET DASHBOARD */}
-            {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+            {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && !isLead) && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
                     <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
                         <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
@@ -580,10 +580,15 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                     <div style={{ flex: 1, minWidth: '300px' }}>
                                         <input 
                                             type="text"
-                                            value={list.name}
-                                            onChange={(e) => handleUpdateListMeta(list.id, 'name', e.target.value)}
+                                            value={isLead ? 'Foreslået materialeliste til opgaven' : list.name}
+                                            readOnly={isLead}
+                                            onChange={(e) => {
+                                                if (!isLead) handleUpdateListMeta(list.id, 'name', e.target.value);
+                                            }}
                                             onClick={(e) => e.stopPropagation()}
-                                            onBlur={() => handleSaveList()}
+                                            onBlur={() => {
+                                                if (!isLead) handleSaveList();
+                                            }}
                                             style={{ 
                                                 fontSize: '1.2rem', 
                                                 fontWeight: '700', 
@@ -600,7 +605,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                             onFocus={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
                                         />
                                         <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                                            {listMaterials.length} materialer &bull; {listMaterials.filter(m => m.status === 'Bestilt' || m.status === 'Leveret').length} bestilt
+                                            {listMaterials.length} materialer {!isLead && <span>&bull; {listMaterials.filter(m => m.status === 'Bestilt' || m.status === 'Leveret').length} bestilt</span>}
                                         </p>
                                     </div>
                                 </div>
@@ -671,22 +676,22 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                             borderRadius: '16px',
                                             border: '1px solid #f1f5f9'
                                         }}>
-                                            <button 
+                                            {!isLead && (<button 
                                                 onClick={() => handleToggleListOrdered(list.id)}
                                                 style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#fee2e2' : '#eff6ff', color: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#dc2626' : '#2563eb', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
                                                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; }}
                                                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                                             >
                                                 {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret') ? <><Trash2 size={16} /> Fortryd Bestilling</> : <><Check size={16} /> Markér bestilt</>}
-                                            </button>
-                                            <button 
+                                            </button>)}
+                                            {!isLead && (<button 
                                                 onClick={() => handleMarkListDelivered(list.id)}
                                                 style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret')) ? '#f0fdf4' : '#10b981', color: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret')) ? '#166534' : '#ffffff', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
                                                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)'; }}
                                                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                                             >
                                                 {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret') ? <><Trash2 size={16} /> Fortryd Levering</> : <><Truck size={16} /> Markér alle leveret</>}
-                                            </button>
+                                            </button>)}
                                             <div style={{ flex: 1 }} />
                                             <button 
                                                 onClick={() => handleDownloadPdf(list.id, list.name)}
@@ -781,7 +786,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
                                                                         {item.status === 'Bestilt' && <Check size={14} />}
                                                                         {(!item.status || item.status !== 'Leveret' && item.status !== 'Bestilt') && <div style={{width: 4, height: 4, borderRadius: '50%', backgroundColor: '#94a3b8'}}/>}
                                                                         {item.status || 'Bestil'}
-                                                                    </button>
+                                                                    </button>)}
                                                                     <button 
                                                                         onClick={() => handleDeleteItem(originalIndex)}
                                                                         style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
