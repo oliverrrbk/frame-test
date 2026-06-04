@@ -336,6 +336,17 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
 
     const showModal = isAdding || editingEntry;
 
+    const getPeriodLabel = () => {
+        switch(selectedPeriod) {
+            case 'this_week': return 'Denne Uge';
+            case 'last_week': return 'Sidste Uge';
+            case 'this_month': return 'Denne Måned';
+            case 'last_month': return 'Sidste Måned';
+            case 'this_year': return 'Dette År';
+            default: return '';
+        }
+    };
+
     return (
         <div className="dashboard-workspace timesheet-view worker-timesheet" style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-out', maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px' }}>
             <div className="glass-panel" style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', position: 'relative', zIndex: 50, overflow: 'visible' }}>
@@ -374,7 +385,7 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
             {/* STAT BOXES */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                 <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Samlede Arbejdstimer</span>
+                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Arbejdstimer ({getPeriodLabel()})</span>
                     <strong style={{ fontSize: '2.5rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(59,130,246,0.1)' }}>
                             <Clock size={28} color="#3b82f6" />
@@ -383,7 +394,7 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
                     </strong>
                 </div>
                 <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kørte Kilometer</span>
+                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kørte Kilometer ({getPeriodLabel()})</span>
                     <strong style={{ fontSize: '2.5rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(16,185,129,0.1)' }}>
                             <TrendingUp size={28} color="#10b981" />
@@ -392,7 +403,7 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
                     </strong>
                 </div>
                 <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fravær / Internt</span>
+                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fravær / Internt ({getPeriodLabel()})</span>
                     <strong style={{ fontSize: '2.5rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(245,158,11,0.1)' }}>
                             <AlertTriangle size={28} color="#f59e0b" />
@@ -433,8 +444,8 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
                         <p style={{ margin: 0, fontSize: '1rem' }}>Du har ikke registreret timer i denne periode.</p>
                     </div>
                 ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '950px' }}>
+                    <div className="timesheet-table-container">
+                        <table className="timesheet-table">
                             <thead>
                                 <tr style={{ backgroundColor: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
                                     <th style={{ padding: '20px 24px', fontSize: '0.85rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dato</th>
@@ -458,10 +469,10 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
                                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)'} 
                                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
-                                            <td style={{ padding: '20px 24px', color: '#1e293b', fontWeight: '600', fontSize: '0.95rem' }}>
+                                            <td data-label="Dato" style={{ padding: '20px 24px', color: '#1e293b', fontWeight: '600', fontSize: '0.95rem' }}>
                                                 {new Date(entry.date).toLocaleDateString('da-DK', { day: '2-digit', month: 'short' })}
                                             </td>
-                                            <td style={{ padding: '20px 24px', fontSize: '0.95rem' }}>
+                                            <td data-label="Sag / Projekt" style={{ padding: '20px 24px', fontSize: '0.95rem' }}>
                                                 {isInternal ? (
                                                     <span style={{ color: '#ea580c', backgroundColor: '#ffedd5', padding: '6px 10px', borderRadius: '8px', fontWeight: '600', fontSize: '0.85rem', display: 'inline-block' }}>
                                                         {entry.leadName}
@@ -472,19 +483,19 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
                                                     </span>
                                                 )}
                                             </td>
-                                            <td style={{ padding: '20px 24px', color: '#64748b', fontSize: '0.95rem', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.desc}>
+                                            <td data-label="Beskrivelse" style={{ padding: '20px 24px', color: '#64748b', fontSize: '0.95rem', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.desc}>
                                                 {entry.desc || '-'}
                                             </td>
-                                            <td style={{ padding: '20px 24px', color: '#475569', fontSize: '0.95rem', fontWeight: '500' }}>
+                                            <td data-label="Tidsrum" style={{ padding: '20px 24px', color: '#475569', fontSize: '0.95rem', fontWeight: '500' }}>
                                                 {entry.startTime} - {entry.endTime || '?'}
                                             </td>
-                                            <td style={{ padding: '20px 24px', color: '#1a1a1a', fontWeight: '800', fontSize: '1.1rem', textAlign: 'right' }}>
+                                            <td data-label="Timer" style={{ padding: '20px 24px', color: '#1a1a1a', fontWeight: '800', fontSize: '1.1rem', textAlign: 'right' }}>
                                                 {entry.hours || 0}
                                             </td>
-                                            <td style={{ padding: '20px 24px', color: '#047857', fontWeight: '700', fontSize: '1rem', textAlign: 'right' }}>
+                                            <td data-label="Kørsel" style={{ padding: '20px 24px', color: '#047857', fontWeight: '700', fontSize: '1rem', textAlign: 'right' }}>
                                                 {entry.km > 0 ? `${entry.km} km` : '-'}
                                             </td>
-                                            <td style={{ padding: '20px 24px', textAlign: 'right' }}>
+                                            <td data-label="Handlinger" style={{ padding: '20px 24px', textAlign: 'right' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                                                     <button 
                                                         onClick={() => openEdit(entry)}
