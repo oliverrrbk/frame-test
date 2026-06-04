@@ -3975,7 +3975,7 @@ const Dashboard = () => {
                                                                                 <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                                                                                     <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>Arbejdsløn (Timer)</div>
                                                                                     <div style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 'bold' }}>~{(calc.totalLaborCost || 0).toLocaleString('da-DK')} kr.</div>
-                                                                                    <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '2px' }}>({calc.totalLaborHours} timer á {settingsData.hourly_rate} kr.)</div>
+                                                                                    <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '2px' }}>({calc.totalLaborHours} timer á {settingsData?.hourly_rate || 0} kr.)</div>
                                                                                 </div>
                                                                                 <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                                                                                     <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>Materialer (Indkøb inkl. avance)</div>
