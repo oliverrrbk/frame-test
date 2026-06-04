@@ -194,7 +194,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                 
                 {/* Thin, compact link banner */}
                 <div className="copy-link-banner" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '8px 12px 8px 16px', borderRadius: '999px' }}>
-                    <span className="hide-on-mobile" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Link size={14} color="#10b981" /> Dit tilbudslink:
                     </span>
                     <span className="copy-link-text" style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '0.9rem', userSelect: 'all' }}>bisonframe.dk/{carpenterProfile?.slug || 't'}</span>
@@ -250,7 +250,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                         {/* Baggrundsikon (subtilt) */}
                         <m.icon size={120} style={{ position: 'absolute', right: '-20px', bottom: '-20px', color: m.color, opacity: 0.04, transform: 'rotate(-15deg)' }} />
                         
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="kpi-label-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={{ padding: '6px', borderRadius: '8px', background: `${m.color}15`, color: m.color }}>
                                 <m.icon size={18} />
                             </div>
@@ -415,9 +415,9 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
             </div>
 
             {/* SEKTION: GRAF (Fuld bredde) */}
-            <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
-                    <div>
+            <div className="glass-panel graph-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column' }}>
+                <div className="graph-header-container" style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+                    <div className="hide-on-mobile">
                         <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 'bold' }}>
                             <div style={{ padding: '10px', borderRadius: '10px', background: `${activeColor}15`, color: activeColor }}>
                                 <ActiveIcon size={22} />
@@ -427,9 +427,9 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                         <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '1rem' }}>Viser udviklingen for {metrics[selectedMetric].label.toLowerCase()} i den valgte periode.</p>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'flex-end' }}>
+                    <div className="graph-filters" style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'flex-end' }}>
                         {/* Selector for metrik */}
-                        <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', overflowX: 'auto', maxWidth: '100%' }}>
+                        <div className="scrollable-buttons" style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', maxWidth: '100%' }}>
                             {['won_revenue', 'new_leads'].map(key => (
                                 <button
                                     key={key}
@@ -447,7 +447,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                         </div>
 
                         {/* Selector for tidsramme */}
-                        <div className="timeframe-filters" style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px' }}>
+                        <div className="timeframe-filters scrollable-buttons" style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', maxWidth: '100%' }}>
                             {[
                                 { id: '7d', label: '7 dage' },
                                 { id: '30d', label: '30 dage' },

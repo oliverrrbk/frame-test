@@ -2323,9 +2323,36 @@ button:focus-visible {
     }
     .kpi-grid .kpi-value {
         font-size: 1.5rem !important;
+        justify-content: center !important;
+    }
+    .kpi-grid .kpi-label-container {
+        justify-content: center !important;
     }
     .kpi-grid .kpi-label {
-        font-size: 0.8rem !important;
+        font-size: 0.75rem !important;
+        letter-spacing: 0 !important;
+    }
+    
+    /* Graph Panel and Buttons */
+    .graph-panel {
+        padding: 16px !important;
+    }
+    .graph-header-container {
+        margin-bottom: 16px !important;
+        justify-content: center !important;
+    }
+    .graph-filters {
+        align-items: center !important;
+        width: 100%;
+    }
+    .scrollable-buttons {
+        overflow-x: hidden !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+    }
+    .scrollable-buttons button {
+        flex: 1 1 auto;
+        text-align: center;
     }
     
     /* Sager i drift header */
