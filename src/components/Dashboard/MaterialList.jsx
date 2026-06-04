@@ -917,7 +917,7 @@ const MaterialList = ({ lead, profile, onUpdate }) => {
             </div>
 
             {/* GLOBAL GEM KNAP */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', position: 'sticky', bottom: '24px', zIndex: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', paddingBottom: '24px', zIndex: 10 }}>
                 <button 
                     onClick={() => handleSaveList()}
                     disabled={isSaving}

@@ -3159,49 +3159,7 @@ const Dashboard = () => {
                                         )}
 
                                         <div className="lead-details-grid">
-                                            <div style={{ padding: '16px', backgroundColor: '#f3f1ed', borderRadius: '14px' }}>
-                                                <span style={{ fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kategori</span>
-                                                <p style={{ margin: '4px 0 12px', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem' }}>{categoryNames[selectedLead.project_category] || selectedLead.project_category}</p>
-                                                {/* AI Opgavebeskrivelse */}
-                                                <div style={{ padding: '12px', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e8e6e1' }}>
-                                                    <span style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                                                        Opsummering af opgaven
-                                                    </span>
-                                                    {(() => {
-                                                        const catMap = {
-                                                            'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
-                                                            'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
-                                                            'Tagprojekt': 'roof', 'Tag': 'roof', 'Nyt Køkken': 'kitchen', 'Køkken': 'kitchen',
-                                                            'Nye Lofter': 'ceilings', 'Lofter': 'ceilings', 'Ny Facadebeklædning': 'facades',
-                                                            'Facader': 'facades', 'Tilbygning': 'extensions', 'Anneks': 'annex', 'Annekser & Skure': 'annex',
-                                                            'Carport': 'carport', 'Hegn': 'fence'
-                                                        };
-                                                        const rawCat = selectedLead.project_category || '';
-                                                        const normalizedCat = catMap[rawCat] || rawCat;
-                                                        
-                                                        const detailedTasks = generateTaskDescription(normalizedCat, selectedLead.raw_data?.details || {});
-                                                        
-                                                        let summaryBullets = [];
-                                                        if (detailedTasks && detailedTasks.length > 0) {
-                                                            summaryBullets = detailedTasks;
-                                                        } else {
-                                                            const summaryText = selectedLead.raw_data?.ai_summary || selectedLead.ai_summary || generateShortSummary(selectedLead);
-                                                            summaryBullets = summaryText.split('. ')
-                                                                .filter(sentence => sentence.trim().length > 0)
-                                                                .map(sentence => sentence.trim() + (sentence.endsWith('.') ? '' : '.'));
-                                                        }
-                                                        
-                                                        return (
-                                                            <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc', marginLeft: '10px', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5' }}>
-                                                                {summaryBullets.map((bullet, idx) => (
-                                                                    <li key={idx} style={{ marginBottom: '6px' }}>{bullet}</li>
-                                                                ))}
-                                                            </ul>
-                                                        );
-                                                    })()}
-                                                </div>
-                                            </div>
+                                            {/* TILBUD / OVERSLAG BOKS (Nu flyttet øverst) */}
                                             <div style={{ padding: '16px', backgroundColor: selectedLead.status === 'Bekræftet opgave' ? '#ecfdf5' : '#f7f6f3', borderRadius: '14px', border: selectedLead.status === 'Bekræftet opgave' ? '1px solid #10b981' : '1px solid #e8e6e1' }}>
                                                 {selectedLead.status === 'Bekræftet opgave' ? (
                                                     <>
@@ -3267,6 +3225,75 @@ const Dashboard = () => {
                                                         </div>
                                                     </>
                                                 )}
+                                            </div>
+
+                                            {/* KATEGORI BOKS (Nu placeret under overslaget) */}
+                                            <div style={{ padding: '16px', backgroundColor: '#f3f1ed', borderRadius: '14px' }}>
+                                                <span style={{ fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kategori</span>
+                                                <p style={{ margin: '4px 0 12px', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem' }}>{categoryNames[selectedLead.project_category] || selectedLead.project_category}</p>
+                                                
+                                                {/* AI Opgavebeskrivelse som dropdown */}
+                                                <details style={{ padding: '12px', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e8e6e1', cursor: 'pointer' }}>
+                                                    <summary style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', outline: 'none' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexGrow: 1 }}>
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                                                            Opsummering af opgaven
+                                                        </div>
+                                                        <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>Læs mere ▼</span>
+                                                    </summary>
+                                                    {(() => {
+                                                        const catMap = {
+                                                            'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
+                                                            'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
+                                                            'Tagprojekt': 'roof', 'Tag': 'roof', 'Nyt Køkken': 'kitchen', 'Køkken': 'kitchen',
+                                                            'Nye Lofter': 'ceilings', 'Lofter': 'ceilings', 'Ny Facadebeklædning': 'facades',
+                                                            'Facader': 'facades', 'Tilbygning': 'extensions', 'Anneks': 'annex', 'Annekser & Skure': 'annex',
+                                                            'Carport': 'carport', 'Hegn': 'fence'
+                                                        };
+                                                        const rawCat = selectedLead.project_category || '';
+                                                        const normalizedCat = catMap[rawCat] || rawCat;
+                                                        
+                                                        const detailedTasks = generateTaskDescription(normalizedCat, selectedLead.raw_data?.details || {});
+                                                        
+                                                        let summaryBullets = [];
+                                                        if (detailedTasks && detailedTasks.length > 0) {
+                                                            summaryBullets = detailedTasks;
+                                                        } else {
+                                                            const summaryText = selectedLead.raw_data?.ai_summary || selectedLead.ai_summary || generateShortSummary(selectedLead);
+                                                            summaryBullets = summaryText.split('. ')
+                                                                .filter(sentence => sentence.trim().length > 0)
+                                                                .map(sentence => sentence.trim() + (sentence.endsWith('.') ? '' : '.'));
+                                                        }
+                                                        
+                                                        return (
+                                                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f3f4f6' }}>
+                                                                <button 
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        if ('speechSynthesis' in window) {
+                                                                            window.speechSynthesis.cancel();
+                                                                            const utterance = new SpeechSynthesisUtterance(summaryBullets.join('. '));
+                                                                            utterance.lang = 'da-DK';
+                                                                            window.speechSynthesis.speak(utterance);
+                                                                            toast.success('Læser op...');
+                                                                        } else {
+                                                                            toast.error('Oplæsning understøttes desværre ikke i din browser.');
+                                                                        }
+                                                                    }}
+                                                                    style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #d8b4fe', background: '#faf5ff', color: '#7e22ce', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginBottom: '12px' }}
+                                                                >
+                                                                    🔊 Læs højt
+                                                                </button>
+                                                                <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc', marginLeft: '10px', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5' }}>
+                                                                    {summaryBullets.map((bullet, idx) => (
+                                                                        <li key={idx} style={{ marginBottom: '6px' }}>{bullet}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </details>
                                             </div>
                                         </div>
 
@@ -3924,29 +3951,29 @@ const Dashboard = () => {
                                                                         if (!expl) return null;
                                                                         
                                                                         return (
-                                                                            <details style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', marginTop: '24px' }}>
-                                                                                <summary style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', outline: 'none' }}>
-                                                                                    Detaljeret Begrundelse for Prisestimatet (Log)
+                                                                            <details style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', marginTop: '24px', wordBreak: 'break-word', overflowWrap: 'break-word', overflow: 'hidden' }}>
+                                                                                <summary style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                                    Detaljeret Begrundelse (Log)
                                                                                 </summary>
                                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '16px' }}>
-                                                                                    <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#64748b', lineHeight: '1.6' }}>
-                                                                                        Systemets "tankegang" brudt ned i tømrer-logik, så I har det fulde belæg bag de estimerede tal.
-                                                                                    </p>
                                                                                 
                                                                                 {(() => {
                                                                                     const activeCategories = Object.values(expl).filter(cat => cat.items.length > 0);
                                                                                     return activeCategories.map((cat, idx) => (
-                                                                                        <div key={idx} style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                                        <div key={idx} style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
                                                                                             <h4 style={{ margin: '0 0 6px 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: 'bold' }}>{idx + 1}. {cat.title}</h4>
                                                                                             <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.85rem' }}>{cat.description}</p>
-                                                                                            <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', lineHeight: '1.6', fontSize: '0.9rem' }}>
+                                                                                            <ul style={{ margin: 0, padding: 0, listStyleType: 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                                                                 {cat.items.map((item, i) => (
-                                                                                                    <li key={i} style={{ marginBottom: '8px' }}>
+                                                                                                    <li key={i} style={{ display: 'flex', flexDirection: 'column', padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
                                                                                                         {item.includes(':') ? (
                                                                                                             <>
-                                                                                                                <strong>{item.split(':')[0]}:</strong>{item.split(':').slice(1).join(':')}
+                                                                                                                <strong style={{ color: '#0f172a', fontSize: '0.9rem', marginBottom: '4px' }}>{item.split(':')[0]}</strong>
+                                                                                                                <span style={{ color: '#475569', fontSize: '0.85rem' }}>{item.split(':').slice(1).join(':').trim()}</span>
                                                                                                             </>
-                                                                                                        ) : item}
+                                                                                                        ) : (
+                                                                                                            <span style={{ color: '#475569', fontSize: '0.85rem' }}>{item}</span>
+                                                                                                        )}
                                                                                                     </li>
                                                                                                 ))}
                                                                                             </ul>
