@@ -2516,6 +2516,226 @@ button:focus-visible {
     }
 }
 
+/* ═══════════════════════════════════════
+   MOBILE ADMIN TAB HEADERS / WORKSPACES
+   ═══════════════════════════════════════ */
+.dashboard-mobile-tab-header {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .dashboard-layout.dashboard-tab-leads .dashboard-topbar .page-title-section,
+    .dashboard-layout.dashboard-tab-settings .dashboard-topbar .page-title-section,
+    .dashboard-layout.dashboard-tab-integrations .dashboard-topbar .page-title-section,
+    .dashboard-layout.dashboard-tab-team .dashboard-topbar .page-title-section {
+        display: none !important;
+    }
+
+    .dashboard-mobile-tab-header {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        margin: 18px 0 18px;
+        padding: 24px 18px;
+        box-sizing: border-box;
+    }
+
+    .dashboard-mobile-tab-header h2 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+        color: #1a1a1a;
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.15;
+        overflow-wrap: normal;
+        word-break: normal;
+    }
+
+    .dashboard-mobile-tab-header p {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.95rem;
+        line-height: 1.55;
+    }
+
+    .leads-overview,
+    .settings-overview,
+    .integrations-overview,
+    .team-overview,
+    .team-management-workspace {
+        width: 100%;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+    }
+
+    .leads-overview > .settings-card,
+    .integrations-overview > .settings-card,
+    .team-management-workspace .settings-card,
+    .settings-overview .settings-card {
+        width: 100%;
+        border-radius: 18px !important;
+        overflow: hidden;
+    }
+
+    .leads-overview .card-body,
+    .integrations-overview > .settings-card > .card-body,
+    .settings-overview .card-body,
+    .team-management-workspace .card-body {
+        padding: 20px 18px !important;
+        gap: 18px !important;
+    }
+
+    .leads-overview .mobile-filters {
+        margin-top: 0;
+    }
+
+    .leads-overview .input-group input {
+        min-height: 52px;
+    }
+
+    .settings-overview {
+        grid-template-columns: 1fr !important;
+        gap: 18px !important;
+    }
+
+    .settings-overview .card-header,
+    .team-management-workspace .card-header {
+        min-height: 88px;
+        padding: 24px 22px !important;
+        gap: 14px !important;
+        align-items: center !important;
+    }
+
+    .settings-overview .card-header h3,
+    .team-management-workspace .card-header h3 {
+        font-size: 1.05rem !important;
+        line-height: 1.25 !important;
+        overflow-wrap: anywhere;
+    }
+
+    .settings-overview .input-group input,
+    .settings-overview .input-group select,
+    .team-management-workspace .input-group input {
+        min-height: 52px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .integrations-overview .settings-grid {
+        grid-template-columns: 1fr !important;
+        gap: 18px !important;
+    }
+
+    .integrations-overview .glass-panel {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 18px !important;
+        box-sizing: border-box;
+    }
+
+    .integrations-overview .card-header {
+        display: grid !important;
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        align-items: center !important;
+        gap: 14px !important;
+        min-height: 98px;
+        padding: 24px 20px !important;
+    }
+
+    .integrations-overview .card-header > div:first-child {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px;
+    }
+
+    .integrations-overview .card-header > div:nth-child(2) {
+        min-width: 0;
+    }
+
+    .integrations-overview .card-header > div:last-child {
+        min-width: max-content;
+        gap: 8px !important;
+        justify-content: flex-end;
+    }
+
+    .integrations-overview .card-header h3 {
+        font-size: 1rem !important;
+        line-height: 1.2 !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
+    }
+
+    .integrations-overview .card-header p {
+        font-size: 0.78rem !important;
+        line-height: 1.35 !important;
+        overflow-wrap: anywhere;
+    }
+
+    .integrations-overview .card-header span {
+        white-space: nowrap;
+        font-size: 0.72rem !important;
+        padding: 4px 8px !important;
+    }
+
+    .integrations-overview .glass-panel > .card-body {
+        padding: 20px 18px !important;
+    }
+
+    .team-overview {
+        padding-right: 0 !important;
+    }
+
+    .team-management-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 18px !important;
+    }
+
+    .team-invite-column .settings-card {
+        position: static !important;
+    }
+
+    .team-management-workspace form {
+        gap: 18px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-mobile-tab-header {
+        margin: 16px 0 16px;
+        padding: 22px 18px;
+    }
+
+    .leads-overview .card-body,
+    .integrations-overview > .settings-card > .card-body,
+    .settings-overview .card-body,
+    .team-management-workspace .card-body {
+        padding: 18px 12px !important;
+    }
+
+    .integrations-overview .card-header {
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        min-height: 96px;
+        padding: 22px 18px !important;
+        gap: 12px !important;
+    }
+
+    .integrations-overview .card-header > div:last-child {
+        flex-direction: column;
+        align-items: flex-end !important;
+        gap: 6px !important;
+    }
+
+    .settings-overview .card-header,
+    .team-management-workspace .card-header {
+        min-height: 86px;
+        padding: 22px 20px !important;
+    }
+}
+
 /* Hide scrollbar for dashboard-sidebar */
 .dashboard-sidebar::-webkit-scrollbar {
     display: none;

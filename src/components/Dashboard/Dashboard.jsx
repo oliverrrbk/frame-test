@@ -1994,9 +1994,47 @@ const Dashboard = () => {
         }
     };
     const headerInfo = getTabHeaderInfo();
+    const mobileTabHeaders = {
+        leads: {
+            icon: Users,
+            title: 'Kunder & Leads',
+            desc: 'Styr forespørgsler, tilbud og bekræftede opgaver fra mobilen.'
+        },
+        settings: {
+            icon: Calculator,
+            title: 'Prisberegner',
+            desc: 'Opsæt kørsel, timepriser, avance og systemregler.'
+        },
+        integrations: {
+            icon: Link,
+            title: 'Integrationer',
+            desc: 'Forbind regnskab og driftssystemer med din Bison Frame konto.'
+        },
+        team: {
+            icon: HardHat,
+            title: 'Team',
+            desc: 'Tilføj medarbejdere og styr roller direkte fra dashboardet.'
+        }
+    };
+
+    const renderDashboardMobileHeader = () => {
+        const config = mobileTabHeaders[activeTab];
+        if (!config) return null;
+        const Icon = config.icon;
+
+        return (
+            <div className="dashboard-mobile-tab-header glass-panel">
+                <h2>
+                    <Icon size={28} color="#000" />
+                    {config.title}
+                </h2>
+                <p>{config.desc}</p>
+            </div>
+        );
+    };
 
     return (
-        <div className="dashboard-layout">
+        <div className={`dashboard-layout dashboard-tab-${activeTab}`}>
             {showOnboarding && carpenterProfile && (
                 <OnboardingModal 
                     profile={carpenterProfile} 
@@ -2452,6 +2490,7 @@ const Dashboard = () => {
                         </div>
                     ) : (
                         <div key={activeTab} className="smooth-fade-in" style={{ height: '100%' }}>
+                        {renderDashboardMobileHeader()}
                         {activeTab === 'superadmin' && myProfile?.email === 'team@bisoncompany.dk' && (
                         <SuperAdminView />
                     )}
@@ -2485,7 +2524,7 @@ const Dashboard = () => {
                     )}
 
                     {activeTab === 'team' && ['admin', 'sales', 'accountant'].includes(effectiveRole) && (
-                        <div className="tab-pane active" style={{ height: '100%', overflowY: 'auto', paddingRight: '10px' }}>
+                        <div className="dashboard-workspace team-overview tab-pane active" style={{ height: '100%', overflowY: 'auto', paddingRight: '10px' }}>
                             {carpenterProfile?.tier === 'enterprise' ? (
                                 <TeamManagement profile={{ ...carpenterProfile, role: effectiveRole }} leadsData={filteredLeads} />
                             ) : (
@@ -2748,7 +2787,7 @@ const Dashboard = () => {
                         </div>
                     )}
                     {activeTab === 'leads' && (
-                        <div className="space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        <div className="dashboard-workspace leads-overview space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
                             <div className="settings-card">
                                 
                                 
@@ -4912,11 +4951,20 @@ const Dashboard = () => {
                     )}
                     
                     {activeTab === 'map' && (
-                        <div className="space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+                        <div className="dashboard-workspace map-overview space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+                            <div className="map-mobile-header glass-panel" style={{ padding: '24px', display: 'none', flexDirection: 'column', gap: '8px' }}>
+                                <h2 style={{ margin: 0, color: '#1a1a1a', fontSize: '1.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <MapPin size={28} color="#000" />
+                                    Geografisk Overblik
+                                </h2>
+                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem' }}>
+                                    Se dine leads og nuværende forespørgsler direkte på Danmarkskortet.
+                                </p>
+                            </div>
                             <div className="settings-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 
                                 <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                    <div className="glass-panel" style={{ padding: '20px', marginBottom: '20px' }}>
+                                    <div className="map-filter-panel glass-panel" style={{ padding: '20px', marginBottom: '20px' }}>
                                     {['admin', 'sales'].includes(effectiveRole) ? (
                                         <>
                                             <h4 style={{ margin: '0 0 16px', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>Filtrér visningen på kortet</h4>
@@ -4971,7 +5019,7 @@ const Dashboard = () => {
                                     )}
                                 </div>
                             
-                            <div style={{ flex: 1, border: '1px solid #e8e6e1', borderRadius: '14px', overflow: 'hidden', marginTop: '16px', position: 'relative', zIndex: 0 }}>
+                            <div className="map-canvas-panel" style={{ flex: 1, border: '1px solid #e8e6e1', borderRadius: '14px', overflow: 'hidden', marginTop: '16px', position: 'relative', zIndex: 0 }}>
                                 {!isLoaded ? (
                                     <div style={{ padding: '40px', textAlign: 'center' }}>Henter Google Maps HD miljøet...</div>
                                 ) : loadError ? (
@@ -5069,7 +5117,7 @@ const Dashboard = () => {
                         </div>
                     )}
                     {activeTab === 'settings' && settingsData && (
-                        <div className="settings-grid">
+                        <div className="dashboard-workspace settings-overview settings-grid">
                             
                             <div className="settings-card">
                                 <div className="card-header">
@@ -5197,6 +5245,18 @@ const Dashboard = () => {
                         </div>
                     )}
 
+                    {activeTab === 'materials' && (
+                        <div className="materials-mobile-header glass-panel" style={{ padding: '24px', display: 'none', flexDirection: 'column', gap: '8px' }}>
+                            <h2 style={{ margin: 0, color: '#1a1a1a', fontSize: '1.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Package size={28} color="#000" />
+                                Materialer
+                            </h2>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem' }}>
+                                Standard indkøbspriser ekskl. moms, som danner grundlag for materialeberegningen.
+                            </p>
+                        </div>
+                    )}
+
                     {activeTab === 'materials' && isMaterialsLoading && (
                         <div className="placeholder-state">
                             <h3>Henter materialedata fra server...</h3>
@@ -5213,7 +5273,7 @@ const Dashboard = () => {
                         </div>
                     )}
                     {activeTab === 'materials' && !isMaterialsLoading && materialsData.length > 0 && (
-                        <div className="space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        <div className="dashboard-workspace materials-overview space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
                             <div className="settings-card">
                                 
                                 <div className="card-body">
@@ -5329,7 +5389,7 @@ const Dashboard = () => {
                     
                     {/* INTEGRATIONER */}
                     {activeTab === 'integrations' && (
-                        <div className="space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        <div className="dashboard-workspace integrations-overview space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
                             <div className="settings-card">
                                 
                                 <div className="card-body">

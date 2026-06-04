@@ -157,10 +157,10 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
     };
 
     return (
-        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="team-management-workspace space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <div className="team-management-grid grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 {/* Inviter Medarbejder Formular */}
-                <div className="lg:col-span-1">
+                <div className="team-invite-column lg:col-span-1">
                     <div className="settings-card sticky top-6" style={{ overflow: 'visible' }}>
                         <div className="card-header">
                             <div className="icon-wrapper">
@@ -339,7 +339,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                 </div>
 
                 {/* Team Liste */}
-                <div className="lg:col-span-2">
+                <div className="team-list-column lg:col-span-2">
                     <div className="settings-card">
                         <div className="card-header">
                             <div className="icon-wrapper">
