@@ -3082,14 +3082,17 @@ const Dashboard = () => {
 
                                                     {lead.status === 'Bekræftet opgave' && (
                                                         <div style={{ display: 'flex', gap: '8px' }}>
-                                                            {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(effectiveRole) && (
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); syncToAccounting(lead); }}
-                                                                style={{ padding: '8px', borderRadius: '8px', border: '1px solid #10b981', backgroundColor: '#ecfdf5', color: '#059669', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                                                            >
-                                                                <FileText size={16} /> Regnskabsprogram
-                                                            </button>
-                                                        )}
+                                                            {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(effectiveRole) && !carpenterProfile?.ordrestyring_token && !carpenterProfile?.apacta_api_key && !carpenterProfile?.minuba_api_token && (
+                                                                // Bison Frame OMS check: If lead has timesheets or work orders, hide the button so they must invoice from within the case management
+                                                                (!lead.timesheets?.length && !lead.work_orders?.length) && (
+                                                                <button 
+                                                                    onClick={(e) => { e.stopPropagation(); syncToAccounting(lead); }}
+                                                                    style={{ padding: '8px', borderRadius: '8px', border: '1px solid #10b981', backgroundColor: '#ecfdf5', color: '#059669', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                                                >
+                                                                    <FileText size={16} /> Regnskabsprogram
+                                                                </button>
+                                                                )
+                                                            )}
                                                         {carpenterProfile?.ordrestyring_token && ['admin', 'accountant'].includes(effectiveRole) && (
                                                             lead.ordrestyring_case_id ? (
                                                                 <a 
