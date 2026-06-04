@@ -1,13 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Phone } from 'lucide-react';
-import { subDays, subMonths, isAfter, isSameDay } from 'date-fns';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { startOfWeek, startOfMonth, isAfter, isSameDay } from 'date-fns';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
 export default function WorkerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId, simulatedRole }) {
-    const [timeframe, setTimeframe] = useState('7d'); // '1d' (i går), '3d', '7d', '30d', '60d'
-
     // Filtrer sager, som arbejderen er tilknyttet
     const activeWorkerCases = useMemo(() => {
         return leadsData.filter(lead => {
@@ -30,11 +27,11 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             // Hvis det er en simulator for en svend/lærling ELLER projektleder, lader vi dem se relevante sager 
             // så de kan teste systemet uden at skulle assigne sig selv først.
             if (simulatedRole && ['worker', 'apprentice', 'sales'].includes(role)) {
-                return ['Bekræftet opgave', 'Historik'].includes(lead.status);
+                return ['Bekræftet opgave'].includes(lead.status);
             }
 
             // For produktion vis de sager man er assignet til
-            return isAssigned && ['Bekræftet opgave', 'Historik'].includes(lead.status || '');
+            return isAssigned && ['Bekræftet opgave'].includes(lead.status || '');
         });
     }, [leadsData, myProfile, simulatedRole]);
 
@@ -119,31 +116,11 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
     // Beregn timeforbrug for den valgte periode
     const timeStats = useMemo(() => {
         const now = new Date();
-        let startDate;
-        
-        switch (timeframe) {
-            case '1d': startDate = subDays(now, 1); break;
-            case '3d': startDate = subDays(now, 3); break;
-            case '7d': startDate = subDays(now, 7); break;
-            case '30d': startDate = subDays(now, 30); break;
-            case '90d': startDate = subDays(now, 90); break;
-            case '180d': startDate = subDays(now, 180); break;
-            case '60d': startDate = subMonths(now, 2); break;
-            default: startDate = subDays(now, 7);
-        }
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+        const monthStart = startOfMonth(now);
 
-        let totalHours = 0;
-        const projectHours = {};
-        const dailyHours = {};
-        const daysArray = [];
-        
-        const daysCount = timeframe === '1d' ? 0 : timeframe === '3d' ? 2 : timeframe === '7d' ? 6 : timeframe === '30d' ? 29 : timeframe === '90d' ? 89 : timeframe === '180d' ? 179 : 59;
-        for (let i = 0; i <= daysCount; i++) {
-            const d = subDays(now, i);
-            const dateStr = d.toISOString().substring(0, 10);
-            dailyHours[dateStr] = 0;
-            daysArray.unshift(dateStr);
-        }
+        let hoursThisWeek = 0;
+        let hoursThisMonth = 0;
 
         leadsData.forEach(lead => {
             const timeEntries = lead.raw_data?.time_entries || [];
@@ -151,40 +128,21 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             timeEntries.forEach(entry => {
                 if (entry.employeeId === myProfile?.id) {
                     const entryDate = new Date(entry.date);
+                    const hours = Number(entry.hours || 0);
                     
-                    if (isAfter(entryDate, startDate) || isSameDay(entryDate, startDate)) {
-                        totalHours += Number(entry.hours || 0);
-                        
-                        const projectName = `Sag ${lead.case_number || String(lead.id).substring(0,8)} - ${lead.customer_name || 'Ukendt'}`;
-                        if (!projectHours[projectName]) {
-                            projectHours[projectName] = 0;
-                        }
-                        projectHours[projectName] += Number(entry.hours || 0);
-                        
-                        const dateStr = entryDate.toISOString().substring(0, 10);
-                        if (dailyHours[dateStr] !== undefined) {
-                            dailyHours[dateStr] += Number(entry.hours || 0);
+                    if (isAfter(entryDate, monthStart) || isSameDay(entryDate, monthStart)) {
+                        hoursThisMonth += hours;
+                        // Hvis den er inden for denne uge også
+                        if (isAfter(entryDate, weekStart) || isSameDay(entryDate, weekStart)) {
+                            hoursThisWeek += hours;
                         }
                     }
                 }
             });
         });
 
-        const sortedProjects = Object.entries(projectHours)
-            .map(([name, hours]) => ({ name, hours }))
-            .sort((a, b) => b.hours - a.hours);
-            
-        const chartData = daysArray.map(dateStr => {
-            const dateObj = new Date(dateStr);
-            const dayName = dateObj.toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short' });
-            return {
-                name: dayName,
-                timer: dailyHours[dateStr] || 0
-            };
-        });
-
-        return { totalHours, sortedProjects, chartData };
-    }, [leadsData, myProfile, timeframe]);
+        return { hoursThisWeek, hoursThisMonth };
+    }, [leadsData, myProfile]);
 
     return (
         <div className="dashboard-workspace worker-overview" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
@@ -329,95 +287,36 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
                 
                 {/* TIMEREGISTRERING KORT */}
-                <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ padding: '8px', background: '#ecfdf5', color: '#10b981', borderRadius: '8px' }}>
-                                <Clock size={20} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
+                        {/* Kort: Denne uge */}
+                        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                            <div style={{ padding: '8px', background: '#ecfdf5', color: '#10b981', borderRadius: '8px', marginBottom: '4px' }}>
+                                <Clock size={24} />
                             </div>
-                            Dine Timer
-                        </h3>
-                        <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '10px' }}>
-                            {[
-                                { id: '3d', label: '3 dg' },
-                                { id: '7d', label: '7 dg' },
-                                { id: '30d', label: '30 dg' },
-                                { id: '90d', label: '3 mdr' },
-                                { id: '180d', label: '6 mdr' }
-                            ].map(filter => (
-                                <button
-                                    key={filter.id}
-                                    onClick={() => setTimeframe(filter.id)}
-                                    style={{
-                                        padding: '6px 12px',
-                                        background: timeframe === filter.id ? 'white' : 'transparent',
-                                        color: timeframe === filter.id ? '#0f172a' : '#64748b',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        fontSize: '0.85rem',
-                                        fontWeight: timeframe === filter.id ? '600' : '500',
-                                        cursor: 'pointer',
-                                        boxShadow: timeframe === filter.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {filter.label}
-                                </button>
-                            ))}
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timer denne uge</span>
+                            <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>{timeStats.hoursThisWeek.toFixed(1)}</span>
+                        </div>
+                        {/* Kort: Denne måned */}
+                        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                            <div style={{ padding: '8px', background: '#eff6ff', color: '#3b82f6', borderRadius: '8px', marginBottom: '4px' }}>
+                                <Calendar size={24} />
+                            </div>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timer denne måned</span>
+                            <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>{timeStats.hoursThisMonth.toFixed(1)}</span>
                         </div>
                     </div>
-
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
-                        <span style={{ fontSize: '3rem', fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>
-                            {timeStats.totalHours.toFixed(1)}
-                        </span>
-                        <span style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: '500' }}>
-                            timer registreret
-                        </span>
-                    </div>
-
-                    <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Udvikling (Timer pr. dag)</h4>
-                        <div style={{ height: '220px', width: '100%', marginTop: '8px' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={timeStats.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="colorTimer" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dx={-10} />
-                                    <Tooltip 
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-                                        formatter={(value) => [`${Number(value).toFixed(1)} t`, 'Timer']}
-                                    />
-                                    <Area type="monotone" dataKey="timer" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorTimer)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fordelt på projekter</h4>
-                        {timeStats.sortedProjects.length === 0 ? (
-                            <p style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: '0.95rem', fontStyle: 'italic' }}>
-                                Ingen timer registreret i perioden.
-                            </p>
-                        ) : (
-                            timeStats.sortedProjects.map((proj, idx) => (
-                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70%' }}>
-                                        {proj.name}
-                                    </span>
-                                    <span style={{ fontSize: '0.95rem', color: '#10b981', fontWeight: 'bold' }}>
-                                        {proj.hours.toFixed(1)} t
-                                    </span>
-                                </div>
-                            ))
-                        )}
-                    </div>
+                    {/* Knap til fuld timeseddel */}
+                    <button 
+                        onClick={() => {
+                            if (setActiveTab) setActiveTab('worker_timesheet');
+                        }}
+                        style={{ width: '100%', padding: '16px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-light)', borderRadius: '12px', fontSize: '1.05rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-primary)'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
+                    >
+                        Gå til din timeregistrering <ArrowRight size={18} />
+                    </button>
                 </div>
 
                 {/* AKTIVE SAGER KORT */}
