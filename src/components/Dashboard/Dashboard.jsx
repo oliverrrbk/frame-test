@@ -3029,9 +3029,9 @@ const Dashboard = () => {
                                             </div>
 
                                             {/* Footer / Actions */}
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                                            <div className="lead-card-actions">
                                                 
-                                                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: 1 }}>
+                                                <div className="lead-card-actions-left">
                                                     <div style={{ width: '250px' }}>
                                                         <CustomSelect 
                                                             value={lead.status || 'Ny forespørgsel'}
@@ -3075,13 +3075,13 @@ const Dashboard = () => {
                                                     )}
                                                 </div>
 
-                                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                <div className="lead-card-actions-right">
                                                     <button className="btn-primary" onClick={(e) => { e.stopPropagation(); handleSelectLead(lead); }} style={{ padding: '10px 24px', fontSize: '0.95rem' }}>
                                                         Se Opgavedetaljer
                                                     </button>
 
                                                     {lead.status === 'Bekræftet opgave' && (
-                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                        <div className="lead-card-integration-btns">
                                                             {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(effectiveRole) && !carpenterProfile?.ordrestyring_token && !carpenterProfile?.apacta_api_key && !carpenterProfile?.minuba_api_token && (
                                                                 // Bison Frame OMS check: If lead has timesheets or work orders, hide the button so they must invoice from within the case management
                                                                 (!lead.timesheets?.length && !lead.work_orders?.length) && (

@@ -2413,3 +2413,75 @@ button:focus-visible {
         gap: 12px !important;
     }
 }
+
+/* ═══════════════════════════════════════
+   LEAD CARD ACTIONS MOBILE LAYOUT
+   ═══════════════════════════════════════ */
+.lead-card-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.lead-card-actions-left {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.lead-card-actions-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.lead-card-integration-btns {
+    display: flex;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .lead-card-actions {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .lead-card-actions-left {
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 12px !important;
+    }
+
+    .lead-card-actions-left > div {
+        width: 100% !important;
+    }
+
+    /* Reverse order: Integrations first, then Se Opgavedetaljer */
+    .lead-card-actions-right {
+        flex-direction: column-reverse !important;
+        width: 100% !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .lead-card-actions-right > button,
+    .lead-card-actions-right > div {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .lead-card-integration-btns {
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 12px !important;
+    }
+
+    .lead-card-integration-btns > * {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+}
