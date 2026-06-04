@@ -1246,7 +1246,7 @@ const Dashboard = () => {
                 console.error("Ordrestyring fejl:", error || data?.error);
                 toast.error("Fejl ved oprettelse i Ordrestyring: " + (error?.message || data?.error), { id: "ordrestyring" });
             } else {
-                toast.success(`🎉 Succes! Sagen er nu overført til eget ordrestyringssystem. (Sagsnr: ${data.caseId})`, { id: "ordrestyring" });
+                toast.success(`Succes! Sagen er nu overført til eget ordrestyringssystem. (Sagsnr: ${data.caseId})`, { id: "ordrestyring" });
                 const { error: updateError } = await supabase.from('leads').update({ ordrestyring_case_id: String(data.caseId) }).eq('id', lead.id);
                 if (!updateError) {
                     setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...l, ordrestyring_case_id: String(data.caseId) } : l));
@@ -1295,7 +1295,7 @@ const Dashboard = () => {
                 console.error("Apacta fejl:", error || data?.error);
                 toast.error("Fejl ved oprettelse i Apacta: " + (error?.message || data?.error), { id: "apacta" });
             } else {
-                toast.success(`🎉 Succes! Sagen er nu overført til eget ordrestyringssystem. (Sagsnr: ${data.caseId})`, { id: "apacta" });
+                toast.success(`Succes! Sagen er nu overført til eget ordrestyringssystem. (Sagsnr: ${data.caseId})`, { id: "apacta" });
                 const { error: updateError } = await supabase.from('leads').update({ apacta_case_id: String(data.caseId) }).eq('id', lead.id);
                 if (!updateError) {
                     setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...l, apacta_case_id: String(data.caseId) } : l));
@@ -1333,7 +1333,7 @@ const Dashboard = () => {
                 console.error("Minuba fejl:", error || data?.error);
                 toast.error("Fejl ved oprettelse i Minuba: " + (error?.message || data?.error), { id: "minuba" });
             } else {
-                toast.success(`🎉 Succes! Sagen er nu overført til eget ordrestyringssystem. (Sagsnr: ${data.caseId})`, { id: "minuba" });
+                toast.success(`Succes! Sagen er nu overført til eget ordrestyringssystem. (Sagsnr: ${data.caseId})`, { id: "minuba" });
                 
                 // Gem Minuba sags-id på leadet
                 await supabase.from('leads').update({ minuba_case_id: data.caseId }).eq('id', lead.id);
