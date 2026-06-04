@@ -10,7 +10,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
     const [materials, setMaterials] = useState([]);
     const [materialListsMeta, setMaterialListsMeta] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
-    const [openLists, setOpenLists] = useState({ 'default': true });
+    const [openLists, setOpenLists] = useState({});
 
     const [deliveryInfo, setDeliveryInfo] = useState({
         address: lead.customer_address || '',
@@ -480,7 +480,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                                     {/* Faktura pris input i overskriften */}
-                                    {profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
+                                    {(!isLead && profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
                                         <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                             {/* Status Badge */}
                                             {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret') ? (
