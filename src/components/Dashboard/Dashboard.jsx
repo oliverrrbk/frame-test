@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown } from 'lucide-react';
+import { Home, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
@@ -74,6 +74,104 @@ const FormattedNumberInput = ({ value, onChange, placeholder, style }) => {
             placeholder={placeholder}
             style={style} 
         />
+    );
+};
+
+const CustomSelect = ({ value, onChange, options, icon: Icon, placeholder, disabled }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedOption = options.find(opt => opt.value === value);
+
+    return (
+        <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+            <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); if (!disabled) setIsOpen(!isOpen); }}
+                style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '8px',
+                    padding: '10px 16px',
+                    backgroundColor: disabled ? 'rgba(0,0,0,0.02)' : 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    fontSize: '0.9rem',
+                    color: disabled ? 'var(--text-secondary)' : 'var(--text-primary)',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left'
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                    {Icon && <Icon size={16} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />}
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {selectedOption ? selectedOption.label : placeholder}
+                    </span>
+                </div>
+                <ChevronDown size={16} style={{ color: 'var(--text-secondary)', flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+            </button>
+            
+            {isOpen && (
+                <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 4px)',
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1)',
+                    zIndex: 100,
+                    maxHeight: '250px',
+                    overflowY: 'auto',
+                    padding: '6px'
+                }}>
+                    {options.map((option) => (
+                        <div
+                            key={option.value}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onChange(option.value);
+                                setIsOpen(false);
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(128,128,128,0.1)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            style={{
+                                padding: '10px 12px',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                color: 'var(--text-primary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                transition: 'background-color 0.15s'
+                            }}
+                        >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {option.icon && <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}>{option.icon}</span>}
+                                {option.label}
+                            </span>
+                            {value === option.value && <Check size={14} style={{ color: '#3b82f6' }} />}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 };
 
@@ -2841,105 +2939,150 @@ const Dashboard = () => {
                                             key={lead.id} 
                                             onClick={() => handleSelectLead(lead)}
                                             className="glass-panel"
-                                            style={{ padding: '24px', display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                                            style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', cursor: 'pointer', transition: 'all 0.2s' }}
                                         >
-                                            <div style={{ flex: '1 1 250px' }}>
-                                                <h3 style={{ margin: '0 0 8px', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    {lead.customer_name} 
+                                            {/* Header */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                                                <div>
+                                                    <h3 style={{ margin: '0 0 4px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem' }}>
+                                                        {lead.customer_name} 
+                                                        {(lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' && lead.is_read === false && (
+                                                            <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+                                                                NY
+                                                            </span>
+                                                        )}
+                                                    </h3>
+                                                    <p style={{ margin: '0', color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <Clock size={14} /> Modtaget: {new Date(lead.created_at).toLocaleDateString('da-DK')} kl. {new Date(lead.created_at).toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'})}
+                                                    </p>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <span style={{ 
-                                                        fontSize: '0.75rem', padding: '4px 8px', borderRadius: '14px', fontWeight: 'bold',
-                                                        backgroundColor: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#eff6ff' : ((lead.status || '') === 'Sendt tilbud' ? '#fefce8' : (lead.status || '') === 'Bekræftet opgave' ? '#ecfdf5' : '#fef2f2'),
-                                                        color: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#2563eb' : ((lead.status || '') === 'Sendt tilbud' ? '#ca8a04' : (lead.status || '') === 'Bekræftet opgave' ? '#059669' : '#dc2626')
+                                                        fontSize: '0.8rem', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold',
+                                                        backgroundColor: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? 'rgba(37,99,235,0.1)' : ((lead.status || '') === 'Sendt tilbud' ? 'rgba(202,138,4,0.1)' : (lead.status || '') === 'Bekræftet opgave' ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.1)'),
+                                                        color: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#3b82f6' : ((lead.status || '') === 'Sendt tilbud' ? '#eab308' : (lead.status || '') === 'Bekræftet opgave' ? '#10b981' : '#ef4444'),
+                                                        border: `1px solid ${(lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#3b82f6' : ((lead.status || '') === 'Sendt tilbud' ? '#eab308' : (lead.status || '') === 'Bekræftet opgave' ? '#10b981' : '#ef4444')}40`
                                                     }}>{lead.status || 'Ny forespørgsel'}</span>
-                                                    {(lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' && lead.is_read === false && (
-                                                        <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', letterSpacing: '0.05em' }}>
-                                                            NY
-                                                        </span>
-                                                    )}
                                                     {(lead.status === 'Sendt tilbud') && (
                                                         lead.opened_at ? (
-                                                            <span style={{ fontSize: '0.8rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #a7f3d0' }}>
+                                                            <span style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '20px', backgroundColor: 'rgba(5,150,105,0.1)', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(16,185,129,0.4)' }}>
                                                                 <Eye size={14} /> Åbnet af kunde
                                                             </span>
                                                         ) : (
-                                                            <span style={{ fontSize: '0.8rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#f3f1ed', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #e8e6e1' }}>
+                                                            <span style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '20px', backgroundColor: 'rgba(107,114,128,0.1)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(107,114,128,0.4)' }}>
                                                                 <Mail size={14} /> Afventer kunde
                                                             </span>
                                                         )
                                                     )}
-                                                </h3>
-                                                <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: '0.9rem' }}><strong>Opgave:</strong> {categoryNames[lead.project_category] || lead.project_category}</p>
-                                                {lead.status === 'Bekræftet opgave' ? (
-                                                    <p style={{ margin: '0 0 4px', color: '#10b981', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                                                        Tilbud givet og accepteret: {lead.raw_data?.actual_quote_price ? Math.round(lead.raw_data.actual_quote_price).toLocaleString('da-DK') : '?'} kr. inkl. moms
-                                                    </p>
-                                                ) : (
-                                                    <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: '0.9rem' }}>
-                                                        <strong>Overslag givet:</strong> {lead.raw_data?.calc_data?.finalEstimateIncVat ? `${lead.raw_data.calc_data.finalEstimateIncVat.toLocaleString('da-DK')} kr. inkl. moms / ${lead.raw_data.calc_data.finalEstimateExVat.toLocaleString('da-DK')} kr. eks. moms` : lead.price_estimate}
-                                                    </p>
-                                                )}
-                                                <p style={{ margin: '0 0 0', color: '#6b7280', fontSize: '0.85rem' }}><em>Modtaget: {new Date(lead.created_at).toLocaleDateString('da-DK')} kl. {new Date(lead.created_at).toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'})}</em></p>
+                                                </div>
                                             </div>
-                                            <div style={{ flex: '1 1 250px', backgroundColor: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                                <h4 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '0.9rem', textTransform: 'uppercase' }}>Kontaktinfo</h4>
-                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                    📞 <a href={`tel:${(lead.customer_phone || '').replace(/[^0-9+]/g, '')}`} style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{lead.customer_phone}</a>
-                                                </p>
-                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                    📧 <a href={`mailto:${lead.customer_email}`} style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{lead.customer_email}</a>
-                                                </p>
-                                                <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                    🏠 <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.customer_address || '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{lead.customer_address}</a>
-                                                </p>
-                                                <p style={{ margin: '0', color: '#60a5fa', fontSize: '0.9rem', fontWeight: 'bold' }}>🗓️ Ring/Besøg: {lead.contact_preference}</p>
-                                            </div>
-                                            <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                <div className="input-group">
-                                                    <select 
-                                                        value={lead.status || 'Ny forespørgsel'}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onChange={(e) => { e.stopPropagation(); updateLeadStatus(lead.id, e.target.value); }}
-                                                    >
-                                                        <option value="Ny forespørgsel">Mappe: Ny forespørgsel</option>
-                                                        <option value="Sendt tilbud">Mappe: Sendt tilbud</option>
-                                                        <option value="Bekræftet opgave">Mappe: Bekræftet opgave</option>
-                                                        <option value="Udgået opgave">Mappe: Udgået opgave</option>
-                                                        <option value="Historik">Mappe: Historik (Afsluttet)</option>
-                                                    </select>
+                                            
+                                            {/* Body */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', padding: '16px 0', borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>
+                                                {/* Kolonne 1: Opgave og pris */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                                                        <Wrench size={18} style={{ color: '#60a5fa' }} /> 
+                                                        <span style={{ fontWeight: 'bold' }}>{categoryNames[lead.project_category] || lead.project_category}</span>
+                                                    </div>
+                                                    
+                                                    {lead.status === 'Bekræftet opgave' ? (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', backgroundColor: 'rgba(16,185,129,0.05)', padding: '10px 12px', borderRadius: '8px' }}>
+                                                            <CheckCircle size={18} />
+                                                            <div>
+                                                                <span style={{ display: 'block', fontSize: '0.8rem', opacity: 0.8 }}>Accepteret tilbud</span>
+                                                                <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{lead.raw_data?.actual_quote_price ? Math.round(lead.raw_data.actual_quote_price).toLocaleString('da-DK') : '?'} kr.</span>
+                                                                <span style={{ fontSize: '0.8rem', opacity: 0.8 }}> inkl. moms</span>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', backgroundColor: 'rgba(96,165,250,0.05)', padding: '10px 12px', borderRadius: '8px' }}>
+                                                            <Calculator size={18} style={{ color: '#60a5fa' }} />
+                                                            <div>
+                                                                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Overslag givet</span>
+                                                                <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{lead.raw_data?.calc_data?.finalEstimateIncVat ? `${lead.raw_data.calc_data.finalEstimateIncVat.toLocaleString('da-DK')} kr.` : lead.price_estimate}</span>
+                                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}> inkl. moms</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
 
-                                                {effectiveRole === 'admin' && teamMembers.length > 0 && (
-                                                    <div className="input-group">
-                                                        <select
-                                                            value={lead.assigned_to || ''}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onChange={async (e) => { 
-                                                                e.stopPropagation(); 
-                                                                const empId = e.target.value;
-                                                                const { error } = await supabase.from('leads').update({ assigned_to: empId || null }).eq('id', lead.id);
-                                                                if (!error) {
-                                                                    setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...l, assigned_to: empId || null } : l));
-                                                                    toast.success("Lead tildelt!");
-                                                                } else {
-                                                                    toast.error("Fejl ved tildeling.");
-                                                                }
-                                                            }}
-                                                        >
-                                                            <option value="">Ikke tildelt</option>
-                                                            {teamMembers.map(member => (
-                                                                <option key={member.id} value={member.id}>👤 {member.owner_name || member.company_name || member.email || 'Ukendt'} ({member.role})</option>
-                                                            ))}
-                                                        </select>
+                                                {/* Kolonne 2: Kontaktinfo */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                                                        <Phone size={16} style={{ color: '#9ca3af' }} />
+                                                        <a href={`tel:${(lead.customer_phone || '').replace(/[^0-9+]/g, '')}`} style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.color = 'var(--text-primary)'} onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'} onClick={(e) => e.stopPropagation()}>{lead.customer_phone}</a>
                                                     </div>
-                                                )}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                                                        <Mail size={16} style={{ color: '#9ca3af' }} />
+                                                        <a href={`mailto:${lead.customer_email}`} style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.color = 'var(--text-primary)'} onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'} onClick={(e) => e.stopPropagation()}>{lead.customer_email}</a>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                                                        <MapPin size={16} style={{ color: '#9ca3af', marginTop: '2px', flexShrink: 0 }} />
+                                                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.customer_address || '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none', lineHeight: '1.4' }} onMouseEnter={(e) => e.target.style.color = 'var(--text-primary)'} onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'} onClick={(e) => e.stopPropagation()}>{lead.customer_address}</a>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#60a5fa', fontSize: '0.95rem', fontWeight: '500', marginTop: '4px' }}>
+                                                        <Calendar size={16} />
+                                                        <span>Kunden ønsker: {lead.contact_preference}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                                <button className="btn-primary" onClick={(e) => { e.stopPropagation(); handleSelectLead(lead); }}>
-                                                    Se Opgavedetaljer
-                                                </button>
-                                                {/* Integrationsknapper vist dynamisk hvis de er valgt i indstillinger */}
-                                                {lead.status === 'Bekræftet opgave' && (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                                                        {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(effectiveRole) && (
+                                            {/* Footer / Actions */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                                                
+                                                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: 1 }}>
+                                                    <div style={{ width: '250px' }}>
+                                                        <CustomSelect 
+                                                            value={lead.status || 'Ny forespørgsel'}
+                                                            onChange={(newVal) => updateLeadStatus(lead.id, newVal)}
+                                                            icon={Layers}
+                                                            options={[
+                                                                { value: "Ny forespørgsel", label: "Mappe: Ny forespørgsel" },
+                                                                { value: "Sendt tilbud", label: "Mappe: Sendt tilbud" },
+                                                                { value: "Bekræftet opgave", label: "Mappe: Bekræftet opgave" },
+                                                                { value: "Udgået opgave", label: "Mappe: Udgået opgave" },
+                                                                { value: "Historik", label: "Mappe: Historik (Afsluttet)" }
+                                                            ]}
+                                                        />
+                                                    </div>
+
+                                                    {effectiveRole === 'admin' && teamMembers.length > 0 && (
+                                                        <div style={{ width: '250px' }}>
+                                                            <CustomSelect 
+                                                                value={lead.assigned_to || ''}
+                                                                placeholder="Ikke tildelt"
+                                                                icon={User}
+                                                                onChange={async (newVal) => { 
+                                                                    const empId = newVal;
+                                                                    const { error } = await supabase.from('leads').update({ assigned_to: empId || null }).eq('id', lead.id);
+                                                                    if (!error) {
+                                                                        setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...l, assigned_to: empId || null } : l));
+                                                                        toast.success("Lead tildelt!");
+                                                                    } else {
+                                                                        toast.error("Fejl ved tildeling.");
+                                                                    }
+                                                                }}
+                                                                options={[
+                                                                    { value: "", label: "Ikke tildelt" },
+                                                                    ...teamMembers.map(member => ({
+                                                                        value: member.id,
+                                                                        label: `${member.owner_name || member.company_name || member.email || 'Ukendt'} (${member.role})`
+                                                                    }))
+                                                                ]}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                    <button className="btn-primary" onClick={(e) => { e.stopPropagation(); handleSelectLead(lead); }} style={{ padding: '10px 24px', fontSize: '0.95rem' }}>
+                                                        Se Opgavedetaljer
+                                                    </button>
+
+                                                    {lead.status === 'Bekræftet opgave' && (
+                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                            {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(effectiveRole) && (
                                                             <button 
                                                                 onClick={(e) => { e.stopPropagation(); syncToAccounting(lead); }}
                                                                 style={{ padding: '8px', borderRadius: '8px', border: '1px solid #10b981', backgroundColor: '#ecfdf5', color: '#059669', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
@@ -2993,6 +3136,7 @@ const Dashboard = () => {
                                                         )}
                                                     </div>
                                                 )}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
