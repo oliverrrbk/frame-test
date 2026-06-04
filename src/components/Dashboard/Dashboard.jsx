@@ -4024,7 +4024,7 @@ const Dashboard = () => {
                                                  </div>
 
                                                  {isMaterialListOpen && (
-                                                     <div style={{ marginBottom: '24px', padding: '24px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column' }}>
+                                                     <div style={{ marginBottom: '24px', padding: '12px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column' }}>
                                                          <MaterialList isLead={true} 
                                                              lead={selectedLead} 
                                                              profile={carpenterProfile} 

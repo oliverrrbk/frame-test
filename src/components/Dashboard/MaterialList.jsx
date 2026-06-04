@@ -407,39 +407,6 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
             
             
 
-            {/* BUDGET DASHBOARD */}
-            {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && !isLead) && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
-                            Materialebudget <span style={{ textTransform: 'none', fontWeight: 'normal', opacity: 0.8, fontSize: '0.75rem' }}>(ekskl. moms)</span>
-                        </h4>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
-                            {originalBudget.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
-                        </div>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Accepteret iflg. tilbud</p>
-                    </div>
-
-                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Faktisk Forbrug</h4>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
-                            {totalSpent.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
-                        </div>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Sum af faktura-priser</p>
-                    </div>
-
-                    <div style={{ padding: '24px', backgroundColor: isOverBudget ? '#fef2f2' : '#f0fdf4', borderRadius: '16px', border: `1px solid ${isOverBudget ? '#fca5a5' : '#86efac'}`, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: isOverBudget ? '#991b1b' : '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Restbudget</h4>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', color: isOverBudget ? '#dc2626' : '#10b981', letterSpacing: '-0.02em' }}>
-                            {budgetRemaining > 0 ? '+' : ''}{budgetRemaining.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: isOverBudget ? '#ef4444' : '#34d399', fontWeight: 'bold' }}>kr.</span>
-                        </div>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: isOverBudget ? '#b91c1c' : '#15803d', fontWeight: '500' }}>
-                            {isOverBudget ? 'Overskredet budget!' : 'Penge tilbage til indkøb'}
-                        </p>
-                    </div>
-                </div>
-            )}
-
             {/* LEVERINGSINFO (ACCORDION) */}
             {profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
             <div style={{ 
@@ -481,7 +448,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                 Leverings- & Fragtoplysninger
                             </h3>
                             {!isDeliveryOpen && (
-                                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: (!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? '#ef4444' : '#64748b', fontWeight: (!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? 'bold' : 'normal' }}>
+                                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: (!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? '#ef4444' : '#64748b', fontWeight: (!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? 'bold' : 'normal', wordBreak: 'break-word', whiteSpace: 'normal' }}>
                                     {(!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? 'Mangler leveringsadresse!' : deliveryInfo.address}
                                 </p>
                             )}
@@ -537,6 +504,39 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
             </div>
             )}
 
+            {/* BUDGET DASHBOARD */}
+            {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && !isLead) && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
+                            Materialebudget <span style={{ textTransform: 'none', fontWeight: 'normal', opacity: 0.8, fontSize: '0.75rem' }}>(ekskl. moms)</span>
+                        </h4>
+                        <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
+                            {originalBudget.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                        </div>
+                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Accepteret iflg. tilbud</p>
+                    </div>
+
+                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Faktisk Forbrug</h4>
+                        <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
+                            {totalSpent.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                        </div>
+                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Sum af faktura-priser</p>
+                    </div>
+
+                    <div style={{ padding: '24px', backgroundColor: isOverBudget ? '#fef2f2' : '#f0fdf4', borderRadius: '16px', border: `1px solid ${isOverBudget ? '#fca5a5' : '#86efac'}`, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: isOverBudget ? '#991b1b' : '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Restbudget</h4>
+                        <div style={{ fontSize: '2rem', fontWeight: '800', color: isOverBudget ? '#dc2626' : '#10b981', letterSpacing: '-0.02em' }}>
+                            {budgetRemaining > 0 ? '+' : ''}{budgetRemaining.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: isOverBudget ? '#ef4444' : '#34d399', fontWeight: 'bold' }}>kr.</span>
+                        </div>
+                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: isOverBudget ? '#b91c1c' : '#15803d', fontWeight: '500' }}>
+                            {isOverBudget ? 'Overskredet budget!' : 'Penge tilbage til indkøb'}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* MATERIALELISTER (ACCORDIONS) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {materialListsMeta.map((list) => {
@@ -577,7 +577,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                     }}>
                                         {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                                     </div>
-                                    <div style={{ flex: 1, minWidth: '300px' }}>
+                                    <div style={{ flex: 1, minWidth: '0', overflow: 'hidden' }}>
                                         <input 
                                             type="text"
                                             value={isLead ? 'Foreslået materialeliste til opgaven' : list.name}
@@ -597,7 +597,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                                 background: 'transparent',
                                                 padding: '4px 8px',
                                                 marginLeft: '-8px',
-                                                borderRadius: '6px',
+                                                borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden',
                                                 outline: 'none',
                                                 transition: 'border-color 0.2s, background-color 0.2s',
                                                 width: '100%'
@@ -754,7 +754,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                                                         }}
                                                                         ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
                                                                         rows={1}
-                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', fontWeight: '500', outline: 'none', fontSize: '0.95rem', textDecoration: item.status === 'Leveret' ? 'line-through' : 'none', opacity: item.status === 'Leveret' ? 0.5 : 1, resize: 'none', overflow: 'hidden', padding: '4px', borderRadius: '6px', transition: 'border-color 0.2s' }}
+                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', fontWeight: '500', outline: 'none', fontSize: '0.95rem', textDecoration: item.status === 'Leveret' ? 'line-through' : 'none', opacity: item.status === 'Leveret' ? 0.5 : 1, resize: 'none', overflow: 'hidden', padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden', transition: 'border-color 0.2s' }}
                                                                         onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
                                                                         onBlur={(e) => { e.currentTarget.style.borderColor = 'transparent'; handleSaveList(); }}
                                                                     />
@@ -764,7 +764,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                                                         placeholder="Antal"
                                                                         onChange={(e) => handleCellChange(originalIndex, 'qty', e.target.value)}
                                                                         onBlur={() => handleSaveList()}
-                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', textAlign: 'center', fontWeight: 'bold', outline: 'none', fontSize: '0.95rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', transition: 'border-color 0.2s' }}
+                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', textAlign: 'center', fontWeight: 'bold', outline: 'none', fontSize: '0.95rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden', transition: 'border-color 0.2s' }}
                                                                         onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
                                                                     />
                                                                     <input 
@@ -773,7 +773,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                                                         placeholder="Enhed"
                                                                         onChange={(e) => handleCellChange(originalIndex, 'unit', e.target.value)}
                                                                         onBlur={() => handleSaveList()}
-                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#64748b', textAlign: 'center', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', transition: 'border-color 0.2s' }}
+                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#64748b', textAlign: 'center', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden', transition: 'border-color 0.2s' }}
                                                                         onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
                                                                     />
                                                                     {!isLead && (<button
@@ -789,7 +789,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                                                     </button>)}
                                                                     <button 
                                                                         onClick={() => handleDeleteItem(originalIndex)}
-                                                                        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                                                                        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
                                                                         onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = '#fee2e2'; }}
                                                                         onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.backgroundColor = 'transparent'; }}
                                                                         title="Fjern række"
