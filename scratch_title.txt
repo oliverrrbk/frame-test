@@ -1,0 +1,31 @@
+                                    <div style={{ flex: 1, minWidth: '300px' }}>
+                                        <input 
+                                            type="text"
+                                            value={list.name}
+                                            onChange={(e) => handleUpdateListMeta(list.id, 'name', e.target.value)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onBlur={() => handleSaveList()}
+                                            style={{ 
+                                                fontSize: '1.2rem', 
+                                                fontWeight: '700', 
+                                                color: '#0f172a', 
+                                                border: '1px solid transparent',
+                                                background: 'transparent',
+                                                padding: '4px 8px',
+                                                marginLeft: '-8px',
+                                                borderRadius: '6px',
+                                                outline: 'none',
+                                                transition: 'border-color 0.2s, background-color 0.2s',
+                                                width: '100%'
+                                            }}
+                                            onFocus={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                                        />
+                                        <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                                            {listMaterials.length} materialer &bull; {listMaterials.filter(m => m.status === 'Bestilt' || m.status === 'Leveret').length} bestilt
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                                    {/* Faktura pris input i overskriften */}
+                                    {profile?.role !== 'worker' && profile?.role !== 'apprentice' && (

@@ -1,0 +1,48 @@
+r.<br/>
+                                                        <strong>Tidspunkt:</strong> {new Date(selectedLead.raw_data.audit_trail.accepted_at).toLocaleString('da-DK')}<br/>
+                                                        <strong>IP-adresse:</strong> {selectedLead.raw_data.audit_trail.ip_address}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="lead-details-grid">
+                                            {/* TILBUD / OVERSLAG BOKS (Nu flyttet øverst) */}
+                                            <div style={{ padding: '16px', backgroundColor: selectedLead.status === 'Bekræftet opgave' ? '#ecfdf5' : '#f7f6f3', borderRadius: '14px', border: selectedLead.status === 'Bekræftet opgave' ? '1px solid #10b981' : '1px solid #e8e6e1' }}>
+                                                {selectedLead.status === 'Bekræftet opgave' ? (
+                                                    <>
+                                                        <span style={{ fontSize: '0.85rem', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tilbud givet og accepteret</span>
+                                                        <div style={{ margin: '12px 0 0', color: '#064e3b', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            {selectedLead.raw_data?.actual_quote_price ? (() => {
+                                                                const incVat = Math.round(selectedLead.raw_data.actual_quote_price);
+                                                                const exVat = Math.round(incVat / 1.25);
+                                                                const vat = incVat - exVat;
+                                                                return (
+                                                                    <>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                            <span style={{ opacity: 0.8 }}>Ekskl. moms:</span>
+                                                                            <span>{exVat.toLocaleString('da-DK')} kr.</span>
+                                                                        </div>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                            <span style={{ opacity: 0.8 }}>Moms (25%):</span>
+                                                                            <span>{vat.toLocaleString('da-DK')} kr.</span>
+                                                                        </div>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #a7f3d0', paddingTop: '6px', marginTop: '4px', fontWeight: 'bold', fontSize: '1.05rem', color: '#065f46' }}>
+                                                                            <span>Inkl. moms:</span>
+                                                                            <span>{incVat.toLocaleString('da-DK')} kr.</span>
+                                                                        </div>
+                                                                    </>
+                                                                );
+                                                            })() : <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>? kr. inkl. moms</span>}
+                                                        </div>
+                                                    </>
+                                                ) : (['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? (
+                                                    <>
+                                                        <span style={{ fontSize: '0.85rem', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overslag udeladt</span>
+                                                        <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#d97706', fontSize: '1.1rem' }}>
+                                                            Kræver besigtigelse
+                                                        </p>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span style={{ fontSize: '0.85rem', color: 

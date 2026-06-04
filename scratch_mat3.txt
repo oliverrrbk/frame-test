@@ -1,0 +1,78 @@
+                <button 
+                    onClick={handleCreateNewList}
+                    style={{ 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', 
+                        background: 'linear-gradient(to right, #f8fafc, #f1f5f9)', 
+                        border: '2px dashed #cbd5e1', color: '#475569', 
+                        padding: '20px', borderRadius: '16px', cursor: 'pointer', 
+                        fontWeight: 'bold', width: '100%', fontSize: '1.05rem',
+                        transition: 'all 0.2s',
+                        marginTop: '8px'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.color = '#334155'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569'; }}
+                >
+                    <FolderPlus size={20} /> Opret Ny Materialeliste
+                </button>
+
+            </div>
+
+            {/* GLOBAL GEM KNAP */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', position: 'sticky', bottom: '24px', zIndex: 10 }}>
+                <button 
+                    onClick={() => handleSaveList()}
+                    disabled={isSaving}
+                    className="btn-primary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 24px', borderRadius: '12px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', backgroundColor: '#10b981', color: 'white', border: 'none', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)' }}
+                >
+                    {isSaving ? <><Loader2 size={18} className="animate-spin" /> Gemmer...</> : <><Save size={18} /> GEM ALLE LISTER PÅ SAGEN</>}
+                </button>
+            </div>
+
+            {/* SLET LISTE MODAL */}
+            {listToDelete && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out' }}>
+                    <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '440px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', animation: 'fadeInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                            <div style={{ padding: '12px', backgroundColor: '#fee2e2', color: '#ef4444', borderRadius: '50%' }}>
+                                <Trash2 size={28} />
+                            </div>
+                            <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a' }}>Slet materialeliste?</h2>
+                        </div>
+                        <p style={{ color: '#64748b', fontSize: '1rem', lineHeight: '1.5', marginBottom: '32px' }}>
+                            Er du sikker på, at du vil slette denne ekstra materialeliste og <strong>alle dens varer</strong>? Handlingen kan ikke fortrydes.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button 
+                                onClick={() => setListToDelete(null)}
+                                style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', transition: 'all 0.2s' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'white'; }}
+                            >
+                                Annullér
+                            </button>
+                            <button 
+                                onClick={confirmDeleteList}
+                                style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: '#ef4444', color: 'white', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dc2626'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                            >
+                                Ja, Slet Liste
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+            
+            <style dangerouslySetInnerHTML={{__html: `
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+                .animate-spin { animation: spin 1s linear infinite; }
+                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            `}} />
+        </div>
+    );
+};
+
+export default MaterialList;

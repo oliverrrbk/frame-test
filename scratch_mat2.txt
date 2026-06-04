@@ -1,0 +1,51 @@
+                        <input 
+                            type="text" 
+                            value={deliveryInfo.address}
+                            onChange={(e) => setDeliveryInfo({ ...deliveryInfo, address: e.target.value })}
+                            placeholder="Vejnavn 42, 8000 Aarhus"
+                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none' }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
+                        />
+                    </div>
+                    
+                    <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Ønsket leveringsdato</label>
+                        <input 
+                            type="date"
+                            value={deliveryInfo.date}
+                            onChange={(e) => setDeliveryInfo({ ...deliveryInfo, date: e.target.value })}
+                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none' }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
+                        />
+                    </div>
+
+                    <div className="input-group" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Bemærkninger til fragtmanden</label>
+                        <textarea 
+                            rows={2}
+                            value={deliveryInfo.notes}
+                            onChange={(e) => setDeliveryInfo({ ...deliveryInfo, notes: e.target.value })}
+                            placeholder="Skriv eventuelle anvisninger til lastbilen..."
+                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', resize: 'vertical' }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
+                        />
+                    </div>
+                </div>
+                )}
+            </div>
+            )}
+
+            {/* MATERIALELISTER (ACCORDIONS) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {materialListsMeta.map((list) => {
+                    const isOpen = openLists[list.id];
+                    const listMaterials = materials.filter(m => m.listId === list.id);
+                    
+                    return (
+                        <div key={list.id} style={{ 
+                            border: '1px solid #e2e8f0', 
+                            borderRadius: '16px', 
+                            overflow: 'hidden', 

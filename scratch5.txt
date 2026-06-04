@@ -1,0 +1,151 @@
+                                                        'floors': 'Antal plan / etager',
+                                                        'houseAge': 'Huset byggeår',
+                                                        'floorType': 'Valgt gulvtype',
+                                                        'oldFloorType': 'Eksisterende gulvtype',
+                                                        'floorFoundation': 'Underlag / Konstruktion',
+                                                        'underfloorHeating': 'Gulvvarme',
+                                                        'floorPattern': 'Lægningsmønster',
+                                                        'floorDoorsNear': 'Døre i nærheden',
+                                                        'floorObstacles': 'Forhindringer i rummet',
+                                                        'specificFloorWishes': 'Særlige gulvønsker',
+                                                        'specificFloorDetails': 'Yderligere gulvdetaljer',
+                                                        'finish': 'Afslutning / Lister / Fuge',
+                                                        'underlayment': 'Underlagstype',
+                                                        'terraceWood': 'Terrasse træsort',
+                                                        'terraceFoundation': 'Fundamentstype',
+                                                        'terraceHeight': 'Højde over terræn',
+                                                        'terraceShape': 'Form på terrassen',
+                                                        'terraceSteps': 'Trappetrin',
+                                                        'terraceRailing': 'Gelænder',
+                                                        'terraceBuiltIn': 'Indbyggede elementer',
+                                                        'terraceSubConstruction': 'Underkonstruktion / Strøer',
+                                                        'screwType': 'Skruetype / Montering',
+                                                        'roofPitch': 'Tagets hældning',
+                                                        'roofType': 'Tagtype',
+                                                        'oldRoofType': 'Eksisterende tagtype',
+                                                        'eavesMaterial': 'Stern & Vindskede materiale',
+                                                        'skotrender': 'Skotrender',
+                                                        'skotrenderMeters': 'Meter skotrende',
+                                                        'grater': 'Grater (ved valmtag)',
+                                                        'graterMeters': 'Meter grat',
+                                                        'chimney': 'Skorstene til inddækning',
+                                                        'chimneyAmount': 'Antal skorstene',
+                                                        'skylightReplace': 'Ovenlysvinduer til udskiftning',
+                                                        'skylightReplaceAmount': 'Antal udskiftede ovenlys',
+                                                        'skylightNew': 'Nye ovenlysvinduer',
+                                                        'skylightNewAmount': 'Antal nye ovenlys',
+                                                        'fenceLength': 'Hegnslængde (meter)',
+                                                        'fenceHeight': 'Hegnhøjde (meter)',
+                                                        'fencePostType': 'Stolpetype',
+                                                        'fenceGravelBoard': 'Bundplade / Hjulplade',
+                                                        'fenceGates': 'Hegnsporte',
+                                                        'facadeWood': 'Facade beklædningstype',
+                                                        'facadeDirection': 'Lægningsretning',
+                                                        'facadeIsolation': 'Efterisolering',
+                                                        'facadeScaffolding': 'Stillads / Arbejdsplatform',
+                                                        'kitchenBrand': 'Køkkenbrand / Mærke',
+                                                        'kitchenElements': 'Antal elementer',
+                                                        'kitchenTabletop': 'Bordplademateriale',
+                                                        'kitchenSinkTabletop': 'Planlimet/underlimet vask',
+                                                        'kitchenAppliances': 'Montering af hvidevarer',
+                                                        'ceilingMaterial': 'Loftmateriale',
+                                                        'ceilingHeight': 'Lofthøjde',
+                                                        'ceilingInsulation': 'Efterisolering af loft',
+                                                        'spots': 'Spots / Lampesteder',
+                                                        'mountingStyle': 'Montagetype',
+                                                        'insulation': 'Efterisolering',
+                                                        'openings': 'Antal åbninger',
+                                                        'annexType': 'Byggeritype',
+                                                        'buildingPermit': 'Byggetilladelse',
+                                                        'foundationType': 'Fundamentstype',
+                                                        'oldCeilingType': 'Eksisterende loft',
+                                                        'oldFacadeMaterial': 'Eksisterende facade',
+                                                        'oldMaterial': 'Eksisterende materiale',
+                                                        'postMaterial': 'Stolpemateriale',
+                                                        'postAnchoringWoodMetal': 'Stolpeforankring (Træ/Metal)',
+                                                        'postAnchoringConcrete': 'Stolpeforankring (Beton)',
+                                                        'doorAmount': 'Antal døre',
+                                                        'doorType': 'Dørtype',
+                                                        'doorStyle': 'Dørstil',
+                                                        'doorModel': 'Dørmodel',
+                                                        'electricLock': 'Elektrisk lås / Smart-lock',
+                                                        'doorHinge': 'Dørhængsling (Indad/Udad)',
+                                                        'windowAmount': 'Antal vinduer',
+                                                        'additionalNotes': 'Ekstra noter',
+                                                        'subProjectCount': 'Antal delprojekter',
+                                                        'length': 'Længde i meter',
+                                                        'height': 'Højde i meter',
+                                                        'width': 'Bredde i meter',
+                                                        'isKombi': 'Kombi-projekt',
+                                                        'vaporAndInsulation': 'Dampspærre og isolering',
+                                                        'spotsAmount': 'Antal spots',
+                                                        'elevation': 'Terrassetype (højde)',
+                                                        'roofTerraceFeet': 'Tagterrassefødder',
+                                                        'awning': 'Markise',
+                                                        'awningType': 'Markisetype',
+                                                        'railing': 'Rækværk/Gelænder',
+                                                        'railingMaterial': 'Rækværksmateriale',
+                                                        'railingMeters': 'Meter rækværk',
+                                                        'terraceComplexity': 'Specialvinkler / Trapper',
+                                                        'floorDoorsCount': 'Antal indvendige døre',
+                                                        'windowsConfig': 'Vinduesspecifikationer',
+                                                        'extensions': 'Kviste',
+                                                        'extensionsAmount': 'Antal kviste'
+                                                    };
+
+                                                    const valueTranslationMap = {
+                                                        'yes': 'Ja',
+                                                        'no': 'Nej',
+                                                        'none': 'Ingen',
+                                                        'both': 'Begge',
+                                                        'standard': 'Standard',
+                                                        'premium': 'Premium',
+                                                        'oak': 'Eg',
+                                                        'pine': 'Fyr',
+                                                        'larch': 'Lærk',
+                                                        'spruce': 'Gran',
+                                                        'plywood': 'Krydsfiner',
+                                                        'felt': 'Tagpap',
+                                                        'tiles': 'Tegl',
+                                                        'concrete': 'Beton',
+                                                        'steel': 'Stål',
+                                                        'composite': 'Komposit',
+                                                        'ground': 'Jordniveau',
+                                                        'elevated': 'Hævet terrasse',
+                                                        'roof': 'Tagterrasse / Tag',
+                                                        'zinc': 'Zink',
+                                                        'copper': 'Kobber',
+                                                        'eternit': 'Eternit',
+                                                        'wood': 'Træ'
+                                                    };
+
+                                                    const translateValue = (val) => {
+                                                        if (val === undefined || val === null) return '';
+                                                        const str = val.toString().trim();
+                                                        const lower = str.toLowerCase();
+                                                        if (valueTranslationMap[lower]) {
+                                                            return valueTranslationMap[lower];
+                                                        }
+                                                        if (lower === 'yes') return 'Ja';
+                                                        if (lower === 'no') return 'Nej';
+                                                        return str;
+                                                    };
+
+                                                    const getUnit = (key, category) => {
+                                                        const k = key.toLowerCase();
+                                                        if (k.includes('amount') || k.includes('area') || k.includes('roofamount') || k.includes('facadeamount')) {
+                                                            if (category === 'fence') return ' meter';
+                                                            if (category === 'windows' || category === 'doors' || category === 'kitchen') return ' stk.';
+                                                            return ' m²';
+                                                        }
+                                                        if (k.includes('length') || k.includes('meters') || k.includes('width') || k.includes('height')) {
+                                                            return ' m';
+                                                        }
+                                                        return '';
+                                                    };
+
+                                                    const categorizeKey = (key) => {
+                                                        const k = key.toLowerCase();
+                                                        if (k.includes('disposal') || k.includes('demolition') || k.includes('old') || k.includes('obstacle') || k.includes('scaffolding') || k.includes('stillads') || k.includes('bortskaffelse') || k.includes('fjern')) {
+                                                            return 'preparation';
+                                                        }

@@ -4187,6 +4187,7 @@ const Dashboard = () => {
                                                                         <label>Timepris (kr)</label>
                                                                         <FormattedNumberInput value={quoteBuilder.hourlyRate} onChange={(val) => setQuoteBuilder({...quoteBuilder, hourlyRate: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
                                                                     </div>
+                                                                    <style>{`@media(max-width:768px){.quote-triple-grid{grid-template-columns:1fr !important;}}`}</style>
                                                                     <div className="quote-triple-grid">
                                                                         <div className="input-group">
                                                                             <label>Internt Indkøbsbudget (kr)</label>

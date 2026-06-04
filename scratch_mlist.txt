@@ -1,0 +1,16 @@
+
+                                                 {isMaterialListOpen && (
+                                                     <div style={{ marginBottom: '24px', padding: '24px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1' }}>
+                                                         <MaterialList isLead={true} 
+                                                             lead={selectedLead} 
+                                                             profile={carpenterProfile} 
+                                                             onUpdate={(updated) => {
+                                                                 setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
+                                                                 setSelectedLead(updated);
+                                                             }} 
+                                                         />
+                                                     </div>
+                                                 )}
+                                             </>
+                                         )}
+

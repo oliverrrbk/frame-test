@@ -1,0 +1,251 @@
+                                                                        </div>
+                                                                        
+                                                                        {details.obsNotes && details.obsNotes.toLowerCase() !== 'ingen særlige forbehold' && (
+                                                                            <div style={{ backgroundColor: '#fffbeb', padding: '16px', borderRadius: '8px', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b' }}>
+                                                                                <strong style={{ color: '#b45309', display: 'block', marginBottom: '4px', fontSize: '0.9rem' }}>OBS / Særlige Forbehold:</strong>
+                                                                                <span style={{ color: '#92400e', fontSize: '0.95rem' }}>{details.obsNotes}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b', fontStyle: 'italic' }}>
+                                                                        (Ældre opgave uden automatisk opsummering. Se chatlog herunder.)
+                                                                    </p>
+                                                                )}
+
+                                                                <details style={{ marginTop: hasSummary ? '8px' : '0' }}>
+                                                                    <summary style={{ cursor: 'pointer', color: '#2563eb', fontWeight: '500', fontSize: '0.9rem', userSelect: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '8px 12px', backgroundColor: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                                                                        {hasSummary ? 'Læs hele samtalen med kunden' : 'Vis rå chatlog'} ({details.chatLog.filter(m => m.role !== 'system').length} beskeder)
+                                                                    </summary>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto', padding: '12px', backgroundColor: '#f1f5f9', borderRadius: '6px', marginTop: '12px', border: '1px solid #e2e8f0' }}>
+                                                                        {details.chatLog.filter(m => m.role !== 'system').map((msg, idx) => (
+                                                                            <div key={idx} style={{ 
+                                                                                padding: '10px 14px', 
+                                                                                borderRadius: '8px', 
+                                                                                maxWidth: '90%', 
+                                                                                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                                                                                backgroundColor: msg.role === 'user' ? '#3b82f6' : 'white',
+                                                                                color: msg.role === 'user' ? 'white' : '#1e293b',
+                                                                                border: msg.role === 'user' ? 'none' : '1px solid #cbd5e1',
+                                                                                fontSize: '0.95rem',
+                                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                                            }}>
+                                                                                <strong style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px', display: 'block' }}>{msg.role === 'user' ? 'Kunde' : 'Digital Assistent'}</strong>
+                                                                                <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content.replace(/\[KLAR_TIL_TILBUD.*?\]/i, '').trim()}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </details>
+                                                                <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', color: '#065f46' }}>
+                                                                    <strong>Systemets hemmelige estimat:</strong><br/>
+                                                                    Arbejdstid: {details.aiLaborHours} timer<br/>
+                                                                    Materialer: {details.aiMaterialCost} kr. (før din avance)
+                                                                    
+                                                                    {details.aiBreakdown && details.aiBreakdown.length > 0 && (
+                                                                        <div style={{ marginTop: '12px', borderTop: '1px solid #a7f3d0', paddingTop: '12px' }}>
+                                                                            <strong style={{ fontSize: '0.9rem' }}>Beregningsoversigt:</strong>
+                                                                            <ul style={{ margin: '8px 0 0', paddingLeft: '20px', fontSize: '0.9rem' }}>
+                                                                                {details.aiBreakdown.map((item, i) => (
+                                                                                    <li key={i} style={{ marginBottom: '4px' }}>
+                                                                                        <strong>{item.item}:</strong> {item.hours} timer, {item.materials} kr.
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    } else if (details.aiLaborHours !== undefined && details.aiMaterialCost !== undefined) {
+                                                        renderElements.push(
+                                                            <div key="ai_internal_estimate" style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+                                                                <details style={{ border: '1px solid #e8e6e1', borderRadius: '8px', backgroundColor: '#ffffff', overflow: 'hidden' }}>
+                                                                    <summary style={{ padding: '12px 16px', background: '#fafafa', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none' }}>
+                                                                        <span>Se beregningsdetaljer (systemets bud)</span>
+                                                                    </summary>
+                                                                    <div style={{ padding: '16px', borderTop: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                            <span>Beregnet tidsforbrug:</span>
+                                                                            <strong>{details.aiLaborHours} timer</strong>
+                                                                        </div>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                            <span>Beregnet materialeindkøb:</span>
+                                                                            <strong>{details.aiMaterialCost.toLocaleString('da-DK')} DKK</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                </details>
+                                                                <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', color: '#065f46' }}>
+                                                                    <strong>Systemets hemmelige estimat:</strong><br/>
+                                                                    Arbejdstid: {details.aiLaborHours} timer<br/>
+                                                                    Materialer: {details.aiMaterialCost} kr. (før din avance)
+                                                                    
+                                                                    {details.aiBreakdown && details.aiBreakdown.length > 0 && (
+                                                                        <div style={{ marginTop: '12px', borderTop: '1px solid #a7f3d0', paddingTop: '12px' }}>
+                                                                            <strong style={{ fontSize: '0.9rem' }}>Beregningsoversigt:</strong>
+                                                                            <ul style={{ margin: '8px 0 0', paddingLeft: '20px', fontSize: '0.9rem' }}>
+                                                                                {details.aiBreakdown.map((item, i) => (
+                                                                                    <li key={i} style={{ marginBottom: '4px' }}>
+                                                                                        <strong>{item.item}:</strong> {item.hours} timer, {item.materials} kr.
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+                                    
+                                                    if (details.photos && details.photos.length > 0) {
+                                                        renderElements.push(
+                                                            <div key="photos" style={{ padding: '16px', border: '1px solid #e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+                                                                <strong style={{ color: '#6b7280' }}>Kundens Billeder</strong>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
+                                                                    {details.photos.map((url, idx) => (
+                                                                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer" style={{ position: 'relative', paddingTop: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e8e6e1', display: 'block' }}>
+                                                                            <img 
+                                                                                src={url} 
+                                                                                alt={`Kundebillede ${idx + 1}`} 
+                                                                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                                            />
+                                                                        </a>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    
+                                                    return renderElements;
+                                                })()}
+                                            </div>
+                                        )}
+
+                                        {selectedLead.project_category === 'windows' && (
+                                            <WindowsChecklist leadId={selectedLead.id} />
+                                        )}
+
+                                        {/* GRUNDLAG FOR PRISESTIMATET ACCORDION */}
+                                        <div 
+                                            onClick={() => setIsPriceBasisOpen(!isPriceBasisOpen)}
+                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px', marginTop: '24px' }}
+                                        >
+                                            <h3 style={{ color: '#1a1a1a', margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Calculator size={18} style={{ color: '#6b7280' }} /> Økonomisk overblik før moms
+                                            </h3>
+                                            <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: 'bold' }}>
+                                                {isPriceBasisOpen ? 'Skjul ▲' : 'Vis ▼'}
+                                            </span>
+                                        </div>
+
+                                        {isPriceBasisOpen && (
+                                            <div style={{ marginBottom: '24px', padding: '24px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1' }}>
+                                                {(() => {
+                                                    const calc = selectedLead.raw_data?.calc_data;
+                                                    const bArr = selectedLead.raw_data?.breakdownArr || calc?.breakdownArr || [];
+                                                    
+                                                    return (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                                            {/* GORGEOUS NUMERICAL BREAKDOWN */}
+                                                            {calc && (
+                                                                <div>
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                                                                        
+                                                                        {/* Arbejdstid Card */}
+                                                                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                            <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                                                Arbejdstid
+                                                                            </div>
+                                                                            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '2px' }}>
+                                                                                {calc.laborHours ? Math.ceil(calc.laborHours) : 0} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#64748b' }}>timer</span>
+                                                                            </div>
+                                                                            <div style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: '500' }}>
+                                                                                {(calc.totalLaborCost || 0).toLocaleString('da-DK')} kr.
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Materialer Card */}
+                                                                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                            <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                                                                                Materialer
+                                                                            </div>
+                                                                            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '2px' }}>
+                                                                                {(calc.materialCost || 0).toLocaleString('da-DK')} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#64748b' }}>kr.</span>
+                                                                            </div>
+                                                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                                                                Inkl. spild & tillæg
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Kørsel & Maskinleje Card */}
+                                                                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                            <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                                                                Kørsel & Maskiner
+                                                                            </div>
+                                                                            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '2px' }}>
+                                                                                {((calc.drivingCost || 0) + (calc.externalLeaseCost || 0)).toLocaleString('da-DK')} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#64748b' }}>kr.</span>
+                                                                            </div>
+                                                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                                                                Logistik udgifter
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Risikobuffer Card */}
+                                                                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                            <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                                                                Tømrer Risikobuffer
+                                                                            </div>
+                                                                            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '2px' }}>
+                                                                                {(calc.hiddenBuffer || 0).toLocaleString('da-DK')} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#64748b' }}>kr.</span>
+                                                                            </div>
+                                                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                                                                Tillæg for uforudset
+                                                                            </div>
+                                                                        </div>
+
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* DETAILED BULLET POINTS / AI SUMMARY */}
+                                                            <div style={{ borderTop: calc ? '1px solid #e2e8f0' : 'none', paddingTop: calc ? '24px' : '0' }}>
+                                                                
+                                                                {bArr.length === 0 ? (
+                                                                    <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #94a3b8' }}>
+                                                                        <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                                                                            Denne beregning er foretaget automatisk baseret på vores indbyggede branchespecifikke formler. Beregningen tager højde for estimeret arbejdstid, gennemsnitlige materialepriser, forventet spild og nødvendigt tilbehør (såsom beslag og fugematerialer).
+                                                                        </p>
+                                                                    </div>
+                                                                ) : (
+                                                                    (() => {
+                                                                        const expl = parseBreakdownToExplanation(calc, bArr);
+                                                                        if (!expl) return null;
+                                                                        
+                                                                        return (
+                                                                            <details style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', marginTop: '24px' }}>
+                                                                                <summary style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', outline: 'none' }}>
+                                                                                    Detaljeret Begrundelse for Prisestimatet (Log)
+                                                                                </summary>
+                                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '16px' }}>
+                                                                                    <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#64748b', lineHeight: '1.6' }}>
+                                                                                        Systemets "tankegang" brudt ned i tømrer-logik, så I har det fulde belæg bag de estimerede tal.
+                                                                                    </p>
+                                                                                
+                                                                                {(() => {
+                                                                                    const activeCategories = Object.values(expl).filter(cat => cat.items.length > 0);
+                                                                                    return activeCategories.map((cat, idx) => (
+                                                                                        <div key={idx} style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                                            <h4 style={{ margin: '0 0 6px 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: 'bold' }}>{idx + 1}. {cat.title}</h4>
+                                                                                            <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.85rem' }}>{cat.description}</p>
+                                                                                            <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', lineHeight: '1.6', fontSize: '0.9rem' }}>
+                                                                                                {cat.items.map((item, i) => (
+                                                                                                    <li key={i} style={{ marginBottom: '8px' }}>
+                                                                                                        {item.includes(':') ? (
+                                                                                                            <>
+                                                                                                                <strong>{item.split(':')[0]}:</strong>{item.split(':').slice(1).join(':')}
+                                                                                                            </>
+                                                                                                        ) : item}
+                                                                                                    </li>

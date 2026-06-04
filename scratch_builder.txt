@@ -1,0 +1,131 @@
+                                                            {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') 
+                                                                ? "Dette er et projekt uden auto-estimat. Opbyg tilbuddet fra bunden ved at indtaste dine beregnede timer og materialer, så bygger systemet en professionel PDF-kontrakt." 
+                                                                : "Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig."}
+                                                        </p>
+                                                        
+                                                        <div className="quote-builder-grid" style={{ marginTop: '10px' }}>
+                                                            {quoteBuilder.isKombi && quoteBuilder.subprojects && quoteBuilder.subprojects.length > 0 ? (
+                                                                <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '8px' }}>
+                                                                    <strong style={{ color: '#1a1a1a', fontSize: '0.95rem' }}>Individuel tilpasning pr. underprojekt:</strong>
+                                                                    {quoteBuilder.subprojects.map((sub, sIdx) => (
+                                                                        <details key={sub.id} style={{ border: '1px solid #e8e6e1', borderRadius: '8px', backgroundColor: '#ffffff', overflow: 'hidden' }} open={sIdx === 0}>
+                                                                            <summary style={{ padding: '10px 14px', background: '#fafafa', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none' }}>
+                                                                                <span>Del {sIdx + 1}: {sub.title}</span>
+                                                                                <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'normal' }}>
+                                                                                    ({sub.laborHours} t / {sub.materialCost.toLocaleString('da-DK')} kr.)
+                                                                                </span>
+                                                                            </summary>
+                                                                            <div className="quote-builder-grid" style={{ padding: '12px 14px', borderTop: '1px solid #e8e6e1' }}>
+                                                                                <div className="input-group">
+                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Arbejdstimer (antal)</label>
+                                                                                    <input 
+                                                                                        type="number" 
+                                                                                        value={sub.laborHours} 
+                                                                                        onChange={(e) => {
+                                                                                            const val = Number(e.target.value);
+                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, laborHours: val } : item);
+                                                                                            const newTotalHours = updatedSubs.reduce((sum, item) => sum + item.laborHours, 0);
+                                                                                            setQuoteBuilder({
+                                                                                                ...quoteBuilder,
+                                                                                                subprojects: updatedSubs,
+                                                                                                laborHours: newTotalHours
+                                                                                            });
+                                                                                        }} 
+                                                                                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
+                                                                                    />
+                                                                                </div>
+                                                                                <div className="input-group">
+                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Internt Indkøbsbudget (kr)</label>
+                                                                                    <input 
+                                                                                        type="number" 
+                                                                                        value={sub.materialCostBase} 
+                                                                                        onChange={(e) => {
+                                                                                            const val = Number(e.target.value);
+                                                                                            const newSales = Math.round(val * sub.materialMarkup);
+                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, materialCostBase: val, materialCost: newSales } : item);
+                                                                                            const newTotalMaterials = updatedSubs.reduce((sum, item) => sum + item.materialCost, 0);
+                                                                                            const newTotalBase = updatedSubs.reduce((sum, item) => sum + item.materialCostBase, 0);
+                                                                                            setQuoteBuilder({
+                                                                                                ...quoteBuilder,
+                                                                                                subprojects: updatedSubs,
+                                                                                                materialCostBase: newTotalBase,
+                                                                                                materialCost: newTotalMaterials
+                                                                                            });
+                                                                                        }} 
+                                                                                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
+                                                                                    />
+                                                                                </div>
+                                                                                <div className="input-group">
+                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Materiale-avance (%)</label>
+                                                                                    <input 
+                                                                                        type="number" 
+                                                                                        value={Math.round((sub.materialMarkup - 1) * 100)} 
+                                                                                        onChange={(e) => {
+                                                                                            const pct = Number(e.target.value);
+                                                                                            const factor = 1 + (pct / 100);
+                                                                                            const newSales = Math.round(sub.materialCostBase * factor);
+                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, materialMarkup: factor, materialCost: newSales } : item);
+                                                                                            const newTotalMaterials = updatedSubs.reduce((sum, item) => sum + item.materialCost, 0);
+                                                                                            setQuoteBuilder({
+                                                                                                ...quoteBuilder,
+                                                                                                subprojects: updatedSubs,
+                                                                                                materialCost: newTotalMaterials
+                                                                                            });
+                                                                                        }} 
+                                                                                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
+                                                                                    />
+                                                                                </div>
+                                                                                <div className="input-group" style={{ backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                                                                    <label style={{ fontSize: '0.8rem', color: '#0f172a', marginBottom: '2px', display: 'block', fontWeight: 'bold' }}>Salgspris (kr)</label>
+                                                                                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#0f172a' }}>
+                                                                                        {sub.materialCost.toLocaleString('da-DK')} kr.
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </details>
+                                                                    ))}
+                                                                    <div className="input-group" style={{ marginTop: '8px' }}>
+                                                                        <label style={{ fontWeight: 'bold' }}>Timepris (kr) - Gælder alle underprojekter</label>
+                                                                        <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="input-group">
+                                                                        <label>Arbejdstimer (antal)</label>
+                                                                        <FormattedNumberInput value={quoteBuilder.laborHours} onChange={(val) => setQuoteBuilder({...quoteBuilder, laborHours: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                    </div>
+                                                                    <div className="input-group">
+                                                                        <label>Timepris (kr)</label>
+                                                                        <FormattedNumberInput value={quoteBuilder.hourlyRate} onChange={(val) => setQuoteBuilder({...quoteBuilder, hourlyRate: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
+                                                                    </div>
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', alignItems: 'end' }}>
+                                                                        <div className="input-group">
+                                                                            <label>Internt Indkøbsbudget (kr)</label>
+                                                                            <FormattedNumberInput value={quoteBuilder.materialCostBase} onChange={(val) => {
+                                                                                const newSales = Math.round(val * quoteBuilder.materialMarkup);
+                                                                                setQuoteBuilder({...quoteBuilder, materialCostBase: val, materialCost: newSales});
+                                                                            }} style={{ border: '1px solid #e8e6e1', padding: '12px 16px', borderRadius: '8px', width: '100%', fontSize: '0.95rem' }} />
+                                                                        </div>
+                                                                        <div className="input-group">
+                                                                            <label>Materiale-avance (%)</label>
+                                                                            <input 
+                                                                                type="number" 
+                                                                                value={Math.round((quoteBuilder.materialMarkup - 1) * 100)} 
+                                                                                onChange={(e) => {
+                                                                                    const pct = Number(e.target.value);
+                                                                                    const factor = 1 + (pct / 100);
+                                                                                    const newSales = Math.round(quoteBuilder.materialCostBase * factor);
+                                                                                    setQuoteBuilder({...quoteBuilder, materialMarkup: factor, materialCost: newSales});
+                                                                                }} 
+                                                                                style={{ border: '1px solid #e8e6e1', padding: '12px 16px', borderRadius: '8px', width: '100%', fontSize: '0.95rem' }} 
+                                                                            />
+                                                                        </div>
+                                                                        <div className="input-group">
+                                                                            <label style={{ fontWeight: 'bold' }}>Salgspris til kunden</label>
+                                                                            <div style={{ backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '8px', width: '100%', display: 'flex', alignItems: 'center', fontSize: '0.95rem', fontWeight: 'bold', color: '#0f172a', height: '46px' }}>
+                                                                                {quoteBuilder.materialCost.toLocaleString('da-DK')} kr.
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </>
