@@ -404,138 +404,6 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-in' }}>
-            
-            
-
-            {/* LEVERINGSINFO (ACCORDION) */}
-            {profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
-            <div style={{ 
-                border: '1px solid #e2e8f0', 
-                borderRadius: '16px', 
-                overflow: 'hidden', 
-                backgroundColor: '#ffffff',
-                marginBottom: '16px',
-                boxShadow: isDeliveryOpen ? '0 12px 24px -10px rgba(0,0,0,0.08)' : '0 2px 4px rgba(0,0,0,0.02)',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}>
-                {/* ACCORDION HEADER */}
-                <div 
-                    onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
-                    style={{ 
-                        padding: '20px 24px', 
-                        backgroundColor: isDeliveryOpen ? '#f8fafc' : '#ffffff', 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        borderBottom: isDeliveryOpen ? '1px solid #e2e8f0' : 'none',
-                        transition: 'background-color 0.2s'
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ 
-                            width: '40px', height: '40px', 
-                            borderRadius: '12px', 
-                            backgroundColor: isDeliveryOpen ? '#fef3c7' : '#f8fafc', 
-                            color: isDeliveryOpen ? '#d97706' : '#64748b',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'all 0.2s'
-                        }}>
-                            <Truck size={20} strokeWidth={2.5} />
-                        </div>
-                        <div>
-                            <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', fontWeight: 'bold' }}>
-                                Leverings- & Fragtoplysninger
-                            </h3>
-                            {!isDeliveryOpen && (
-                                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: (!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? '#ef4444' : '#64748b', fontWeight: (!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? 'bold' : 'normal', wordBreak: 'break-word', whiteSpace: 'normal' }}>
-                                    {(!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? 'Mangler leveringsadresse!' : deliveryInfo.address}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                    <div style={{ color: '#94a3b8' }}>
-                        {isDeliveryOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                    </div>
-                </div>
-
-                {/* ACCORDION BODY */}
-                {isDeliveryOpen && (
-                <div style={{ padding: '24px', backgroundColor: '#ffffff', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                    <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Leveringsadresse</label>
-                        <input 
-                            type="text" 
-                            value={deliveryInfo.address}
-                            onChange={(e) => setDeliveryInfo({ ...deliveryInfo, address: e.target.value })}
-                            placeholder="Vejnavn 42, 8000 Aarhus"
-                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none' }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
-                        />
-                    </div>
-                    
-                    <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Ønsket leveringsdato</label>
-                        <input 
-                            type="date"
-                            value={deliveryInfo.date}
-                            onChange={(e) => setDeliveryInfo({ ...deliveryInfo, date: e.target.value })}
-                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none' }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
-                        />
-                    </div>
-
-                    <div className="input-group" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Bemærkninger til fragtmanden</label>
-                        <textarea 
-                            rows={2}
-                            value={deliveryInfo.notes}
-                            onChange={(e) => setDeliveryInfo({ ...deliveryInfo, notes: e.target.value })}
-                            placeholder="Skriv eventuelle anvisninger til lastbilen..."
-                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', resize: 'vertical' }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
-                        />
-                    </div>
-                </div>
-                )}
-            </div>
-            )}
-
-            {/* BUDGET DASHBOARD */}
-            {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && !isLead) && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
-                            Materialebudget <span style={{ textTransform: 'none', fontWeight: 'normal', opacity: 0.8, fontSize: '0.75rem' }}>(ekskl. moms)</span>
-                        </h4>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
-                            {originalBudget.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
-                        </div>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Accepteret iflg. tilbud</p>
-                    </div>
-
-                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Faktisk Forbrug</h4>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
-                            {totalSpent.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
-                        </div>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Sum af faktura-priser</p>
-                    </div>
-
-                    <div style={{ padding: '24px', backgroundColor: isOverBudget ? '#fef2f2' : '#f0fdf4', borderRadius: '16px', border: `1px solid ${isOverBudget ? '#fca5a5' : '#86efac'}`, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: isOverBudget ? '#991b1b' : '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Restbudget</h4>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', color: isOverBudget ? '#dc2626' : '#10b981', letterSpacing: '-0.02em' }}>
-                            {budgetRemaining > 0 ? '+' : ''}{budgetRemaining.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: isOverBudget ? '#ef4444' : '#34d399', fontWeight: 'bold' }}>kr.</span>
-                        </div>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: isOverBudget ? '#b91c1c' : '#15803d', fontWeight: '500' }}>
-                            {isOverBudget ? 'Overskredet budget!' : 'Penge tilbage til indkøb'}
-                        </p>
-                    </div>
-                </div>
-            )}
 
             {/* MATERIALELISTER (ACCORDIONS) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -577,7 +445,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                     }}>
                                         {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                                     </div>
-                                    <div style={{ flex: 1, minWidth: '0', overflow: 'hidden' }}>
+                                    <div style={{ flex: 1, minWidth: '100px' }}>
                                         <input 
                                             type="text"
                                             value={isLead ? 'Foreslået materialeliste til opgaven' : list.name}
@@ -920,6 +788,136 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                 </button>
 
             </div>
+
+            {/* LEVERINGSINFO (ACCORDION) */}
+            {profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
+            <div style={{ 
+                border: '1px solid #e2e8f0', 
+                borderRadius: '16px', 
+                overflow: 'hidden', 
+                backgroundColor: '#ffffff',
+                marginBottom: '16px',
+                boxShadow: isDeliveryOpen ? '0 12px 24px -10px rgba(0,0,0,0.08)' : '0 2px 4px rgba(0,0,0,0.02)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}>
+                {/* ACCORDION HEADER */}
+                <div 
+                    onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
+                    style={{ 
+                        padding: '20px 24px', 
+                        backgroundColor: isDeliveryOpen ? '#f8fafc' : '#ffffff', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        borderBottom: isDeliveryOpen ? '1px solid #e2e8f0' : 'none',
+                        transition: 'background-color 0.2s'
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ 
+                            width: '40px', height: '40px', 
+                            borderRadius: '12px', 
+                            backgroundColor: isDeliveryOpen ? '#fef3c7' : '#f8fafc', 
+                            color: isDeliveryOpen ? '#d97706' : '#64748b',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.2s'
+                        }}>
+                            <Truck size={20} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', fontWeight: 'bold' }}>
+                                Leverings- & Fragtoplysninger
+                            </h3>
+                            {!isDeliveryOpen && (
+                                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: (!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? '#ef4444' : '#64748b', fontWeight: (!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? 'bold' : 'normal', wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                                    {(!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? 'Mangler leveringsadresse!' : deliveryInfo.address}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    <div style={{ color: '#94a3b8' }}>
+                        {isDeliveryOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                    </div>
+                </div>
+
+                {/* ACCORDION BODY */}
+                {isDeliveryOpen && (
+                <div style={{ padding: '24px', backgroundColor: '#ffffff', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                    <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Leveringsadresse</label>
+                        <input 
+                            type="text" 
+                            value={deliveryInfo.address}
+                            onChange={(e) => setDeliveryInfo({ ...deliveryInfo, address: e.target.value })}
+                            placeholder="Vejnavn 42, 8000 Aarhus"
+                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none' }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
+                        />
+                    </div>
+                    
+                    <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Ønsket leveringsdato</label>
+                        <input 
+                            type="date"
+                            value={deliveryInfo.date}
+                            onChange={(e) => setDeliveryInfo({ ...deliveryInfo, date: e.target.value })}
+                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none' }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
+                        />
+                    </div>
+
+                    <div className="input-group" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Bemærkninger til fragtmanden</label>
+                        <textarea 
+                            rows={2}
+                            value={deliveryInfo.notes}
+                            onChange={(e) => setDeliveryInfo({ ...deliveryInfo, notes: e.target.value })}
+                            placeholder="Skriv eventuelle anvisninger til lastbilen..."
+                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', resize: 'vertical' }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
+                        />
+                    </div>
+                </div>
+                )}
+            </div>
+            )}
+
+            {/* BUDGET DASHBOARD */}
+            {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && !isLead) && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
+                            Materialebudget <span style={{ textTransform: 'none', fontWeight: 'normal', opacity: 0.8, fontSize: '0.75rem' }}>(ekskl. moms)</span>
+                        </h4>
+                        <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
+                            {originalBudget.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                        </div>
+                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Accepteret iflg. tilbud</p>
+                    </div>
+
+                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Faktisk Forbrug</h4>
+                        <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
+                            {totalSpent.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                        </div>
+                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Sum af faktura-priser</p>
+                    </div>
+
+                    <div style={{ padding: '24px', backgroundColor: isOverBudget ? '#fef2f2' : '#f0fdf4', borderRadius: '16px', border: `1px solid ${isOverBudget ? '#fca5a5' : '#86efac'}`, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: isOverBudget ? '#991b1b' : '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Restbudget</h4>
+                        <div style={{ fontSize: '2rem', fontWeight: '800', color: isOverBudget ? '#dc2626' : '#10b981', letterSpacing: '-0.02em' }}>
+                            {budgetRemaining > 0 ? '+' : ''}{budgetRemaining.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: isOverBudget ? '#ef4444' : '#34d399', fontWeight: 'bold' }}>kr.</span>
+                        </div>
+                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: isOverBudget ? '#b91c1c' : '#15803d', fontWeight: '500' }}>
+                            {isOverBudget ? 'Overskredet budget!' : 'Penge tilbage til indkøb'}
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* GLOBAL GEM KNAP */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', paddingBottom: '24px', zIndex: 10 }}>
