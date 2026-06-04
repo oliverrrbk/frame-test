@@ -128,13 +128,13 @@ const CustomSelect = ({ value, onChange, options, icon: Icon, placeholder, disab
             {isOpen && (
                 <div style={{
                     position: 'absolute',
-                    top: 'calc(100% + 4px)',
+                    bottom: 'calc(100% + 4px)',
                     left: 0,
                     right: 0,
-                    backgroundColor: 'var(--bg-card)',
+                    backgroundColor: '#ffffff',
                     border: '1px solid var(--border-color)',
                     borderRadius: '8px',
-                    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1)',
+                    boxShadow: '0 -10px 25px -5px rgba(0,0,0,0.2), 0 -5px 10px -5px rgba(0,0,0,0.1)',
                     zIndex: 100,
                     maxHeight: '250px',
                     overflowY: 'auto',
@@ -143,7 +143,7 @@ const CustomSelect = ({ value, onChange, options, icon: Icon, placeholder, disab
                     {options.map((option) => (
                         <div
                             key={option.value}
-                            onClick={(e) => {
+                            onMouseDown={(e) => {
                                 e.stopPropagation();
                                 onChange(option.value);
                                 setIsOpen(false);
@@ -4102,40 +4102,48 @@ const Dashboard = () => {
                                                                         </p>
                                                                     </div>
                                                                 ) : (
-                                                                    <details style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', marginTop: '24px', overflow: 'hidden' }}>
-                                                                        <summary style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                            Detaljeret Begrundelse (Log)
-                                                                        </summary>
-                                                                        {calc && (
-                                                                            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                                                <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                                                    <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>Arbejdsløn (Timer)</div>
-                                                                                    <div style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 'bold' }}>~{(calc.totalLaborCost || 0).toLocaleString('da-DK')} kr.</div>
-                                                                                    <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '2px' }}>({calc.totalLaborHours} timer á {settingsData?.hourly_rate || 0} kr.)</div>
+                                                                    (() => {
+                                                                        const expl = parseBreakdownToExplanation(calc, bArr);
+                                                                        if (!expl) return null;
+                                                                        
+                                                                        return (
+                                                                            <details style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', marginTop: '24px', overflow: 'hidden' }}>
+                                                                                <summary style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                                    Detaljeret Begrundelse (Log)
+                                                                                </summary>
+                                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '16px' }}>
+                                                                                
+                                                                                {(() => {
+                                                                                    const activeCategories = Object.values(expl).filter(cat => cat.items.length > 0);
+                                                                                    return activeCategories.map((cat, idx) => {
+                                                                                        let catTotal = '';
+                                                                                        if (cat.title.includes('Arbejdstid')) catTotal = ` (I alt: ~${(calc.totalLaborCost || 0).toLocaleString('da-DK')} kr.)`;
+                                                                                        if (cat.title.includes('Hovedmaterialer')) catTotal = ` (I alt: ~${(calc.materialCost || 0).toLocaleString('da-DK')} kr.)`;
+                                                                                        if (cat.title.includes('Logistik')) catTotal = ` (I alt: ~${((calc.drivingCost || 0) + (calc.externalLeaseCost || 0) + (calc.hiddenBuffer || 0)).toLocaleString('da-DK')} kr.)`;
+                                                                                        
+                                                                                        return (
+                                                                                            <div key={idx} style={{ padding: '16px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                                                <h4 style={{ margin: '0 0 6px 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: 'bold' }}>{idx + 1}. {cat.title}{catTotal}</h4>
+                                                                                                <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.85rem' }}>{cat.description}</p>
+                                                                                                <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', lineHeight: '1.6', fontSize: '0.9rem' }}>
+                                                                                                    {cat.items.map((item, i) => (
+                                                                                                        <li key={i} style={{ marginBottom: '8px' }}>
+                                                                                                            {item.includes(':') ? (
+                                                                                                                <>
+                                                                                                                    <strong>{item.split(':')[0]}:</strong>{item.split(':').slice(1).join(':')}
+                                                                                                                </>
+                                                                                                            ) : item}
+                                                                                                        </li>
+                                                                                                    ))}
+                                                                                                </ul>
+                                                                                            </div>
+                                                                                        );
+                                                                                    });
+                                                                                })()}
                                                                                 </div>
-                                                                                <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                                                    <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>Materialer (Indkøb inkl. avance)</div>
-                                                                                    <div style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 'bold' }}>~{(calc.materialCost || 0).toLocaleString('da-DK')} kr.</div>
-                                                                                </div>
-                                                                                {((calc.drivingCost || 0) + (calc.externalLeaseCost || 0) > 0) && (
-                                                                                <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                                                    <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>Kørsel & Maskinleje</div>
-                                                                                    <div style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 'bold' }}>~{((calc.drivingCost || 0) + (calc.externalLeaseCost || 0)).toLocaleString('da-DK')} kr.</div>
-                                                                                </div>
-                                                                                )}
-                                                                                {(calc.hiddenBuffer > 0) && (
-                                                                                <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                                                    <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>Logistik & Risiko-buffer</div>
-                                                                                    <div style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 'bold' }}>~{(calc.hiddenBuffer || 0).toLocaleString('da-DK')} kr.</div>
-                                                                                </div>
-                                                                                )}
-                                                                                <div style={{ padding: '12px', backgroundColor: '#f0fdf4', border: '2px solid #bbf7d0', borderRadius: '8px', marginTop: '4px' }}>
-                                                                                    <div style={{ fontSize: '0.85rem', color: '#166534', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' }}>System-afrunding (Tilbud)</div>
-                                                                                    <div style={{ fontSize: '1.2rem', color: '#15803d', fontWeight: 'bold' }}>{Math.ceil(calc.strictPrice / 1000) * 1000} kr.</div>
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-                                                                    </details>
+                                                                            </details>
+                                                                        );
+                                                                    })()
                                                                 )}
                                                             </div>
                                                         </div>
