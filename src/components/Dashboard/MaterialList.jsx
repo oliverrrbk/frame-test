@@ -441,44 +441,63 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                         backgroundColor: isOpen ? '#e0f2fe' : '#f1f5f9', 
                                         color: isOpen ? '#0284c7' : '#64748b',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        transition: 'all 0.3s'
+                                        transition: 'all 0.3s',
+                                        flexShrink: 0
                                     }}>
-                                        {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                                        <Package size={20} />
                                     </div>
-                                    <div style={{ flex: 1, minWidth: '100px' }}>
-                                        <input 
-                                            type="text"
-                                            value={isLead ? 'Foreslået materialeliste til opgaven' : list.name}
-                                            readOnly={isLead}
-                                            onChange={(e) => {
-                                                if (!isLead) handleUpdateListMeta(list.id, 'name', e.target.value);
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                            onBlur={() => {
-                                                if (!isLead) handleSaveList();
-                                            }}
-                                            style={{ 
-                                                fontSize: '1.2rem', 
+                                    <div style={{ flex: 1, minWidth: '10px' }}>
+                                        {isLead ? (
+                                            <div style={{ 
+                                                fontSize: '1.15rem', 
                                                 fontWeight: '700', 
                                                 color: '#0f172a', 
-                                                border: '1px solid transparent',
-                                                background: 'transparent',
-                                                padding: '4px 8px',
-                                                marginLeft: '-8px',
-                                                borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s, background-color 0.2s',
-                                                width: '100%'
-                                            }}
-                                            onFocus={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                                        />
-                                        <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                                                wordBreak: 'break-word',
+                                                lineHeight: '1.3'
+                                            }}>
+                                                Foreslået materialeliste til opgaven
+                                            </div>
+                                        ) : (
+                                            <input 
+                                                type="text"
+                                                value={list.name}
+                                                readOnly={isLead}
+                                                onChange={(e) => {
+                                                    if (!isLead) handleUpdateListMeta(list.id, 'name', e.target.value);
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                onBlur={() => {
+                                                    if (!isLead) handleSaveList();
+                                                }}
+                                                style={{ 
+                                                    fontSize: '1.2rem', 
+                                                    fontWeight: '700', 
+                                                    color: '#0f172a', 
+                                                    border: '1px solid transparent',
+                                                    background: 'transparent',
+                                                    padding: '4px 8px',
+                                                    marginLeft: '-8px',
+                                                    borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden',
+                                                    outline: 'none',
+                                                    transition: 'border-color 0.2s, background-color 0.2s',
+                                                    width: '100%'
+                                                }}
+                                                onFocus={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                                            />
+                                        )}
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
                                             {listMaterials.length} materialer {!isLead && <span>&bull; {listMaterials.filter(m => m.status === 'Bestilt' || m.status === 'Leveret').length} bestilt</span>}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                    {/* Fold ud / Skjul indikator */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                                        <span>{isOpen ? 'Skjul' : 'Fold ud'}</span>
+                                        {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                    </div>
+
                                     {/* Faktura pris input i overskriften */}
                                     {(!isLead && profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
                                         <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
