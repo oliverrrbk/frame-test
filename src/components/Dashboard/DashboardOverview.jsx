@@ -178,7 +178,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
             
             {/* Header & Quick Actions */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
-                <div>
+                <div className="hide-on-mobile">
                     <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.75rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
                         Velkommen tilbage, {(myProfile?.owner_name || carpenterProfile?.company_name || 'Mester').split(' ')[0]}!
                     </h2>
@@ -186,13 +186,18 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                         Her er dit visuelle overblik for forretningen lige nu.
                     </p>
                 </div>
+                <div className="mobile-only">
+                    <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
+                        Oversigt over din forretning
+                    </h2>
+                </div>
                 
                 {/* Thin, compact link banner */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '8px 12px 8px 16px', borderRadius: '999px' }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="copy-link-banner" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '8px 12px 8px 16px', borderRadius: '999px' }}>
+                    <span className="hide-on-mobile" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Link size={14} color="#10b981" /> Dit tilbudslink:
                     </span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '0.9rem', userSelect: 'all' }}>bisonframe.dk/{carpenterProfile?.slug || 't'}</span>
+                    <span className="copy-link-text" style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '0.9rem', userSelect: 'all' }}>bisonframe.dk/{carpenterProfile?.slug || 't'}</span>
                     <button 
                         onClick={() => {
                             const baseUrl = window.location.origin.includes('localhost') ? window.location.origin : 'https://bisonframe.dk';
@@ -209,7 +214,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
             </div>
 
             {/* NY SEKTION: Top-Level KPI Kort */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+            <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                 {[
                     metrics.won_revenue,
                     metrics.active_cases,
@@ -249,11 +254,11 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                             <div style={{ padding: '6px', borderRadius: '8px', background: `${m.color}15`, color: m.color }}>
                                 <m.icon size={18} />
                             </div>
-                            <h3 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <h3 className="kpi-label" style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                 {m.label}
                             </h3>
                         </div>
-                        <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                        <div className="kpi-value" style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                             {m.format === 'currency' ? m.value.toLocaleString('da-DK') : m.value}
                             <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>{m.suffix}</span>
                         </div>
@@ -263,17 +268,18 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
 
             {/* NY SEKTION: SAGER I DRIFT (GRID LAYOUT) */}
             <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
-                    <div>
+                <div className="cases-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px', gap: '12px' }}>
+                    <div className="cases-header-text">
                         <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
-                            Sager i drift (Igangværende)
+                            Sager i drift <span className="hide-on-mobile">(Igangværende)</span>
                         </h3>
-                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Overblik over byggepladser med accepterede tilbud.</p>
+                        <p className="hide-on-mobile" style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Overblik over byggepladser med accepterede tilbud.</p>
                     </div>
                     {setActiveTab && (
                         <button 
+                            className="se-alle-btn"
                             onClick={() => setActiveTab('cases')}
-                            style={{ background: 'white', border: '1px solid var(--border-light)', padding: '8px 16px', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}
+                            style={{ background: 'white', border: '1px solid var(--border-light)', padding: '8px 16px', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s', flexShrink: 0 }}
                             onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--text-primary)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                             onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border-light)'; e.currentTarget.style.transform = 'translateY(0)'; }}
                         >
