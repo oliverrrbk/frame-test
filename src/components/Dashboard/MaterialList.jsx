@@ -357,7 +357,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
     };
 
     const handleGenerateEmail = (listId, listName) => {
-        if (!deliveryInfo?.address || deliveryInfo.address.trim() === '') {
+        if (!deliveryInfo?.address || String(deliveryInfo.address).trim() === '') {
             toast.error("Du skal angive en leveringsadresse for at kunne bestille!");
             setIsDeliveryOpen(true);
             return;
@@ -849,8 +849,8 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                 Leverings- & Fragtoplysninger
                             </h3>
                             {!isDeliveryOpen && (
-                                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: (!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? '#ef4444' : '#64748b', fontWeight: (!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? 'bold' : 'normal', wordBreak: 'break-word', whiteSpace: 'normal' }}>
-                                    {(!deliveryInfo?.address || deliveryInfo.address.trim() === '') ? 'Mangler leveringsadresse!' : deliveryInfo.address}
+                                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: (!deliveryInfo?.address || String(deliveryInfo.address).trim() === '') ? '#ef4444' : '#64748b', fontWeight: (!deliveryInfo?.address || String(deliveryInfo.address).trim() === '') ? 'bold' : 'normal', wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                                    {(!deliveryInfo?.address || String(deliveryInfo.address).trim() === '') ? 'Mangler leveringsadresse!' : deliveryInfo.address}
                                 </p>
                             )}
                         </div>
