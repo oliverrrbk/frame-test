@@ -774,11 +774,24 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                 />
                             </div>
 
-                            <div style={{ marginTop: '10px', paddingTop: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                                <button type="button" onClick={() => { setIsAdding(false); setEditingEntry(null); }} style={{ padding: '12px 24px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }}>Annuller</button>
-                                <button type="submit" style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Save size={18} /> Gem registrering
-                                </button>
+                            <div style={{ marginTop: '10px', paddingTop: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    {editingEntry && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteEntry(editingEntry)}
+                                            style={{ background: '#fef2f2', border: 'none', padding: '10px 16px', borderRadius: '8px', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}
+                                        >
+                                            <Trash2 size={18} /> Slet
+                                        </button>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button type="button" onClick={() => { setIsAdding(false); setEditingEntry(null); }} style={{ padding: '12px 24px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }}>Annuller</button>
+                                    <button type="submit" style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Save size={18} /> Gem registrering
+                                    </button>
+                                </div>
                             </div>
 
                         </form>

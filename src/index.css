@@ -2301,6 +2301,221 @@ button:focus-visible {
     }
 }
 
+/* ═══════════════════════════════════════
+   MOBILE MAP / GEOGRAPHIC OVERVIEW
+   ═══════════════════════════════════════ */
+@media (max-width: 768px) {
+    .dashboard-layout.dashboard-tab-map .dashboard-topbar .page-title-section {
+        display: none !important;
+    }
+
+    .map-overview {
+        height: auto !important;
+        min-height: 0 !important;
+        gap: 16px !important;
+        max-width: 100% !important;
+    }
+
+    .map-overview .map-mobile-header {
+        display: flex !important;
+        width: 100%;
+        padding: 24px 18px !important;
+    }
+
+    .map-overview .map-mobile-header h2 {
+        font-size: 1.75rem !important;
+        line-height: 1.15 !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
+    }
+
+    .map-overview > .settings-card {
+        width: 100%;
+        margin: 0 auto;
+        border-radius: 18px !important;
+        overflow: hidden;
+    }
+
+    .map-overview .card-body {
+        padding: 16px !important;
+        gap: 16px;
+    }
+
+    .map-overview .map-filter-panel {
+        width: 100%;
+        max-width: 100%;
+        margin: 0 auto 16px !important;
+        padding: 20px 18px !important;
+        border-radius: 16px !important;
+    }
+
+    .map-overview .map-filter-panel h4 {
+        font-size: 1rem !important;
+        margin-bottom: 16px !important;
+    }
+
+    .map-overview .map-filter-panel > div {
+        width: 100%;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .map-overview .map-filter-panel button {
+        width: 100%;
+        min-height: 44px;
+        justify-content: flex-start;
+        border-radius: 14px !important;
+        padding: 10px 14px !important;
+    }
+
+    .map-overview .map-canvas-panel {
+        width: 100%;
+        min-height: 420px;
+        margin-top: 0 !important;
+        border-radius: 16px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .map-overview .card-body {
+        padding: 10px !important;
+    }
+
+    .map-overview .map-filter-panel {
+        padding: 18px !important;
+    }
+
+    .map-overview .map-canvas-panel {
+        min-height: 380px;
+    }
+}
+
+/* ═══════════════════════════════════════
+   MOBILE MATERIALS OVERVIEW
+   ═══════════════════════════════════════ */
+@media (max-width: 768px) {
+    .dashboard-layout.dashboard-tab-materials .dashboard-topbar .page-title-section {
+        display: none !important;
+    }
+
+    .dashboard-layout.dashboard-tab-materials .materials-mobile-header {
+        display: flex !important;
+        width: 100%;
+        padding: 24px 18px !important;
+        margin: 18px 0 18px !important;
+        box-sizing: border-box;
+    }
+
+    .dashboard-layout.dashboard-tab-materials .materials-mobile-header h2 {
+        font-size: 1.75rem !important;
+        line-height: 1.15 !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
+    }
+
+    .materials-overview {
+        max-width: 100% !important;
+        width: 100%;
+        margin-top: 0 !important;
+    }
+
+    .materials-overview > .settings-card {
+        width: 100%;
+        margin: 0 auto;
+        border-radius: 18px !important;
+        overflow: hidden;
+    }
+
+    .materials-overview .card-body {
+        padding: 20px 12px !important;
+    }
+
+    .materials-overview .settings-grid {
+        grid-template-columns: 1fr !important;
+        gap: 18px !important;
+    }
+
+    .materials-overview .glass-panel {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        border-radius: 14px !important;
+    }
+
+    .materials-overview .card-header {
+        min-height: 96px;
+        padding: 24px 22px !important;
+        gap: 12px !important;
+        align-items: center !important;
+    }
+
+    .materials-overview .card-title-group h3 {
+        font-size: 1rem !important;
+        line-height: 1.25 !important;
+        overflow-wrap: anywhere;
+    }
+
+    .materials-overview .material-input-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 18px 0 !important;
+    }
+
+    .materials-overview .material-input-row > div:first-child {
+        width: 100% !important;
+        padding-right: 0 !important;
+    }
+
+    .materials-overview .material-input-row > div:last-child {
+        width: 100% !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+    }
+
+    .materials-overview .price-input-wrapper {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .materials-overview .price-input-wrapper input {
+        width: 100% !important;
+        min-width: 0;
+    }
+
+    .materials-overview .card-footer {
+        padding: 18px !important;
+    }
+
+    .materials-overview .card-footer .btn-primary {
+        width: 100%;
+        max-width: 360px;
+        padding: 13px 18px !important;
+        font-size: 1rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-layout.dashboard-tab-materials .materials-mobile-header {
+        padding: 22px 18px !important;
+        margin: 16px 0 16px !important;
+    }
+
+    .materials-overview .card-body {
+        padding: 18px 12px !important;
+    }
+
+    .materials-overview .settings-grid {
+        gap: 16px !important;
+    }
+
+    .materials-overview .card-header {
+        min-height: 94px;
+        padding: 22px 20px !important;
+    }
+}
+
 /* Hide scrollbar for dashboard-sidebar */
 .dashboard-sidebar::-webkit-scrollbar {
     display: none;
@@ -2502,14 +2717,18 @@ button:focus-visible {
 
 @media (max-width: 768px) {
     .timesheet-table-container {
-        overflow-x: visible;
+        overflow-x: hidden;
         padding: 16px;
         background-color: transparent !important;
+        width: auto !important;
+        box-sizing: border-box;
     }
     
     .timesheet-table {
-        min-width: auto;
-        display: block;
+        min-width: 0 !important;
+        width: 100% !important;
+        display: flex;
+        flex-direction: column;
         background-color: transparent;
     }
 
@@ -2521,54 +2740,117 @@ button:focus-visible {
         display: flex;
         flex-direction: column;
         gap: 16px;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .timesheet-table tr {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-areas:
+            "dato timer"
+            "sag sag"
+            "medarbejder medarbejder"
+            "tidsrum tidsrum"
+            "desc desc";
+        grid-template-columns: 1fr auto;
         background-color: #fff;
         border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         padding: 16px;
         border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        gap: 12px;
+        position: relative;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .timesheet-table tr:active {
+        transform: scale(0.97);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     }
 
     .timesheet-table td {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        padding: 12px 0 !important;
-        text-align: left !important;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 0.95rem !important;
-        width: 100% !important;
-        max-width: none !important;
-        white-space: normal !important;
-        overflow: visible !important;
-        gap: 6px;
+        display: none !important; /* Hide everything by default */
+        border-bottom: none !important;
+        padding: 0 !important;
+        width: auto !important;
     }
 
-    .timesheet-table td:last-child {
-        border-bottom: none;
-        padding-bottom: 0 !important;
-    }
+    /* Visible fields */
+    .timesheet-table td[data-label="Dato"] { grid-area: dato; display: flex !important; flex-direction: column !important; align-items: flex-start !important; }
+    .timesheet-table td[data-label="Timer"] { grid-area: timer; display: flex !important; flex-direction: column !important; align-items: flex-end !important; }
+    .timesheet-table td[data-label="Sag / Projekt"] { grid-area: sag; display: flex !important; flex-direction: column !important; align-items: flex-start !important; }
+    .timesheet-table td[data-label="Medarbejder"] { grid-area: medarbejder; display: flex !important; flex-direction: column !important; align-items: flex-start !important; }
+    .timesheet-table td[data-label="Tidsrum"] { grid-area: tidsrum; display: flex !important; flex-direction: column !important; align-items: flex-start !important; }
+    .timesheet-table td[data-label="Beskrivelse"] { grid-area: desc; display: flex !important; flex-direction: column !important; align-items: flex-start !important; white-space: normal !important; overflow: visible !important; }
 
-    .timesheet-table td:first-child {
-        padding-top: 0 !important;
-    }
-
-    .timesheet-table td::before {
+    .timesheet-table td[data-label="Dato"]::before,
+    .timesheet-table td[data-label="Timer"]::before,
+    .timesheet-table td[data-label="Sag / Projekt"]::before,
+    .timesheet-table td[data-label="Medarbejder"]::before,
+    .timesheet-table td[data-label="Tidsrum"]::before,
+    .timesheet-table td[data-label="Beskrivelse"]::before {
         content: attr(data-label);
         font-weight: 700;
         color: #94a3b8;
         text-transform: uppercase;
-        font-size: 0.75rem;
+        font-size: 0.65rem;
         letter-spacing: 0.05em;
-        text-align: left;
+        margin-bottom: 2px;
+    }
+
+    .timesheet-table td[data-label="Dato"] {
+        font-size: 1.1rem !important;
+        color: #0f172a !important;
+    }
+
+    .timesheet-table td[data-label="Timer"] {
+        font-size: 1.1rem !important;
+        color: #3b82f6 !important;
+    }
+
+    .timesheet-table td[data-label="Tidsrum"] {
+        font-size: 0.95rem !important;
+        color: #475569 !important;
+        font-weight: 500 !important;
+    }
+
+    .timesheet-table td[data-label="Beskrivelse"] {
+        color: #64748b !important;
+        font-size: 0.9rem !important;
+        line-height: 1.4;
     }
 
     .timesheet-table td > div {
         justify-content: flex-start !important;
         width: 100%;
+    }
+
+    .dashboard-workspace.timesheet-view .timesheet-table-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 8px !important;
+        margin: 0 auto !important;
+        overflow-x: hidden !important;
+    }
+
+    .dashboard-workspace.timesheet-view .timesheet-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .dashboard-workspace.timesheet-view .timesheet-table tbody {
+        width: 100% !important;
+        max-width: 100% !important;
+        align-items: stretch;
+    }
+
+    .dashboard-workspace.timesheet-view .timesheet-table tr {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
     }
 }
