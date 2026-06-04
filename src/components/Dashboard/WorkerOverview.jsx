@@ -158,7 +158,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             </div>
 
             {/* GLOBAL STEMPLING MODUL */}
-            <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', background: '#ffffff', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center' }}>
+            <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', background: '#ffffff', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center', position: 'relative', zIndex: 20, overflow: 'visible' }}>
                 <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     Stempling
                 </h3>
@@ -286,39 +286,6 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
                 
-                {/* TIMEREGISTRERING KORT */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
-                        {/* Kort: Denne uge */}
-                        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                            <div style={{ padding: '8px', background: '#ecfdf5', color: '#10b981', borderRadius: '8px', marginBottom: '4px' }}>
-                                <Clock size={24} />
-                            </div>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timer denne uge</span>
-                            <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>{timeStats.hoursThisWeek.toFixed(1)}</span>
-                        </div>
-                        {/* Kort: Denne måned */}
-                        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                            <div style={{ padding: '8px', background: '#eff6ff', color: '#3b82f6', borderRadius: '8px', marginBottom: '4px' }}>
-                                <Calendar size={24} />
-                            </div>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timer denne måned</span>
-                            <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>{timeStats.hoursThisMonth.toFixed(1)}</span>
-                        </div>
-                    </div>
-                    {/* Knap til fuld timeseddel */}
-                    <button 
-                        onClick={() => {
-                            if (setActiveTab) setActiveTab('worker_timesheet');
-                        }}
-                        style={{ width: '100%', padding: '16px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-light)', borderRadius: '12px', fontSize: '1.05rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
-                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-primary)'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
-                    >
-                        Gå til din timeregistrering <ArrowRight size={18} />
-                    </button>
-                </div>
-
                 {/* AKTIVE SAGER KORT */}
                 <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -420,6 +387,39 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                             })
                         )}
                     </div>
+                </div>
+
+                {/* TIMEREGISTRERING KORT */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
+                        {/* Kort: Denne uge */}
+                        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                            <div style={{ padding: '8px', background: '#ecfdf5', color: '#10b981', borderRadius: '8px', marginBottom: '4px' }}>
+                                <Clock size={24} />
+                            </div>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timer denne uge</span>
+                            <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>{timeStats.hoursThisWeek.toFixed(1)}</span>
+                        </div>
+                        {/* Kort: Denne måned */}
+                        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                            <div style={{ padding: '8px', background: '#eff6ff', color: '#3b82f6', borderRadius: '8px', marginBottom: '4px' }}>
+                                <Calendar size={24} />
+                            </div>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timer denne måned</span>
+                            <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>{timeStats.hoursThisMonth.toFixed(1)}</span>
+                        </div>
+                    </div>
+                    {/* Knap til fuld timeseddel */}
+                    <button 
+                        onClick={() => {
+                            if (setActiveTab) setActiveTab('worker_timesheet');
+                        }}
+                        style={{ width: '100%', padding: '16px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-light)', borderRadius: '12px', fontSize: '1.05rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-primary)'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
+                    >
+                        Gå til din timeregistrering <ArrowRight size={18} />
+                    </button>
                 </div>
 
             </div>

@@ -2213,7 +2213,8 @@ const Dashboard = () => {
                                     style={{ 
                                         position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 50,
                                         width: '240px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px',
-                                        boxShadow: '0 10px 40px -10px rgba(0,0,0,0.15)'
+                                        boxShadow: '0 10px 40px -10px rgba(0,0,0,0.15)',
+                                        background: 'var(--bg-primary)'
                                     }}
                                 >
                                     <button 
