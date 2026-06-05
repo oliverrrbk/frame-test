@@ -59,6 +59,45 @@ serve(async (req) => {
       timestamp: new Date().getTime()
     };
 
+    // --- NYT: AUTOMATISK WEBHOOK REGISTRERING ---
+    console.log("Henter organisationer for at sætte webhook op...");
+    try {
+      const orgsResponse = await fetch('https://api.dinero.dk/v1/organizations', {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`
+        }
+      });
+      
+      if (orgsResponse.ok) {
+        const orgsData = await orgsResponse.json();
+        // Det er normalt et array, vi løber dem igennem og sætter webhook på alle
+        for (const org of orgsData) {
+          console.log(`Forsøger at oprette webhook på org: ${org.id}`);
+          const webhookUrl = "https://zjbjupovlgwlrvojusnr.supabase.co/functions/v1/accounting-webhooks?source=dinero";
+          
+          await fetch(`https://api.dinero.dk/v1/${org.id}/webhooks`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${tokenData.access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              url: webhookUrl,
+              events: [
+                "invoice.booked",
+                "invoice.paid"
+              ]
+            })
+          });
+          // Vi ignorerer fejl, da det kan være, at URL'en allerede er registreret
+        }
+        console.log("Webhooks er forsøgt oprettet.");
+      }
+    } catch (whError) {
+      console.error("Fejl ved automatisk opsætning af webhook (ignoreres):", whError);
+    }
+    // --- SLUT PÅ WEBHOOK ---
+
     // 2. Find brugeren og gem
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Mangler Authorization header - Frontend sendte ikke token!')

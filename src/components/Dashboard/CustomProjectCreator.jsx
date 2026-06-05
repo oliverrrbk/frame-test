@@ -24,6 +24,8 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
     const [projectTitle, setProjectTitle] = useState('');
     const [projectNotes, setProjectNotes] = useState('');
     const [hourlyRate, setHourlyRate] = useState(carpenter?.hourly_rate || 550);
+    const [laborType, setLaborType] = useState('hourly'); // 'hourly', 'fixed'
+    const [fixedLaborPrice, setFixedLaborPrice] = useState('');
     
     // Global Costs (Entreprenøromkostninger)
     const [globalCosts, setGlobalCosts] = useState({
@@ -263,7 +265,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
             });
         });
 
-        const laborSales = sumHours * (parseFloat(hourlyRate) || 0);
+        const laborSales = laborType === 'fixed' ? (parseFloat(fixedLaborPrice) || 0) : sumHours * (parseFloat(hourlyRate) || 0);
         
         // Globale Omkostninger
         const globalContainers = parseFloat(globalCosts.containers) || 0;
@@ -317,7 +319,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
             });
 
             // Add labor line for this phase
-            if (parseFloat(p.hours) > 0) {
+            if (laborType === 'hourly' && parseFloat(p.hours) > 0) {
                 breakdownArr.push({
                     id: crypto.randomUUID(),
                     category: p.name,
@@ -328,6 +330,18 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
                 });
             }
         });
+
+        // Add fixed labor if applicable
+        if (laborType === 'fixed' && parseFloat(fixedLaborPrice) > 0) {
+            breakdownArr.push({
+                id: crypto.randomUUID(),
+                category: 'Arbejdsløn',
+                text: `Fast pris på arbejdsløn`,
+                materialCost: 0,
+                profitTotal: parseFloat(fixedLaborPrice),
+                hours: 0
+            });
+        }
 
         // Tilføj Globale Omkostninger til Breakdown
         if (parseFloat(globalCosts.containers) > 0) {
@@ -377,6 +391,12 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
         }
 
         const customLines = [];
+        if (laborType === 'fixed' && parseFloat(fixedLaborPrice) > 0) {
+            customLines.push({
+                description: `Fast pris på arbejdsløn`,
+                price: parseFloat(fixedLaborPrice)
+            });
+        }
         if (parseFloat(globalCosts.containers) > 0) {
             customLines.push({
                 description: `${parseFloat(globalCosts.containers)}x Containerleje og bortskaffelse (Uden avance)`,
@@ -586,56 +606,63 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
                     </div>
                 )}
 
+                
                 {/* VIEW: EDITOR */}
                 {viewMode === 'editor' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                     
-                    {/* Customer Info Card */}
-                    <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
-                        <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>Kundeinformation</h3>
-                        <div className="customer-info-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                            <div className="input-group">
-                                <label>Kundenavn *</label>
-                                <input type="text" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} placeholder="F.eks. Jens Hansen" className="modern-input" />
+                    {/* 1. Projekt Detaljer & Arbejdsløn */}
+                    <div className="desc-hours-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+                        <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
+                            <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>Projekt Detaljer & Arbejdsløn</h3>
+                            <div className="input-group" style={{ marginBottom: '16px' }}>
+                                <label>Opgavetitel</label>
+                                <input type="text" value={projectTitle} onChange={e => setProjectTitle(e.target.value)} placeholder="F.eks. Udskiftning af Vinduer" className="modern-input" />
                             </div>
-                            <div className="input-group">
-                                <label>Telefon</label>
-                                <input type="text" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} placeholder="Tlf. nr." className="modern-input" />
+                            <div className="input-group" style={{ marginBottom: '24px' }}>
+                                <label>Intern Note / Beskrivelse (Kundens PDF)</label>
+                                <textarea value={projectNotes} onChange={e => setProjectNotes(e.target.value)} placeholder="Beskriv opgaven i detaljer (f.eks. mål, dimensioner, specifikke ønsker)..." className="modern-input" style={{ minHeight: '80px', resize: 'vertical' }} />
                             </div>
-                            <div className="input-group">
-                                <label>Email</label>
-                                <input type="email" value={customerInfo.email} onChange={e => setCustomerInfo({...customerInfo, email: e.target.value})} placeholder="Email adresse" className="modern-input" />
-                            </div>
-                            <div className="input-group">
-                                <label>Adresse</label>
-                                <input type="text" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} placeholder="Vej og nummer" className="modern-input" />
-                            </div>
-                            <div className="input-group">
-                                <label>Postnummer</label>
-                                <input type="text" value={customerInfo.zip} onChange={async (e) => {
-                                    const val = e.target.value;
-                                    setCustomerInfo({...customerInfo, zip: val});
-                                    if (val.length === 4 && /^\d+$/.test(val)) {
-                                        try {
-                                            const res = await fetch(`https://api.dataforsyningen.dk/postnumre/${val}`);
-                                            if (res.ok) {
-                                                const data = await res.json();
-                                                if (data && data.navn) {
-                                                    setCustomerInfo(prev => ({...prev, zip: val, city: data.navn}));
-                                                }
-                                            }
-                                        } catch(err) { console.error(err); }
-                                    }
-                                }} placeholder="Postnr." className="modern-input" />
-                            </div>
-                            <div className="input-group">
-                                <label>By</label>
-                                <input type="text" value={customerInfo.city} onChange={e => setCustomerInfo({...customerInfo, city: e.target.value})} placeholder="By" className="modern-input" />
+
+                            <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 'bold', color: '#1e293b' }}>Afregning af arbejdsløn</label>
+                                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                                    <button 
+                                        onClick={() => setLaborType('hourly')}
+                                        style={{ flex: 1, padding: '10px', borderRadius: '8px', border: laborType === 'hourly' ? '2px solid #3b82f6' : '1px solid #cbd5e1', backgroundColor: laborType === 'hourly' ? '#eff6ff' : '#fff', color: laborType === 'hourly' ? '#1d4ed8' : '#64748b', fontWeight: laborType === 'hourly' ? 'bold' : 'normal', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    >
+                                        Timepris (Beregnes pr. etape)
+                                    </button>
+                                    <button 
+                                        onClick={() => setLaborType('fixed')}
+                                        style={{ flex: 1, padding: '10px', borderRadius: '8px', border: laborType === 'fixed' ? '2px solid #3b82f6' : '1px solid #cbd5e1', backgroundColor: laborType === 'fixed' ? '#eff6ff' : '#fff', color: laborType === 'fixed' ? '#1d4ed8' : '#64748b', fontWeight: laborType === 'fixed' ? 'bold' : 'normal', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    >
+                                        Fast Pris (Samlet arbejdsløn)
+                                    </button>
+                                </div>
+                                
+                                {laborType === 'hourly' ? (
+                                    <div className="input-group">
+                                        <label>Din Timepris (Salgspris inkl. avance)</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <input type="number" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} className="modern-input" style={{ paddingRight: '40px' }} />
+                                            <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>kr/t</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="input-group">
+                                        <label>Samlet Fast Pris for Arbejdsløn (ekskl. moms)</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <input type="number" value={fixedLaborPrice} onChange={e => setFixedLaborPrice(e.target.value)} placeholder="Indtast totalbeløb for løn" className="modern-input" style={{ paddingRight: '40px' }} />
+                                            <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>kr</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Phases rendering */}
+                    {/* 2. Phases rendering */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         {phases.map((phase, pIndex) => (
                             <div key={phase.id} className="phase-card">
@@ -655,17 +682,19 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
                                     </div>
                                     
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <label style={{ fontSize: '0.9rem', color: '#64748b' }}>Timer:</label>
-                                            <input 
-                                                type="number" 
-                                                value={phase.hours} 
-                                                onChange={e => updatePhase(pIndex, 'hours', e.target.value)}
-                                                placeholder="0"
-                                                className="modern-input"
-                                                style={{ width: '80px', textAlign: 'right', padding: '6px 10px' }}
-                                            />
-                                        </div>
+                                        {laborType === 'hourly' && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <label style={{ fontSize: '0.9rem', color: '#64748b' }}>Timer:</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={phase.hours} 
+                                                    onChange={e => updatePhase(pIndex, 'hours', e.target.value)}
+                                                    placeholder="0"
+                                                    className="modern-input"
+                                                    style={{ width: '80px', textAlign: 'right', padding: '6px 10px' }}
+                                                />
+                                            </div>
+                                        )}
                                         {phases.length > 1 && (
                                             <button onClick={() => handleRemovePhase(pIndex)} style={{ background: '#fef2f2', color: '#ef4444', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer' }}>
                                                 <Trash2 size={18} />
@@ -755,6 +784,19 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
                                                 ))}
                                             </tbody>
                                             </table>
+                                            
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                {(() => {
+                                                    const phaseMatCost = phase.materials.reduce((acc, m) => {
+                                                        return acc + ((parseFloat(m.price) || 0) * (parseFloat(m.quantity) || 0) * (1 + ((parseFloat(m.markup) || 0) / 100)));
+                                                    }, 0);
+                                                    return (
+                                                        <div style={{ fontSize: '0.95rem', color: '#475569' }}>
+                                                            Materialer i etapen: <strong>{phaseMatCost.toFixed(0)} kr.</strong> <span style={{ fontSize: '0.8rem' }}>(Ekskl. moms)</span> / <strong>{(phaseMatCost * 1.25).toFixed(0)} kr.</strong> <span style={{ fontSize: '0.8rem' }}>(Inkl. moms)</span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -766,7 +808,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
                         </button>
                     </div>
 
-                    {/* Tillæg, Udstyr & Tømrer-beskyttelse */}
+                    {/* 3. Tillæg, Udstyr & Tømrer-beskyttelse */}
                     <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
                         <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>Tillæg, Udstyr & Tømrer-beskyttelse</h3>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -795,43 +837,70 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
                         </div>
                     </div>
 
-                    {/* Description and Hours */}
-                    <div className="desc-hours-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-                        <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
-                            <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>Projekt Detaljer & Samlet Pris</h3>
-                            <div className="input-group" style={{ marginBottom: '16px' }}>
-                                <label>Opgavetitel</label>
-                                <input type="text" value={projectTitle} onChange={e => setProjectTitle(e.target.value)} placeholder="F.eks. Udskiftning af Vinduer" className="modern-input" />
+                    {/* 4. Customer Info Card */}
+                    <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
+                        <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>Kundeinformation</h3>
+                        <div className="customer-info-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            <div className="input-group">
+                                <label>Kundenavn *</label>
+                                <input type="text" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} placeholder="F.eks. Jens Hansen" className="modern-input" />
                             </div>
-                            <div className="input-group" style={{ marginBottom: '24px' }}>
-                                <label>Intern Note / Beskrivelse (Kundens PDF)</label>
-                                <textarea value={projectNotes} onChange={e => setProjectNotes(e.target.value)} placeholder="Beskriv opgaven i detaljer..." className="modern-input" style={{ minHeight: '80px', resize: 'vertical' }} />
+                            <div className="input-group">
+                                <label>Telefon</label>
+                                <input type="text" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} placeholder="Tlf. nr." className="modern-input" />
                             </div>
-
-                            <div className="input-group" style={{ marginBottom: '24px' }}>
-                                <label>Din Timepris (Salgspris inkl. avance)</label>
-                                <div style={{ position: 'relative' }}>
-                                    <input type="number" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} className="modern-input" style={{ paddingRight: '40px' }} />
-                                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>kr/t</span>
-                                </div>
+                            <div className="input-group">
+                                <label>Email</label>
+                                <input type="email" value={customerInfo.email} onChange={e => setCustomerInfo({...customerInfo, email: e.target.value})} placeholder="Email adresse" className="modern-input" />
                             </div>
-
-                            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '2px dashed #e2e8f0' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', marginBottom: '8px' }}>
-                                    <span>Materialer i alt (Salgspris):</span>
-                                    <span>{totals.materialsSales.toFixed(0)} kr</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', marginBottom: '8px' }}>
-                                    <span>Arbejdsløn i alt ({totals.totalHours} t):</span>
-                                    <span>{totals.laborSales.toFixed(0)} kr</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f172a', fontWeight: 'bold', fontSize: '1.3rem', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
-                                    <span>Total (ekskl. moms):</span>
-                                    <span style={{ color: '#10b981' }}>{totals.totalSales.toFixed(0)} kr</span>
-                                </div>
+                            <div className="input-group">
+                                <label>Adresse</label>
+                                <input type="text" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} placeholder="Vej og nummer" className="modern-input" />
+                            </div>
+                            <div className="input-group">
+                                <label>Postnummer</label>
+                                <input type="text" value={customerInfo.zip} onChange={async (e) => {
+                                    const val = e.target.value;
+                                    setCustomerInfo({...customerInfo, zip: val});
+                                    if (val.length === 4 && /^\d+$/.test(val)) {
+                                        try {
+                                            const res = await fetch(`https://api.dataforsyningen.dk/postnumre/${val}`);
+                                            if (res.ok) {
+                                                const data = await res.json();
+                                                if (data && data.navn) {
+                                                    setCustomerInfo(prev => ({...prev, zip: val, city: data.navn}));
+                                                }
+                                            }
+                                        } catch(err) { console.error(err); }
+                                    }
+                                }} placeholder="Postnr." className="modern-input" />
+                            </div>
+                            <div className="input-group">
+                                <label>By</label>
+                                <input type="text" value={customerInfo.city} onChange={e => setCustomerInfo({...customerInfo, city: e.target.value})} placeholder="By" className="modern-input" />
                             </div>
                         </div>
                     </div>
+
+                    {/* 5. Samlet Pris */}
+                    <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
+                        <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>Samlet Pris & Opsamling</h3>
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', marginBottom: '8px' }}>
+                                <span>Materialer i alt (Salgspris):</span>
+                                <span>{totals.materialsSales.toFixed(0)} kr</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', marginBottom: '8px' }}>
+                                <span>Arbejdsløn i alt {laborType === 'hourly' ? `(${totals.totalHours} t)` : '(Fast Pris)'}:</span>
+                                <span>{totals.laborSales.toFixed(0)} kr</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f172a', fontWeight: 'bold', fontSize: '1.3rem', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                                <span>Total (ekskl. moms):</span>
+                                <span style={{ color: '#10b981' }}>{totals.totalSales.toFixed(0)} kr</span>
+                            </div>
+                        </div>
+                    </div>
+
                     </div>
                 )}
             </div>

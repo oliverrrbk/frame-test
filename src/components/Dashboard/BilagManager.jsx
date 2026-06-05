@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, ChevronDown, CheckCircle2, FileText, Building2, Send, Loader2 } from 'lucide-react';
+import { Upload, ChevronDown, CheckCircle2, FileText, Building2, Send, Loader2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
 
@@ -104,6 +104,42 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
             toast.error("Kunne ikke sende til regnskab");
         } finally {
             setSendingId(null);
+        }
+    };
+
+    const handleDeleteInvoice = async (invId, e) => {
+        e.stopPropagation();
+        
+        if (!window.confirm("Er du sikker på, at du vil slette dette bilag?")) {
+            return;
+        }
+
+        const updatedInvoices = rawSupplierInvoices.filter(inv => inv.id !== invId);
+        
+        const updatedCase = {
+            ...lead,
+            raw_data: {
+                ...(lead.raw_data || {}),
+                supplier_invoices: updatedInvoices
+            }
+        };
+
+        try {
+            const { error } = await supabase
+                .from('leads')
+                .update({ raw_data: updatedCase.raw_data })
+                .eq('id', lead.id);
+
+            if (error) throw error;
+
+            if (onUpdateLead) {
+                onUpdateLead(updatedCase);
+            }
+            
+            toast.success("Bilag slettet!");
+        } catch (err) {
+            console.error("Fejl ved sletning af bilag:", err);
+            toast.error("Kunne ikke slette bilag");
         }
     };
 
@@ -351,8 +387,17 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', flexShrink: 0, marginLeft: '16px' }}>
-                                    <div style={{ fontWeight: '800', color: inv.amount ? '#ef4444' : '#94a3b8', fontSize: '1.15rem', letterSpacing: '-0.02em' }}>
+                                    <div style={{ fontWeight: '800', color: inv.amount ? '#ef4444' : '#94a3b8', fontSize: '1.15rem', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         {inv.amount ? `- ${inv.amount.toLocaleString('da-DK')} kr.` : 'Beløb ukendt'}
+                                        <button 
+                                            onClick={(e) => handleDeleteInvoice(inv.id, e)}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', transition: 'all 0.2s' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                            title="Slet bilag"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
                                     </div>
                                     {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && inv.is_sent_to_accounting) && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981', fontSize: '0.8rem', fontWeight: '700', padding: '6px 12px', background: '#ecfdf5', borderRadius: '20px', border: '1px solid #a7f3d0' }} title="Ligger klar i e-conomic indbakken">

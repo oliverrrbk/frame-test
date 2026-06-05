@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowRight, Send, Upload, FileText, CheckCircle2, ChevronDown, Plus, Banknote, Building2, User, Phone, Mail, MapPin, AlertCircle, Edit2, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Send, Upload, FileText, CheckCircle2, ChevronDown, Plus, Banknote, Building2, User, Phone, Mail, MapPin, AlertCircle, Edit2, Save, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
 import { jsPDF } from "jspdf";
@@ -349,7 +349,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                         {invoiceType === 'aconto' && (
                             <div style={{ animation: 'fadeIn 0.3s ease-out', marginBottom: '20px' }}>
                                 <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 'bold', marginBottom: '8px' }}>Indtast Aconto-beløb (ekskl. moms)</label>
-                                <div style={{ position: 'relative', width: '50%' }}>
+                                <div style={{ position: 'relative', width: '50%', marginBottom: '12px' }}>
                                     <input 
                                         type="text" 
                                         value={acontoAmountRaw ? Number(acontoAmountRaw).toLocaleString('da-DK') : ''}
@@ -358,9 +358,32 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                             setAcontoAmountRaw(val);
                                         }}
                                         placeholder="0"
-                                        style={{ width: '100%', padding: '14px 40px 14px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1.05rem', fontWeight: '600', outline: 'none' }}
+                                        style={{ width: '100%', padding: '14px 40px 14px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1.05rem', fontWeight: '600', outline: 'none', transition: 'border-color 0.2s' }}
+                                        onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                                        onBlur={e => e.target.style.borderColor = '#cbd5e1'}
                                     />
                                     <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontWeight: 'bold' }}>kr.</span>
+                                </div>
+                                <div style={{ 
+                                    padding: '12px 16px', 
+                                    background: (remaining - currentAmountToBill) < 0 ? '#fef2f2' : '#f8fafc', 
+                                    border: `1px dashed ${(remaining - currentAmountToBill) < 0 ? '#fecaca' : '#cbd5e1'}`, 
+                                    borderRadius: '8px', 
+                                    display: 'inline-flex', 
+                                    alignItems: 'center', 
+                                    gap: '8px',
+                                    color: (remaining - currentAmountToBill) < 0 ? '#e11d48' : '#334155',
+                                    transition: 'all 0.2s'
+                                }}>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                                        Mangler at blive faktureret bagefter: 
+                                    </div>
+                                    <div style={{ fontSize: '1.05rem', fontWeight: '800' }}>
+                                        {Math.max(0, remaining - currentAmountToBill).toLocaleString('da-DK')} kr.
+                                    </div>
+                                    {(remaining - currentAmountToBill) < 0 && (
+                                        <div style={{ fontSize: '0.8rem', marginLeft: '8px', fontWeight: 'bold' }}>(Advarsel: Overstiger restbeløb)</div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -402,6 +425,43 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                  'Overfør til Regnskab'}
                             </button>
                         </div>
+                        
+                        {/* FAKTURA HISTORIK */}
+                        {lead.raw_data?.invoice_history && lead.raw_data.invoice_history.length > 0 && (
+                            <div style={{ padding: '24px', background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginTop: '24px' }}>
+                                <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Clock size={18} color="#64748b" /> Tidligere Fakturaer & Historik
+                                </h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {lead.raw_data.invoice_history.map((inv, idx) => (
+                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem' }}>Faktura #{inv.id}</div>
+                                                <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{new Date(inv.date).toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#0f172a' }}>
+                                                    {Number(inv.amount).toLocaleString('da-DK')} kr.
+                                                </div>
+                                                {inv.status === 'paid' ? (
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#ecfdf5', color: '#10b981', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                        <CheckCircle2 size={14} /> Betalt
+                                                    </span>
+                                                ) : inv.status === 'booked' ? (
+                                                    <span style={{ background: '#eff6ff', color: '#3b82f6', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                        Bogført
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ background: '#f1f5f9', color: '#64748b', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                        Kladde
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

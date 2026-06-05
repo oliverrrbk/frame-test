@@ -439,6 +439,7 @@ const PdfMobileWrapper = ({ children }) => {
 
 const Dashboard = () => {
     const [targetCaseId, setTargetCaseId] = useState(null);
+    const [targetInvoiceCaseId, setTargetInvoiceCaseId] = useState(null);
     const [activeTab, setActiveTab] = useState(() => {
         return localStorage.getItem('dashboard_active_tab') || 'overview';
     });
@@ -530,6 +531,7 @@ const Dashboard = () => {
     const [feedbackText, setFeedbackText] = useState('');
     const [isSendingFeedback, setIsSendingFeedback] = useState(false);
     const [isCreateLeadModalOpen, setIsCreateLeadModalOpen] = useState(false);
+    const [showCreateLeadCancelConfirm, setShowCreateLeadCancelConfirm] = useState(false);
     const [createLeadMode, setCreateLeadMode] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [mapFilters, setMapFilters] = useState({ showNew: true, showSent: true, showConfirmed: true });
@@ -657,9 +659,12 @@ const Dashboard = () => {
                     window.history.replaceState({}, document.title, window.location.pathname);
                     setCarpenterProfile(prev => prev ? {...prev, economic_api_key: 'pending_authorization'} : null);
                     
-                    const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: session.user.id, economic_api_key: token });
+                    const { error } = await supabase.functions.invoke('economic-auth', {
+                        body: { token: token }
+                    });
+                    
                     if (error) {
-                        toast.error("Fejl ved gem af e-conomic token.");
+                        toast.error("Der skete en fejl under godkendelse hos e-conomic. Prøv venligst igen.");
                     } else {
                         toast.success("e-conomic er nu forbundet!");
                     }
@@ -1262,19 +1267,17 @@ const Dashboard = () => {
                     toast.success(data.message || `Fakturakladde oprettet i Dinero! (ID: ${data.invoiceId})`);
                     
                     let newRawData = { ...(leadForInvoice.raw_data || {}) };
-                    if (action === 'book_and_send') {
-                        const history = newRawData.invoice_history || [];
-                        history.push({
-                            id: data.invoiceId,
-                            amount: totalAmountToBill || 0,
-                            date: new Date().toISOString(),
-                            system: 'dinero'
-                        });
-                        newRawData.invoice_history = history;
-                        newRawData.invoiced_amount = (newRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
-                    } else {
-                        newRawData.synced_to_accounting = true;
-                    }
+                    const history = newRawData.invoice_history || [];
+                    history.push({
+                        id: data.invoiceId,
+                        amount: totalAmountToBill || 0,
+                        date: new Date().toISOString(),
+                        system: 'dinero',
+                        status: action === 'book_and_send' ? 'booked' : 'draft'
+                    });
+                    newRawData.invoice_history = history;
+                    newRawData.invoiced_amount = (newRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
+                    newRawData.synced_to_accounting = true;
                     
                     const updatedLead = { ...leadForInvoice, raw_data: newRawData };
                     await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
@@ -1296,19 +1299,17 @@ const Dashboard = () => {
                     toast.success(data.message || `Fakturakladde oprettet i e-conomic! (ID: ${data.invoiceId})`);
                     
                     let newRawData = { ...(leadForInvoice.raw_data || {}) };
-                    if (action === 'book_and_send') {
-                        const history = newRawData.invoice_history || [];
-                        history.push({
-                            id: data.invoiceId,
-                            amount: totalAmountToBill || 0,
-                            date: new Date().toISOString(),
-                            system: 'economic'
-                        });
-                        newRawData.invoice_history = history;
-                        newRawData.invoiced_amount = (newRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
-                    } else {
-                        newRawData.synced_to_accounting = true;
-                    }
+                    const history = newRawData.invoice_history || [];
+                    history.push({
+                        id: data.invoiceId,
+                        amount: totalAmountToBill || 0,
+                        date: new Date().toISOString(),
+                        system: 'economic',
+                        status: action === 'book_and_send' ? 'booked' : 'draft'
+                    });
+                    newRawData.invoice_history = history;
+                    newRawData.invoiced_amount = (newRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
+                    newRawData.synced_to_accounting = true;
 
                     const updatedLead = { ...leadForInvoice, raw_data: newRawData };
                     await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
@@ -2754,6 +2755,10 @@ const Dashboard = () => {
                                 profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.id }} 
                                 simulatedRole={simulatedRole}
                                 syncToAccounting={syncToAccounting}
+                                onOpenInvoice={(caseId) => {
+                                    setTargetInvoiceCaseId(caseId);
+                                    setActiveTab('finance');
+                                }}
                                 onUpdateLead={(updated) => {
                                     setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
                                     if (selectedLead && selectedLead.id === updated.id) {
@@ -2769,6 +2774,8 @@ const Dashboard = () => {
                                 cases={leadsData.filter(l => ['Bekræftet opgave', 'Sæt i bero', 'Historik'].includes(l.status))}
                                 carpenterProfile={carpenterProfile}
                                 onSendToAccounting={syncToAccounting}
+                                targetInvoiceCaseId={targetInvoiceCaseId}
+                                clearTargetInvoiceCase={() => setTargetInvoiceCaseId(null)}
                                 onOpenCase={(caseId) => {
                                     setTargetCaseId(caseId);
                                     setActiveTab('cases');
@@ -3026,7 +3033,11 @@ const Dashboard = () => {
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
                                                         <Wrench size={18} style={{ color: '#60a5fa' }} /> 
-                                                        <span style={{ fontWeight: 'bold' }}>{categoryNames[lead.project_category] || lead.project_category}</span>
+                                                        <span style={{ fontWeight: 'bold' }}>
+                                                            {lead.project_category === 'special' 
+                                                                ? (lead.raw_data?.details?.title || 'Skræddersyet opgave')
+                                                                : (categoryNames[lead.project_category] || lead.project_category)}
+                                                        </span>
                                                     </div>
                                                     
                                                     {lead.status === 'Bekræftet opgave' ? (
@@ -3042,7 +3053,9 @@ const Dashboard = () => {
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', backgroundColor: 'rgba(96,165,250,0.05)', padding: '10px 12px', borderRadius: '8px' }}>
                                                             <Calculator size={18} style={{ color: '#60a5fa' }} />
                                                             <div>
-                                                                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Overslag givet</span>
+                                                                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                                    {lead.project_category === 'special' ? 'Estimat (Intern kladde)' : 'Overslag givet'}
+                                                                </span>
                                                                 <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{lead.raw_data?.calc_data?.finalEstimateIncVat ? `${lead.raw_data.calc_data.finalEstimateIncVat.toLocaleString('da-DK')} kr.` : lead.price_estimate}</span>
                                                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}> inkl. moms</span>
                                                             </div>
@@ -3383,27 +3396,45 @@ const Dashboard = () => {
                                                             {selectedLead.project_category === 'special' ? 'Estimat (Før moms) - Intern Kladde' : (['Sendt tilbud', 'Bekræftet opgave'].includes(selectedLead.status) ? 'Tilbud sendt til kunde' : 'Overslag sendt til kunde')}
                                                         </span>
                                                         <div style={{ margin: '12px 0 0', color: '#1e3a8a', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                            {selectedLead.raw_data?.calc_data?.finalEstimateIncVat ? (() => {
-                                                                const incVat = selectedLead.raw_data.calc_data.finalEstimateIncVat;
-                                                                const exVat = selectedLead.raw_data.calc_data.finalEstimateExVat;
-                                                                const vat = incVat - exVat;
-                                                                return (
-                                                                    <>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                            <span style={{ opacity: 0.8 }}>Ekskl. moms:</span>
-                                                                            <span>{exVat.toLocaleString('da-DK')} kr.</span>
-                                                                        </div>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                            <span style={{ opacity: 0.8 }}>Moms (25%):</span>
-                                                                            <span>{vat.toLocaleString('da-DK')} kr.</span>
-                                                                        </div>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #bfdbfe', paddingTop: '6px', marginTop: '4px', fontWeight: 'bold', fontSize: '1.05rem', color: '#1d4ed8' }}>
-                                                                            <span>Inkl. moms:</span>
-                                                                            <span>{incVat.toLocaleString('da-DK')} kr.</span>
-                                                                        </div>
-                                                                    </>
-                                                                );
-                                                            })() : <span style={{ fontWeight: 'bold', color: '#1d4ed8', fontSize: '1.1rem' }}>{selectedLead.price_estimate}</span>}
+                                                            {(() => {
+    let incVat = 0, exVat = 0, vat = 0;
+    let hasData = false;
+
+    if (selectedLead.raw_data?.calc_data?.finalEstimateIncVat) {
+        incVat = selectedLead.raw_data.calc_data.finalEstimateIncVat;
+        exVat = selectedLead.raw_data.calc_data.finalEstimateExVat;
+        vat = incVat - exVat;
+        hasData = true;
+    } else if (selectedLead.project_category === 'special' && selectedLead.price_estimate) {
+        exVat = parseFloat(selectedLead.price_estimate.replace(/[^0-9,-]/g, '').replace(',', '.'));
+        if (!isNaN(exVat)) {
+            vat = exVat * 0.25;
+            incVat = exVat + vat;
+            hasData = true;
+        }
+    }
+
+    if (hasData) {
+        return (
+            <>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ opacity: 0.8 }}>Ekskl. moms:</span>
+                    <span>{exVat.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kr.</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ opacity: 0.8 }}>Moms (25%):</span>
+                    <span>{vat.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kr.</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #bfdbfe', paddingTop: '6px', marginTop: '4px', fontWeight: 'bold', fontSize: '1.05rem', color: '#1d4ed8' }}>
+                    <span>Inkl. moms:</span>
+                    <span>{incVat.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kr.</span>
+                </div>
+            </>
+        );
+    }
+    
+    return <span style={{ fontWeight: 'bold', color: '#1d4ed8', fontSize: '1.1rem' }}>{selectedLead.price_estimate}</span>;
+})()}
                                                         </div>
                                                     </>
                                                 )}
@@ -3412,9 +3443,63 @@ const Dashboard = () => {
                                             {/* KATEGORI BOKS (Nu placeret under overslaget) */}
                                             <div style={{ padding: '16px', backgroundColor: '#f3f1ed', borderRadius: '14px' }}>
                                                 <span style={{ fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kategori</span>
-                                                <p style={{ margin: '4px 0 12px', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem' }}>
-                                                    {selectedLead.project_category === 'special' ? (selectedLead.raw_data?.details?.title || 'Skræddersyet Opgave') : (categoryNames[selectedLead.project_category] || selectedLead.project_category)}
-                                                </p>
+                                                <div style={{ margin: '4px 0 12px', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem', position: 'relative' }}>
+    {selectedLead.project_category === 'special' ? (
+        <input 
+            type="text" 
+            defaultValue={selectedLead.raw_data?.details?.title || 'Skræddersyet Opgave'}
+            onBlur={async (e) => {
+                e.target.style.background = 'transparent';
+                e.target.style.border = '1px solid transparent';
+                e.target.style.boxShadow = 'none';
+                
+                const newTitle = e.target.value.trim();
+                if (newTitle && newTitle !== (selectedLead.raw_data?.details?.title || 'Skræddersyet Opgave')) {
+                    const newRawData = { ...selectedLead.raw_data, details: { ...selectedLead.raw_data?.details, title: newTitle } };
+                    const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', selectedLead.id);
+                    if (!error) {
+                        setSelectedLead({ ...selectedLead, raw_data: newRawData });
+                        setLeadsData(prev => prev.map(l => l.id === selectedLead.id ? { ...l, raw_data: newRawData } : l));
+                        toast.success('Kategori/Titel opdateret');
+                    }
+                }
+            }}
+            style={{ 
+                width: '100%', 
+                background: 'transparent', 
+                border: '1px solid transparent', 
+                borderRadius: '8px', 
+                padding: '4px 8px', 
+                marginLeft: '-8px', 
+                fontSize: 'inherit', 
+                fontWeight: 'inherit', 
+                color: 'inherit', 
+                outline: 'none',
+                transition: 'all 0.2s ease',
+                boxShadow: 'none',
+                WebkitAppearance: 'none'
+            }}
+            onFocus={(e) => {
+                e.target.style.background = '#ffffff';
+                e.target.style.border = '1px solid #3b82f6';
+                e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.15)';
+            }}
+            onMouseEnter={(e) => { 
+                if (document.activeElement !== e.target) {
+                    e.target.style.background = 'rgba(0,0,0,0.04)';
+                }
+            }}
+            onMouseLeave={(e) => { 
+                if (document.activeElement !== e.target) {
+                    e.target.style.background = 'transparent';
+                }
+            }}
+            title="Klik for at redigere"
+        />
+    ) : (
+        <p style={{ margin: 0 }}>{categoryNames[selectedLead.project_category] || selectedLead.project_category}</p>
+    )}
+</div>
                                                 
                                                 {/* AI Opgavebeskrivelse som dropdown (skjult for 'special' sager) */}
                                                 {selectedLead.project_category !== 'special' && (
@@ -5802,27 +5887,44 @@ const Dashboard = () => {
                 document.body
             )}
 
+            
+            {/* Create Lead Cancel Confirm Modal */}
+            {showCreateLeadCancelConfirm && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100001, padding: '20px', animation: 'fadeIn 0.2s ease-out' }} onClick={() => setShowCreateLeadCancelConfirm(false)}>
+                    <div style={{ backgroundColor: '#fff', padding: '32px', borderRadius: '24px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', textAlign: 'center', transform: 'scale(1)', animation: 'popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ width: '72px', height: '72px', backgroundColor: '#fef2f2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', border: '8px solid #fff', boxShadow: '0 0 0 1px #fee2e2' }}>
+                            <span style={{ fontSize: '32px', lineHeight: 1 }}>⚠️</span>
+                        </div>
+                        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.5rem', color: '#0f172a', fontWeight: 'bold' }}>Er du helt sikker?</h3>
+                        <p style={{ margin: '0 0 32px 0', color: '#64748b', lineHeight: '1.6', fontSize: '1.05rem' }}>Hvis du lukker nu, mister du alt det arbejde, du lige har lavet i opgaven.</p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={() => setShowCreateLeadCancelConfirm(false)} style={{ flex: 1, padding: '14px', background: '#f1f5f9', border: 'none', borderRadius: '12px', color: '#475569', fontWeight: '600', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#e2e8f0'} onMouseLeave={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}>Vent, bliv her</button>
+                            <button onClick={() => { setShowCreateLeadCancelConfirm(false); setIsCreateLeadModalOpen(false); setCreateLeadMode(null); }} style={{ flex: 1, padding: '14px', background: '#ef4444', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: '600', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(239,68,68,0.25)' }} onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#dc2626'; e.currentTarget.style.transform = 'translateY(-2px)'; }} onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; }}>Ja, slet det</button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {/* Create Lead Modal */}
             {isCreateLeadModalOpen && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => {
                     if (createLeadMode === 'custom' || createLeadMode === 'classic') {
-                        if (!window.confirm("Er du sikker på, at du vil lukke vinduet? Alt indtastet data vil gå tabt.")) {
-                            return;
-                        }
+                        setShowCreateLeadCancelConfirm(true);
+                        return;
                     }
                     setIsCreateLeadModalOpen(false); 
                     setCreateLeadMode(null); 
                 }}>
                     <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => {
-                            if (createLeadMode === 'custom' || createLeadMode === 'classic') {
-                                if (!window.confirm("Er du sikker på, at du vil lukke vinduet? Alt indtastet data vil gå tabt.")) {
-                                    return;
-                                }
-                            }
-                            setIsCreateLeadModalOpen(false); 
-                            setCreateLeadMode(null); 
-                        }} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f3f1ed', border: 'none', fontSize: '1.2rem', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>×</button>
+                    if (createLeadMode === 'custom' || createLeadMode === 'classic') {
+                        setShowCreateLeadCancelConfirm(true);
+                        return;
+                    }
+                    setIsCreateLeadModalOpen(false); 
+                    setCreateLeadMode(null); 
+                }} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f3f1ed', border: 'none', fontSize: '1.2rem', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>×</button>
                         <div style={{ padding: '0' }}>
                             {createLeadMode === null && (
                                 <CreateLeadSelector 
@@ -5854,7 +5956,7 @@ const Dashboard = () => {
                             {createLeadMode === 'custom' && (
                                 <CustomProjectCreator 
                                     carpenter={carpenterProfile}
-                                    onCancel={() => { setIsCreateLeadModalOpen(false); setCreateLeadMode(null); }}
+                                    onCancel={() => setShowCreateLeadCancelConfirm(true)}
                                     onComplete={async () => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);

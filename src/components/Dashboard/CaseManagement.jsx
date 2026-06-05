@@ -126,7 +126,7 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
     );
 };
 
-export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onUpdateLead, isModalView = false, selectedLeadId = null }) {
+export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onUpdateLead, isModalView = false, selectedLeadId = null }) {
     const [activeCases, setActiveCases] = useState([]);
     const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
     const selectedCase = activeCases.find(c => c.id === selectedCaseIdState) || null;
@@ -1338,6 +1338,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         
                         {/* Status bar */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            {['admin', 'accountant', 'boss', 'sales'].includes(profile?.role) && (
+                                <button
+                                    onClick={() => onOpenInvoice && onOpenInvoice(selectedCase.id)}
+                                    style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #059669', background: '#10b981', fontSize: '0.85rem', fontWeight: 'bold', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#059669'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(16, 185, 129, 0.3)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.2)'; }}
+                                >
+                                    <DollarSign size={16} /> Opret Faktura
+                                </button>
+                            )}
                             {['admin', 'sales'].includes(profile?.role) && (
                                 <div style={{ position: 'relative' }}>
                                     <button 

@@ -116,12 +116,15 @@ export default function AdminTimesheet({ leadsData, profile }) {
     const [formData, setFormData] = useState({ 
         date: new Date().toISOString().substring(0, 10), 
         employeeId: '', 
+        regType: 'project',
         leadId: '', 
+        absenceType: 'Sygdom',
         desc: '', 
         hours: '', 
         km: '', 
         startTime: '07:00', 
-        endTime: '15:00' 
+        endTime: '15:00',
+        pauseMinutes: '30'
     });
 
     useEffect(() => {
@@ -147,16 +150,21 @@ export default function AdminTimesheet({ leadsData, profile }) {
         if (profile) fetchTeam();
     }, [profile]);
 
-    // Auto-beregn timer ud fra start og slut
+    // Auto-beregn timer ud fra start og slut og pause
     useEffect(() => {
         if (formData.startTime && formData.endTime) {
             const [sH, sM] = formData.startTime.split(':').map(Number);
             const [eH, eM] = formData.endTime.split(':').map(Number);
             let diffHours = (eH + eM/60) - (sH + sM/60);
             if (diffHours < 0) diffHours += 24; // If crossing midnight
-            setFormData(prev => ({ ...prev, hours: (Math.round(diffHours * 4) / 4).toString() }));
+            
+            const pauseHours = (parseInt(formData.pauseMinutes) || 0) / 60;
+            let finalHours = diffHours - pauseHours;
+            if (finalHours < 0) finalHours = 0;
+            
+            setFormData(prev => ({ ...prev, hours: (Math.round(finalHours * 4) / 4).toString() }));
         }
-    }, [formData.startTime, formData.endTime]);
+    }, [formData.startTime, formData.endTime, formData.pauseMinutes]);
 
     // Opsamling af alle registreringer
     const allEntries = useMemo(() => {
@@ -318,13 +326,14 @@ export default function AdminTimesheet({ leadsData, profile }) {
     const handleSaveEntry = async (e) => {
         e.preventDefault();
         if (!formData.employeeId) return toast.error('Vælg en medarbejder');
-        if (!formData.leadId) return toast.error('Vælg en sag eller internt fravær');
+        if (formData.regType === 'project' && !formData.leadId) return toast.error('Vælg venligst en sag');
         if (!formData.date) return toast.error('Vælg en dato');
         
         const finalEntry = {
             id: isAdding ? `time-${Date.now()}` : editingEntry.id,
             startTime: formData.startTime || '',
             endTime: formData.endTime || '',
+            pauseMinutes: parseInt(formData.pauseMinutes) || 0,
             hours: parseFloat(formData.hours) || 0,
             date: formData.date,
             desc: formData.desc || '',
@@ -333,8 +342,8 @@ export default function AdminTimesheet({ leadsData, profile }) {
             km: formData.km ? parseFloat(formData.km) : 0
         };
 
-        if (formData.leadId === 'internal') {
-            finalEntry.absenceType = formData.desc || 'Internt';
+        if (formData.regType === 'internal') {
+            finalEntry.absenceType = formData.absenceType || 'Internt';
             const member = teamMembers.find(m => m.id === formData.employeeId);
             if (!member) return toast.error('Medarbejder ikke fundet');
             
@@ -365,15 +374,19 @@ export default function AdminTimesheet({ leadsData, profile }) {
     };
 
     const openEdit = (entry) => {
+        const isInternal = entry.leadId === 'internal';
         setFormData({
             date: entry.date || '',
             employeeId: entry.employeeId || '',
-            leadId: entry.leadId || '',
+            regType: isInternal ? 'internal' : 'project',
+            leadId: isInternal ? '' : (entry.leadId || ''),
+            absenceType: isInternal ? (entry.absenceType || entry.desc || 'Sygdom') : 'Sygdom',
             desc: entry.desc || '',
             hours: entry.hours || '',
             km: entry.km || '',
             startTime: entry.startTime || '',
-            endTime: entry.endTime || ''
+            endTime: entry.endTime || '',
+            pauseMinutes: entry.pauseMinutes !== undefined ? String(entry.pauseMinutes) : '0'
         });
         setEditingEntry(entry);
         setIsAdding(false);
@@ -383,12 +396,15 @@ export default function AdminTimesheet({ leadsData, profile }) {
         setFormData({ 
             date: new Date().toISOString().substring(0, 10), 
             employeeId: profile?.id || '', 
+            regType: 'project',
             leadId: '', 
+            absenceType: 'Sygdom',
             desc: '', 
             hours: '', 
             km: '', 
             startTime: '07:00', 
-            endTime: '15:00' 
+            endTime: '15:00',
+            pauseMinutes: '30'
         });
         setIsAdding(true);
         setEditingEntry(null);
@@ -694,25 +710,47 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Sag / Projekt / Internt Fravær</label>
-                                <CustomSelect 
-                                    value={formData.leadId}
-                                    onChange={(val) => setFormData({...formData, leadId: val})}
-                                    placeholder="-- Vælg Sag --"
-                                    options={[
-                                        { 
-                                            isGroup: true, 
-                                            label: 'Aktive Byggeprojekter', 
-                                            options: leadsData.filter(l => ['Sendt tilbud', 'Bekræftet opgave', 'Historik'].includes(l.status)).map(l => ({ value: l.id, label: `Sag ${l.case_number || String(l.id).substring(0,6)} - ${l.customer_name}` }))
-                                        },
-                                        {
-                                            isGroup: true,
-                                            label: 'Internt',
-                                            options: [{ value: 'internal', label: 'Fravær, Sygdom, Ferie, Møder o.lign.' }]
-                                        }
-                                    ]}
-                                />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Kategori</label>
+                                    <CustomSelect 
+                                        value={formData.regType}
+                                        onChange={(val) => {
+                                            setFormData({...formData, regType: val, leadId: ''});
+                                        }}
+                                        options={[
+                                            { value: 'project', label: 'Sag / Projekt' },
+                                            { value: 'internal', label: 'Internt Fravær' }
+                                        ]}
+                                    />
+                                </div>
+                                
+                                {formData.regType === 'project' ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Vælg Sag</label>
+                                        <CustomSelect 
+                                            value={formData.leadId}
+                                            onChange={(val) => setFormData({...formData, leadId: val})}
+                                            placeholder="-- Vælg Sag --"
+                                            options={leadsData.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status)).map(l => ({ value: l.id, label: `Sag ${l.case_number || String(l.id).substring(0,6)} - ${l.customer_name}` }))}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Type Fravær</label>
+                                        <CustomSelect 
+                                            value={formData.absenceType}
+                                            onChange={(val) => setFormData({...formData, absenceType: val})}
+                                            options={[
+                                                { value: 'Sygdom', label: 'Sygdom' },
+                                                { value: 'Ferie', label: 'Ferie' },
+                                                { value: 'Skole', label: 'Skole / Uddannelse' },
+                                                { value: 'Møde', label: 'Møde / Kontor' },
+                                                { value: 'Værksted', label: 'Værksted / Oprydning' }
+                                            ]}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
@@ -735,18 +773,30 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                     />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Totale Timer *</label>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Pause (min.)</label>
                                     <input 
                                         type="number" 
-                                        required
-                                        step="0.25"
                                         min="0"
-                                        placeholder="F.eks. 7.5"
-                                        value={formData.hours}
-                                        onChange={(e) => setFormData({...formData, hours: e.target.value})}
-                                        style={{ padding: '12px 16px', borderRadius: '12px', border: '2px solid #3b82f6', outline: 'none', fontSize: '0.95rem', fontWeight: 'bold', backgroundColor: '#eff6ff', color: '#1e293b' }}
+                                        placeholder="F.eks. 30"
+                                        value={formData.pauseMinutes}
+                                        onChange={(e) => setFormData({...formData, pauseMinutes: e.target.value})}
+                                        style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
                                     />
                                 </div>
+                            </div>
+
+                            <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <label style={{ fontSize: '1rem', fontWeight: '700', color: '#334155', margin: 0 }}>Timer i alt (Totalt) *</label>
+                                <input 
+                                    type="number" 
+                                    required
+                                    step="0.25"
+                                    min="0"
+                                    placeholder="F.eks. 7.5"
+                                    value={formData.hours}
+                                    onChange={(e) => setFormData({...formData, hours: e.target.value})}
+                                    style={{ padding: '10px 16px', borderRadius: '8px', border: '2px solid #3b82f6', outline: 'none', fontSize: '1.25rem', color: '#1e293b', backgroundColor: '#fff', fontWeight: '900', width: '120px', textAlign: 'center' }}
+                                />
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -767,7 +817,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                 <textarea 
                                     required
                                     rows="3"
-                                    placeholder={formData.leadId === 'internal' ? "F.eks. 'Sygdom', 'Ferie', 'Værksted'" : "F.eks. 'Opsat gipslofter og spartlet'"}
+                                    placeholder={formData.regType === 'internal' ? "Valgfri note til fraværet..." : "F.eks. 'Opsat gipslofter og spartlet'"}
                                     value={formData.desc}
                                     onChange={(e) => setFormData({...formData, desc: e.target.value})}
                                     style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', fontFamily: 'inherit', resize: 'vertical', color: '#1e293b' }}

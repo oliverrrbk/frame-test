@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import InvoiceEditor from './InvoiceEditor';
 
-const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounting, onUpdateLead }) => {
+const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounting, onUpdateLead, targetInvoiceCaseId, clearTargetInvoiceCase }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeInvoiceCase, setActiveInvoiceCase] = useState(null);
 
@@ -13,6 +13,7 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
         let totalRevenue = 0;
         let totalInvoiced = 0;
         let totalMissingInvoice = 0;
+        let totalPaid = 0;
         let pendingCases = [];
         let completedCases = [];
 
@@ -46,12 +47,16 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
             const invoiced = c.raw_data?.invoiced_amount || 0;
             const remaining = caseTotal - invoiced;
 
+            const history = c.raw_data?.invoice_history || [];
+            const casePaid = history.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+
             totalRevenue += caseTotal;
             totalInvoiced += invoiced;
+            totalPaid += casePaid;
             
             const caseData = {
                 ...c,
-                finance: { caseTotal, invoiced, remaining, extraPrice }
+                finance: { caseTotal, invoiced, remaining, extraPrice, casePaid }
             };
 
             if (remaining > 0) {
@@ -65,8 +70,19 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
         // Sorter så de med størst manglende fakturering ligger øverst
         pendingCases.sort((a, b) => b.finance.remaining - a.finance.remaining);
 
-        return { totalRevenue, totalInvoiced, totalMissingInvoice, pendingCases, completedCases };
+        return { totalRevenue, totalInvoiced, totalMissingInvoice, totalPaid, pendingCases, completedCases };
     }, [cases]);
+
+    React.useEffect(() => {
+        if (targetInvoiceCaseId) {
+            const allFinanceCases = [...financeData.pendingCases, ...financeData.completedCases];
+            const leadToInvoice = allFinanceCases.find(c => c.id === targetInvoiceCaseId);
+            if (leadToInvoice) {
+                setActiveInvoiceCase(leadToInvoice);
+            }
+            if (clearTargetInvoiceCase) clearTargetInvoiceCase();
+        }
+    }, [targetInvoiceCaseId, financeData, clearTargetInvoiceCase]);
 
     const filteredPending = financeData.pendingCases.filter(c => 
         (c.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -191,8 +207,23 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                                                 <td style={{ padding: '16px 24px', textAlign: 'right', color: '#334155', fontWeight: '500' }}>
                                                     {c.finance.caseTotal.toLocaleString('da-DK')} kr.
                                                 </td>
-                                                <td style={{ padding: '16px 24px', textAlign: 'right', color: '#10b981', fontWeight: '500' }}>
+                                                <td style={{ padding: '16px 24px', textAlign: 'right', color: '#334155', fontWeight: '500' }}>
                                                     {c.finance.invoiced > 0 ? `${c.finance.invoiced.toLocaleString('da-DK')} kr.` : '0 kr.'}
+                                                    {c.finance.casePaid > 0 && (
+                                                        <div style={{ 
+                                                            color: c.finance.casePaid >= c.finance.invoiced ? '#059669' : '#10b981', 
+                                                            fontSize: '0.8rem', 
+                                                            marginTop: '6px', 
+                                                            display: 'flex', 
+                                                            alignItems: 'center', 
+                                                            justifyContent: 'flex-end', 
+                                                            gap: '4px',
+                                                            fontWeight: c.finance.casePaid >= c.finance.invoiced ? 'bold' : 'normal'
+                                                        }}>
+                                                            <CheckCircle2 size={12} /> 
+                                                            {c.finance.casePaid >= c.finance.invoiced ? 'Fuldt betalt' : `Heraf betalt: ${c.finance.casePaid.toLocaleString('da-DK')} kr.`}
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td style={{ padding: '16px 24px', textAlign: 'right', color: '#e11d48', fontWeight: 'bold', fontSize: '1.1rem' }}>
                                                     {c.finance.remaining.toLocaleString('da-DK')} kr.
