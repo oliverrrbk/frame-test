@@ -421,7 +421,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
             customer_email: customerInfo.email || 'Ukendt',
             customer_phone: customerInfo.phone || 'Ukendt',
             status: 'Ny forespørgsel',
-            category: 'special',
+            project_category: 'special',
             details: { 
                 title: projectTitle || 'Skræddersyet Opgave',
                 notes: projectNotes,

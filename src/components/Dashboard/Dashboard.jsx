@@ -5800,9 +5800,25 @@ const Dashboard = () => {
 
             {/* Create Lead Modal */}
             {isCreateLeadModalOpen && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => { setIsCreateLeadModalOpen(false); setCreateLeadMode(null); }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => {
+                    if (createLeadMode === 'custom' || createLeadMode === 'classic') {
+                        if (!window.confirm("Er du sikker på, at du vil lukke vinduet? Alt indtastet data vil gå tabt.")) {
+                            return;
+                        }
+                    }
+                    setIsCreateLeadModalOpen(false); 
+                    setCreateLeadMode(null); 
+                }}>
                     <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => { setIsCreateLeadModalOpen(false); setCreateLeadMode(null); }} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f3f1ed', border: 'none', fontSize: '1.2rem', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>×</button>
+                        <button onClick={() => {
+                            if (createLeadMode === 'custom' || createLeadMode === 'classic') {
+                                if (!window.confirm("Er du sikker på, at du vil lukke vinduet? Alt indtastet data vil gå tabt.")) {
+                                    return;
+                                }
+                            }
+                            setIsCreateLeadModalOpen(false); 
+                            setCreateLeadMode(null); 
+                        }} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f3f1ed', border: 'none', fontSize: '1.2rem', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>×</button>
                         <div style={{ padding: '0' }}>
                             {createLeadMode === null && (
                                 <CreateLeadSelector 
