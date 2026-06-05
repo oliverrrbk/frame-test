@@ -611,7 +611,21 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
                             </div>
                             <div className="input-group">
                                 <label>Postnummer</label>
-                                <input type="text" value={customerInfo.zip} onChange={e => setCustomerInfo({...customerInfo, zip: e.target.value})} placeholder="Postnr." className="modern-input" />
+                                <input type="text" value={customerInfo.zip} onChange={async (e) => {
+                                    const val = e.target.value;
+                                    setCustomerInfo({...customerInfo, zip: val});
+                                    if (val.length === 4 && /^\d+$/.test(val)) {
+                                        try {
+                                            const res = await fetch(`https://api.dataforsyningen.dk/postnumre/${val}`);
+                                            if (res.ok) {
+                                                const data = await res.json();
+                                                if (data && data.navn) {
+                                                    setCustomerInfo(prev => ({...prev, zip: val, city: data.navn}));
+                                                }
+                                            }
+                                        } catch(err) { console.error(err); }
+                                    }
+                                }} placeholder="Postnr." className="modern-input" />
                             </div>
                             <div className="input-group">
                                 <label>By</label>
