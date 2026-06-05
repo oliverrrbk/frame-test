@@ -3380,7 +3380,7 @@ const Dashboard = () => {
                                                 ) : (
                                                     <>
                                                         <span style={{ fontSize: '0.85rem', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                            {['Sendt tilbud', 'Bekræftet opgave'].includes(selectedLead.status) ? 'Tilbud sendt til kunde' : 'Overslag sendt til kunde'}
+                                                            {selectedLead.project_category === 'special' ? 'Estimat (Før moms) - Intern Kladde' : (['Sendt tilbud', 'Bekræftet opgave'].includes(selectedLead.status) ? 'Tilbud sendt til kunde' : 'Overslag sendt til kunde')}
                                                         </span>
                                                         <div style={{ margin: '12px 0 0', color: '#1e3a8a', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                                             {selectedLead.raw_data?.calc_data?.finalEstimateIncVat ? (() => {
@@ -3412,90 +3412,94 @@ const Dashboard = () => {
                                             {/* KATEGORI BOKS (Nu placeret under overslaget) */}
                                             <div style={{ padding: '16px', backgroundColor: '#f3f1ed', borderRadius: '14px' }}>
                                                 <span style={{ fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kategori</span>
-                                                <p style={{ margin: '4px 0 12px', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem' }}>{categoryNames[selectedLead.project_category] || selectedLead.project_category}</p>
+                                                <p style={{ margin: '4px 0 12px', fontWeight: 'bold', color: '#1a1a1a', fontSize: '1.1rem' }}>
+                                                    {selectedLead.project_category === 'special' ? (selectedLead.raw_data?.details?.title || 'Skræddersyet Opgave') : (categoryNames[selectedLead.project_category] || selectedLead.project_category)}
+                                                </p>
                                                 
-                                                {/* AI Opgavebeskrivelse som dropdown */}
-                                                <details style={{ padding: '12px', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e8e6e1', cursor: 'pointer' }}>
-                                                    <summary style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', outline: 'none' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexGrow: 1 }}>
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                                                            Opsummering af opgaven
-                                                        </div>
-                                                        <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>Læs mere ▼</span>
-                                                    </summary>
-                                                    {(() => {
-                                                        const catMap = {
-                                                            'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
-                                                            'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
-                                                            'Tagprojekt': 'roof', 'Tag': 'roof', 'Nyt Køkken': 'kitchen', 'Køkken': 'kitchen',
-                                                            'Nye Lofter': 'ceilings', 'Lofter': 'ceilings', 'Ny Facadebeklædning': 'facades',
-                                                            'Facader': 'facades', 'Tilbygning': 'extensions', 'Anneks': 'annex', 'Annekser & Skure': 'annex',
-                                                            'Carport': 'carport', 'Hegn': 'fence'
-                                                        };
-                                                        const rawCat = selectedLead.project_category || '';
-                                                        const normalizedCat = catMap[rawCat] || rawCat;
-                                                        
-                                                        const detailedTasks = generateTaskDescription(normalizedCat, selectedLead.raw_data?.details || {});
-                                                        
-                                                        let summaryBullets = [];
-                                                        if (detailedTasks && detailedTasks.length > 0) {
-                                                            summaryBullets = detailedTasks;
-                                                        } else {
-                                                            const summaryText = selectedLead.raw_data?.ai_summary || selectedLead.ai_summary || generateShortSummary(selectedLead);
-                                                            summaryBullets = summaryText.split('. ')
-                                                                .filter(sentence => sentence.trim().length > 0)
-                                                                .map(sentence => sentence.trim() + (sentence.endsWith('.') ? '' : '.'));
-                                                        }
-                                                        
-                                                        return (
-                                                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f3f4f6' }}>
-                                                                <button 
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                        if ('speechSynthesis' in window) {
-                                                                            const synth = window.speechSynthesis;
-                                                                            const btn = e.currentTarget;
-                                                                            if (synth.speaking || synth.pending) {
-                                                                                synth.cancel();
-                                                                                btn.innerHTML = '🔊 Læs højt';
-                                                                                btn.style.background = '#faf5ff';
-                                                                                btn.style.color = '#7e22ce';
-                                                                                btn.style.borderColor = '#d8b4fe';
-                                                                            } else {
-                                                                                synth.cancel();
-                                                                                const utterance = new SpeechSynthesisUtterance(summaryBullets.join('. '));
-                                                                                utterance.lang = 'da-DK';
-                                                                                utterance.onend = () => {
+                                                {/* AI Opgavebeskrivelse som dropdown (skjult for 'special' sager) */}
+                                                {selectedLead.project_category !== 'special' && (
+                                                    <details style={{ padding: '12px', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e8e6e1', cursor: 'pointer' }}>
+                                                        <summary style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', outline: 'none' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexGrow: 1 }}>
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                                                                Opsummering af opgaven
+                                                            </div>
+                                                            <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>Læs mere ▼</span>
+                                                        </summary>
+                                                        {(() => {
+                                                            const catMap = {
+                                                                'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
+                                                                'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
+                                                                'Tagprojekt': 'roof', 'Tag': 'roof', 'Nyt Køkken': 'kitchen', 'Køkken': 'kitchen',
+                                                                'Nye Lofter': 'ceilings', 'Lofter': 'ceilings', 'Ny Facadebeklædning': 'facades',
+                                                                'Facader': 'facades', 'Tilbygning': 'extensions', 'Anneks': 'annex', 'Annekser & Skure': 'annex',
+                                                                'Carport': 'carport', 'Hegn': 'fence'
+                                                            };
+                                                            const rawCat = selectedLead.project_category || '';
+                                                            const normalizedCat = catMap[rawCat] || rawCat;
+                                                            
+                                                            const detailedTasks = generateTaskDescription(normalizedCat, selectedLead.raw_data?.details || {});
+                                                            
+                                                            let summaryBullets = [];
+                                                            if (detailedTasks && detailedTasks.length > 0) {
+                                                                summaryBullets = detailedTasks;
+                                                            } else {
+                                                                const summaryText = selectedLead.raw_data?.ai_summary || selectedLead.ai_summary || generateShortSummary(selectedLead);
+                                                                summaryBullets = summaryText.split('. ')
+                                                                    .filter(sentence => sentence.trim().length > 0)
+                                                                    .map(sentence => sentence.trim() + (sentence.endsWith('.') ? '' : '.'));
+                                                            }
+                                                            
+                                                            return (
+                                                                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f3f4f6' }}>
+                                                                    <button 
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            if ('speechSynthesis' in window) {
+                                                                                const synth = window.speechSynthesis;
+                                                                                const btn = e.currentTarget;
+                                                                                if (synth.speaking || synth.pending) {
+                                                                                    synth.cancel();
                                                                                     btn.innerHTML = '🔊 Læs højt';
                                                                                     btn.style.background = '#faf5ff';
                                                                                     btn.style.color = '#7e22ce';
                                                                                     btn.style.borderColor = '#d8b4fe';
-                                                                                };
-                                                                                utterance.onerror = utterance.onend;
-                                                                                synth.speak(utterance);
-                                                                                btn.innerHTML = '🛑 Stop Oplæsning';
-                                                                                btn.style.background = '#fef2f2';
-                                                                                btn.style.color = '#ef4444';
-                                                                                btn.style.borderColor = '#fecaca';
+                                                                                } else {
+                                                                                    synth.cancel();
+                                                                                    const utterance = new SpeechSynthesisUtterance(summaryBullets.join('. '));
+                                                                                    utterance.lang = 'da-DK';
+                                                                                    utterance.onend = () => {
+                                                                                        btn.innerHTML = '🔊 Læs højt';
+                                                                                        btn.style.background = '#faf5ff';
+                                                                                        btn.style.color = '#7e22ce';
+                                                                                        btn.style.borderColor = '#d8b4fe';
+                                                                                    };
+                                                                                    utterance.onerror = utterance.onend;
+                                                                                    synth.speak(utterance);
+                                                                                    btn.innerHTML = '🛑 Stop Oplæsning';
+                                                                                    btn.style.background = '#fef2f2';
+                                                                                    btn.style.color = '#ef4444';
+                                                                                    btn.style.borderColor = '#fecaca';
+                                                                                }
+                                                                            } else {
+                                                                                toast.error('Oplæsning understøttes desværre ikke i din browser.');
                                                                             }
-                                                                        } else {
-                                                                            toast.error('Oplæsning understøttes desværre ikke i din browser.');
-                                                                        }
-                                                                    }}
-                                                                    style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #d8b4fe', background: '#faf5ff', color: '#7e22ce', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginBottom: '12px' }}
-                                                                >
-                                                                    🔊 Læs højt
-                                                                </button>
-                                                                <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc', marginLeft: '10px', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5' }}>
-                                                                    {summaryBullets.map((bullet, idx) => (
-                                                                        <li key={idx} style={{ marginBottom: '6px' }}>{bullet}</li>
-                                                                    ))}
-                                                                </ul>
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                </details>
+                                                                        }}
+                                                                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #d8b4fe', background: '#faf5ff', color: '#7e22ce', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginBottom: '12px' }}
+                                                                    >
+                                                                        🔊 Læs højt
+                                                                    </button>
+                                                                    <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc', marginLeft: '10px', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5' }}>
+                                                                        {summaryBullets.map((bullet, idx) => (
+                                                                            <li key={idx} style={{ marginBottom: '6px' }}>{bullet}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </details>
+                                                )}
                                             </div>
                                         </div>
 
@@ -3504,7 +3508,7 @@ const Dashboard = () => {
                                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px' }}
                                         >
                                             <h3 style={{ color: '#1a1a1a', margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                {selectedLead.raw_data?.category === 'special' ? (
+                                                {selectedLead.project_category === 'special' ? (
                                                     <><PenTool size={18} style={{ color: '#6b7280' }} /> Skræddersyet Opgave - Detaljer</>
                                                 ) : (
                                                     <><Sliders size={18} style={{ color: '#6b7280' }} /> Kundens Valg i Beregneren</>
@@ -3521,7 +3525,7 @@ const Dashboard = () => {
                                                     const details = selectedLead.raw_data.details || {};
                                                     
                                                     // SÆRHÅNDTERING: Skræddersyet Opgave (Manuelt oprettet)
-                                                    if (selectedLead.raw_data.category === 'special') {
+                                                    if (selectedLead.project_category === 'special') {
                                                         return (
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
                                                                 <div style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
