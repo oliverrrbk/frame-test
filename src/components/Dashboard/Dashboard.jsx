@@ -647,7 +647,7 @@ const Dashboard = () => {
                     });
                     
                     if (error) {
-                        toast.error("Der skete en fejl under godkendelse hos Dinero. Prøv venligst igen.");
+                        toast.error(`Fejl hos Dinero: ${error.message || JSON.stringify(error)}`);
                     } else {
                         toast.success("Dinero er nu forbundet!");
                     }
