@@ -30,6 +30,8 @@ import DashboardOverview from './DashboardOverview';
 import WorkerOverview from './WorkerOverview';
 import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
+import CreateLeadSelector from './CreateLeadSelector';
+import CustomProjectCreator from './CustomProjectCreator';
 
 // Konfiguration til det nye Google Map
 const MAP_LIBRARIES = ['places'];
@@ -527,6 +529,7 @@ const Dashboard = () => {
     const [feedbackText, setFeedbackText] = useState('');
     const [isSendingFeedback, setIsSendingFeedback] = useState(false);
     const [isCreateLeadModalOpen, setIsCreateLeadModalOpen] = useState(false);
+    const [createLeadMode, setCreateLeadMode] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [mapFilters, setMapFilters] = useState({ showNew: true, showSent: true, showConfirmed: true });
     
@@ -3500,7 +3503,11 @@ const Dashboard = () => {
                                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px' }}
                                         >
                                             <h3 style={{ color: '#1a1a1a', margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <Sliders size={18} style={{ color: '#6b7280' }} /> Kundens Valg i Beregneren
+                                                {selectedLead.raw_data?.category === 'special' ? (
+                                                    <><PenTool size={18} style={{ color: '#6b7280' }} /> Skræddersyet Opgave - Detaljer</>
+                                                ) : (
+                                                    <><Sliders size={18} style={{ color: '#6b7280' }} /> Kundens Valg i Beregneren</>
+                                                )}
                                             </h3>
                                             <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: 'bold' }}>
                                                 {isCustomerChoicesOpen ? 'Skjul ▲' : 'Vis ▼'}
@@ -3511,6 +3518,51 @@ const Dashboard = () => {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                                                 {selectedLead.raw_data && (() => {
                                                     const details = selectedLead.raw_data.details || {};
+                                                    
+                                                    // SÆRHÅNDTERING: Skræddersyet Opgave (Manuelt oprettet)
+                                                    if (selectedLead.raw_data.category === 'special') {
+                                                        return (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+                                                                <div style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                                                                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                        <FileText size={16} /> Opgavebeskrivelse
+                                                                    </h4>
+                                                                    <p style={{ margin: 0, fontSize: '1rem', color: '#1e293b', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                                                                        {details.notes || 'Ingen beskrivelse angivet for opgaven.'}
+                                                                    </p>
+                                                                </div>
+                                                                
+                                                                {details.phases && details.phases.length > 0 && (
+                                                                    <div style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                                                                        <h4 style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                            <Layers size={16} /> Opdeling (Etaper)
+                                                                        </h4>
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                                            {details.phases.map((phase, idx) => (
+                                                                                <div key={idx} style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
+                                                                                    <h5 style={{ margin: '0 0 4px 0', fontSize: '0.95rem', color: '#0f172a' }}>{idx + 1}. {phase.name}</h5>
+                                                                                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                                                                                        {phase.hours} timer, {phase.materialCostBase} kr. materialer
+                                                                                    </p>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {details.ai_summary && (
+                                                                    <div style={{ padding: '20px', backgroundColor: '#faf5ff', borderRadius: '12px', border: '1px solid #e9d5ff', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                                                                        <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#9333ea', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                            <PenTool size={16} /> AI Opsummering
+                                                                        </h4>
+                                                                        <p style={{ margin: 0, fontSize: '1rem', color: '#4c1d95', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                                                                            {details.ai_summary}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    }
                                                     
                                                     const translationMap = {
                                                         'material': 'Materialetype / Beklædning',
@@ -5759,26 +5811,55 @@ const Dashboard = () => {
 
             {/* Create Lead Modal */}
             {isCreateLeadModalOpen && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => setIsCreateLeadModalOpen(false)}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => { setIsCreateLeadModalOpen(false); setCreateLeadMode(null); }}>
                     <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => setIsCreateLeadModalOpen(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f3f1ed', border: 'none', fontSize: '1.2rem', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>×</button>
+                        <button onClick={() => { setIsCreateLeadModalOpen(false); setCreateLeadMode(null); }} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f3f1ed', border: 'none', fontSize: '1.2rem', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>×</button>
                         <div style={{ padding: '0' }}>
-                            <Wizard 
-                                carpenter={carpenterProfile} 
-                                isManualCreation={true} 
-                                onComplete={async () => {
-                                    setIsCreateLeadModalOpen(false);
-                                    toast.success('Ny kunde oprettet!');
-                                    // Genindlæs leads
-                                    const { data } = await supabase.from('leads').select('*').eq('carpenter_id', carpenterProfile.id).order('created_at', { ascending: false });
-                                    if (data && data.length > 0) {
-                                        setLeadsData(data.filter(l => l.status !== 'Slettet'));
-                                        setActiveTab('leads');
-                                        setLeadFilter('Ny forespørgsel');
-                                        setSelectedLead(data[0]); // Vælg og åbn det nyeste lead automatisk!
-                                    }
-                                }} 
-                            />
+                            {createLeadMode === null && (
+                                <CreateLeadSelector 
+                                    onSelectClassic={() => setCreateLeadMode('classic')}
+                                    onSelectCustom={() => setCreateLeadMode('custom')}
+                                />
+                            )}
+                            
+                            {createLeadMode === 'classic' && (
+                                <Wizard 
+                                    carpenter={carpenterProfile} 
+                                    isManualCreation={true} 
+                                    onComplete={async () => {
+                                        setIsCreateLeadModalOpen(false);
+                                        setCreateLeadMode(null);
+                                        toast.success('Ny kunde oprettet!');
+                                        // Genindlæs leads
+                                        const { data } = await supabase.from('leads').select('*').eq('carpenter_id', carpenterProfile.id).order('created_at', { ascending: false });
+                                        if (data && data.length > 0) {
+                                            setLeadsData(data.filter(l => l.status !== 'Slettet'));
+                                            setActiveTab('leads');
+                                            setLeadFilter('Ny forespørgsel');
+                                            setSelectedLead(data[0]); // Vælg og åbn det nyeste lead automatisk!
+                                        }
+                                    }} 
+                                />
+                            )}
+
+                            {createLeadMode === 'custom' && (
+                                <CustomProjectCreator 
+                                    carpenter={carpenterProfile}
+                                    onCancel={() => { setIsCreateLeadModalOpen(false); setCreateLeadMode(null); }}
+                                    onComplete={async () => {
+                                        setIsCreateLeadModalOpen(false);
+                                        setCreateLeadMode(null);
+                                        toast.success('Skræddersyet kunde oprettet!');
+                                        const { data } = await supabase.from('leads').select('*').eq('carpenter_id', carpenterProfile.id).order('created_at', { ascending: false });
+                                        if (data && data.length > 0) {
+                                            setLeadsData(data.filter(l => l.status !== 'Slettet'));
+                                            setActiveTab('leads');
+                                            setLeadFilter('Ny forespørgsel');
+                                            setSelectedLead(data[0]);
+                                        }
+                                    }}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>,
