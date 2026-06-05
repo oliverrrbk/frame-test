@@ -415,34 +415,35 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
 
         const payload = {
             customer_name: customerInfo.name,
-            customer_address: customerInfo.address,
-            customer_zip: customerInfo.zip,
-            customer_city: customerInfo.city,
+            customer_address: `${customerInfo.address || ''}, ${customerInfo.zip || ''} ${customerInfo.city || ''}`.replace(/^, | , | $/g, '').trim() || 'Ukendt adresse',
             customer_email: customerInfo.email || 'Ukendt',
             customer_phone: customerInfo.phone || 'Ukendt',
             status: 'Ny forespørgsel',
             project_category: 'special',
-            details: { 
-                title: projectTitle || 'Skræddersyet Opgave',
-                notes: projectNotes,
-                ai_summary: aiSummary,
-                phases: phases
+            price_estimate: totals.totalSales.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' kr.',
+            raw_data: {
+                details: { 
+                    title: projectTitle || 'Skræddersyet Opgave',
+                    notes: projectNotes,
+                    ai_summary: aiSummary,
+                    phases: phases
+                },
+                calc_data: { 
+                    breakdown: breakdownArr, 
+                    totals: { min: totals.totalSales, max: totals.totalSales },
+                    laborHours: totals.totalHours,
+                    hourlyRate: parseFloat(hourlyRate) || 0,
+                    materialCostBase: phaseMaterialsCost,
+                    materialMarkup: effectiveMaterialMarkup,
+                    materialCost: phaseMaterialsSales,
+                    customLines: customLines,
+                    drivingCost: 0,
+                    extraMaterialsCost: 0
+                },
+                actual_quote_price: totals.totalSales,
+                project_title: projectTitle || 'Skræddersyet Opgave'
             },
-            calc_data: { 
-                breakdown: breakdownArr, 
-                totals: { min: totals.totalSales, max: totals.totalSales },
-                laborHours: totals.totalHours,
-                hourlyRate: parseFloat(hourlyRate) || 0,
-                materialCostBase: phaseMaterialsCost,
-                materialMarkup: effectiveMaterialMarkup,
-                materialCost: phaseMaterialsSales,
-                customLines: customLines,
-                drivingCost: 0,
-                extraMaterialsCost: 0
-            },
-            actual_quote_price: totals.totalSales,
-            carpenter_id: carpenter?.id || null,
-            assigned_to: carpenter?.id || null
+            carpenter_id: carpenter?.id || null
         };
 
         try {
