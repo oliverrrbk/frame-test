@@ -14,7 +14,7 @@ export const generateTaskDescription = (category, details, customerType = 'priva
         // 2. Klargøring / Underlag
         tasks.push('Klargøring af murhuller (false/sålbænke) og montering af fugtspærre');
         
-        const obstacleWindowsCount = details.windowsConfig.reduce((acc, w) => acc + (w.obstacles ? (parseInt(w.count) || 1) : 0), 0);
+        const obstacleWindowsCount = (details.windowsConfig || []).reduce((acc, w) => acc + (w.obstacles ? (parseInt(w.count) || 1) : 0), 0);
         if (obstacleWindowsCount > 0) {
             tasks.push(`Klargøringstillæg ved ${obstacleWindowsCount} element(er) pga. begrænset plads/beplantning`);
         }
