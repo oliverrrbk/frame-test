@@ -4,6 +4,7 @@
 const ALLOWED_HOSTS = new Set([
     'bisonframe.dk',
     'www.bisonframe.dk',
+    'app.bisonframe.dk',
     'localhost'
 ]);
 

@@ -59,42 +59,50 @@ serve(async (req) => {
       timestamp: new Date().getTime()
     };
 
-    // --- NYT: AUTOMATISK WEBHOOK REGISTRERING ---
-    console.log("Henter organisationer for at sætte webhook op...");
-    try {
-      const orgsResponse = await fetch('https://api.dinero.dk/v1/organizations', {
-        headers: {
-          'Authorization': `Bearer ${tokenData.access_token}`
+    // --- NYT: AUTOMATISK WEBHOOK REGISTRERING (BAGGRUND) ---
+    // Vi kører dette asynkront (uden await) for at undgå at ramme Supabase's 5-sekunders timeout!
+    const setupWebhooks = async () => {
+      try {
+        console.log("Henter organisationer for at sætte webhook op...");
+        const orgsResponse = await fetch('https://api.dinero.dk/v1/organizations', {
+          headers: {
+            'Authorization': `Bearer ${tokenData.access_token}`
+          }
+        });
+        
+        if (orgsResponse.ok) {
+          const orgsData = await orgsResponse.json();
+          for (const org of orgsData) {
+            console.log(`Forsøger at oprette webhook på org: ${org.id}`);
+            const webhookUrl = "https://zjbjupovlgwlrvojusnr.supabase.co/functions/v1/accounting-webhooks?source=dinero";
+            
+            await fetch(`https://api.dinero.dk/v1/${org.id}/webhooks`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                url: webhookUrl,
+                events: [
+                  "invoice.booked",
+                  "invoice.paid"
+                ]
+              })
+            });
+          }
         }
-      });
-      
-      if (orgsResponse.ok) {
-        const orgsData = await orgsResponse.json();
-        // Det er normalt et array, vi løber dem igennem og sætter webhook på alle
-        for (const org of orgsData) {
-          console.log(`Forsøger at oprette webhook på org: ${org.id}`);
-          const webhookUrl = "https://zjbjupovlgwlrvojusnr.supabase.co/functions/v1/accounting-webhooks?source=dinero";
-          
-          await fetch(`https://api.dinero.dk/v1/${org.id}/webhooks`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${tokenData.access_token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              url: webhookUrl,
-              events: [
-                "invoice.booked",
-                "invoice.paid"
-              ]
-            })
-          });
-          // Vi ignorerer fejl, da det kan være, at URL'en allerede er registreret
-        }
-        console.log("Webhooks er forsøgt oprettet.");
+      } catch (whError) {
+        console.error("Fejl ved automatisk opsætning af webhook (ignoreres):", whError);
       }
-    } catch (whError) {
-      console.error("Fejl ved automatisk opsætning af webhook (ignoreres):", whError);
+    };
+
+    // Kør webhook-opsætningen uden at vente på at den bliver færdig
+    // EdgeRuntime.waitUntil sikrer at Deno ikke dræber processen, før dette er færdigt i baggrunden
+    if (typeof EdgeRuntime !== 'undefined' && typeof EdgeRuntime.waitUntil === 'function') {
+      EdgeRuntime.waitUntil(setupWebhooks());
+    } else {
+      setupWebhooks(); // Falder tilbage på standard floating promise
     }
     // --- SLUT PÅ WEBHOOK ---
 
