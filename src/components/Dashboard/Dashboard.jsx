@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown } from 'lucide-react';
+import { Home, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown, Play } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
@@ -460,6 +460,7 @@ const Dashboard = () => {
     const [isQuoteEditorOpen, setIsQuoteEditorOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+    const [isTestWizardOpen, setIsTestWizardOpen] = useState(false);
 
     useEffect(() => {
         if (selectedLead) {
@@ -5222,38 +5223,26 @@ const Dashboard = () => {
                             <div className="settings-card">
                                 <div className="card-header">
                                     <div className="icon-wrapper">
-                                        <Bell size={24} />
+                                        <Play size={24} />
                                     </div>
-                                    <h3>Notifikationer & Alarmer</h3>
+                                    <h3>Test Din Beregner</h3>
                                 </div>
                                 <div className="card-body">
-                                    <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#f3f1ed', borderRadius: '8px', border: '1px solid #e8e6e1' }}>
-                                        <label className="toggle-switch" style={{ margin: 0 }}>
-                                            <input 
-                                                type="checkbox" 
-                                                checked={settingsData.sms_notifications_enabled || false}
-                                                onChange={(e) => {
-                                                    const isChecked = e.target.checked;
-                                                    setSettingsData(prev => ({ ...prev, sms_notifications_enabled: isChecked }));
-                                                    if (isChecked) {
-                                                        import('../../utils/sendEmail').then(({ sendEmail }) => {
-                                                            sendEmail({
-                                                                to: 'team@bisoncompany.dk',
-                                                                subject: `🔥 FAKE DOOR: SMS Interesse fra ${carpenterProfile?.company_name || 'En tømrer'}`,
-                                                                html: `<p>Tømrer <b>${carpenterProfile?.company_name || 'En tømrer'}</b> (Email: ${carpenterProfile?.email || 'Ukendt'}) har netop slået SMS-notifikationer TIL på deres dashboard.</p><p>Dette er et signal om, at featuren er efterspurgt! Husk at skrive til dem, at det er under udvikling, eller opsæt det manuelt.</p>`,
-                                                                fromName: 'Bison Frame System'
-                                                            });
-                                                        });
-                                                        toast.success("Interesse registreret! SMS-featuren er pt. i lukket betatest. Vi kontakter dig for opsætning.", { duration: 6000 });
-                                                    }
-                                                }}
-                                            />
-                                            <span className="slider"></span>
-                                        </label>
-                                        <div style={{ flex: 1 }}>
-                                            <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', color: '#1a1a1a' }}>SMS ved Nye Opgaver</h4>
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.4' }}>Modtag en lynhurtig SMS på telefonen hver gang en kunde udfylder tilbudsberegneren, så du kan reagere hurtigt, mens du står på byggepladsen.</p>
-                                        </div>
+                                    <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        <p style={{ margin: 0, fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
+                                            Har du justeret dine priser, avancer eller sat nye varer inaktive? Åbn din personlige beregner i en test-simulator og tjek, at alting regner korrekt ud. Test-beregninger gemmes ikke som opgaver i dit system.
+                                        </p>
+                                        <button 
+                                            onClick={() => setIsTestWizardOpen(true)}
+                                            style={{ 
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', 
+                                                padding: '12px 24px', background: '#3b82f6', color: '#fff', 
+                                                borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer',
+                                                alignSelf: 'flex-start', boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
+                                            }}
+                                        >
+                                            <Play size={16} /> Åbn Simulator
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -5998,6 +5987,26 @@ const Dashboard = () => {
             )}
             {activeTab === 'overview' && (
                 <MobileQuickShare carpenterProfile={carpenterProfile} />
+            )}
+            
+            {isTestWizardOpen && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(10px)', zIndex: 100000, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                    <div style={{ padding: '16px', display: 'flex', justifyContent: 'flex-end', position: 'sticky', top: 0, zIndex: 100001 }}>
+                        <button 
+                            onClick={() => setIsTestWizardOpen(false)}
+                            style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        >
+                            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#0f172a' }}>×</span>
+                        </button>
+                    </div>
+                    <div style={{ flex: 1, padding: '0 16px 64px 16px', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
+                        <div style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+                            {/* Vi sender isTestMode med ned til Wizard */}
+                            <Wizard carpenter={carpenterProfile} isTestMode={true} testSettings={settingsData} testMaterials={materialsData} onComplete={() => setIsTestWizardOpen(false)} />
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );

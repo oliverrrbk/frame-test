@@ -13,7 +13,7 @@ import { fetchCalibrationFactor } from '../../utils/calibration';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
-const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
+const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTestMode = false, testSettings = null, testMaterials = null }) => {
     const [projectData, setProjectData] = useState({
         category: null,
         details: {},
@@ -212,6 +212,29 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
 
     React.useEffect(() => {
         const fetchDb = async () => {
+            if (isTestMode && testSettings && testMaterials) {
+                setDbSettings(testSettings);
+                
+                const sysMat = testMaterials.find(m => m.category === 'SYSTEM' && m.name && m.name.startsWith('DISABLED_CATEGORIES||'));
+                if (sysMat) {
+                    const str = sysMat.name.replace('DISABLED_CATEGORIES||', '');
+                    setDisabledCategories(str ? str.split(',') : []);
+                }
+                
+                const formattedMaterials = testMaterials.reduce((acc, curr) => {
+                    if (curr.category === 'SYSTEM') return acc;
+                    const matName = curr.name || '';
+                    const isItemActive = !matName.startsWith('INACTIVE||');
+                    if (!isItemActive) return acc;
+                    if (!acc[curr.category]) acc[curr.category] = {};
+                    acc[curr.category][matName] = curr.price;
+                    return acc;
+                }, {});
+                setDbMaterials(formattedMaterials);
+                setIsDbLoading(false);
+                return;
+            }
+
             if (!carpenter) return;
             const [settingsRes, materialsRes] = await Promise.all([
                 supabase.from('settings').select('*').eq('carpenter_id', carpenter.id).limit(1).single(),
@@ -256,7 +279,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             setIsDbLoading(false);
         };
         fetchDb();
-    }, [carpenter?.id]);
+    }, [carpenter?.id, isTestMode, testSettings, testMaterials]);
     
     const [notes, setNotes] = useState("");
     const [priceRange, setPriceRange] = useState("-- kr.");
@@ -414,6 +437,17 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
             let leadId = updatedProjectData.leadId;
             let isUpdate = !!leadId;
             let insertedData = null;
+
+            if (isTestMode) {
+                setProjectData(prev => ({
+                    ...prev,
+                    calc_data: res.calcData,
+                    leadId: 'test-lead'
+                }));
+                setIsCalculating(false);
+                goToStep(4); // Altid til resultatet i test mode
+                return;
+            }
 
             if (isUpdate) {
                 // Tjek om leadId er UUID (fra den nye quote_token) eller BIGINT (fra tidligere)
@@ -712,8 +746,8 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null }) => {
                 />
             )}
             {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} onAddAnotherProject={projectData.category !== 'special' ? handleAddAnotherProject : null} projects={projects} />}
-            {currentStep === 3 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} />}
-            {currentStep === 4 && <StepResult projectData={projectData} notes={projectData.details?.notes || ''} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} />}
+            {currentStep === 3 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} isTestMode={isTestMode} />}
+            {currentStep === 4 && <StepResult projectData={projectData} notes={projectData.details?.notes || ''} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} isTestMode={isTestMode} />}
             {currentStep === 5 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
 
             <AiSupportWidget 

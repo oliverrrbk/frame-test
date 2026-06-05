@@ -2,17 +2,17 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Autocomplete } from '@react-google-maps/api';
 import { toast } from 'react-hot-toast';
 
-const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
-    const [email, setEmail] = useState(prefillData?.email || '');
-    const [fullName, setFullName] = useState(prefillData?.fullName || '');
-    const [street, setStreet] = useState(prefillData?.street || '');
+const Step4Contact = ({ calculateEstimate, prevStep, prefillData, isTestMode = false }) => {
+    const [email, setEmail] = useState(prefillData?.email || (isTestMode ? 'test@test.dk' : ''));
+    const [fullName, setFullName] = useState(prefillData?.fullName || (isTestMode ? 'Testperson' : ''));
+    const [street, setStreet] = useState(prefillData?.street || (isTestMode ? 'Testgade 1' : ''));
     const [zip, setZip] = useState(prefillData?.zip || '');
     const [city, setCity] = useState(prefillData?.city || '');
-    const [phone, setPhone] = useState(prefillData?.phone || '');
+    const [phone, setPhone] = useState(prefillData?.phone || (isTestMode ? '+4512345678' : ''));
     const [customerType, setCustomerType] = useState(prefillData?.customerType || 'privat');
     const [companyName, setCompanyName] = useState(prefillData?.companyName || '');
     const [cvr, setCvr] = useState(prefillData?.cvr || '');
-    const [acceptedTerms, setAcceptedTerms] = useState(!!prefillData); // Accept default if prefilled
+    const [acceptedTerms, setAcceptedTerms] = useState(!!prefillData || isTestMode); // Accept default if prefilled or testmode
     
     const nameInputRef = useRef(null);
     const inputRefs = useRef({
@@ -98,43 +98,46 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
     const handleCalculate = () => {
-        if (customerType === 'erhverv') {
-            if (companyName.trim().length < 2) {
-                toast.error("Indtast venligst virksomhedens navn.");
+        if (!isTestMode) {
+            if (customerType === 'erhverv') {
+                if (companyName.trim().length < 2) {
+                    toast.error("Indtast venligst virksomhedens navn.");
+                    return;
+                }
+                if (cvr.trim().length !== 8 || !/^\d+$/.test(cvr.trim())) {
+                    toast.error("Indtast venligst et gyldigt CVR-nummer (8 cifre).");
+                    return;
+                }
+            }
+            
+            if (fullName.trim().length < 2) {
+                toast.error(customerType === 'erhverv' ? "Indtast venligst kontaktpersonens navn." : "Indtast venligst dit fulde navn.");
                 return;
             }
-            if (cvr.trim().length !== 8 || !/^\d+$/.test(cvr.trim())) {
-                toast.error("Indtast venligst et gyldigt CVR-nummer (8 cifre).");
+            if (street.trim().length < 3) {
+                toast.error("Indtast venligst din adresse.");
+                return;
+            }
+            if (phone.replace(/\s+/g, '').length < 8) {
+                toast.error("Indtast venligst et gyldigt telefonnummer.");
+                return;
+            }
+            if (!emailRegex.test(email)) {
+                toast.error("Indtast venligst en gyldig e-mailadresse.");
+                return;
+            }
+            if (!acceptedTerms) {
+                toast.error("Du skal acceptere betingelserne for at fortsætte.");
                 return;
             }
         }
         
-        if (fullName.trim().length < 2) {
-            toast.error(customerType === 'erhverv' ? "Indtast venligst kontaktpersonens navn." : "Indtast venligst dit fulde navn.");
-            return;
-        }
-        if (street.trim().length < 3) {
-            toast.error("Indtast venligst din adresse.");
-            return;
-        }
         if (zip.length !== 4) {
             toast.error("Indtast venligst et gyldigt dansk postnummer (4 cifre).");
             return;
         }
         if (city.trim().length < 2) {
             toast.error("Indtast venligst din by.");
-            return;
-        }
-        if (phone.replace(/\s+/g, '').length < 8) {
-            toast.error("Indtast venligst et gyldigt telefonnummer.");
-            return;
-        }
-        if (!emailRegex.test(email)) {
-            toast.error("Indtast venligst en gyldig e-mailadresse.");
-            return;
-        }
-        if (!acceptedTerms) {
-            toast.error("Du skal acceptere betingelserne for at fortsætte.");
             return;
         }
 
@@ -311,23 +314,25 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
             </div>
             
             <div className="premium-contact-card">
-                <div className="customer-type-toggle">
-                    <button 
-                        className={`toggle-btn ${customerType === 'privat' ? 'active' : ''}`}
-                        onClick={() => setCustomerType('privat')}
-                    >
-                        Privatkunde
-                    </button>
-                    <button 
-                        className={`toggle-btn ${customerType === 'erhverv' ? 'active' : ''}`}
-                        onClick={() => setCustomerType('erhverv')}
-                    >
-                        Erhvervskunde
-                    </button>
-                </div>
+                {!isTestMode && (
+                    <div className="customer-type-toggle">
+                        <button 
+                            className={`toggle-btn ${customerType === 'privat' ? 'active' : ''}`}
+                            onClick={() => setCustomerType('privat')}
+                        >
+                            Privatkunde
+                        </button>
+                        <button 
+                            className={`toggle-btn ${customerType === 'erhverv' ? 'active' : ''}`}
+                            onClick={() => setCustomerType('erhverv')}
+                        >
+                            Erhvervskunde
+                        </button>
+                    </div>
+                )}
 
                 <div className="premium-grid">
-                    {customerType === 'erhverv' && (
+                    {!isTestMode && customerType === 'erhverv' && (
                         <div className="premium-grid-dual">
                             <div>
                                 <label className="premium-label">Virksomhedsnavn <span style={{ color: '#ef4444' }}>*</span></label>
@@ -354,61 +359,64 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                         </div>
                     )}
 
-                    <div>
-                        <label className="premium-label">{customerType === 'erhverv' ? 'Kontaktperson' : 'Fulde navn'} <span style={{ color: '#ef4444' }}>*</span></label>
-                        <input 
-                            type="text" 
-                            name="name"
-                            autoComplete="name"
-                            placeholder="Indtast dit fulde navn" 
-                            value={fullName} 
-                            onChange={(e) => setFullName(e.target.value)} 
-                            ref={nameInputRef}
-                            onKeyDown={(e) => handleKeyDown(e, 'address')}
-                            className="premium-input"
-                        />
-                    </div>
+                    {!isTestMode && (
+                        <div>
+                            <label className="premium-label">{customerType === 'erhverv' ? 'Kontaktperson' : 'Fulde navn'} <span style={{ color: '#ef4444' }}>*</span></label>
+                            <input 
+                                type="text" 
+                                name="name"
+                                autoComplete="name"
+                                placeholder="Indtast dit fulde navn" 
+                                value={fullName} 
+                                onChange={(e) => setFullName(e.target.value)} 
+                                ref={nameInputRef}
+                                onKeyDown={(e) => handleKeyDown(e, 'address')}
+                                className="premium-input"
+                            />
+                        </div>
+                    )}
                     
-                    <div style={{ position: 'relative' }} ref={el => inputRefs.current.address = el}>
-                        <label className="premium-label">Vejnavn og Husnummer <span style={{ color: '#ef4444' }}>*</span></label>
-                        {window.google && window.google.maps && window.google.maps.places ? (
-                            <Autocomplete 
-                                onLoad={onLoad} 
-                                onPlaceChanged={onPlaceChanged} 
-                                options={{ 
-                                    componentRestrictions: { country: "dk" },
-                                    types: ['address'],
-                                    fields: ['address_components', 'formatted_address', 'name']
-                                }}
-                            >
+                    {!isTestMode && (
+                        <div style={{ position: 'relative' }} ref={el => inputRefs.current.address = el}>
+                            <label className="premium-label">Vejnavn og Husnummer <span style={{ color: '#ef4444' }}>*</span></label>
+                            {window.google && window.google.maps && window.google.maps.places ? (
+                                <Autocomplete 
+                                    onLoad={onLoad} 
+                                    onPlaceChanged={onPlaceChanged} 
+                                    options={{ 
+                                        componentRestrictions: { country: "dk" },
+                                        types: ['address'],
+                                        fields: ['address_components', 'formatted_address', 'name']
+                                    }}
+                                >
+                                    <input 
+                                        type="text" 
+                                        name="address"
+                                        autoComplete="street-address"
+                                        placeholder="Søg på din adresse (fx Skovvejen 15)" 
+                                        value={street} 
+                                        onChange={(e) => setStreet(e.target.value)} 
+                                        className="premium-input"
+                                        style={{ borderColor: '#bfdbfe', background: '#eff6ff' }}
+                                        onKeyDown={(e) => {
+                                            if(e.key === 'Enter') e.preventDefault();
+                                        }}
+                                    />
+                                </Autocomplete>
+                            ) : (
                                 <input 
                                     type="text" 
                                     name="address"
                                     autoComplete="street-address"
-                                    placeholder="Søg på din adresse (fx Skovvejen 15)" 
+                                    placeholder="Skovvejen 15" 
                                     value={street} 
                                     onChange={(e) => setStreet(e.target.value)} 
+                                    onKeyDown={(e) => handleKeyDown(e, 'zip')}
                                     className="premium-input"
-                                    style={{ borderColor: '#bfdbfe', background: '#eff6ff' }}
-                                    onKeyDown={(e) => {
-                                        if(e.key === 'Enter') e.preventDefault();
-                                    }}
                                 />
-                            </Autocomplete>
-                        ) : (
-                            <input 
-                                type="text" 
-                                name="address"
-                                autoComplete="street-address"
-                                placeholder="Skovvejen 15" 
-                                value={street} 
-                                onChange={(e) => setStreet(e.target.value)} 
-                                onKeyDown={(e) => handleKeyDown(e, 'zip')}
-                                className="premium-input"
-                            />
-                        )}
-
-                    </div>
+                            )}
+                        </div>
+                    )}
 
                     <div className="premium-grid-dual" style={{ marginTop: '12px' }}>
                         <div ref={el => inputRefs.current.zip = el}>
@@ -441,49 +449,52 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData }) => {
                         </div>
                     </div>
 
-                    <div className="premium-grid-dual">
-                        <div ref={el => inputRefs.current.tel = el}>
-                            <label className="premium-label">Telefon <span style={{ color: '#ef4444' }}>*</span></label>
-                            <input 
-                                type="tel" 
-                                name="tel"
-                                autoComplete="tel"
-                                placeholder="+45 20 30 40 50" 
-                                value={phone} 
-                                onChange={handlePhoneChange} 
-                                onKeyDown={(e) => handleKeyDown(e, 'email')}
-                                className="premium-input"
-                            />
+                    {!isTestMode && (
+                        <div className="premium-grid-dual">
+                            <div ref={el => inputRefs.current.tel = el}>
+                                <label className="premium-label">Telefon <span style={{ color: '#ef4444' }}>*</span></label>
+                                <input 
+                                    type="tel" 
+                                    name="tel"
+                                    autoComplete="tel"
+                                    placeholder="+45 20 30 40 50" 
+                                    value={phone} 
+                                    onChange={handlePhoneChange} 
+                                    onKeyDown={(e) => handleKeyDown(e, 'email')}
+                                    className="premium-input"
+                                />
+                            </div>
+                            <div ref={el => inputRefs.current.email = el}>
+                                <label className="premium-label">E-mail <span style={{ color: '#ef4444' }}>*</span></label>
+                                <input 
+                                    type="email" 
+                                    name="email"
+                                    autoComplete="email"
+                                    placeholder="din@mail.dk" 
+                                    value={email} 
+                                    onChange={(e) => setEmail(e.target.value)} 
+                                    onKeyDown={(e) => handleKeyDown(e, 'gdpr')}
+                                    className="premium-input"
+                                />
+                            </div>
                         </div>
-                        <div ref={el => inputRefs.current.email = el}>
-                            <label className="premium-label">E-mail <span style={{ color: '#ef4444' }}>*</span></label>
-                            <input 
-                                type="email" 
-                                name="email"
-                                autoComplete="email"
-                                placeholder="din@mail.dk" 
-                                value={email} 
-                                onChange={(e) => setEmail(e.target.value)} 
-                                onKeyDown={(e) => handleKeyDown(e, 'gdpr')}
-                                className="premium-input"
-                            />
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
             
-            {/* NY: GDPR Checkbox før actions */}
-            <div className="premium-gdpr" ref={el => inputRefs.current.gdpr = el} onClick={() => setAcceptedTerms(!acceptedTerms)}>
-                <input 
-                    type="checkbox" 
-                    checked={acceptedTerms} 
-                    onChange={() => setAcceptedTerms(!acceptedTerms)}
-                    className="premium-checkbox"
-                />
-                <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569', lineHeight: '1.6' }}>
-                    Jeg accepterer, at mine indtastede oplysninger gemmes og behandles med det formål at modtage et estimat, samt at jeg kan blive kontaktet af det pågældende tømrerfirma i forbindelse med min forespørgsel.
-                </p>
-            </div>
+            {!isTestMode && (
+                <div className="premium-gdpr" ref={el => inputRefs.current.gdpr = el} onClick={() => setAcceptedTerms(!acceptedTerms)}>
+                    <input 
+                        type="checkbox" 
+                        checked={acceptedTerms} 
+                        onChange={() => setAcceptedTerms(!acceptedTerms)}
+                        className="premium-checkbox"
+                    />
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569', lineHeight: '1.6' }}>
+                        Jeg accepterer, at mine indtastede oplysninger gemmes og behandles med det formål at modtage et estimat, samt at jeg kan blive kontaktet af det pågældende tømrerfirma i forbindelse med min forespørgsel.
+                    </p>
+                </div>
+            )}
             
             <div className="actions" style={{ display: 'flex', flexDirection: 'column-reverse', gap: '16px', marginTop: '40px' }}>
                 {/* På mobil vendes retningen om med column-reverse så "Vis Mit Overslag" er øverst, men på desktop skal de stå ved siden af hinanden */}

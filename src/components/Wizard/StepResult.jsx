@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { QUESTIONS } from './questionsConfig';
 import { generateTaskDescription } from '../../utils/taskDescription';
 
-const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard, nextStep, carpenter, isManualCreation = false, onComplete = null, editProject }) => {
+const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard, nextStep, carpenter, isManualCreation = false, onComplete = null, editProject, isTestMode = false }) => {
     const categoryMap = {
         windows: 'Nye Vinduer',
         doors: 'Nye Døre',
@@ -435,38 +435,70 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
 
             {!wantsQuote ? (
                 <div className="result-actions" style={{ marginTop: '40px', display: 'flex', gap: '16px', flexDirection: 'column' }}>
-                    <button 
-                        style={{ 
-                            width: '100%', 
-                            justifyContent: 'center', 
-                            padding: '18px', 
-                            fontSize: '1.2rem', 
-                            background: '#10b981', 
-                            color: 'white', 
-                            border: 'none', 
-                            borderRadius: '12px', 
-                            fontWeight: 'bold', 
-                            cursor: 'pointer', 
-                            boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)',
-                            transition: 'all 0.2s'
-                        }} 
-                        onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                        onClick={() => {
-                            setWantsQuote(true);
-                            setTimeout(() => {
-                                bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }, 100);
-                        }}
-                    >
-                        {needsPhysicalInspection ? 'Send oplysninger og bliv ringet op' : `Vælg ${carpenter?.company_name || 'os'} til at udføre opgaven`}
-                    </button>
-                    <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
-                        {/* Ret opgaven knappen er flyttet op under opsummeringen */}
-                        <button className="wizard-btn wizard-btn-secondary" style={{ width: '100%', justifyContent: 'center', border: 'none', background: 'transparent', color: '#94a3b8', fontSize: '0.9rem' }} onClick={resetWizard}>
-                            Annuller og start helt forfra
-                        </button>
-                    </div>
+                    {isTestMode ? (
+                        <>
+                            <button 
+                                style={{ 
+                                    width: '100%', 
+                                    justifyContent: 'center', 
+                                    padding: '18px', 
+                                    fontSize: '1.2rem', 
+                                    background: '#3b82f6', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    borderRadius: '12px', 
+                                    fontWeight: 'bold', 
+                                    cursor: 'pointer', 
+                                    boxShadow: '0 10px 25px rgba(59, 130, 246, 0.3)',
+                                    transition: 'all 0.2s'
+                                }} 
+                                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                onClick={onComplete}
+                            >
+                                Afslut og Luk Simulator
+                            </button>
+                            <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
+                                <button className="wizard-btn wizard-btn-secondary" style={{ width: '100%', justifyContent: 'center', border: 'none', background: 'transparent', color: '#64748b', fontSize: '1rem', fontWeight: 'bold' }} onClick={resetWizard}>
+                                    Test Forfra med Ny Kategori
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <button 
+                                style={{ 
+                                    width: '100%', 
+                                    justifyContent: 'center', 
+                                    padding: '18px', 
+                                    fontSize: '1.2rem', 
+                                    background: '#10b981', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    borderRadius: '12px', 
+                                    fontWeight: 'bold', 
+                                    cursor: 'pointer', 
+                                    boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)',
+                                    transition: 'all 0.2s'
+                                }} 
+                                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                onClick={() => {
+                                    setWantsQuote(true);
+                                    setTimeout(() => {
+                                        bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    }, 100);
+                                }}
+                            >
+                                {needsPhysicalInspection ? 'Send oplysninger og bliv ringet op' : `Vælg ${carpenter?.company_name || 'os'} til at udføre opgaven`}
+                            </button>
+                            <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
+                                <button className="wizard-btn wizard-btn-secondary" style={{ width: '100%', justifyContent: 'center', border: 'none', background: 'transparent', color: '#94a3b8', fontSize: '0.9rem' }} onClick={resetWizard}>
+                                    Annuller og start helt forfra
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             ) : (
                 <div ref={bookingRef} className="visit-booking visit-booking-card" style={{ marginTop: '40px', padding: '32px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
