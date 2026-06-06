@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS public.drawings (
     updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
     name text NOT NULL,
     user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
-    lead_id uuid REFERENCES public.leads(id) ON DELETE CASCADE,
+    lead_id bigint REFERENCES public.leads(id) ON DELETE CASCADE,
     type text DEFAULT 'tldraw', -- 'tldraw', 'upload', etc.
     document_data jsonb, -- The vector JSON data from tldraw
     image_url text -- For future use, if we want to export a thumbnail
