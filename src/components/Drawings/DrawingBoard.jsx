@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tldraw, getSnapshot, loadSnapshot } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { supabase } from '../../supabaseClient';
@@ -11,8 +11,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const [drawingName, setDrawingName] = useState('Ny Skitse');
     const [isSaving, setIsSaving] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
-    const [selectedIds, setSelectedIds] = useState([]);
-    const [rotationDegrees, setRotationDegrees] = useState(0);
+    const rotateHandleRef = useRef(null);
+    const [snapLines, setSnapLines] = useState(null);
 
     // Initial load of drawing data
     const handleMount = useCallback((editorInstance) => {
@@ -50,26 +50,100 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         }
     }, [drawingId]);
 
-    // Subscribing to editor selection to show rotation UI
+    // Custom Word-style rotation handle logic using tick event
     useEffect(() => {
         if (!editor) return;
 
-        const unsubscribe = editor.store.listen(() => {
+        const handleTick = () => {
+            if (!rotateHandleRef.current) return;
             const ids = editor.getSelectedShapeIds();
-            // Tjek om det er ændret markant (her for simpelhedens skyld tjekker vi længden)
-            // Det korrekte ville være at tjekke arrays for lighed, men for performancen tjekker vi bare on-the-fly.
-            setSelectedIds(ids);
-
-            if (ids.length > 0) {
-                const rad = editor.getSelectionRotation();
-                let deg = Math.round(rad * (180 / Math.PI));
-                if (deg < 0) deg += 360;
-                setRotationDegrees(deg);
+            if (ids.length === 0) {
+                rotateHandleRef.current.style.display = 'none';
+                return;
             }
-        });
 
-        return () => unsubscribe();
+            const selectionPageBounds = editor.getSelectionPageBounds();
+            if (!selectionPageBounds) {
+                rotateHandleRef.current.style.display = 'none';
+                return;
+            }
+
+            const center = selectionPageBounds.center;
+            const rotation = editor.getSelectionRotation();
+            
+            // Get screen center
+            const screenCenter = editor.pageToViewport(center);
+            
+            rotateHandleRef.current.style.display = 'flex';
+            rotateHandleRef.current.style.left = `${screenCenter.x}px`;
+            rotateHandleRef.current.style.top = `${screenCenter.y}px`;
+            
+            // Calculate distance to move the handle up
+            const zoom = editor.getZoomLevel();
+            const distanceUp = (selectionPageBounds.h / 2) * zoom + 35; // 35px above shape
+            
+            rotateHandleRef.current.style.transform = `translate(-50%, -50%) rotate(${rotation}rad) translateY(-${distanceUp}px)`;
+        };
+
+        editor.on('tick', handleTick);
+        return () => editor.off('tick', handleTick);
     }, [editor]);
+
+    const handleRotationPointerDown = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        if (!editor) return;
+        const startCenterPage = editor.getSelectionPageBounds().center;
+        
+        const onPointerMove = (ev) => {
+            const currentMousePage = editor.screenToPage({ x: ev.clientX, y: ev.clientY });
+            
+            // Calculate angle from center to mouse
+            let angle = Math.atan2(currentMousePage.y - startCenterPage.y, currentMousePage.x - startCenterPage.x);
+            // Offset because "top" is -90 degrees (-PI/2)
+            angle += Math.PI / 2;
+            
+            if (angle < 0) angle += 2 * Math.PI;
+
+            // Snapping logic (5 degrees)
+            const snapThreshold = 5 * (Math.PI / 180);
+            let snapLinesData = null;
+
+            const snapAngles = [0, Math.PI/2, Math.PI, (3*Math.PI)/2, 2*Math.PI];
+            for (let target of snapAngles) {
+                // We check the raw difference
+                let diff = Math.abs(angle - target);
+                // Also handle the wrap-around at 0 and 360
+                if (diff > Math.PI) diff = 2 * Math.PI - diff;
+                
+                if (diff < snapThreshold) {
+                    angle = target;
+                    // For snap lines, just pass the page center
+                    snapLinesData = { centerPage: startCenterPage };
+                    break;
+                }
+            }
+
+            setSnapLines(snapLinesData);
+            
+            // Apply delta rotation
+            const currentRot = editor.getSelectionRotation();
+            const delta = angle - currentRot;
+            if (delta !== 0) {
+                editor.rotateShapesBy(editor.getSelectedShapeIds(), delta);
+            }
+        };
+
+        const onPointerUp = () => {
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+            setSnapLines(null);
+        };
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+    };
 
     const handleSave = async () => {
         if (!editor) return;
@@ -205,9 +279,9 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     from { transform: translateY(-20px); opacity: 0; }
                     to { transform: translateY(0); opacity: 1; }
                 }
-                @keyframes slideUp {
-                    from { transform: translate(-50%, 20px); opacity: 0; }
-                    to { transform: translate(-50%, 0); opacity: 1; }
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
                 }
             `}</style>
 
@@ -353,53 +427,81 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     <span style={{ fontWeight: 800, fontSize: '0.85rem', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Bison Frame</span>
                 </div>
 
-                {/* Custom Rotation UI (Modern Slider) */}
-                {selectedIds.length > 0 && (
-                    <div style={{
+                {/* Word-style Rotation Handle Overlay */}
+                <div 
+                    ref={rotateHandleRef}
+                    onPointerDown={handleRotationPointerDown}
+                    style={{
                         position: 'absolute',
-                        bottom: '40px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(16px)',
-                        WebkitBackdropFilter: 'blur(16px)',
-                        padding: '16px 24px',
-                        borderRadius: '24px',
-                        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0,0,0,0.04)',
-                        border: '1px solid rgba(255, 255, 255, 0.8)',
-                        display: 'flex',
+                        display: 'none',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '12px',
-                        zIndex: 100,
-                        animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                        width: '320px',
-                        pointerEvents: 'auto'
+                        justifyContent: 'center',
+                        zIndex: 99999,
+                        cursor: 'grab',
+                        transformOrigin: 'center center' // Important for exact rotation
+                    }}
+                >
+                    {/* The connecting line */}
+                    <div style={{ width: '1.5px', height: '24px', backgroundColor: '#3b82f6', marginBottom: '-2px', zIndex: 1 }} />
+                    {/* The handle circle */}
+                    <div style={{ 
+                        width: '24px', 
+                        height: '24px', 
+                        borderRadius: '50%', 
+                        backgroundColor: 'white', 
+                        border: '2px solid #3b82f6',
+                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 2,
+                        transition: 'transform 0.1s'
+                    }}
+                    onMouseOver={e => e.currentTarget.style.transform = 'scale(1.15)'}
+                    onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                        {/* A tiny rotate icon inside */}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.44-5.44"/>
+                        </svg>
+                    </div>
+                </div>
+
+                {/* Snap Guidelines (Streger) */}
+                {snapLines && editor && (
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        pointerEvents: 'none',
+                        zIndex: 99998,
+                        overflow: 'hidden'
                     }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '0.9rem', fontWeight: 700, color: '#334155' }}>
-                            <span>Rotation</span>
-                            <span style={{ color: '#0ea5e9' }}>{rotationDegrees}°</span>
-                        </div>
-                        <input 
-                            type="range" 
-                            min="0" 
-                            max="360" 
-                            value={rotationDegrees}
-                            onChange={(e) => {
-                                const newDeg = parseInt(e.target.value);
-                                const newRad = newDeg * (Math.PI / 180);
-                                const currentRad = editor.getSelectionRotation();
-                                editor.rotateShapesBy(selectedIds, newRad - currentRad);
-                                setRotationDegrees(newDeg);
-                            }}
-                            style={{
-                                width: '100%',
-                                accentColor: '#0ea5e9',
-                                cursor: 'pointer'
-                            }}
-                        />
+                        {/* Vertical Snap Line */}
+                        <div style={{
+                            position: 'absolute',
+                            left: `${editor.pageToViewport(snapLines.centerPage).x}px`,
+                            top: 0,
+                            bottom: 0,
+                            width: '1.5px',
+                            backgroundColor: '#3b82f6',
+                            opacity: 0.5,
+                            transform: 'translateX(-50%)'
+                        }} />
+                        {/* Horizontal Snap Line */}
+                        <div style={{
+                            position: 'absolute',
+                            top: `${editor.pageToViewport(snapLines.centerPage).y}px`,
+                            left: 0,
+                            right: 0,
+                            height: '1.5px',
+                            backgroundColor: '#3b82f6',
+                            opacity: 0.5,
+                            transform: 'translateY(-50%)'
+                        }} />
                     </div>
                 )}
+
                 <Tldraw onMount={handleMount} persistenceKey={drawingId ? null : 'bison-frame-sketch-draft'} />
                 
                 {isLoading && (
