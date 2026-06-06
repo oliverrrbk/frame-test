@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tldraw } from 'tldraw';
+import { Tldraw, getSnapshot, loadSnapshot } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -30,7 +30,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     if (data) {
                         setDrawingName(data.name || 'Ny Skitse');
                         if (data.document_data) {
-                            editorInstance.store.loadSnapshot(data.document_data);
+                            loadSnapshot(editorInstance.store, data.document_data);
                         }
                     }
                 } catch (err) {
@@ -52,7 +52,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         setIsSaving(true);
         
         try {
-            const snapshot = editor.store.getSnapshot();
+            const snapshot = getSnapshot(editor.store);
             
             // Generate a thumbnail (optional, but good for gallery)
             // For now we just save the JSON data
@@ -94,7 +94,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
         } catch (err) {
             console.error("Fejl ved gem:", err);
-            toast.error("Kunne ikke gemme skitsen.");
+            toast.error("Kunne ikke gemme skitsen: " + (err.message || err.details || "Ukendt fejl"));
         } finally {
             setIsSaving(false);
         }
