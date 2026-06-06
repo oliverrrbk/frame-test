@@ -72,7 +72,7 @@ const DrawingsGallery = ({ leadId = null }) => {
         
         // Hent igangværende sager til "Tilknyt Sag" popover
         const loadLeads = async () => {
-            const { data, error } = await supabase.from('leads').select('id, customer_name, customer_address').order('created_at', { ascending: false });
+            const { data, error } = await supabase.from('leads').select('id, customer_name, customer_address, status').order('created_at', { ascending: false });
             if (error) console.error("Fejl ved hentning af sager:", error);
             setAllLeads(data || []);
         };
@@ -463,7 +463,7 @@ const DrawingsGallery = ({ leadId = null }) => {
                                             />
                                         </div>
 
-                                        <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
+                                        <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
                                             <button 
                                                 onClick={(e) => assignToLead(e, drawing.id, null)}
                                                 style={{ padding: '10px 12px', textAlign: 'left', background: 'transparent', border: '1px solid transparent', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem', color: '#ef4444', fontWeight: 600, transition: 'all 0.2s' }}
@@ -472,36 +472,92 @@ const DrawingsGallery = ({ leadId = null }) => {
                                             >
                                                 Fjern fra sag (Ingen sag)
                                             </button>
-                                            
-                                            {allLeads.filter(l => !leadSearch || String(l.id).includes(leadSearch) || l.customer_name?.toLowerCase().includes(leadSearch.toLowerCase()) || l.customer_address?.toLowerCase().includes(leadSearch.toLowerCase())).map(lead => (
-                                                <button
-                                                    key={lead.id}
-                                                    onClick={(e) => assignToLead(e, drawing.id, lead.id)}
-                                                    style={{ 
-                                                        padding: '12px', textAlign: 'left', 
-                                                        background: drawing.lead_id === lead.id ? '#eff6ff' : '#f8fafc', 
-                                                        border: `1px solid ${drawing.lead_id === lead.id ? '#93c5fd' : '#e2e8f0'}`, 
-                                                        borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                    onMouseOver={e => { 
-                                                        e.currentTarget.style.backgroundColor = '#eff6ff'; 
-                                                        e.currentTarget.style.borderColor = '#bfdbfe';
-                                                        e.currentTarget.style.transform = 'translateY(-1px)';
-                                                    }}
-                                                    onMouseOut={e => { 
-                                                        e.currentTarget.style.backgroundColor = drawing.lead_id === lead.id ? '#eff6ff' : '#f8fafc'; 
-                                                        e.currentTarget.style.borderColor = drawing.lead_id === lead.id ? '#93c5fd' : '#e2e8f0';
-                                                        e.currentTarget.style.transform = 'translateY(0)';
-                                                    }}
-                                                >
-                                                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                        Sag: {String(lead.id).substring(0,8)}
-                                                        {drawing.lead_id === lead.id && <Check size={16} color="#2563eb" strokeWidth={3} />}
-                                                    </span>
-                                                    <span style={{ fontSize: '0.85rem', color: '#475569' }}>{lead.customer_name || lead.customer_address || 'Ukendt kunde'}</span>
-                                                </button>
-                                            ))}
+
+                                            {/* Aktive Sager */}
+                                            {(() => {
+                                                const activeLeads = allLeads.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status || '') && (!leadSearch || String(l.id).includes(leadSearch) || l.customer_name?.toLowerCase().includes(leadSearch.toLowerCase()) || l.customer_address?.toLowerCase().includes(leadSearch.toLowerCase())));
+                                                const quoteLeads = allLeads.filter(l => !['Bekræftet opgave', 'Historik'].includes(l.status || '') && (!leadSearch || String(l.id).includes(leadSearch) || l.customer_name?.toLowerCase().includes(leadSearch.toLowerCase()) || l.customer_address?.toLowerCase().includes(leadSearch.toLowerCase())));
+
+                                                return (
+                                                    <>
+                                                        {activeLeads.length > 0 && (
+                                                            <>
+                                                                <div style={{ padding: '8px 4px 4px', fontSize: '0.75rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
+                                                                    Aktive Sager
+                                                                </div>
+                                                                {activeLeads.map(lead => (
+                                                                    <button
+                                                                        key={lead.id}
+                                                                        onClick={(e) => assignToLead(e, drawing.id, lead.id)}
+                                                                        style={{ 
+                                                                            padding: '12px', textAlign: 'left', 
+                                                                            background: drawing.lead_id === lead.id ? '#eff6ff' : '#f8fafc', 
+                                                                            border: `1px solid ${drawing.lead_id === lead.id ? '#93c5fd' : '#e2e8f0'}`, 
+                                                                            borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px',
+                                                                            transition: 'all 0.2s'
+                                                                        }}
+                                                                        onMouseOver={e => { 
+                                                                            e.currentTarget.style.backgroundColor = '#eff6ff'; 
+                                                                            e.currentTarget.style.borderColor = '#bfdbfe';
+                                                                            e.currentTarget.style.transform = 'translateY(-1px)';
+                                                                        }}
+                                                                        onMouseOut={e => { 
+                                                                            e.currentTarget.style.backgroundColor = drawing.lead_id === lead.id ? '#eff6ff' : '#f8fafc'; 
+                                                                            e.currentTarget.style.borderColor = drawing.lead_id === lead.id ? '#93c5fd' : '#e2e8f0';
+                                                                            e.currentTarget.style.transform = 'translateY(0)';
+                                                                        }}
+                                                                    >
+                                                                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                            Sag: {String(lead.id).substring(0,8)}
+                                                                            {drawing.lead_id === lead.id && <Check size={16} color="#2563eb" strokeWidth={3} />}
+                                                                        </span>
+                                                                        <span style={{ fontSize: '0.85rem', color: '#475569' }}>{lead.customer_name || lead.customer_address || 'Ukendt kunde'}</span>
+                                                                    </button>
+                                                                ))}
+                                                            </>
+                                                        )}
+
+                                                        {quoteLeads.length > 0 && (
+                                                            <>
+                                                                <div style={{ padding: '16px 4px 4px', fontSize: '0.75rem', fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                                                                    Leads & Tilbud
+                                                                </div>
+                                                                {quoteLeads.map(lead => (
+                                                                    <button
+                                                                        key={lead.id}
+                                                                        onClick={(e) => assignToLead(e, drawing.id, lead.id)}
+                                                                        style={{ 
+                                                                            padding: '12px', textAlign: 'left', 
+                                                                            background: drawing.lead_id === lead.id ? '#fffbeb' : '#f8fafc', 
+                                                                            border: `1px solid ${drawing.lead_id === lead.id ? '#fde68a' : '#e2e8f0'}`, 
+                                                                            borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px',
+                                                                            transition: 'all 0.2s'
+                                                                        }}
+                                                                        onMouseOver={e => { 
+                                                                            e.currentTarget.style.backgroundColor = '#fffbeb'; 
+                                                                            e.currentTarget.style.borderColor = '#fde68a';
+                                                                            e.currentTarget.style.transform = 'translateY(-1px)';
+                                                                        }}
+                                                                        onMouseOut={e => { 
+                                                                            e.currentTarget.style.backgroundColor = drawing.lead_id === lead.id ? '#fffbeb' : '#f8fafc'; 
+                                                                            e.currentTarget.style.borderColor = drawing.lead_id === lead.id ? '#fde68a' : '#e2e8f0';
+                                                                            e.currentTarget.style.transform = 'translateY(0)';
+                                                                        }}
+                                                                    >
+                                                                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                            Lead: {String(lead.id).substring(0,8)}
+                                                                            {drawing.lead_id === lead.id && <Check size={16} color="#d97706" strokeWidth={3} />}
+                                                                        </span>
+                                                                        <span style={{ fontSize: '0.85rem', color: '#475569' }}>{lead.customer_name || lead.customer_address || 'Ukendt kunde'}</span>
+                                                                    </button>
+                                                                ))}
+                                                            </>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 )}
