@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tldraw, getSnapshot } from 'tldraw';
-import 'tldraw/tldraw.css';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { ChevronLeft, Save, FileImage } from 'lucide-react';
