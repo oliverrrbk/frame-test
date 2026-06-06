@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Tldraw, getSnapshot } from 'tldraw';
+import { Tldraw, getSnapshot, loadSnapshot } from 'tldraw';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { ChevronLeft, Save, FileImage } from 'lucide-react';
@@ -69,9 +69,9 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         setDrawingName(data.name || 'Ny Skitse');
                         if (data.document_data) {
                             if (data.document_data.snapshot) {
-                                editorInstance.store.loadSnapshot(data.document_data.snapshot);
+                                loadSnapshot(editorInstance.store, data.document_data.snapshot);
                             } else {
-                                editorInstance.store.loadSnapshot(data.document_data);
+                                loadSnapshot(editorInstance.store, data.document_data);
                             }
                         }
                     }
@@ -326,11 +326,9 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', width: '100vw', height: '100vh', overflow: 'hidden' }}>
             
             <style>{`
-                /* Hide default tldraw watermark */
-                .tl-watermark_link, .tl-watermark, [data-testid="watermark"] {
-                    display: none !important;
-                    opacity: 0 !important;
-                    visibility: hidden !important;
+                /* Override tldraw styles to make it fit nicely */
+                .tl-container {
+                    background-color: #f8fafc !important;
                 }
 
                 /* Modern Gorgeous Styling for Tldraw UI (Top Left / Menus / Tools) */
