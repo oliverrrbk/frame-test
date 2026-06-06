@@ -203,6 +203,8 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                 }}>
                     {isUpload && d.document_data?.url ? (
                         <img src={d.document_data.url} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : !isUpload && d.image_url ? (
+                        <img src={d.image_url} alt="Skitse Thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : !isUpload && d.document_data?.thumbnail_svg ? (
                         <div 
                             style={{ width: '100%', height: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
