@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tldraw, getSnapshot, loadSnapshot, exportToBlob } from 'tldraw';
+import { Tldraw, getSnapshot, loadSnapshot } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -117,13 +117,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 return;
             }
 
-            // Export to PNG blob using tldraw's utility
-            const blob = await exportToBlob({
-                editor,
-                ids: shapeIds,
-                format: 'png',
-                opts: { background: true }
-            });
+            // Export to PNG blob using editor.toImage utility
+            const { blob } = await editor.toImage(shapeIds, { format: 'png', background: true });
 
             const user = (await supabase.auth.getUser()).data.user;
             if (!user) throw new Error("Ikke logget ind");
