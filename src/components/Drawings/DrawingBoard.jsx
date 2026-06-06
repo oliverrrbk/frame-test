@@ -448,14 +448,55 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         setIsSaving(true);
         const tid = toast.loading('Gemmer skitse...');
         try {
+            // 1. Generate Thumbnail Blob (small JPEG)
+            let thumbUrl = null;
+            if (canvasRef.current) {
+                try {
+                    const originalCanvas = canvasRef.current;
+                    const tempCanvas = document.createElement('canvas');
+                    const targetWidth = 600; 
+                    const scale = targetWidth / originalCanvas.width;
+                    tempCanvas.width = targetWidth;
+                    tempCanvas.height = originalCanvas.height * scale;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    
+                    // Draw solid white background
+                    tempCtx.fillStyle = '#ffffff';
+                    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    // Draw scaled canvas content on top
+                    tempCtx.scale(scale, scale);
+                    tempCtx.drawImage(originalCanvas, 0, 0);
+
+                    const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/jpeg', 0.8));
+                    const fileName = `thumb_${drawingId || 'new'}_${Date.now()}.jpg`;
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('uploads')
+                        .upload(`drawings_thumbnails/${fileName}`, blob, { contentType: 'image/jpeg' });
+                        
+                    if (!uploadError) {
+                        const { data: urlData } = supabase.storage
+                            .from('uploads')
+                            .getPublicUrl(`drawings_thumbnails/${fileName}`);
+                        thumbUrl = urlData.publicUrl;
+                    }
+                } catch (thumbErr) {
+                    console.error("Kunne ikke generere thumbnail:", thumbErr);
+                }
+            }
+
+            // 2. Save to Database
             if (drawingId && drawingId !== 'new') {
+                const updatePayload = { 
+                    document_data: elements, 
+                    name: drawingName,
+                    updated_at: new Date().toISOString()
+                };
+                if (thumbUrl) updatePayload.image_url = thumbUrl;
+                
                 const { error } = await supabase
                     .from('drawings')
-                    .update({ 
-                        document_data: elements, 
-                        name: drawingName,
-                        updated_at: new Date().toISOString()
-                    })
+                    .update(updatePayload)
                     .eq('id', drawingId);
                 if (error) throw error;
             } else {
@@ -466,6 +507,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     document_data: elements,
                     user_id: user?.id
                 };
+                if (thumbUrl) payload.image_url = thumbUrl;
                 
                 if (leadId) {
                     payload.lead_id = leadId;

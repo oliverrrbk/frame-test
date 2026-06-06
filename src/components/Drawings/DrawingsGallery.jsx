@@ -121,35 +121,46 @@ const DrawingsGallery = ({ leadId = null }) => {
     const handleDownloadPdf = async (e, drawing) => {
         e.stopPropagation();
         
-        if (!drawing.document_data?.thumbnail_svg) {
+        if (!drawing.image_url && !drawing.document_data?.thumbnail_svg) {
             toast.error("Skitsen har intet billede endnu. Åbn og gem den én gang for at generere et.");
             return;
         }
 
         try {
             toast.loading("Genererer PDF...", { id: "pdf_gen" });
-            let svgString = drawing.document_data.thumbnail_svg;
-            
-            // Chrome/Safari nægter at tegne SVGer uden xmlns på et canvas
-            if (!svgString.includes('xmlns=')) {
-                svgString = svgString.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
-            }
-            // Hvis viewBox findes men ingen width/height, sæt default så billedet ikke bliver 0x0
-            if (!svgString.includes('width=') && svgString.includes('viewBox=')) {
-                svgString = svgString.replace('<svg ', '<svg width="1920" height="1080" ');
-            }
             
             const img = new Image();
             img.crossOrigin = 'anonymous';
             
-            // Base64 encode for at undgå problemer med specialtegn i blob/data URL'er
-            const url = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
-            
-            await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = () => reject(new Error("Kunne ikke indlæse tegningen som billede. SVG formatfejl."));
-                img.src = url;
-            });
+            if (drawing.image_url) {
+                // We have a direct JPEG/PNG URL
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = () => reject(new Error("Kunne ikke indlæse tegningen som billede."));
+                    img.src = drawing.image_url;
+                });
+            } else {
+                // Fallback to old SVG string logic
+                let svgString = drawing.document_data.thumbnail_svg;
+                
+                // Chrome/Safari nægter at tegne SVGer uden xmlns på et canvas
+                if (!svgString.includes('xmlns=')) {
+                    svgString = svgString.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+                }
+                // Hvis viewBox findes men ingen width/height, sæt default så billedet ikke bliver 0x0
+                if (!svgString.includes('width=') && svgString.includes('viewBox=')) {
+                    svgString = svgString.replace('<svg ', '<svg width="1920" height="1080" ');
+                }
+                
+                // Base64 encode for at undgå problemer med specialtegn i blob/data URL'er
+                const url = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
+                
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = () => reject(new Error("Kunne ikke indlæse tegningen som billede. SVG formatfejl."));
+                    img.src = url;
+                });
+            }
             
             const canvas = document.createElement('canvas');
             canvas.width = 1920; 
@@ -321,6 +332,8 @@ const DrawingsGallery = ({ leadId = null }) => {
                             }}>
                                 {drawing.type === 'upload' && drawing.document_data?.url ? (
                                     <img src={drawing.document_data.url} alt="Officiel Tegning" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : drawing.type === 'tldraw' && drawing.image_url ? (
+                                    <img src={drawing.image_url} alt="Skitse Thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : drawing.type === 'tldraw' && drawing.document_data?.thumbnail_svg ? (
                                     <div 
                                         style={{ width: '100%', height: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
