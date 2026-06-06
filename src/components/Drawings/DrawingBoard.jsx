@@ -33,7 +33,11 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     if (data) {
                         setDrawingName(data.name || 'Ny Skitse');
                         if (data.document_data) {
-                            loadSnapshot(editorInstance.store, data.document_data);
+                            if (data.document_data.snapshot) {
+                                loadSnapshot(editorInstance.store, data.document_data.snapshot);
+                            } else {
+                                loadSnapshot(editorInstance.store, data.document_data);
+                            }
                         }
                     }
                 } catch (err) {
@@ -152,15 +156,27 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         try {
             const snapshot = getSnapshot(editor.store);
             
-            // Generate a thumbnail (optional, but good for gallery)
-            // For now we just save the JSON data
+            // Extract SVG thumbnail
+            let thumbnailSvg = null;
+            const shapeIds = Array.from(editor.getCurrentPageShapeIds());
+            if (shapeIds.length > 0) {
+                try {
+                    const result = await editor.getSvgString(shapeIds, { background: true, padding: 32 });
+                    if (result && result.svg) thumbnailSvg = result.svg;
+                } catch(e) {
+                    console.error("Kunne ikke generere SVG thumbnail:", e);
+                }
+            }
             
             const user = (await supabase.auth.getUser()).data.user;
             if (!user) throw new Error("Ikke logget ind");
 
             const payload = {
                 name: drawingName,
-                document_data: snapshot,
+                document_data: {
+                    snapshot: snapshot,
+                    thumbnail_svg: thumbnailSvg
+                },
                 user_id: user.id,
                 lead_id: leadId || null,
                 type: 'tldraw'

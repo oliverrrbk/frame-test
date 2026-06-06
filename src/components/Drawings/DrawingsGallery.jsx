@@ -15,7 +15,7 @@ const DrawingsGallery = ({ leadId = null }) => {
     const fetchDrawings = async () => {
         setIsLoading(true);
         try {
-            let query = supabase.from('drawings').select('*').order('created_at', { ascending: false });
+            let query = supabase.from('drawings').select('*, leads(case_number)').order('created_at', { ascending: false });
             
             if (leadId) {
                 query = query.eq('lead_id', leadId);
@@ -189,15 +189,24 @@ const DrawingsGallery = ({ leadId = null }) => {
                             {/* Thumbnail area */}
                             <div style={{ 
                                 height: '180px', background: 'radial-gradient(circle at center, #f8fafc 0%, #e2e8f0 100%)', borderBottom: '1px solid #e2e8f0',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden'
                             }}>
-                                <div style={{ background: 'white', padding: '20px', borderRadius: '50%', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                                    {drawing.type === 'upload' ? (
-                                        <FileText size={40} strokeWidth={1.5} style={{ color: '#64748b' }} />
-                                    ) : (
-                                        <PenTool size={40} strokeWidth={1.5} style={{ color: '#64748b' }} />
-                                    )}
-                                </div>
+                                {drawing.type === 'upload' && drawing.document_data?.url ? (
+                                    <img src={drawing.document_data.url} alt="Officiel Tegning" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : drawing.type === 'tldraw' && drawing.document_data?.thumbnail_svg ? (
+                                    <div 
+                                        style={{ width: '100%', height: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        dangerouslySetInnerHTML={{ __html: drawing.document_data.thumbnail_svg }} 
+                                    />
+                                ) : (
+                                    <div style={{ background: 'white', padding: '20px', borderRadius: '50%', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                                        {drawing.type === 'upload' ? (
+                                            <FileText size={40} strokeWidth={1.5} style={{ color: '#64748b' }} />
+                                        ) : (
+                                            <PenTool size={40} strokeWidth={1.5} style={{ color: '#64748b' }} />
+                                        )}
+                                    </div>
+                                )}
                                 
                                 <button
                                     onClick={(e) => handleDelete(e, drawing.id)}
@@ -226,9 +235,14 @@ const DrawingsGallery = ({ leadId = null }) => {
                                     <Calendar size={16} />
                                     <span>Sidst redigeret: {format(new Date(drawing.created_at), 'd. MMM yyyy', { locale: da })}</span>
                                 </div>
-                                {!leadId && drawing.lead_id && (
-                                    <div style={{ marginTop: '16px', display: 'inline-flex', alignItems: 'center', backgroundColor: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
-                                        Tilknyttet et igangværende projekt
+                                {drawing.lead_id && (
+                                    <div style={{ 
+                                        marginTop: '16px',
+                                        display: 'inline-flex', padding: '4px 10px', 
+                                        backgroundColor: '#f0fdf4', color: '#16a34a', borderRadius: '6px', 
+                                        fontSize: '0.8rem', fontWeight: 600, border: '1px solid #bbf7d0'
+                                    }}>
+                                        Sag: {drawing.leads?.case_number || 'Ukendt'}
                                     </div>
                                 )}
                             </div>
