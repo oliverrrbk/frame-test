@@ -212,6 +212,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         {isSaving ? 'Gemmer...' : 'Gem Skitse'}
                     </button>
                 </div>
+                </div>
                 
                 {/* Custom Watermark */}
                 <div style={{
