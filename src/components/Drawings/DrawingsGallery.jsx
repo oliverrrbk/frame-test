@@ -282,7 +282,7 @@ const DrawingsGallery = ({ leadId = null }) => {
                             onClick={() => handleOpenDrawing(drawing.id)}
                             style={{
                                 backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '16px',
-                                overflow: 'hidden', cursor: 'pointer', position: 'relative',
+                                cursor: 'pointer', position: 'relative',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)',
                                 display: 'flex', flexDirection: 'column'
@@ -301,6 +301,7 @@ const DrawingsGallery = ({ leadId = null }) => {
                             {/* Thumbnail area */}
                             <div style={{ 
                                 height: '180px', background: 'radial-gradient(circle at center, #f8fafc 0%, #e2e8f0 100%)', borderBottom: '1px solid #e2e8f0',
+                                borderTopLeftRadius: '16px', borderTopRightRadius: '16px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden'
                             }}>
                                 {drawing.type === 'upload' && drawing.document_data?.url ? (
@@ -439,10 +440,10 @@ const DrawingsGallery = ({ leadId = null }) => {
                                 {/* Assign Popover */}
                                 {assigningDrawingId === drawing.id && (
                                     <div style={{
-                                        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                                        position: 'absolute', bottom: '70px', left: '50%', transform: 'translateX(-50%)',
                                         background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-                                        borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)', border: '1px solid rgba(226,232,240,0.8)',
-                                        padding: '16px', zIndex: 20, width: '90%', maxWidth: '300px',
+                                        borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(226,232,240,0.8)',
+                                        padding: '16px', zIndex: 100, width: '90%', maxWidth: '320px',
                                         display: 'flex', flexDirection: 'column', gap: '12px'
                                     }} onClick={e => e.stopPropagation()}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
