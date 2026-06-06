@@ -32,6 +32,7 @@ import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import CustomProjectCreator from './CustomProjectCreator';
+import DrawingsGallery from '../Drawings/DrawingsGallery';
 
 // Konfiguration til det nye Google Map
 const MAP_LIBRARIES = ['places'];
@@ -2124,6 +2125,11 @@ const Dashboard = () => {
                             <MapPin size={20} /> Kortvisning
                         </button>
                     )}
+                    {['admin', 'sales', 'worker', 'apprentice'].includes(effectiveRole) && (
+                        <button className={activeTab === 'drawings' ? 'active' : ''} onClick={() => { setActiveTab('drawings'); setIsMobileMenuOpen(false); }}>
+                            <PenTool size={20} /> Skitser & Tegninger
+                        </button>
+                    )}
                     {['admin', 'sales'].includes(effectiveRole) && (
                         <button className={activeTab === 'materials' ? 'active' : ''} onClick={() => { setActiveTab('materials'); setIsMobileMenuOpen(false); }}>
                             <Package size={20} /> Materialer
@@ -4190,6 +4196,11 @@ const Dashboard = () => {
                                             <WindowsChecklist leadId={selectedLead.id} />
                                         )}
 
+                                        {/* SKITSER & TEGNINGER for denne lead */}
+                                        <div style={{ marginTop: '24px', marginBottom: '24px', border: '1px solid #e8e6e1', borderRadius: '12px', overflow: 'hidden' }}>
+                                            <DrawingsGallery leadId={selectedLead.id} />
+                                        </div>
+
                                         {/* GRUNDLAG FOR PRISESTIMATET ACCORDION */}
                                         <div 
                                             onClick={() => setIsPriceBasisOpen(!isPriceBasisOpen)}
@@ -5089,6 +5100,12 @@ const Dashboard = () => {
                             , document.body)}
                                 </div> {/* Close card-body */}
                             </div> {/* Close settings-card */}
+                        </div>
+                    )}
+                    
+                    {activeTab === 'drawings' && (
+                        <div className="dashboard-workspace fade-in" style={{ height: '100%' }}>
+                            <DrawingsGallery />
                         </div>
                     )}
                     
