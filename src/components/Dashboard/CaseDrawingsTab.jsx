@@ -197,20 +197,24 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                 </button>
 
                 <div style={{ 
-                    width: '100%', height: '140px', backgroundColor: '#f8fafc', borderRadius: '8px', 
+                    width: '100%', height: '140px', background: 'radial-gradient(circle at center, #f8fafc 0%, #e2e8f0 100%)', borderRadius: '8px', 
                     marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     border: '1px solid #f1f5f9', overflow: 'hidden'
                 }}>
-                    {isUpload ? (
-                        isImage ? (
-                            <img src={d.document_data.url} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                            <FileText size={48} style={{ color: '#94a3b8' }} />
-                        )
+                    {isUpload && d.document_data?.url ? (
+                        <img src={d.document_data.url} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : !isUpload && d.document_data?.thumbnail_svg ? (
+                        <div 
+                            style={{ width: '100%', height: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            dangerouslySetInnerHTML={{ __html: d.document_data.thumbnail_svg }} 
+                        />
                     ) : (
-                        <div style={{ color: '#0ea5e9', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                            <PenTool size={40} />
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>TLDRAW</span>
+                        <div style={{ background: 'white', padding: '16px', borderRadius: '50%', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                            {isUpload ? (
+                                <FileText size={32} strokeWidth={1.5} style={{ color: '#64748b' }} />
+                            ) : (
+                                <PenTool size={32} strokeWidth={1.5} style={{ color: '#64748b' }} />
+                            )}
                         </div>
                     )}
                 </div>
@@ -241,10 +245,9 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
 
     // Hvis tegnebrættet er åbent, vis det i fuld skærm (modal look)
     if (isBoardOpen) {
-        return (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, backgroundColor: 'white' }}>
-                <DrawingBoard drawingId={activeDrawingId} leadId={selectedCase.id} onClose={handleBoardClose} />
-            </div>
+        return createPortal(
+            <DrawingBoard drawingId={activeDrawingId} leadId={selectedCase.id} onClose={handleBoardClose} />,
+            document.body
         );
     }
 
