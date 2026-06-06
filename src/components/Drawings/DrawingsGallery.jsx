@@ -38,7 +38,23 @@ const DrawingsGallery = ({ leadId = null }) => {
                 throw error;
             }
 
-            setDrawings(data || []);
+            let enrichedData = data || [];
+            if (enrichedData.length > 0) {
+                const userIds = [...new Set(enrichedData.map(d => d.user_id).filter(Boolean))];
+                if (userIds.length > 0) {
+                    const { data: profiles } = await supabase.from('profiles').select('id, owner_name, email, avatar_url').in('id', userIds);
+                    if (profiles) {
+                        const profileMap = {};
+                        profiles.forEach(p => profileMap[p.id] = p);
+                        enrichedData = enrichedData.map(d => ({
+                            ...d,
+                            profile: profileMap[d.user_id] || null
+                        }));
+                    }
+                }
+            }
+
+            setDrawings(enrichedData);
         } catch (err) {
             console.error("Fejl ved hentning af skitser:", err);
             // toast.error("Kunne ikke hente skitser.");
@@ -89,7 +105,10 @@ const DrawingsGallery = ({ leadId = null }) => {
     };
 
     if (isBoardOpen) {
-        return <DrawingBoard drawingId={activeDrawingId} leadId={leadId} onClose={handleBoardClose} />;
+        return createPortal(
+            <DrawingBoard drawingId={activeDrawingId} leadId={leadId} onClose={handleBoardClose} />,
+            document.body
+        );
     }
 
     return (
@@ -251,6 +270,27 @@ const DrawingsGallery = ({ leadId = null }) => {
                                         fontSize: '0.8rem', fontWeight: 600, border: '1px solid #bbf7d0'
                                     }}>
                                         Sag: {drawing.leads?.id ? String(drawing.leads.id).substring(0, 8) : 'Ukendt'}
+                                    </div>
+                                )}
+
+                                {/* Profil Avatar */}
+                                {drawing.profile && (
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px', 
+                                        marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9'
+                                    }}>
+                                        <div style={{
+                                            width: '28px', height: '28px', borderRadius: '50%', 
+                                            background: drawing.profile.avatar_url ? `url(${drawing.profile.avatar_url}) center/cover` : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            color: 'white', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0,
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                        }}>
+                                            {!drawing.profile.avatar_url && (drawing.profile.owner_name?.substring(0, 2).toUpperCase() || 'BF')}
+                                        </div>
+                                        <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {drawing.profile.owner_name || drawing.profile.email}
+                                        </span>
                                     </div>
                                 )}
                             </div>
