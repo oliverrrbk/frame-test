@@ -1995,6 +1995,8 @@ const Dashboard = () => {
                 return { title: 'Min Profil', desc: 'Administrer dine personlige oplysninger og præferencer.' };
             case 'account_settings':
                 return { title: 'Konto Indstillinger', desc: 'Administrer din virksomheds indstillinger.' };
+            case 'drawings':
+                return { title: 'Mit Skitse-bibliotek', desc: 'Få det fulde overblik over alle dine byggetegninger.' };
             default:
                 return null;
         }
@@ -2020,6 +2022,11 @@ const Dashboard = () => {
             icon: HardHat,
             title: 'Team',
             desc: 'Tilføj medarbejdere og styr roller direkte fra dashboardet.'
+        },
+        drawings: {
+            icon: PenTool,
+            title: 'Skitser',
+            desc: 'Se og rediger byggetegninger direkte på mobilen.'
         }
     };
 
