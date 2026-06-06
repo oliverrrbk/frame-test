@@ -4,6 +4,42 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { ChevronLeft, Save, FileImage } from 'lucide-react';
 
+class DrawingErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        console.error('DrawingBoard Error:', error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div style={{ padding: '20px', background: '#fee2e2', color: '#991b1b', height: '100%', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: 'bold' }}>Tegnebrættet crashede!</h2>
+                    <pre style={{ marginTop: '10px', padding: '10px', background: '#f87171', color: 'white', borderRadius: '4px', maxWidth: '80%', overflow: 'auto' }}>
+                        {this.state.error?.message}
+                    </pre>
+                    <button 
+                        onClick={() => this.setState({ hasError: false, error: null })}
+                        style={{ marginTop: '20px', padding: '8px 16px', background: '#b91c1c', color: 'white', borderRadius: '4px' }}
+                    >
+                        Prøv igen
+                    </button>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
 const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const [editor, setEditor] = useState(null);
     const [isLoading, setIsLoading] = useState(!!drawingId);
@@ -71,21 +107,29 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 return;
             }
 
-            const center = selectionPageBounds.center;
-            const rotation = editor.getSelectionRotation();
-            
-            // Get screen center
-            const screenCenter = editor.pageToViewport(center);
-            
-            rotateHandleRef.current.style.display = 'flex';
-            rotateHandleRef.current.style.left = `${screenCenter.x}px`;
-            rotateHandleRef.current.style.top = `${screenCenter.y}px`;
-            
-            // Calculate distance to move the handle up
-            const zoom = editor.getZoomLevel();
-            const distanceUp = (selectionPageBounds.h / 2) * zoom + 35; // 35px above shape
-            
-            rotateHandleRef.current.style.transform = `translate(-50%, -50%) rotate(${rotation}rad) translateY(-${distanceUp}px)`;
+            try {
+                const center = selectionPageBounds.center;
+                if (!center) return;
+                const rotation = editor.getSelectionRotation() || 0;
+                
+                // Get screen center
+                const screenCenter = editor.pageToViewport(center);
+                if (!screenCenter) return;
+                
+                rotateHandleRef.current.style.display = 'flex';
+                rotateHandleRef.current.style.left = `${screenCenter.x}px`;
+                rotateHandleRef.current.style.top = `${screenCenter.y}px`;
+
+                // Position handle above the shape
+                const boxTopY = screenCenter.y - (selectionPageBounds.height / 2) * editor.getZoomLevel() - 40;
+                
+                rotateHandleRef.current.style.transform = `rotate(${rotation}rad) translateY(${boxTopY - screenCenter.y}px)`;
+            } catch (err) {
+                console.error("Error in handleTick:", err);
+                if (rotateHandleRef.current) {
+                    rotateHandleRef.current.style.display = 'none';
+                }
+            }
         };
 
         editor.on('tick', handleTick);
@@ -551,7 +595,9 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     </div>
                 )}
 
-                <Tldraw onMount={handleMount} />
+                <DrawingErrorBoundary>
+                    <Tldraw onMount={handleMount} />
+                </DrawingErrorBoundary>
                 
                 {isLoading && (
                     <div style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)' }}>
