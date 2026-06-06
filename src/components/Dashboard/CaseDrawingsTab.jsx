@@ -71,20 +71,15 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
         if (!drawingToDelete) return;
         
         try {
-            // Slet selve filen fra storage, hvis det er en upload
-            if (drawingToDelete.type === 'upload' && drawingToDelete.document_data?.filename) {
-                // Filnavnet er gemt i DB
-                const { error: storageError } = await supabase.storage
-                    .from('uploads')
-                    .remove([drawingToDelete.document_data.filename]);
-                if (storageError) console.error("Kunne ikke slette filen i storage:", storageError);
-            }
-
-            // Slet fra databasen
-            const { error } = await supabase.from('drawings').delete().eq('id', drawingToDelete.id);
+            // Fjern blot tilknytningen til denne sag, så tegningen overlever i "Skitse-biblioteket"
+            const { error } = await supabase
+                .from('drawings')
+                .update({ lead_id: null })
+                .eq('id', drawingToDelete.id);
+                
             if (error) throw error;
             
-            toast.success("Tegning slettet!");
+            toast.success("Tegning fjernet fra sagen!");
             fetchDrawings();
         } catch (err) {
             console.error("Fejl ved sletning:", err);
@@ -364,9 +359,10 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                         <div style={{ width: '48px', height: '48px', backgroundColor: '#fee2e2', color: '#ef4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
                             <Trash2 size={24} />
                         </div>
-                        <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', color: '#0f172a' }}>Slet tegning?</h3>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', color: '#0f172a' }}>Fjern tegning fra sag?</h3>
                         <p style={{ margin: '0 0 24px 0', color: '#64748b', fontSize: '0.95rem', lineHeight: 1.5 }}>
-                            Er du sikker på, at du vil slette tegningen <strong>{drawingToDelete.name}</strong>? Dette kan ikke fortrydes.
+                            Er du sikker på, at du vil fjerne tegningen <strong>{drawingToDelete.name}</strong> fra denne sag? <br/><br/>
+                            Tegningen slettes ikke permanent, men flyttes blot tilbage til dit primære Skitse-bibliotek.
                         </p>
                         
                         <div style={{ display: 'flex', gap: '12px' }}>
@@ -384,7 +380,7 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                                 onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(239, 68, 68, 0.3)'; }}
                                 onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(239, 68, 68, 0.2)'; }}
                             >
-                                Ja, slet
+                                Fjern fra sag
                             </button>
                         </div>
                     </div>
