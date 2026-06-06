@@ -15,7 +15,7 @@ const DrawingsGallery = ({ leadId = null }) => {
     const fetchDrawings = async () => {
         setIsLoading(true);
         try {
-            let query = supabase.from('drawings').select('*, leads(case_number)').order('created_at', { ascending: false });
+            let query = supabase.from('drawings').select('*, leads(id)').order('created_at', { ascending: false });
             
             if (leadId) {
                 query = query.eq('lead_id', leadId);
@@ -242,7 +242,7 @@ const DrawingsGallery = ({ leadId = null }) => {
                                         backgroundColor: '#f0fdf4', color: '#16a34a', borderRadius: '6px', 
                                         fontSize: '0.8rem', fontWeight: 600, border: '1px solid #bbf7d0'
                                     }}>
-                                        Sag: {drawing.leads?.case_number || 'Ukendt'}
+                                        Sag: {drawing.leads?.id ? String(drawing.leads.id).substring(0, 8) : 'Ukendt'}
                                     </div>
                                 )}
                             </div>
