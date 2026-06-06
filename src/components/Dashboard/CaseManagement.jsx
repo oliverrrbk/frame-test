@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { createPortal } from 'react-dom';
-import { HardHat, CheckSquare, Camera, Clock, UserPlus, ChevronRight, AlertTriangle, TrendingUp, Plus, Trash2, Calendar, ShieldAlert, MapPin, User, ArrowLeft, Package, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, ChevronDown, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool } from 'lucide-react';
+import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool } from 'lucide-react';
 import MaterialList from './MaterialList';
 import AftalesedlerTab from './AftalesedlerTab';
+import CaseDrawingsTab from './CaseDrawingsTab';
 import BilagManager from './BilagManager';
 import toast from 'react-hot-toast';
 
@@ -1655,7 +1656,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             { id: 'logs', label: 'Byggeproces', icon: <ClipboardList size={18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
                             { id: 'timesheet', label: 'Timeregistrering', icon: <Clock size={18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
                             { id: 'invoices', label: 'Bilag', icon: <Receipt size={18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
-                            { id: 'extra-work', label: 'Aftalesedler', icon: <PenTool size={18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' }
+                            { id: 'extra-work', label: 'Aftalesedler', icon: <PenTool size={18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' },
+                            { id: 'drawings', label: 'Tegninger & Skitser', icon: <FileImage size={18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: true }
                         ].filter(tab => tab.show).map(tab => {
                             const isActive = activeSubTab === tab.id;
                             return (
@@ -2301,6 +2303,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     selectedCase={selectedCase} 
                                     profile={profile} 
                                     onUpdateCase={onUpdateLead}
+                                />
+                            </div>
+                        )}
+
+                        {/* TAB 7: TEGNINGER & SKITSER */}
+                        {activeSubTab === 'drawings' && (
+                            <div className="case-tab-content">
+                                <CaseDrawingsTab 
+                                    selectedCase={selectedCase} 
+                                    profile={profile} 
                                 />
                             </div>
                         )}

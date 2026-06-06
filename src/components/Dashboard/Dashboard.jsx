@@ -4196,11 +4196,6 @@ const Dashboard = () => {
                                             <WindowsChecklist leadId={selectedLead.id} />
                                         )}
 
-                                        {/* SKITSER & TEGNINGER for denne lead */}
-                                        <div style={{ marginTop: '24px', marginBottom: '24px', border: '1px solid #e8e6e1', borderRadius: '12px', overflow: 'hidden' }}>
-                                            <DrawingsGallery leadId={selectedLead.id} />
-                                        </div>
-
                                         {/* GRUNDLAG FOR PRISESTIMATET ACCORDION */}
                                         <div 
                                             onClick={() => setIsPriceBasisOpen(!isPriceBasisOpen)}
