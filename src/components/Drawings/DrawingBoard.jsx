@@ -444,7 +444,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
     // Save Logic
     const handleSave = async () => {
-        if (!leadId) return;
+        // Remove the early return if leadId is null, since generic drawings can have null leadId
         setIsSaving(true);
         const tid = toast.loading('Gemmer skitse...');
         try {
@@ -459,16 +459,21 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     .eq('id', drawingId);
                 if (error) throw error;
             } else {
-                // Generate a very basic SVG thumbnail to avoid crash in gallery if it expects thumbnail_svg
-                const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" style="background-color: #f8fafc;"></svg>`;
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                const payload = {
+                    name: drawingName,
+                    document_data: elements,
+                    user_id: user?.id
+                };
+                
+                if (leadId) {
+                    payload.lead_id = leadId;
+                }
+
                 const { error } = await supabase
                     .from('drawings')
-                    .insert([{
-                        lead_id: leadId,
-                        name: drawingName,
-                        document_data: elements,
-                        thumbnail_svg: svgContent
-                    }]);
+                    .insert([payload]);
                 if (error) throw error;
             }
             
