@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { PenTool, Upload, Trash2, Calendar, FileText, Image as ImageIcon, X } from 'lucide-react';
@@ -351,8 +352,8 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                 </>
             )}
 
-            {/* Custom Delete Modal */}
-            {drawingToDelete && (
+            {/* Custom Delete Modal using createPortal to escape parent layout contexts */}
+            {drawingToDelete && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)' }}>
                     <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '24px', maxWidth: '400px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0', animation: 'fadeIn 0.2s ease-out' }}>
                         <div style={{ width: '48px', height: '48px', backgroundColor: '#fee2e2', color: '#ef4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
@@ -382,7 +383,8 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
