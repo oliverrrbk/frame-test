@@ -1,514 +1,352 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Tldraw, getSnapshot, loadSnapshot } from 'tldraw';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { ChevronLeft, Save, FileImage } from 'lucide-react';
+import { ChevronLeft, Save, FileImage, Undo, Eraser, PenTool } from 'lucide-react';
 
-class DrawingErrorBoundary extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = { hasError: false, error: null };
-    }
-
-    static getDerivedStateFromError(error) {
-        return { hasError: true, error };
-    }
-
-    componentDidCatch(error, errorInfo) {
-        console.error('DrawingBoard Error:', error, errorInfo);
-    }
-
-    render() {
-        if (this.state.hasError) {
-            return (
-                <div style={{ padding: '20px', background: '#fee2e2', color: '#991b1b', height: '100%', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <h2 style={{ fontSize: '20px', fontWeight: 'bold' }}>Tegnebrættet crashede!</h2>
-                    <pre style={{ marginTop: '10px', padding: '10px', background: '#f87171', color: 'white', borderRadius: '4px', maxWidth: '80%', overflow: 'auto' }}>
-                        {this.state.error?.message}
-                    </pre>
-                    <button 
-                        onClick={() => this.setState({ hasError: false, error: null })}
-                        style={{ marginTop: '20px', padding: '8px 16px', background: '#b91c1c', color: 'white', borderRadius: '4px' }}
-                    >
-                        Prøv igen
-                    </button>
-                </div>
-            );
-        }
-
-        return this.props.children;
-    }
-}
+const COLORS = ['#000000', '#ef4444', '#3b82f6', '#22c55e', '#eab308'];
 
 const DrawingBoard = ({ drawingId, leadId, onClose }) => {
-    const [editor, setEditor] = useState(null);
+    const canvasRef = useRef(null);
+    const containerRef = useRef(null);
     const [isLoading, setIsLoading] = useState(!!drawingId);
-    const [drawingName, setDrawingName] = useState('Ny Skitse');
     const [isSaving, setIsSaving] = useState(false);
-    const [isExporting, setIsExporting] = useState(false);
-    const rotateHandleRef = useRef(null);
-    const [snapLines, setSnapLines] = useState(null);
+    const [drawingName, setDrawingName] = useState('Ny Skitse');
+    
+    // Drawing state
+    const [paths, setPaths] = useState([]);
+    const [currentPath, setCurrentPath] = useState(null);
+    const [color, setColor] = useState('#000000');
+    const [lineWidth, setLineWidth] = useState(3);
+    const [tool, setTool] = useState('pen'); // 'pen' or 'eraser'
 
-    // Initial load of drawing data
-    const handleMount = useCallback((editorInstance) => {
-        setEditor(editorInstance);
-        
-        if (drawingId) {
-            const loadDrawing = async () => {
-                setIsLoading(true);
-                try {
-                    const { data, error } = await supabase
-                        .from('drawings')
-                        .select('*')
-                        .eq('id', drawingId)
-                        .single();
-                    
-                    if (error) throw error;
-                    
-                    if (data) {
-                        setDrawingName(data.name || 'Ny Skitse');
-                        if (data.document_data) {
-                            if (data.document_data.snapshot) {
-                                loadSnapshot(editorInstance.store, data.document_data.snapshot);
-                            } else {
-                                loadSnapshot(editorInstance.store, data.document_data);
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.error("Fejl ved indlæsning af skitse:", err);
-                    toast.error("Kunne ikke indlæse skitsen");
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            loadDrawing();
-        } else {
-             // New drawing - we don't need to clear the store because tldraw initializes it fresh.
-             // editorInstance.store.clear() breaks tldraw v5 because it removes the page records.
-        }
-    }, [drawingId]);
-
-    // Custom Word-style rotation handle logic using tick event
+    // Resize canvas
     useEffect(() => {
-        if (!editor) return;
-
-        const handleTick = () => {
-            if (!rotateHandleRef.current) return;
-            const ids = editor.getSelectedShapeIds();
-            if (ids.length === 0) {
-                rotateHandleRef.current.style.display = 'none';
-                return;
+        const resizeCanvas = () => {
+            const canvas = canvasRef.current;
+            const container = containerRef.current;
+            if (canvas && container) {
+                // Set actual size in memory (scaled to account for extra pixel density)
+                canvas.width = container.clientWidth * window.devicePixelRatio;
+                canvas.height = container.clientHeight * window.devicePixelRatio;
+                
+                // Set logical size
+                canvas.style.width = `${container.clientWidth}px`;
+                canvas.style.height = `${container.clientHeight}px`;
+                
+                // Normalize coordinate system to use css pixels
+                const ctx = canvas.getContext('2d');
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                redraw(paths);
             }
+        };
 
-            const selectionPageBounds = editor.getSelectionPageBounds();
-            if (!selectionPageBounds) {
-                rotateHandleRef.current.style.display = 'none';
-                return;
+        window.addEventListener('resize', resizeCanvas);
+        // Delay initial resize slightly to ensure container is fully rendered
+        setTimeout(resizeCanvas, 100);
+        
+        return () => window.removeEventListener('resize', resizeCanvas);
+    }, [paths]);
+
+    // Redraw all paths
+    const redraw = useCallback((pathsToDraw) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        
+        // Clear entire canvas
+        ctx.clearRect(0, 0, canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
+        
+        pathsToDraw.forEach(p => {
+            if (p.points.length === 0) return;
+            
+            ctx.beginPath();
+            ctx.strokeStyle = p.tool === 'eraser' ? '#f8fafc' : p.color; // Eraser uses background color
+            ctx.lineWidth = p.tool === 'eraser' ? 20 : p.width;
+            ctx.moveTo(p.points[0].x, p.points[0].y);
+            
+            for (let i = 1; i < p.points.length; i++) {
+                ctx.lineTo(p.points[i].x, p.points[i].y);
             }
+            ctx.stroke();
+        });
+    }, []);
 
+    // Load existing drawing
+    useEffect(() => {
+        if (!drawingId || drawingId === 'new') {
+            setIsLoading(false);
+            return;
+        }
+
+        const loadDrawing = async () => {
+            setIsLoading(true);
             try {
-                const center = selectionPageBounds.center;
-                if (!center) return;
-                const rotation = editor.getSelectionRotation() || 0;
-                
-                // Get screen center
-                const screenCenter = editor.pageToViewport(center);
-                if (!screenCenter) return;
-                
-                rotateHandleRef.current.style.display = 'flex';
-                rotateHandleRef.current.style.left = `${screenCenter.x}px`;
-                rotateHandleRef.current.style.top = `${screenCenter.y}px`;
+                const { data, error } = await supabase
+                    .from('drawings')
+                    .select('*')
+                    .eq('id', drawingId)
+                    .single();
 
-                // Position handle above the shape
-                const boxTopY = screenCenter.y - (selectionPageBounds.height / 2) * editor.getZoomLevel() - 40;
-                
-                rotateHandleRef.current.style.transform = `rotate(${rotation}rad) translateY(${boxTopY - screenCenter.y}px)`;
+                if (error) throw error;
+                if (data) {
+                    setDrawingName(data.name || 'Ny Skitse');
+                    if (data.document_data && Array.isArray(data.document_data)) {
+                        setPaths(data.document_data);
+                        setTimeout(() => redraw(data.document_data), 100);
+                    }
+                }
             } catch (err) {
-                console.error("Error in handleTick:", err);
-                if (rotateHandleRef.current) {
-                    rotateHandleRef.current.style.display = 'none';
-                }
+                console.error("Fejl ved indlæsning af skitse:", err);
+                toast.error('Kunne ikke indlæse skitsen');
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        editor.on('tick', handleTick);
-        return () => editor.off('tick', handleTick);
-    }, [editor]);
+        loadDrawing();
+    }, [drawingId, redraw]);
 
-    const handleRotationPointerDown = (e) => {
-        e.stopPropagation();
+    // Pointer events
+    const getPointerPos = (e) => {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    };
+
+    const startDrawing = (e) => {
         e.preventDefault();
-        
-        if (!editor) return;
-        const startCenterPage = editor.getSelectionPageBounds().center;
-        
-        const onPointerMove = (ev) => {
-            const currentMousePage = editor.screenToPage({ x: ev.clientX, y: ev.clientY });
-            
-            // Calculate angle from center to mouse
-            let angle = Math.atan2(currentMousePage.y - startCenterPage.y, currentMousePage.x - startCenterPage.x);
-            // Offset because "top" is -90 degrees (-PI/2)
-            angle += Math.PI / 2;
-            
-            if (angle < 0) angle += 2 * Math.PI;
-
-            // Snapping logic (5 degrees)
-            const snapThreshold = 5 * (Math.PI / 180);
-            let snapLinesData = null;
-
-            const snapAngles = [0, Math.PI/2, Math.PI, (3*Math.PI)/2, 2*Math.PI];
-            for (let target of snapAngles) {
-                // We check the raw difference
-                let diff = Math.abs(angle - target);
-                // Also handle the wrap-around at 0 and 360
-                if (diff > Math.PI) diff = 2 * Math.PI - diff;
-                
-                if (diff < snapThreshold) {
-                    angle = target;
-                    // For snap lines, just pass the page center
-                    snapLinesData = { centerPage: startCenterPage };
-                    break;
-                }
-            }
-
-            setSnapLines(snapLinesData);
-            
-            // Apply delta rotation
-            const currentRot = editor.getSelectionRotation();
-            const delta = angle - currentRot;
-            if (delta !== 0) {
-                editor.rotateShapesBy(editor.getSelectedShapeIds(), delta);
-            }
+        const pos = getPointerPos(e);
+        const newPath = {
+            color,
+            width: lineWidth,
+            tool,
+            points: [pos]
         };
+        setCurrentPath(newPath);
+    };
 
-        const onPointerUp = () => {
-            window.removeEventListener('pointermove', onPointerMove);
-            window.removeEventListener('pointerup', onPointerUp);
-            setSnapLines(null);
-        };
+    const draw = (e) => {
+        e.preventDefault();
+        if (!currentPath) return;
+        
+        const pos = getPointerPos(e);
+        const updatedPath = { ...currentPath, points: [...currentPath.points, pos] };
+        setCurrentPath(updatedPath);
+        
+        // Redraw everything plus current path
+        redraw([...paths, updatedPath]);
+    };
 
-        window.addEventListener('pointermove', onPointerMove);
-        window.addEventListener('pointerup', onPointerUp);
+    const stopDrawing = () => {
+        if (!currentPath) return;
+        setPaths([...paths, currentPath]);
+        setCurrentPath(null);
+    };
+
+    const handleUndo = () => {
+        if (paths.length === 0) return;
+        const newPaths = paths.slice(0, -1);
+        setPaths(newPaths);
+        redraw(newPaths);
+    };
+
+    const handleClear = () => {
+        if (confirm('Er du sikker på, du vil rydde hele skitsen?')) {
+            setPaths([]);
+            redraw([]);
+        }
+    };
+
+    const generateSvg = () => {
+        const width = containerRef.current?.clientWidth || 800;
+        const height = containerRef.current?.clientHeight || 600;
+        
+        let svgPaths = paths.map(p => {
+            if (p.points.length === 0) return '';
+            
+            // Note: Eraser paths are complicated in standard SVG. 
+            // For a thumbnail, we could just render them as white strokes or filter them out if they are true erasers.
+            // A simple approach is just rendering them as white strokes over the other elements.
+            const strokeColor = p.tool === 'eraser' ? '#ffffff' : p.color;
+            const strokeWidth = p.tool === 'eraser' ? 20 : p.width;
+            
+            const pointsStr = p.points.map(pt => `${pt.x},${pt.y}`).join(' ');
+            return `<polyline points="${pointsStr}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" />`;
+        }).join('');
+
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background-color: #f8fafc;">${svgPaths}</svg>`;
     };
 
     const handleSave = async () => {
-        if (!editor) return;
-        setIsSaving(true);
-        
-        try {
-            const snapshot = getSnapshot(editor.store);
-            
-            // Extract SVG thumbnail
-            let thumbnailSvg = null;
-            const shapeIds = Array.from(editor.getCurrentPageShapeIds());
-            if (shapeIds.length > 0) {
-                try {
-                    const result = await editor.getSvgString(shapeIds, { background: true, padding: 32 });
-                    if (result && result.svg) thumbnailSvg = result.svg;
-                } catch(e) {
-                    console.error("Kunne ikke generere SVG thumbnail:", e);
-                }
-            }
-            
-            const user = (await supabase.auth.getUser()).data.user;
-            if (!user) throw new Error("Ikke logget ind");
+        if (!leadId) {
+            toast.error("Kan ikke gemme skitse uden sag.");
+            return;
+        }
 
-            const payload = {
+        setIsSaving(true);
+        try {
+            const svgContent = generateSvg();
+
+            const drawingData = {
+                lead_id: leadId,
                 name: drawingName,
-                document_data: {
-                    snapshot: snapshot,
-                    thumbnail_svg: thumbnailSvg
-                },
-                user_id: user.id,
-                lead_id: leadId || null,
-                type: 'tldraw'
+                document_data: paths,
+                thumbnail_svg: svgContent
             };
 
-            let response;
-            if (drawingId) {
-                // Update existing
-                response = await supabase
+            if (drawingId && drawingId !== 'new') {
+                const { error } = await supabase
                     .from('drawings')
-                    .update(payload)
-                    .eq('id', drawingId)
-                    .select();
+                    .update(drawingData)
+                    .eq('id', drawingId);
+                if (error) throw error;
+                toast.success('Skitse opdateret');
             } else {
-                // Insert new
-                response = await supabase
+                const { data, error } = await supabase
                     .from('drawings')
-                    .insert([payload])
-                    .select();
-            }
-
-            if (response.error) throw response.error;
-            
-            toast.success("Skitse gemt!");
-            
-            // If it was new, we might want to close or pass back the new ID
-            // For now, we'll just close it so it returns to the gallery/lead view
-            onClose();
-
-        } catch (err) {
-            console.error("Fejl ved gem:", err);
-            toast.error("Kunne ikke gemme skitsen: " + (err.message || err.details || "Ukendt fejl"));
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleMakeOfficial = async () => {
-        if (!editor) return;
-        setIsExporting(true);
-
-        try {
-            // First, save the current sketch
-            await handleSave();
-
-            // Next, get all shape IDs from the current page to export
-            const shapeIds = Array.from(editor.getCurrentPageShapeIds());
-            if (shapeIds.length === 0) {
-                toast.error("Tegningen er tom");
-                setIsExporting(false);
+                    .insert([drawingData])
+                    .select()
+                    .single();
+                if (error) throw error;
+                toast.success('Skitse gemt');
+                
+                // Force reload logic if needed
+                if (onClose) onClose();
                 return;
             }
-
-            // Export to PNG blob using editor.toImage utility
-            const { blob } = await editor.toImage(shapeIds, { format: 'png', background: true });
-
-            const user = (await supabase.auth.getUser()).data.user;
-            if (!user) throw new Error("Ikke logget ind");
-
-            const fileName = `official_${Date.now()}.png`;
-            const filePath = `${user.id}/${fileName}`;
-
-            // Upload the PNG blob to 'uploads' bucket
-            const { error: uploadError } = await supabase.storage
-                .from('uploads')
-                .upload(filePath, blob, { contentType: 'image/png' });
-
-            if (uploadError) throw uploadError;
-
-            // Get public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('uploads')
-                .getPublicUrl(filePath);
-
-            // Insert as 'upload' in drawings table
-            const { error: dbError } = await supabase
-                .from('drawings')
-                .insert([{
-                    name: `${drawingName} (Officiel)`,
-                    lead_id: leadId || null,
-                    user_id: user.id,
-                    type: 'upload',
-                    document_data: {
-                        url: publicUrl,
-                        path: filePath,
-                        fileType: 'image/png'
-                    }
-                }]);
-
-            if (dbError) throw dbError;
-
-            toast.success("Skitsen er nu gemt som en Officiel Tegning!");
-            onClose();
-
-        } catch (err) {
-            console.error("Fejl ved eksport:", err);
-            toast.error("Kunne ikke gemme som officiel: " + (err.message || "Ukendt fejl"));
+        } catch (error) {
+            console.error('Fejl ved gem:', error);
+            toast.error('Kunne ikke gemme skitse');
         } finally {
-            setIsExporting(false);
+            setIsSaving(false);
         }
     };
 
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', width: '100vw', height: '100vh', overflow: 'hidden' }}>
             
-            <style>{`
-                /* Override tldraw styles to make it fit nicely */
-                .tl-container {
-                    background-color: #f8fafc !important;
-                }
-
-                /* Modern Gorgeous Styling for Tldraw UI (Top Left / Menus / Tools) */
-                .tlui-layout__top__left .tlui-button-grid,
-                .tlui-layout__top__left .tlui-menu-zone {
-                    background: rgba(255, 255, 255, 0.85) !important;
-                    backdrop-filter: blur(16px) !important;
-                    -webkit-backdrop-filter: blur(16px) !important;
-                    border: 1px solid rgba(226, 232, 240, 0.8) !important;
-                    border-radius: 16px !important;
-                    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0,0,0,0.04) !important;
-                    padding: 4px !important;
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-                }
-
-                .tlui-layout__top__left .tlui-button-grid:hover,
-                .tlui-layout__top__left .tlui-menu-zone:hover {
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0,0,0,0.04) !important;
-                    background: rgba(255, 255, 255, 0.95) !important;
-                }
-
-                .tlui-layout__top__left .tlui-button {
-                    border-radius: 10px !important;
-                    transition: all 0.2s !important;
-                }
-
-                .tlui-layout__top__left .tlui-button:hover {
-                    background-color: rgba(59, 130, 246, 0.08) !important;
-                    color: #2563eb !important;
-                }
-                
-                /* Make the dropdown menu page indicator look cleaner */
-                .tlui-navigation-zone {
-                    gap: 8px !important;
-                }
-                
-                /* Custom animations for our UI */
-                @keyframes slideDown {
-                    from { transform: translateY(-20px); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-            `}</style>
-
             {/* Tegneområde */}
-            <div style={{ position: 'absolute', inset: 0 }}>
+            <div ref={containerRef} style={{ position: 'absolute', inset: 0 }}>
+                <canvas
+                    ref={canvasRef}
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseOut={stopDrawing}
+                    onTouchStart={startDrawing}
+                    onTouchMove={draw}
+                    onTouchEnd={stopDrawing}
+                    style={{ touchAction: 'none', cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}
+                />
                 
+                {isLoading && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)' }}>
+                        <div style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }} />
+                        <span style={{ fontWeight: 600, color: '#475569', fontSize: '1.1rem' }}>Indlæser skitse...</span>
+                    </div>
+                )}
+
                 {/* Floating Modern Header */}
-                <div style={{ 
+                <div style={{
                     position: 'absolute',
-                    top: '20px',
+                    top: '24px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    background: 'rgba(255, 255, 255, 0.85)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    padding: '8px 12px 8px 16px',
+                    zIndex: 10000,
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
                     borderRadius: '16px',
-                    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0,0,0,0.05)',
-                    border: '1px solid rgba(255,255,255,0.4)',
-                    zIndex: 10,
-                    width: 'auto',
-                    minWidth: '600px',
-                    animation: 'slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '8px 12px',
+                    gap: '12px',
+                    border: '1px solid rgba(226, 232, 240, 0.8)',
+                    fontFamily: 'Inter, sans-serif'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <button 
-                            onClick={onClose}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '8px 12px', borderRadius: '10px', transition: 'all 0.2s', fontWeight: 600 }}
-                            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)'; e.currentTarget.style.color = '#0f172a'; }}
-                            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
-                        >
-                            <ChevronLeft size={18} strokeWidth={2.5} />
-                            <span>Tilbage</span>
-                        </button>
-                        
-                        <div style={{ width: '1px', height: '24px', backgroundColor: '#e2e8f0' }}></div>
-                        
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                            <input 
-                                type="text" 
-                                value={drawingName}
-                                onChange={(e) => setDrawingName(e.target.value)}
-                                placeholder="Navngiv din skitse..."
-                                style={{
-                                    background: 'transparent',
-                                    border: '1px solid transparent',
-                                    color: '#0f172a',
-                                    fontSize: '1.15rem',
-                                    fontWeight: 700,
-                                    padding: '8px 36px 8px 12px',
-                                    borderRadius: '10px',
-                                    outline: 'none',
-                                    width: '300px',
-                                    transition: 'all 0.2s',
-                                }}
-                                onFocus={(e) => { e.target.style.background = 'rgba(59, 130, 246, 0.05)'; e.target.style.color = '#2563eb'; }}
-                                onBlur={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#0f172a'; }}
-                            />
-                            <div style={{ position: 'absolute', right: '12px', pointerEvents: 'none', color: '#94a3b8' }}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-                                </svg>
-                            </div>
-                        </div>
-                </div>
-                
-                <div style={{ display: 'flex', gap: '8px' }}>
                     <button 
-                        onClick={handleMakeOfficial}
-                        disabled={isSaving || isExporting}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            background: 'white',
-                            color: '#0ea5e9',
-                            border: '1px solid #0ea5e9',
-                            padding: '10px 20px',
-                            borderRadius: '10px',
-                            fontWeight: 600,
-                            fontSize: '0.95rem',
-                            cursor: (isSaving || isExporting) ? 'not-allowed' : 'pointer',
-                            opacity: (isSaving || isExporting) ? 0.7 : 1,
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseOver={(e) => { if (!isSaving && !isExporting) { e.currentTarget.style.background = '#f0f9ff'; } }}
-                        onMouseOut={(e) => { if (!isSaving && !isExporting) { e.currentTarget.style.background = 'white'; } }}
+                        onClick={onClose}
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 12px', borderRadius: '10px', color: '#64748b', fontSize: '0.9rem', fontWeight: 500, transition: 'all 0.2s', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
                     >
-                        <FileImage size={18} />
-                        {isExporting ? 'Udgiver...' : 'Gør Officiel'}
+                        <ChevronLeft size={16} />
+                        Tilbage
+                    </button>
+                    
+                    <div style={{ width: '1px', height: '24px', backgroundColor: '#e2e8f0' }} />
+                    
+                    <input 
+                        type="text" 
+                        value={drawingName}
+                        onChange={(e) => setDrawingName(e.target.value)}
+                        placeholder="Navngiv skitse..."
+                        style={{ border: 'none', background: 'transparent', fontSize: '1rem', fontWeight: 600, color: '#0f172a', padding: '4px 8px', width: '200px', outline: 'none' }}
+                    />
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {COLORS.map(c => (
+                            <button
+                                key={c}
+                                onClick={() => { setTool('pen'); setColor(c); }}
+                                style={{
+                                    width: '24px', height: '24px', borderRadius: '50%', backgroundColor: c, border: color === c && tool === 'pen' ? '3px solid #cbd5e1' : 'none', cursor: 'pointer', transition: 'all 0.2s', transform: color === c && tool === 'pen' ? 'scale(1.1)' : 'scale(1)'
+                                }}
+                            />
+                        ))}
+                    </div>
+
+                    <div style={{ width: '1px', height: '24px', backgroundColor: '#e2e8f0' }} />
+
+                    <button
+                        onClick={() => setTool(tool === 'eraser' ? 'pen' : 'eraser')}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '8px', backgroundColor: tool === 'eraser' ? '#eff6ff' : 'transparent', color: tool === 'eraser' ? '#3b82f6' : '#64748b', border: 'none', cursor: 'pointer' }}
+                        title="Viskelæder"
+                    >
+                        <Eraser size={18} />
                     </button>
 
+                    <button
+                        onClick={handleUndo}
+                        disabled={paths.length === 0}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '8px', backgroundColor: 'transparent', color: paths.length === 0 ? '#cbd5e1' : '#64748b', border: 'none', cursor: paths.length === 0 ? 'default' : 'pointer' }}
+                        title="Fortryd (Undo)"
+                    >
+                        <Undo size={18} />
+                    </button>
+                    
+                    <div style={{ width: '1px', height: '24px', backgroundColor: '#e2e8f0' }} />
+                    
                     <button 
                         onClick={handleSave}
-                        disabled={isSaving || isExporting}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                            color: 'white',
-                            border: 'none',
-                            padding: '10px 24px',
-                            borderRadius: '10px',
-                            fontWeight: 600,
-                            fontSize: '0.95rem',
-                            cursor: (isSaving || isExporting) ? 'not-allowed' : 'pointer',
-                            opacity: (isSaving || isExporting) ? 0.7 : 1,
-                            transition: 'all 0.2s',
-                            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)'
-                        }}
-                        onMouseOver={(e) => { if (!isSaving && !isExporting) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(15, 23, 42, 0.3)'; } }}
-                        onMouseOut={(e) => { if (!isSaving && !isExporting) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.2)'; } }}
+                        disabled={isSaving}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', fontSize: '0.9rem', fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)', opacity: isSaving ? 0.7 : 1 }}
                     >
-                        <Save size={18} />
+                        <Save size={16} />
                         {isSaving ? 'Gemmer...' : 'Gem Skitse'}
                     </button>
                 </div>
-                </div>
-                
-                {/* Custom Watermark */}
+
+                {/* Bison Frame Watermark */}
                 <div style={{
                     position: 'absolute',
-                    bottom: '16px',
+                    bottom: '24px',
                     right: '24px',
-                    zIndex: 10,
+                    zIndex: 10000,
                     pointerEvents: 'none',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    background: 'rgba(255, 255, 255, 0.8)',
-                    backdropFilter: 'blur(8px)',
-                    padding: '8px 16px',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    padding: '8px 12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    backdropFilter: 'blur(4px)',
                     borderRadius: '20px',
                     boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
                     border: '1px solid rgba(226, 232, 240, 0.8)',
@@ -517,92 +355,6 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#64748b' }}>Tegnet med</span>
                     <span style={{ fontWeight: 800, fontSize: '0.85rem', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Bison Frame</span>
                 </div>
-
-                {/* Word-style Rotation Handle Overlay */}
-                <div 
-                    ref={rotateHandleRef}
-                    onPointerDown={handleRotationPointerDown}
-                    style={{
-                        position: 'absolute',
-                        display: 'none',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 99999,
-                        cursor: 'grab',
-                        transformOrigin: 'center center' // Important for exact rotation
-                    }}
-                >
-                    {/* The connecting line */}
-                    <div style={{ width: '1.5px', height: '24px', backgroundColor: '#3b82f6', marginBottom: '-2px', zIndex: 1 }} />
-                    {/* The handle circle */}
-                    <div style={{ 
-                        width: '24px', 
-                        height: '24px', 
-                        borderRadius: '50%', 
-                        backgroundColor: 'white', 
-                        border: '2px solid #3b82f6',
-                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 2,
-                        transition: 'transform 0.1s'
-                    }}
-                    onMouseOver={e => e.currentTarget.style.transform = 'scale(1.15)'}
-                    onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-                    >
-                        {/* A tiny rotate icon inside */}
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.44-5.44"/>
-                        </svg>
-                    </div>
-                </div>
-
-                {/* Snap Guidelines (Streger) */}
-                {snapLines && editor && (
-                    <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        pointerEvents: 'none',
-                        zIndex: 99998,
-                        overflow: 'hidden'
-                    }}>
-                        {/* Vertical Snap Line */}
-                        <div style={{
-                            position: 'absolute',
-                            left: `${editor.pageToViewport(snapLines.centerPage).x}px`,
-                            top: 0,
-                            bottom: 0,
-                            width: '1.5px',
-                            backgroundColor: '#3b82f6',
-                            opacity: 0.5,
-                            transform: 'translateX(-50%)'
-                        }} />
-                        {/* Horizontal Snap Line */}
-                        <div style={{
-                            position: 'absolute',
-                            top: `${editor.pageToViewport(snapLines.centerPage).y}px`,
-                            left: 0,
-                            right: 0,
-                            height: '1.5px',
-                            backgroundColor: '#3b82f6',
-                            opacity: 0.5,
-                            transform: 'translateY(-50%)'
-                        }} />
-                    </div>
-                )}
-
-                <DrawingErrorBoundary>
-                    <Tldraw onMount={handleMount} />
-                </DrawingErrorBoundary>
-                
-                {isLoading && (
-                    <div style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)' }}>
-                        <div style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }} />
-                        <span style={{ fontWeight: 600, color: '#475569', fontSize: '1.1rem' }}>Indlæser skitse...</span>
-                    </div>
-                )}
             </div>
         </div>
     );
