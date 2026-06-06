@@ -862,22 +862,28 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             if (d.disposal && d.disposal.startsWith('Ja') && d.oldFloorType) {
                 let disposalHours = 0.2; // default
+                let isHeavy = false;
                 if (d.oldFloorType.includes('Gulvtæppe') || d.oldFloorType.includes('Linoleum')) {
                     disposalHours = 0.3; // Fuldlimet tæppe/linoleum tager længere tid at skrabe/afmontere
                     bArr.push(`Tillæg: Fjernelse og afskrabning af fuldlimet gulvtæppe/linoleum/vinyl`);
                 } else if (d.oldFloorType.includes('Trægulv')) {
                     disposalHours = 0.25;
                     bArr.push(`Tillæg: Nedbrydning af eksisterende trægulv/parket/laminat`);
+                } else if (d.oldFloorType.includes('Klinker') || d.oldFloorType.includes('Fliser') || d.oldFloorType.includes('Beton')) {
+                    disposalHours = 0.8; // Tungt gulv tager meget lang tid at bryde op
+                    isHeavy = true;
+                    bArr.push(`Tillæg: Tung nedbrydning af eksisterende klinker/fliser/beton`);
                 }
                 laborHours += numericAmount * disposalHours;
 
                 // SOP #2: Usynlige Omkostninger (Containerleje/bortskaffelse)
                 if (!userSuppliesMaterials && d.disposal.toLowerCase().includes('bortskaffe')) {
-                    let disposalFeePerM2 = indexCat['Bortskaffelse af gulv (pr m2)'] || 50;
+                    let disposalFeeKey = isHeavy ? 'Bortskaffelse af tungt gulv (pr m2)' : 'Bortskaffelse af gulv (pr m2)';
+                    let disposalFeePerM2 = indexCat[disposalFeeKey] || (isHeavy ? 120 : 50);
                     const floorDisposalFee = numericAmount * disposalFeePerM2;
                     materialCost += floorDisposalFee; // Ingen markup på affaldsgebyr
                     externalLeaseCost += floorDisposalFee;
-                    bArr.push(`Miljøtillæg: Containerleje og affaldsgebyrer for bortskaffelse af eksisterende gulv (Uden avance)`);
+                    bArr.push(`Miljøtillæg: Containerleje og affaldsgebyrer for bortskaffelse af eksisterende ${isHeavy ? 'tungt ' : ''}gulv (Uden avance)`);
                 }
             }
 
@@ -1040,19 +1046,49 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             }
 
             if (d.elevation !== 'Tagterrasse') {
-                laborHours += numericAmount * (formula.groundFoundationHours || 0.8);
-                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Punktfundament og støbemix (pr m2 overslag)'] || 150) * dbSettings.material_markup;
-                bArr.push(`Standard tillæg: Etablering af bærende underlag (Udgravning, dug, stabilisering og opklodsning/punktfundament)`);
+                let scaleFactor = 1.0;
+                if (d.material === 'Komposit (vedligeholdelsesfrit biomateriale)') {
+                    scaleFactor = 1.4; // Komposit kræver max 40 cm strøafstand, dvs. 40% mere underkonstruktion
+                }
+                laborHours += numericAmount * (formula.groundFoundationHours || 0.8) * scaleFactor;
+                
+                // Ukrudtsdug og pløkker
+                laborHours += numericAmount * (formula.weedMembraneHours || 0.1);
+                
+                if (!userSuppliesMaterials) {
+                    materialCost += numericAmount * (indexCat['Punktfundament og støbemix (pr m2 overslag)'] || 150) * scaleFactor * dbSettings.material_markup;
+                    materialCost += numericAmount * (indexCat['Ukrudtsdug inkl. pløkker (pr m2)'] || 25) * dbSettings.material_markup;
+                }
+                
+                // Maskinleje pælebor hvis over 10 m2
+                if (numericAmount > 10 && !userSuppliesMaterials) {
+                    const augerPrice = indexCat['Leje af motoriseret pælebor'] || 600;
+                    materialCost += augerPrice * (dbSettings.equipment_markup || 1.05);
+                    externalLeaseCost += augerPrice;
+                    bArr.push(`Tillæg: Maskinleje af motoriseret pælebor til punktfundamenter`);
+                }
+                
+                let kompositText = scaleFactor > 1.0 ? ' (Skaleret +40% pga. komposit strø-krav)' : '';
+                bArr.push(`Standard tillæg: Etablering af bærende underlag (Udgravning, ukrudtsdug, stabilisering og opklodsning/punktfundament)${kompositText}`);
             }
+
+            // Dækbrædder / Kant-finish (SOP #1: Orphan Check)
+            const perimeterMeters = Math.round(Math.sqrt(numericAmount) * 3.5);
+            laborHours += perimeterMeters * (formula.fasciaHoursPerMeter || 0.4);
+            if (!userSuppliesMaterials) {
+                materialCost += perimeterMeters * (indexCat['Dækbrædder / Kant-finish (pr løbende meter)'] || 150) * dbSettings.material_markup;
+            }
+            bArr.push(`Standard tillæg: Afsluttende kant-finish og dækbrædder (estimeret ${perimeterMeters} løbende meter)`);
 
             if (d.material === 'Hardwood / Hårdttræ') {
                 laborHours += initialInstallHours * 0.5; // +50% ekstra tid pga. forboring og undersænkning af hver skrue
                 bArr.push(`Tillæg: Forøget tidsforbrug til Hardwood/Hårdttræ (krav om forboring og undersænkning af hver skrue) (+50%)`);
             }
-            if (d.fastening && d.fastening.startsWith('Skjult montering')) {
+            if ((d.fastening && d.fastening.startsWith('Skjult montering')) || d.material === 'Komposit (vedligeholdelsesfrit biomateriale)') {
                 laborHours += numericAmount * (formula.hiddenFasteningHours || 0.3);
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Beslag til skjult montering (pr m2 overslag)'] || 120) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Skjult montering (kræver specialbeslag/propper og tager længere tid pr. bræt)`);
+                let reason = d.material === 'Komposit (vedligeholdelsesfrit biomateriale)' ? 'Obligatorisk for komposit' : 'Valgt af kunde';
+                bArr.push(`Tillæg: Skjult montering (${reason}: kræver specialbeslag/clips og tager længere tid pr. bræt)`);
             }
 
             if (d.railing && d.railing.startsWith('Ja') && d.railingMeters) {
@@ -1112,7 +1148,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (d.floors === '1-plan (Stueplan)') {
                 scaffoldCost += roofGrundplanM2 * (indexCat['Kant-sikring / Rullestillads 1-plan (pr m2 grundplan)'] || 45);
             } else if (d.floors === '1½-plan / 2-plan / Mere') {
-                scaffoldCost += roofGrundplanM2 * (indexCat['Stilladsleje 1½-plan/2-plan (pr m2 grundplan)'] || 150); 
+                if (d.oldRoofType && d.oldRoofType.includes('asbest')) {
+                    scaffoldCost += roofGrundplanM2 * (indexCat['Totaloverdækning (pr m2 grundplan)'] || 400);
+                    bArr.push(`OBS: Totaloverdækning er medregnet frem for standard stillads pga. asbestsanering kombineret med efterisolering.`);
+                } else {
+                    scaffoldCost += roofGrundplanM2 * (indexCat['Stilladsleje 1½-plan/2-plan (pr m2 grundplan)'] || 150); 
+                }
                 laborHours += initialInstallHours * 0.3; // Changed to additive
             }
             if (d.roofPitch === 'Høj rejsning / Normal hældning') {
@@ -1136,11 +1177,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 // Så vi skal KUN håndtere de materielle miljø-udgifter (deponi/container) her, UDEN markup.
                 if ((d.oldRoofType.includes('asbest') || d.oldRoofType.includes('vides ikke')) && !d.oldRoofType.includes('fri')) {
                     if (!userSuppliesMaterials) {
+                        // Vi tilføjer administration og sikkerhed til materialCost
                         const asbestCost = numericAmount * (indexCat['Miljødeponi asbest (pr m2)'] || 150);
-                        materialCost += asbestCost;
+                        materialCost += asbestCost * (dbSettings.material_markup || 1.15); // Nu med markup pga. sikkerhedsrisiko/admin
                         externalLeaseCost += asbestCost;
                     }
-                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af potentielt asbestholdigt tag (Uden avance)`);
+                    bArr.push(`Miljøtillæg: Sikker nedtagning og specialdeponi af potentielt asbestholdigt tag (Sikkerheds/admin avance inkluderet)`);
                 } else if (d.oldRoofType === 'Stråtag (tækket tag)') {
                     if (!userSuppliesMaterials) {
                         const straaCost = numericAmount * (indexCat['Bortskaffelse af stråtag (ekstra volumen pr m2)'] || 200);
@@ -1164,8 +1206,13 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             // Obligatorisk udskiftning af stern og udhæng (SOP)
             laborHours += estimatedSternMeters * (formula.eavesHoursPerMeter || 0.4);
+            // Tilføj arbejdstid til udhængsbrædder/underbeklædning
+            laborHours += estimatedSternMeters * (formula.eavesSoffitHoursPerMeter || 0.5);
+            
             if (!userSuppliesMaterials) {
                 materialCost += estimatedSternMeters * (indexCat['Stern træværk (pr løbende meter)'] || 150) * dbSettings.material_markup;
+                // SOP: Underbeklædning mangler tit i beregning
+                materialCost += estimatedSternMeters * (indexCat['Underbeklædning træ (pr løbende meter)'] || 120) * dbSettings.material_markup;
                 
                 // Materialevalg for stern
                 const eavesMat = d.eavesMaterial || 'Træ';
@@ -1177,10 +1224,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                         bArr.push(`Tillæg: Stern og vindskede udført i premium ${eavesMat.toLowerCase()} (+${extraEavesPrice} kr/m, estimeret ${estimatedSternMeters} m)`);
                     }
                 } else {
-                    bArr.push(`Standard: Udskiftning af stern/udhæng i standard fyrretræ (estimeret ${estimatedSternMeters} løbende meter omkreds)`);
+                    bArr.push(`Standard: Udskiftning af stern og udhængsbrædder (underbeklædning) i træ (estimeret ${estimatedSternMeters} løbende meter omkreds)`);
                 }
             } else {
-                bArr.push(`Standard: Udskiftning af stern/udhæng (estimeret ${estimatedSternMeters} løbende meter omkreds)`);
+                bArr.push(`Standard: Udskiftning af stern og udhængsbrædder (underbeklædning) (estimeret ${estimatedSternMeters} løbende meter omkreds)`);
             }
 
             // Gavlsider (Træbeklædning) er nu altid inkluderet som standard ved saddeltag (SOP)
@@ -1239,8 +1286,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             // Obligatorisk efterisolering (SOP)
             laborHours += numericAmount * (formula.insulationHours || 0.4);
-            if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Efterisolering af tag (pr m2)'] || 120) * dbSettings.material_markup;
-            bArr.push(`Standard: 200mm efterisolering af tagfladen er obligatorisk inkluderet.`);
+            if (!userSuppliesMaterials) {
+                materialCost += numericAmount * (indexCat['Efterisolering af tag (pr m2)'] || 120) * dbSettings.material_markup;
+                // Vindplader ved tagfoden er lovkrav ved efterisolering
+                materialCost += estimatedSternMeters * (indexCat['Vindplader/Vindledere (pr løbende meter)'] || 80) * dbSettings.material_markup;
+            }
+            bArr.push(`Standard: 200mm efterisolering af tagfladen inkl. vindplader/vindledere ude ved tagfoden.`);
 
             if (d.extensions === 'Ja') {
                 const extAmount = parseInt(d.extensionsAmount) || 1;

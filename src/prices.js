@@ -43,9 +43,12 @@ export const MATERIAL_INDEX = {
         'Kant-sikring / Rullestillads 1-plan (pr m2 grundplan)': 45,
         'Stilladsleje 1½-plan/2-plan (pr m2 grundplan)': 150,
         'Stilladsleje høj rejsning (pr m2 grundplan)': 100,
+        'Totaloverdækning (pr m2 grundplan)': 400,
         'Miljødeponi asbest (pr m2)': 150,
         'Bortskaffelse af stråtag (ekstra volumen pr m2)': 200,
         'Efterisolering af tag (pr m2)': 120,
+        'Underbeklædning træ (pr løbende meter)': 120,
+        'Vindplader/Vindledere (pr løbende meter)': 80,
         'Gavlbeklædning i træ (pr m2 gavl)': 500,
         'Montagematerialer (Skruer, fugleklodser, rygning) pr m2': 75,
         'Kvist (Inddækning og montering pr stk)': 12000,
@@ -141,6 +144,9 @@ export const MATERIAL_INDEX = {
         'Rækværk/Gelænder glas (pr løbende meter)': 1200,      // glaspaneler + stål/træstolper
         'Rækværk/Gelænder stål (pr løbende meter)': 1000,      // stålwire eller stålrør
         'Rækværk/Gelænder træ og stål (pr løbende meter)': 850, // kombination
+        'Dækbrædder / Kant-finish (pr løbende meter)': 150,
+        'Ukrudtsdug inkl. pløkker (pr m2)': 25,
+        'Leje af motoriseret pælebor': 600,
         'Manuel markise (materialer)': 5000,
         'Elektrisk markise (materialer)': 12000,
         'Beslag til skjult montering (pr m2 overslag)': 120,
@@ -283,8 +289,8 @@ export const WORK_FORMULAS = {
             'Skiffer (hårdt materiale)': 0.30,
             'Skiffer (blødt materiale)': 0.30,
             'Tagplader (eternit asbest fri)': 0.25,
-            'Tagplader (asbest)': 0.50, // Kræver asbestdragter, maske og specialhåndtering
-            'Tagplader vides ikke': 0.50, // Hvis asbest-status er ukendt, skal der kalkuleres med forholdsregler!
+            'Tagplader (asbest)': 0.70, // Kræver asbestdragter, maske, sluser og specialhåndtering
+            'Tagplader vides ikke': 0.70, // Hvis asbest-status er ukendt, skal der kalkuleres med forholdsregler!
             'Stråtag (tækket tag)': 0.50,  // Strå er tungt + halmsupport
             'Metal-tag (zink, stål, kobber)': 0.20
         },
@@ -298,7 +304,8 @@ export const WORK_FORMULAS = {
         insulationHours: 0.4, // Timer pr m2 efterisolering
         trailerAccessHours: 0.15, // Ekstra bæretid pr m2 ved utilgængelig container
         containerThreshold: 150, // M2 pr container (var 0, hvilket udløste Infinity og altid gav max 5 containere!)
-        roofWindowNewHours: 14.0 // Timer pr. nyt etableret tagvindue (inkl. spærudveksling)
+        roofWindowNewHours: 18.0, // Timer pr. nyt etableret tagvindue (inkl. udvidet spærudveksling og dampspærrekrave)
+        eavesSoffitHoursPerMeter: 0.5 // Tid til underbeklædning/udhængsbrædder
     },
     windows: {
         hoursPerUnit: 3.5, // Timer pr. facadevindue (inkl. standard isolering og montering)
@@ -334,6 +341,8 @@ export const WORK_FORMULAS = {
         elevatedHours: 0.6, // Ekstra tid pr m2 til opbygning af stor underkonstruktion pga. højde
         hiddenFasteningHours: 0.3, // Ekstra tid pr m2 til skjulte beslag/propper
         railingHoursPerMeter: 1.2, // Timer pr løbende meter rækværk
+        fasciaHoursPerMeter: 0.4, // Kant-finish og dækbrædder pr løbende meter
+        weedMembraneHours: 0.1, // Udlægning af ukrudtsdug pr m2
         containerThreshold: 30 // M2 pr container (var 15, hvilket gav astronomiske gebyrer på mellemstore terrasser)
     },
     kitchen: {
