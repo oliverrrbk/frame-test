@@ -128,15 +128,26 @@ const DrawingsGallery = ({ leadId = null }) => {
 
         try {
             toast.loading("Genererer PDF...", { id: "pdf_gen" });
-            const svgString = drawing.document_data.thumbnail_svg;
+            let svgString = drawing.document_data.thumbnail_svg;
+            
+            // Chrome/Safari nægter at tegne SVGer uden xmlns på et canvas
+            if (!svgString.includes('xmlns=')) {
+                svgString = svgString.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+            }
+            // Hvis viewBox findes men ingen width/height, sæt default så billedet ikke bliver 0x0
+            if (!svgString.includes('width=') && svgString.includes('viewBox=')) {
+                svgString = svgString.replace('<svg ', '<svg width="1920" height="1080" ');
+            }
             
             const img = new Image();
-            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-            const url = URL.createObjectURL(svgBlob);
+            img.crossOrigin = 'anonymous';
+            
+            // Base64 encode for at undgå problemer med specialtegn i blob/data URL'er
+            const url = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
             
             await new Promise((resolve, reject) => {
                 img.onload = resolve;
-                img.onerror = reject;
+                img.onerror = () => reject(new Error("Kunne ikke indlæse tegningen som billede. SVG formatfejl."));
                 img.src = url;
             });
             
@@ -145,27 +156,31 @@ const DrawingsGallery = ({ leadId = null }) => {
             canvas.height = 1080;
             const ctx = canvas.getContext('2d');
             
+            // Hvid baggrund
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-            const x = (canvas.width / 2) - (img.width / 2) * scale;
-            const y = (canvas.height / 2) - (img.height / 2) * scale;
+            const imgW = img.width || 1920;
+            const imgH = img.height || 1080;
+            const scale = Math.min(canvas.width / imgW, canvas.height / imgH);
+            const w = imgW * scale;
+            const h = imgH * scale;
+            const x = (canvas.width / 2) - (w / 2);
+            const y = (canvas.height / 2) - (h / 2);
             
-            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            ctx.drawImage(img, x, y, w, h);
             
-            const pngDataUrl = canvas.toDataURL('image/png');
+            const pngDataUrl = canvas.toDataURL('image/png', 1.0);
             
             const pdf = new jsPDF('l', 'mm', 'a4'); 
-            pdf.addImage(pngDataUrl, 'PNG', 0, 0, 297, 210); 
+            pdf.addImage(pngDataUrl, 'PNG', 0, 0, 297, 210, '', 'FAST'); 
             
             pdf.save(`Skitse_${drawing.name || 'Dokument'}.pdf`);
             toast.success("PDF Downloadet!", { id: "pdf_gen" });
             
-            URL.revokeObjectURL(url);
         } catch (err) {
-            console.error(err);
-            toast.error("Kunne ikke generere PDF.", { id: "pdf_gen" });
+            console.error("PDF Export fejl:", err);
+            toast.error("Kunne ikke generere PDF: " + err.message, { id: "pdf_gen" });
         }
     };
 
