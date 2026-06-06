@@ -42,8 +42,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             };
             loadDrawing();
         } else {
-             // New drawing - clear store just in case
-             editorInstance.store.clear();
+             // New drawing - we don't need to clear the store because tldraw initializes it fresh.
+             // editorInstance.store.clear() breaks tldraw v5 because it removes the page records.
         }
     }, [drawingId]);
 
@@ -104,27 +104,29 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
             {/* Header bar */}
             <div style={{ 
-                height: '60px', 
-                backgroundColor: '#1e293b', 
+                height: '64px', 
+                background: 'linear-gradient(to right, #0f172a, #1e293b)', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'space-between',
-                padding: '0 20px',
+                padding: '0 24px',
                 color: 'white',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0,0,0,0.2)',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                zIndex: 10
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <button 
                         onClick={onClose}
-                        style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '8px', borderRadius: '6px' }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer', padding: '8px 14px', borderRadius: '8px', transition: 'all 0.2s' }}
+                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
                     >
-                        <ChevronLeft size={20} />
-                        <span style={{ fontWeight: 500 }}>Tilbage</span>
+                        <ChevronLeft size={18} />
+                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Tilbage</span>
                     </button>
                     
-                    <div style={{ width: '1px', height: '24px', backgroundColor: '#334155' }}></div>
+                    <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.1)' }}></div>
                     
                     <input 
                         type="text" 
@@ -132,18 +134,20 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         onChange={(e) => setDrawingName(e.target.value)}
                         placeholder="Navngiv din skitse..."
                         style={{
-                            background: 'transparent',
-                            border: '1px solid transparent',
+                            background: 'rgba(0,0,0,0.2)',
+                            border: '1px solid rgba(255,255,255,0.05)',
                             color: 'white',
-                            fontSize: '1.1rem',
+                            fontSize: '1.15rem',
                             fontWeight: 600,
-                            padding: '4px 8px',
-                            borderRadius: '4px',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
                             outline: 'none',
-                            width: '300px'
+                            width: '350px',
+                            transition: 'all 0.2s',
+                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
                         }}
-                        onFocus={(e) => e.target.style.border = '1px solid #475569'}
-                        onBlur={(e) => e.target.style.border = '1px solid transparent'}
+                        onFocus={(e) => { e.target.style.border = '1px solid #3b82f6'; e.target.style.background = 'rgba(0,0,0,0.3)'; }}
+                        onBlur={(e) => { e.target.style.border = '1px solid rgba(255,255,255,0.05)'; e.target.style.background = 'rgba(0,0,0,0.2)'; }}
                     />
                 </div>
                 
@@ -155,16 +159,20 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            backgroundColor: '#3b82f6',
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                             color: 'white',
                             border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '6px',
+                            padding: '10px 20px',
+                            borderRadius: '8px',
                             fontWeight: 600,
+                            fontSize: '1rem',
                             cursor: isSaving ? 'not-allowed' : 'pointer',
                             opacity: isSaving ? 0.7 : 1,
-                            transition: 'background-color 0.2s'
+                            transition: 'all 0.2s',
+                            boxShadow: '0 4px 10px rgba(37, 99, 235, 0.3)'
                         }}
+                        onMouseOver={(e) => { if (!isSaving) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 15px rgba(37, 99, 235, 0.4)'; } }}
+                        onMouseOut={(e) => { if (!isSaving) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.3)'; } }}
                     >
                         <Save size={18} />
                         {isSaving ? 'Gemmer...' : 'Gem Skitse'}
