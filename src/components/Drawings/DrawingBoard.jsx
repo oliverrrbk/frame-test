@@ -280,7 +280,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     };
 
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', width: '100vw', height: '100vh', overflow: 'hidden' }}>
             
             <style>{`
                 /* Hide default tldraw watermark */
@@ -336,7 +336,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             `}</style>
 
             {/* Tegneområde */}
-            <div style={{ flexGrow: 1, position: 'relative', minHeight: 0, width: '100%' }}>
+            <div style={{ position: 'absolute', inset: 0 }}>
                 
                 {/* Floating Modern Header */}
                 <div style={{ 
