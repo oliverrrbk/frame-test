@@ -289,6 +289,40 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     opacity: 0 !important;
                     visibility: hidden !important;
                 }
+
+                /* Modern Gorgeous Styling for Tldraw UI (Top Left / Menus / Tools) */
+                .tlui-layout__top__left .tlui-button-grid,
+                .tlui-layout__top__left .tlui-menu-zone {
+                    background: rgba(255, 255, 255, 0.85) !important;
+                    backdrop-filter: blur(16px) !important;
+                    -webkit-backdrop-filter: blur(16px) !important;
+                    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+                    border-radius: 16px !important;
+                    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0,0,0,0.04) !important;
+                    padding: 4px !important;
+                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                }
+
+                .tlui-layout__top__left .tlui-button-grid:hover,
+                .tlui-layout__top__left .tlui-menu-zone:hover {
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0,0,0,0.04) !important;
+                    background: rgba(255, 255, 255, 0.95) !important;
+                }
+
+                .tlui-layout__top__left .tlui-button {
+                    border-radius: 10px !important;
+                    transition: all 0.2s !important;
+                }
+
+                .tlui-layout__top__left .tlui-button:hover {
+                    background-color: rgba(59, 130, 246, 0.08) !important;
+                    color: #2563eb !important;
+                }
+                
+                /* Make the dropdown menu page indicator look cleaner */
+                .tlui-navigation-zone {
+                    gap: 8px !important;
+                }
                 
                 /* Custom animations for our UI */
                 @keyframes slideDown {
@@ -518,7 +552,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     </div>
                 )}
 
-                <Tldraw onMount={handleMount} persistenceKey={drawingId ? null : 'bison-frame-sketch-draft'} />
+                <Tldraw onMount={handleMount} persistenceKey={null} />
                 
                 {isLoading && (
                     <div style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)' }}>
