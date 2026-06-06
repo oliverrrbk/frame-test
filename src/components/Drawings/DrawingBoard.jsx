@@ -128,27 +128,34 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     
                     <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.1)' }}></div>
                     
-                    <input 
-                        type="text" 
-                        value={drawingName}
-                        onChange={(e) => setDrawingName(e.target.value)}
-                        placeholder="Navngiv din skitse..."
-                        style={{
-                            background: 'rgba(0,0,0,0.2)',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            color: 'white',
-                            fontSize: '1.15rem',
-                            fontWeight: 600,
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            outline: 'none',
-                            width: '350px',
-                            transition: 'all 0.2s',
-                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
-                        }}
-                        onFocus={(e) => { e.target.style.border = '1px solid #3b82f6'; e.target.style.background = 'rgba(0,0,0,0.3)'; }}
-                        onBlur={(e) => { e.target.style.border = '1px solid rgba(255,255,255,0.05)'; e.target.style.background = 'rgba(0,0,0,0.2)'; }}
-                    />
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <input 
+                            type="text" 
+                            value={drawingName}
+                            onChange={(e) => setDrawingName(e.target.value)}
+                            placeholder="Navngiv din skitse..."
+                            style={{
+                                background: 'rgba(0,0,0,0.2)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                color: 'white',
+                                fontSize: '1.15rem',
+                                fontWeight: 600,
+                                padding: '6px 36px 6px 12px',
+                                borderRadius: '8px',
+                                outline: 'none',
+                                width: '350px',
+                                transition: 'all 0.2s',
+                                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                            }}
+                            onFocus={(e) => { e.target.style.border = '1px solid #3b82f6'; e.target.style.background = 'rgba(0,0,0,0.3)'; }}
+                            onBlur={(e) => { e.target.style.border = '1px solid rgba(255,255,255,0.05)'; e.target.style.background = 'rgba(0,0,0,0.2)'; }}
+                        />
+                        <div style={{ position: 'absolute', right: '12px', pointerEvents: 'none', opacity: 0.5 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
                 
                 <div>
@@ -182,12 +189,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             
             {/* The Drawing Area */}
             <div style={{ flex: 1, position: 'relative' }}>
-                {isLoading ? (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
-                        Indlæser skitse...
+                <Tldraw onMount={handleMount} persistenceKey={drawingId ? null : 'bison-frame-sketch-draft'} />
+                
+                {isLoading && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)' }}>
+                        <div style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }} />
+                        <span style={{ fontWeight: 600, color: '#475569', fontSize: '1.1rem' }}>Indlæser skitse...</span>
                     </div>
-                ) : (
-                    <Tldraw onMount={handleMount} persistenceKey={drawingId ? null : 'bison-frame-sketch-draft'} />
                 )}
             </div>
         </div>
