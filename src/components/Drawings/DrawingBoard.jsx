@@ -444,20 +444,34 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
     // Save Logic
     const handleSave = async () => {
-        if (!drawingId || !leadId) return;
+        if (!leadId) return;
         setIsSaving(true);
         const tid = toast.loading('Gemmer skitse...');
         try {
-            const { error } = await supabase
-                .from('drawings')
-                .update({ 
-                    document_data: elements, 
-                    name: drawingName,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', drawingId);
+            if (drawingId && drawingId !== 'new') {
+                const { error } = await supabase
+                    .from('drawings')
+                    .update({ 
+                        document_data: elements, 
+                        name: drawingName,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', drawingId);
+                if (error) throw error;
+            } else {
+                // Generate a very basic SVG thumbnail to avoid crash in gallery if it expects thumbnail_svg
+                const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" style="background-color: #f8fafc;"></svg>`;
+                const { error } = await supabase
+                    .from('drawings')
+                    .insert([{
+                        lead_id: leadId,
+                        name: drawingName,
+                        document_data: elements,
+                        thumbnail_svg: svgContent
+                    }]);
+                if (error) throw error;
+            }
             
-            if (error) throw error;
             toast.success('Skitse gemt!', { id: tid });
             if (onClose) onClose();
         } catch (error) {
