@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Tldraw, getSnapshot, loadSnapshot } from 'tldraw';
+import { Tldraw, getSnapshot } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -34,9 +34,9 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         setDrawingName(data.name || 'Ny Skitse');
                         if (data.document_data) {
                             if (data.document_data.snapshot) {
-                                loadSnapshot(editorInstance.store, data.document_data.snapshot);
+                                editorInstance.store.loadSnapshot(data.document_data.snapshot);
                             } else {
-                                loadSnapshot(editorInstance.store, data.document_data);
+                                editorInstance.store.loadSnapshot(data.document_data);
                             }
                         }
                     }
@@ -280,7 +280,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     };
 
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', overflow: 'hidden' }}>
             
             <style>{`
                 /* Hide default tldraw watermark */
@@ -335,8 +335,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 }
             `}</style>
 
-            {/* The Drawing Area (now takes full screen) */}
-            <div style={{ flex: 1, position: 'relative' }}>
+            {/* Tegneområde */}
+            <div style={{ flexGrow: 1, position: 'relative', minHeight: 0, width: '100%' }}>
                 
                 {/* Floating Modern Header */}
                 <div style={{ 
@@ -552,7 +552,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     </div>
                 )}
 
-                <Tldraw onMount={handleMount} persistenceKey={null} />
+                <Tldraw onMount={handleMount} />
                 
                 {isLoading && (
                     <div style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)' }}>
