@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { PlusSquare, PenTool, Trash2, Calendar, FileText, X } from 'lucide-react';
+import { PlusSquare, PenTool, Trash2, Calendar, FileText, X, FolderOutput, FileDown, Search, Check } from 'lucide-react';
 import DrawingBoard from './DrawingBoard';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
+import { jsPDF } from 'jspdf';
 
 const DrawingsGallery = ({ leadId = null }) => {
     const [drawings, setDrawings] = useState([]);
@@ -13,6 +14,9 @@ const DrawingsGallery = ({ leadId = null }) => {
     const [activeDrawingId, setActiveDrawingId] = useState(null);
     const [isBoardOpen, setIsBoardOpen] = useState(false);
     const [drawingToDelete, setDrawingToDelete] = useState(null);
+    const [allLeads, setAllLeads] = useState([]);
+    const [assigningDrawingId, setAssigningDrawingId] = useState(null);
+    const [leadSearch, setLeadSearch] = useState('');
 
     const fetchDrawings = async () => {
         setIsLoading(true);
@@ -65,6 +69,16 @@ const DrawingsGallery = ({ leadId = null }) => {
 
     useEffect(() => {
         fetchDrawings();
+        
+        // Hent igangværende sager til "Tilknyt Sag" popover
+        const loadLeads = async () => {
+            const { data, error } = await supabase.from('leads').select('id, customer_name, customer_address').order('created_at', { ascending: false });
+            if (error) console.error("Fejl ved hentning af sager:", error);
+            setAllLeads(data || []);
+        };
+        if (!leadId) { // Only needed in generic gallery
+            loadLeads();
+        }
     }, [leadId]);
 
     const handleNewDrawing = () => {
@@ -102,6 +116,77 @@ const DrawingsGallery = ({ leadId = null }) => {
     const handleBoardClose = () => {
         setIsBoardOpen(false);
         fetchDrawings(); // Refresh the list
+    };
+
+    const handleDownloadPdf = async (e, drawing) => {
+        e.stopPropagation();
+        
+        if (!drawing.document_data?.thumbnail_svg) {
+            toast.error("Skitsen har intet billede endnu. Åbn og gem den én gang for at generere et.");
+            return;
+        }
+
+        try {
+            toast.loading("Genererer PDF...", { id: "pdf_gen" });
+            const svgString = drawing.document_data.thumbnail_svg;
+            
+            const img = new Image();
+            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = url;
+            });
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 1920; 
+            canvas.height = 1080;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+            const x = (canvas.width / 2) - (img.width / 2) * scale;
+            const y = (canvas.height / 2) - (img.height / 2) * scale;
+            
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            
+            const pngDataUrl = canvas.toDataURL('image/png');
+            
+            const pdf = new jsPDF('l', 'mm', 'a4'); 
+            pdf.addImage(pngDataUrl, 'PNG', 0, 0, 297, 210); 
+            
+            pdf.save(`Skitse_${drawing.name || 'Dokument'}.pdf`);
+            toast.success("PDF Downloadet!", { id: "pdf_gen" });
+            
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error(err);
+            toast.error("Kunne ikke generere PDF.", { id: "pdf_gen" });
+        }
+    };
+
+    const handleAssignLeadClick = (e, drawingId) => {
+        e.stopPropagation();
+        setAssigningDrawingId(assigningDrawingId === drawingId ? null : drawingId);
+        setLeadSearch('');
+    };
+
+    const assignToLead = async (e, drawingId, newLeadId) => {
+        e.stopPropagation();
+        try {
+            const { error } = await supabase.from('drawings').update({ lead_id: newLeadId }).eq('id', drawingId);
+            if (error) throw error;
+            toast.success("Skitse tilknyttet sag!");
+            setAssigningDrawingId(null);
+            fetchDrawings();
+        } catch (err) {
+            console.error(err);
+            toast.error("Kunne ikke tilknytte sagen.");
+        }
     };
 
     if (isBoardOpen) {
@@ -197,7 +282,7 @@ const DrawingsGallery = ({ leadId = null }) => {
                             onClick={() => handleOpenDrawing(drawing.id)}
                             style={{
                                 backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '16px',
-                                overflow: 'hidden', cursor: 'pointer',
+                                overflow: 'hidden', cursor: 'pointer', position: 'relative',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)',
                                 display: 'flex', flexDirection: 'column'
@@ -291,6 +376,133 @@ const DrawingsGallery = ({ leadId = null }) => {
                                         <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {drawing.profile.owner_name || drawing.profile.email}
                                         </span>
+                                    </div>
+                                )}
+
+                                {/* Actions Bar - Gorgeous 2026 Style */}
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }} onClick={e => e.stopPropagation()}>
+                                    <button 
+                                        onClick={(e) => handleAssignLeadClick(e, drawing.id)}
+                                        style={{ 
+                                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', 
+                                            background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)', 
+                                            border: '1px solid #e2e8f0', padding: '10px', borderRadius: '12px', 
+                                            color: '#334155', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', 
+                                            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                                            boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                                        }}
+                                        onMouseOver={e => { 
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                            e.currentTarget.style.boxShadow = '0 8px 16px rgba(37, 99, 235, 0.08)'; 
+                                            e.currentTarget.style.borderColor = '#bfdbfe'; 
+                                            e.currentTarget.style.color = '#2563eb'; 
+                                        }}
+                                        onMouseOut={e => { 
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)'; 
+                                            e.currentTarget.style.borderColor = '#e2e8f0'; 
+                                            e.currentTarget.style.color = '#334155'; 
+                                        }}
+                                    >
+                                        <FolderOutput size={16} />
+                                        Tilknyt Sag
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={(e) => handleDownloadPdf(e, drawing)}
+                                        style={{ 
+                                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', 
+                                            background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)', 
+                                            border: '1px solid #e2e8f0', padding: '10px', borderRadius: '12px', 
+                                            color: '#334155', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', 
+                                            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                                            boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                                        }}
+                                        onMouseOver={e => { 
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                            e.currentTarget.style.boxShadow = '0 8px 16px rgba(37, 99, 235, 0.08)'; 
+                                            e.currentTarget.style.borderColor = '#bfdbfe'; 
+                                            e.currentTarget.style.color = '#2563eb'; 
+                                        }}
+                                        onMouseOut={e => { 
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)'; 
+                                            e.currentTarget.style.borderColor = '#e2e8f0'; 
+                                            e.currentTarget.style.color = '#334155'; 
+                                        }}
+                                    >
+                                        <FileDown size={16} />
+                                        Hent PDF
+                                    </button>
+                                </div>
+
+                                {/* Assign Popover */}
+                                {assigningDrawingId === drawing.id && (
+                                    <div style={{
+                                        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                                        background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                                        borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)', border: '1px solid rgba(226,232,240,0.8)',
+                                        padding: '16px', zIndex: 20, width: '90%', maxWidth: '300px',
+                                        display: 'flex', flexDirection: 'column', gap: '12px'
+                                    }} onClick={e => e.stopPropagation()}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <h5 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>Vælg Sag</h5>
+                                            <button onClick={(e) => { e.stopPropagation(); setAssigningDrawingId(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+                                        
+                                        <div style={{ position: 'relative' }}>
+                                            <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: '#94a3b8' }} />
+                                            <input 
+                                                type="text" 
+                                                placeholder="Søg sagsnr eller navn..." 
+                                                value={leadSearch}
+                                                onChange={e => setLeadSearch(e.target.value)}
+                                                style={{ width: '100%', padding: '8px 12px 8px 30px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.9rem', outline: 'none' }}
+                                            />
+                                        </div>
+
+                                        <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
+                                            <button 
+                                                onClick={(e) => assignToLead(e, drawing.id, null)}
+                                                style={{ padding: '10px 12px', textAlign: 'left', background: 'transparent', border: '1px solid transparent', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem', color: '#ef4444', fontWeight: 600, transition: 'all 0.2s' }}
+                                                onMouseOver={e => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.borderColor = '#fca5a5'; }}
+                                                onMouseOut={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+                                            >
+                                                Fjern fra sag (Ingen sag)
+                                            </button>
+                                            
+                                            {allLeads.filter(l => !leadSearch || String(l.id).includes(leadSearch) || l.customer_name?.toLowerCase().includes(leadSearch.toLowerCase()) || l.customer_address?.toLowerCase().includes(leadSearch.toLowerCase())).map(lead => (
+                                                <button
+                                                    key={lead.id}
+                                                    onClick={(e) => assignToLead(e, drawing.id, lead.id)}
+                                                    style={{ 
+                                                        padding: '12px', textAlign: 'left', 
+                                                        background: drawing.lead_id === lead.id ? '#eff6ff' : '#f8fafc', 
+                                                        border: `1px solid ${drawing.lead_id === lead.id ? '#93c5fd' : '#e2e8f0'}`, 
+                                                        borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseOver={e => { 
+                                                        e.currentTarget.style.backgroundColor = '#eff6ff'; 
+                                                        e.currentTarget.style.borderColor = '#bfdbfe';
+                                                        e.currentTarget.style.transform = 'translateY(-1px)';
+                                                    }}
+                                                    onMouseOut={e => { 
+                                                        e.currentTarget.style.backgroundColor = drawing.lead_id === lead.id ? '#eff6ff' : '#f8fafc'; 
+                                                        e.currentTarget.style.borderColor = drawing.lead_id === lead.id ? '#93c5fd' : '#e2e8f0';
+                                                        e.currentTarget.style.transform = 'translateY(0)';
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                        Sag: {String(lead.id).substring(0,8)}
+                                                        {drawing.lead_id === lead.id && <Check size={16} color="#2563eb" strokeWidth={3} />}
+                                                    </span>
+                                                    <span style={{ fontSize: '0.85rem', color: '#475569' }}>{lead.customer_name || lead.customer_address || 'Ukendt kunde'}</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
