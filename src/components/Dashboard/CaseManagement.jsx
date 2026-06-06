@@ -1646,7 +1646,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     
                     {/* CASE WORKSPACE TABS */}
                                         {/* MODERN HORIZONTAL TABS (2026 DESIGN) */}
-                    <div className="case-workspace-tabs modern-tab-scroll" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingTop: '4px', paddingBottom: '8px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none', marginBottom: '16px', marginTop: '24px' }}>
+                    <div className="case-workspace-tabs modern-tab-scroll" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', paddingTop: '4px', paddingBottom: '8px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none', marginBottom: '16px', marginTop: '24px' }}>
                         <style>{`
                             .modern-tab-scroll::-webkit-scrollbar { display: none; }
                         `}</style>
@@ -1657,7 +1657,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             { id: 'timesheet', label: 'Timeregistrering', icon: <Clock size={18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
                             { id: 'invoices', label: 'Bilag', icon: <Receipt size={18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
                             { id: 'extra-work', label: 'Aftalesedler', icon: <PenTool size={18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' },
-                            { id: 'drawings', label: 'Tegninger & Skitser', icon: <FileImage size={18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: true }
+                            { id: 'drawings', label: 'Tegninger', icon: <FileImage size={18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: true }
                         ].filter(tab => tab.show).map(tab => {
                             const isActive = activeSubTab === tab.id;
                             return (
@@ -1668,17 +1668,19 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         display: 'flex', 
                                         alignItems: 'center', 
                                         gap: '8px', 
-                                        padding: '12px 20px', 
+                                        padding: '10px 16px', 
                                         border: isActive ? `1px solid ${tab.activeColor}` : '1px solid #e2e8f0', 
                                         background: isActive ? tab.activeBg : '#ffffff', 
                                         borderRadius: '30px',
-                                        fontSize: '0.9rem', 
+                                        fontSize: '0.85rem', 
                                         fontWeight: '600', 
                                         cursor: 'pointer', 
                                         color: isActive ? tab.activeColor : '#64748b',
                                         boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
                                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        whiteSpace: 'nowrap'
+                                        whiteSpace: 'nowrap',
+                                        flex: '1 1 auto',
+                                        justifyContent: 'center'
                                     }}
                                     onMouseEnter={(e) => {
                                         if (!isActive) {

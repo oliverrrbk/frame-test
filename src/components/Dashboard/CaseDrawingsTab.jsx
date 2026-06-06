@@ -11,6 +11,9 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
     
+    // For Sletning
+    const [drawingToDelete, setDrawingToDelete] = useState(null);
+    
     // For DrawingBoard
     const [activeDrawingId, setActiveDrawingId] = useState(null);
     const [isBoardOpen, setIsBoardOpen] = useState(false);
@@ -58,22 +61,26 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
         fetchDrawings();
     };
 
-    const handleDelete = async (e, id, type, document_data) => {
+    const triggerDelete = (e, d) => {
         e.stopPropagation();
-        if (!window.confirm("Er du sikker på, at du vil slette denne tegning?")) return;
+        setDrawingToDelete(d);
+    };
+
+    const confirmDelete = async () => {
+        if (!drawingToDelete) return;
         
         try {
             // Slet selve filen fra storage, hvis det er en upload
-            if (type === 'upload' && document_data?.filename) {
+            if (drawingToDelete.type === 'upload' && drawingToDelete.document_data?.filename) {
                 // Filnavnet er gemt i DB
                 const { error: storageError } = await supabase.storage
                     .from('uploads')
-                    .remove([document_data.filename]);
+                    .remove([drawingToDelete.document_data.filename]);
                 if (storageError) console.error("Kunne ikke slette filen i storage:", storageError);
             }
 
             // Slet fra databasen
-            const { error } = await supabase.from('drawings').delete().eq('id', id);
+            const { error } = await supabase.from('drawings').delete().eq('id', drawingToDelete.id);
             if (error) throw error;
             
             toast.success("Tegning slettet!");
@@ -81,6 +88,8 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
         } catch (err) {
             console.error("Fejl ved sletning:", err);
             toast.error("Kunne ikke slette tegningen");
+        } finally {
+            setDrawingToDelete(null);
         }
     };
 
@@ -252,7 +261,7 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                                 }}
                             >
                                 <button 
-                                    onClick={(e) => handleDelete(e, d.id, d.type, d.document_data)}
+                                    onClick={(e) => triggerDelete(e, d)}
                                     style={{
                                         position: 'absolute', top: '12px', right: '12px',
                                         background: 'white', border: '1px solid #fee2e2', color: '#ef4444',
@@ -309,6 +318,40 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {/* Custom Delete Modal */}
+            {drawingToDelete && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)' }}>
+                    <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '24px', maxWidth: '400px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0', animation: 'fadeIn 0.2s ease-out' }}>
+                        <div style={{ width: '48px', height: '48px', backgroundColor: '#fee2e2', color: '#ef4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+                            <Trash2 size={24} />
+                        </div>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', color: '#0f172a' }}>Slet tegning?</h3>
+                        <p style={{ margin: '0 0 24px 0', color: '#64748b', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                            Er du sikker på, at du vil slette tegningen <strong>{drawingToDelete.name}</strong>? Dette kan ikke fortrydes.
+                        </p>
+                        
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button 
+                                onClick={() => setDrawingToDelete(null)}
+                                style={{ flex: 1, padding: '12px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                                onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'}
+                                onMouseOut={e => e.currentTarget.style.background = '#f1f5f9'}
+                            >
+                                Annuller
+                            </button>
+                            <button 
+                                onClick={confirmDelete}
+                                style={{ flex: 1, padding: '12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(239, 68, 68, 0.2)' }}
+                                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(239, 68, 68, 0.3)'; }}
+                                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(239, 68, 68, 0.2)'; }}
+                            >
+                                Ja, slet
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
