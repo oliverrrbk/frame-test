@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tldraw, getSnapshot, loadSnapshot } from 'tldraw';
+import { Tldraw, getSnapshot, loadSnapshot, exportToBlob } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { ChevronLeft, Save } from 'lucide-react';
+import { ChevronLeft, Save, FileImage } from 'lucide-react';
 
 const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const [editor, setEditor] = useState(null);
     const [isLoading, setIsLoading] = useState(!!drawingId);
     const [drawingName, setDrawingName] = useState('Ny Skitse');
     const [isSaving, setIsSaving] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
 
     // Initial load of drawing data
     const handleMount = useCallback((editorInstance) => {
@@ -100,6 +101,76 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         }
     };
 
+    const handleMakeOfficial = async () => {
+        if (!editor) return;
+        setIsExporting(true);
+
+        try {
+            // First, save the current sketch
+            await handleSave();
+
+            // Next, get all shape IDs from the current page to export
+            const shapeIds = Array.from(editor.getCurrentPageShapeIds());
+            if (shapeIds.length === 0) {
+                toast.error("Tegningen er tom");
+                setIsExporting(false);
+                return;
+            }
+
+            // Export to PNG blob using tldraw's utility
+            const blob = await exportToBlob({
+                editor,
+                ids: shapeIds,
+                format: 'png',
+                opts: { background: true }
+            });
+
+            const user = (await supabase.auth.getUser()).data.user;
+            if (!user) throw new Error("Ikke logget ind");
+
+            const fileName = `official_${Date.now()}.png`;
+            const filePath = `${user.id}/${fileName}`;
+
+            // Upload the PNG blob to 'uploads' bucket
+            const { error: uploadError } = await supabase.storage
+                .from('uploads')
+                .upload(filePath, blob, { contentType: 'image/png' });
+
+            if (uploadError) throw uploadError;
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('uploads')
+                .getPublicUrl(filePath);
+
+            // Insert as 'upload' in drawings table
+            const { error: dbError } = await supabase
+                .from('drawings')
+                .insert([{
+                    name: `${drawingName} (Officiel)`,
+                    lead_id: leadId || null,
+                    user_id: user.id,
+                    type: 'upload',
+                    document_data: {
+                        url: publicUrl,
+                        path: filePath,
+                        fileType: 'image/png'
+                    }
+                }]);
+
+            if (dbError) throw dbError;
+
+            toast.success("Skitsen er nu gemt som en Officiel Tegning!");
+            onClose();
+
+        } catch (err) {
+            console.error("Fejl ved eksport:", err);
+            toast.error("Kunne ikke gemme som officiel: " + (err.message || "Ukendt fejl"));
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
             
@@ -120,7 +191,6 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
             {/* The Drawing Area (now takes full screen) */}
             <div style={{ flex: 1, position: 'relative' }}>
-                <Tldraw onMount={handleMount} persistenceKey={drawingId ? null : 'bison-frame-sketch-draft'} />
                 
                 {/* Floating Modern Header */}
                 <div style={{ 
@@ -185,10 +255,35 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         </div>
                 </div>
                 
-                <div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                        onClick={handleMakeOfficial}
+                        disabled={isSaving || isExporting}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'white',
+                            color: '#0ea5e9',
+                            border: '1px solid #0ea5e9',
+                            padding: '10px 20px',
+                            borderRadius: '10px',
+                            fontWeight: 600,
+                            fontSize: '0.95rem',
+                            cursor: (isSaving || isExporting) ? 'not-allowed' : 'pointer',
+                            opacity: (isSaving || isExporting) ? 0.7 : 1,
+                            transition: 'all 0.2s',
+                        }}
+                        onMouseOver={(e) => { if (!isSaving && !isExporting) { e.currentTarget.style.background = '#f0f9ff'; } }}
+                        onMouseOut={(e) => { if (!isSaving && !isExporting) { e.currentTarget.style.background = 'white'; } }}
+                    >
+                        <FileImage size={18} />
+                        {isExporting ? 'Udgiver...' : 'Gør Officiel'}
+                    </button>
+
                     <button 
                         onClick={handleSave}
-                        disabled={isSaving}
+                        disabled={isSaving || isExporting}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -200,13 +295,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                             borderRadius: '10px',
                             fontWeight: 600,
                             fontSize: '0.95rem',
-                            cursor: isSaving ? 'not-allowed' : 'pointer',
-                            opacity: isSaving ? 0.7 : 1,
+                            cursor: (isSaving || isExporting) ? 'not-allowed' : 'pointer',
+                            opacity: (isSaving || isExporting) ? 0.7 : 1,
                             transition: 'all 0.2s',
                             boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)'
                         }}
-                        onMouseOver={(e) => { if (!isSaving) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(15, 23, 42, 0.3)'; } }}
-                        onMouseOut={(e) => { if (!isSaving) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.2)'; } }}
+                        onMouseOver={(e) => { if (!isSaving && !isExporting) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(15, 23, 42, 0.3)'; } }}
+                        onMouseOut={(e) => { if (!isSaving && !isExporting) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.2)'; } }}
                     >
                         <Save size={18} />
                         {isSaving ? 'Gemmer...' : 'Gem Skitse'}

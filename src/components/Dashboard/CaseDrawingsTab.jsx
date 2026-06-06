@@ -147,6 +147,97 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
         }
     };
 
+    const renderDrawingCard = (d) => {
+        const isUpload = d.type === 'upload';
+        const isPdf = isUpload && d.document_data?.fileType === 'application/pdf';
+        const isImage = isUpload && d.document_data?.fileType?.startsWith('image/');
+        
+        return (
+            <div 
+                key={d.id} 
+                onClick={() => {
+                    if (isUpload) {
+                        window.open(d.document_data.url, '_blank');
+                    } else {
+                        handleOpenDrawing(d.id);
+                    }
+                }}
+                style={{
+                    backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '12px',
+                    padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                }}
+                onMouseOver={e => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 12px 20px rgba(0,0,0,0.05)';
+                    e.currentTarget.style.borderColor = '#0ea5e9';
+                }}
+                onMouseOut={e => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                }}
+            >
+                <button 
+                    onClick={(e) => triggerDelete(e, d)}
+                    style={{
+                        position: 'absolute', top: '12px', right: '12px',
+                        background: 'white', border: '1px solid #fee2e2', color: '#ef4444',
+                        width: '32px', height: '32px', borderRadius: '8px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: 'all 0.2s', zIndex: 10
+                    }}
+                    onMouseOver={e => { e.currentTarget.style.background = '#fee2e2'; }}
+                    onMouseOut={e => { e.currentTarget.style.background = 'white'; }}
+                    title="Slet"
+                >
+                    <Trash2 size={16} />
+                </button>
+
+                <div style={{ 
+                    width: '100%', height: '140px', backgroundColor: '#f8fafc', borderRadius: '8px', 
+                    marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '1px solid #f1f5f9', overflow: 'hidden'
+                }}>
+                    {isUpload ? (
+                        isImage ? (
+                            <img src={d.document_data.url} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            <FileText size={48} style={{ color: '#94a3b8' }} />
+                        )
+                    ) : (
+                        <div style={{ color: '#0ea5e9', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <PenTool size={40} />
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>TLDRAW</span>
+                        </div>
+                    )}
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {isUpload ? (
+                            <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                                {isPdf ? 'PDF' : 'BILLEDE'}
+                            </span>
+                        ) : (
+                            <span style={{ background: '#e0f2fe', color: '#0284c7', fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                                SKITSE
+                            </span>
+                        )}
+                        <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Calendar size={12} />
+                            {format(new Date(d.created_at), 'd. MMM yyyy', { locale: da })}
+                        </span>
+                    </div>
+                    <h4 style={{ margin: '4px 0 0 0', color: '#0f172a', fontSize: '1rem', fontWeight: 600, wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {d.name}
+                    </h4>
+                </div>
+            </div>
+        );
+    };
+
     // Hvis tegnebrættet er åbent, vis det i fuld skærm (modal look)
     if (isBoardOpen) {
         return (
@@ -227,98 +318,37 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                     <p style={{ margin: 0, color: '#64748b' }}>Upload en eksisterende tegning eller start en ny skitse fra bunden.</p>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-                    {drawings.map(d => {
-                        const isUpload = d.type === 'upload';
-                        const isPdf = isUpload && d.document_data?.fileType === 'application/pdf';
-                        const isImage = isUpload && d.document_data?.fileType?.startsWith('image/');
-                        
-                        return (
-                            <div 
-                                key={d.id} 
-                                onClick={() => {
-                                    if (isUpload) {
-                                        window.open(d.document_data.url, '_blank');
-                                    } else {
-                                        handleOpenDrawing(d.id);
-                                    }
-                                }}
-                                style={{
-                                    backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '12px',
-                                    padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                }}
-                                onMouseOver={e => {
-                                    e.currentTarget.style.transform = 'translateY(-4px)';
-                                    e.currentTarget.style.boxShadow = '0 12px 20px rgba(0,0,0,0.05)';
-                                    e.currentTarget.style.borderColor = '#0ea5e9';
-                                }}
-                                onMouseOut={e => {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
-                                    e.currentTarget.style.borderColor = '#e2e8f0';
-                                }}
-                            >
-                                <button 
-                                    onClick={(e) => triggerDelete(e, d)}
-                                    style={{
-                                        position: 'absolute', top: '12px', right: '12px',
-                                        background: 'white', border: '1px solid #fee2e2', color: '#ef4444',
-                                        width: '32px', height: '32px', borderRadius: '8px',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: 'all 0.2s', zIndex: 10
-                                    }}
-                                    onMouseOver={e => { e.currentTarget.style.background = '#fee2e2'; }}
-                                    onMouseOut={e => { e.currentTarget.style.background = 'white'; }}
-                                    title="Slet"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-
-                                <div style={{ 
-                                    width: '100%', height: '140px', backgroundColor: '#f8fafc', borderRadius: '8px', 
-                                    marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    border: '1px solid #f1f5f9', overflow: 'hidden'
-                                }}>
-                                    {isUpload ? (
-                                        isImage ? (
-                                            <img src={d.document_data.url} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : (
-                                            <FileText size={48} style={{ color: '#94a3b8' }} />
-                                        )
-                                    ) : (
-                                        <div style={{ color: '#0ea5e9', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                            <PenTool size={40} />
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>TLDRAW</span>
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        {isUpload ? (
-                                            <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                                                {isPdf ? 'PDF' : 'BILLEDE'}
-                                            </span>
-                                        ) : (
-                                            <span style={{ background: '#e0f2fe', color: '#0284c7', fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                                                SKITSE
-                                            </span>
-                                        )}
-                                        <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Calendar size={12} />
-                                            {format(new Date(d.created_at), 'd. MMM yyyy', { locale: da })}
-                                        </span>
-                                    </div>
-                                    <h4 style={{ margin: '4px 0 0 0', color: '#0f172a', fontSize: '1rem', fontWeight: 600, wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                        {d.name}
-                                    </h4>
-                                </div>
+                <>
+                    {/* SEKTION 1: OFFICIELLE TEGNINGER (LÅSTE) */}
+                    {drawings.filter(d => d.type === 'upload').length > 0 && (
+                        <div style={{ marginBottom: '40px' }}>
+                            <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FileText size={18} style={{ color: '#0ea5e9' }} />
+                                Officielle Tegninger
+                            </h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                                {drawings.filter(d => d.type === 'upload').map(d => renderDrawingCard(d))}
                             </div>
-                        );
-                    })}
-                </div>
+                        </div>
+                    )}
+
+                    {/* SEKTION 2: VÆRKSTEDET (SKITSER & IDÉER) */}
+                    <div style={{ marginBottom: '20px' }}>
+                        <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <PenTool size={18} style={{ color: '#8b5cf6' }} />
+                            Værkstedet (Arbejds-skitser)
+                        </h4>
+                        {drawings.filter(d => d.type !== 'upload').length > 0 ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                                {drawings.filter(d => d.type !== 'upload').map(d => renderDrawingCard(d))}
+                            </div>
+                        ) : (
+                            <div style={{ padding: '30px', backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '12px', textAlign: 'center', color: '#64748b' }}>
+                                Ingen skitser endnu. Tryk på "Tegn Ny Skitse" for at starte værkstedet.
+                            </div>
+                        )}
+                    </div>
+                </>
             )}
 
             {/* Custom Delete Modal */}
