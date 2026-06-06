@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { PlusSquare, PenTool, Trash2, Calendar, FileText } from 'lucide-react';
+import { PlusSquare, PenTool, Trash2, Calendar, FileText, X } from 'lucide-react';
 import DrawingBoard from './DrawingBoard';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
@@ -11,6 +12,7 @@ const DrawingsGallery = ({ leadId = null }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [activeDrawingId, setActiveDrawingId] = useState(null);
     const [isBoardOpen, setIsBoardOpen] = useState(false);
+    const [drawingToDelete, setDrawingToDelete] = useState(null);
 
     const fetchDrawings = async () => {
         setIsLoading(true);
@@ -59,12 +61,16 @@ const DrawingsGallery = ({ leadId = null }) => {
         setIsBoardOpen(true);
     };
 
-    const handleDelete = async (e, id) => {
+    const handleDeleteClick = (e, drawing) => {
         e.stopPropagation();
-        if (!window.confirm("Er du sikker på, at du vil slette denne skitse?")) return;
+        setDrawingToDelete(drawing);
+    };
+
+    const confirmDelete = async () => {
+        if (!drawingToDelete) return;
         
         try {
-            const { error } = await supabase.from('drawings').delete().eq('id', id);
+            const { error } = await supabase.from('drawings').delete().eq('id', drawingToDelete.id);
             if (error) throw error;
             
             toast.success("Skitse slettet");
@@ -72,6 +78,8 @@ const DrawingsGallery = ({ leadId = null }) => {
         } catch (err) {
             console.error("Fejl ved sletning:", err);
             toast.error("Kunne ikke slette skitsen");
+        } finally {
+            setDrawingToDelete(null);
         }
     };
 
@@ -209,7 +217,7 @@ const DrawingsGallery = ({ leadId = null }) => {
                                 )}
                                 
                                 <button
-                                    onClick={(e) => handleDelete(e, drawing.id)}
+                                    onClick={(e) => handleDeleteClick(e, drawing)}
                                     style={{
                                         position: 'absolute', top: '12px', right: '12px',
                                         background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', borderRadius: '8px',
@@ -249,6 +257,77 @@ const DrawingsGallery = ({ leadId = null }) => {
                         </div>
                     ))}
                 </div>
+            )}
+            
+            {drawingToDelete && createPortal(
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 999999,
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    animation: 'fadeIn 0.2s ease-out'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white', padding: '32px', borderRadius: '24px',
+                        width: '100%', maxWidth: '420px', textAlign: 'center',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        animation: 'slideUpScale 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                    }}>
+                        <div style={{ width: '64px', height: '64px', backgroundColor: '#fee2e2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                            <Trash2 size={32} color="#ef4444" />
+                        </div>
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', marginBottom: '12px' }}>
+                            Slet skitse?
+                        </h3>
+                        <p style={{ color: '#64748b', fontSize: '1.05rem', lineHeight: 1.5, marginBottom: '32px' }}>
+                            Er du sikker på, at du vil slette skitsen <strong>"{drawingToDelete.name}"</strong>? Denne handling kan ikke fortrydes.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button 
+                                onClick={() => setDrawingToDelete(null)}
+                                style={{
+                                    flex: 1, padding: '14px', borderRadius: '12px',
+                                    backgroundColor: '#f1f5f9', color: '#475569',
+                                    fontWeight: 600, fontSize: '1.05rem', border: 'none', cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseOver={e => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+                                onMouseOut={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                            >
+                                Annuller
+                            </button>
+                            <button 
+                                onClick={confirmDelete}
+                                style={{
+                                    flex: 1, padding: '14px', borderRadius: '12px',
+                                    backgroundColor: '#ef4444', color: 'white',
+                                    fontWeight: 600, fontSize: '1.05rem', border: 'none', cursor: 'pointer',
+                                    transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)'
+                                }}
+                                onMouseOver={e => {
+                                    e.currentTarget.style.backgroundColor = '#dc2626';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                }}
+                                onMouseOut={e => {
+                                    e.currentTarget.style.backgroundColor = '#ef4444';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                }}
+                            >
+                                Slet Skitse
+                            </button>
+                        </div>
+                    </div>
+                    <style>{`
+                        @keyframes slideUpScale {
+                            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+                            to { opacity: 1; transform: scale(1) translateY(0); }
+                        }
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                    `}</style>
+                </div>,
+                document.body
             )}
         </div>
     );
