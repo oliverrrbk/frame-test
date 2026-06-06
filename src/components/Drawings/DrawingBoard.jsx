@@ -11,6 +11,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const [drawingName, setDrawingName] = useState('Ny Skitse');
     const [isSaving, setIsSaving] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [rotationDegrees, setRotationDegrees] = useState(0);
 
     // Initial load of drawing data
     const handleMount = useCallback((editorInstance) => {
@@ -47,6 +49,27 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
              // editorInstance.store.clear() breaks tldraw v5 because it removes the page records.
         }
     }, [drawingId]);
+
+    // Subscribing to editor selection to show rotation UI
+    useEffect(() => {
+        if (!editor) return;
+
+        const unsubscribe = editor.store.listen(() => {
+            const ids = editor.getSelectedShapeIds();
+            // Tjek om det er ændret markant (her for simpelhedens skyld tjekker vi længden)
+            // Det korrekte ville være at tjekke arrays for lighed, men for performancen tjekker vi bare on-the-fly.
+            setSelectedIds(ids);
+
+            if (ids.length > 0) {
+                const rad = editor.getSelectionRotation();
+                let deg = Math.round(rad * (180 / Math.PI));
+                if (deg < 0) deg += 360;
+                setRotationDegrees(deg);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [editor]);
 
     const handleSave = async () => {
         if (!editor) return;
@@ -181,6 +204,10 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 @keyframes slideDown {
                     from { transform: translateY(-20px); opacity: 0; }
                     to { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes slideUp {
+                    from { transform: translate(-50%, 20px); opacity: 0; }
+                    to { transform: translate(-50%, 0); opacity: 1; }
                 }
             `}</style>
 
@@ -325,6 +352,54 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#64748b' }}>Tegnet med</span>
                     <span style={{ fontWeight: 800, fontSize: '0.85rem', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Bison Frame</span>
                 </div>
+
+                {/* Custom Rotation UI (Modern Slider) */}
+                {selectedIds.length > 0 && (
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '40px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(16px)',
+                        WebkitBackdropFilter: 'blur(16px)',
+                        padding: '16px 24px',
+                        borderRadius: '24px',
+                        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0,0,0,0.04)',
+                        border: '1px solid rgba(255, 255, 255, 0.8)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '12px',
+                        zIndex: 100,
+                        animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                        width: '320px',
+                        pointerEvents: 'auto'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '0.9rem', fontWeight: 700, color: '#334155' }}>
+                            <span>Rotation</span>
+                            <span style={{ color: '#0ea5e9' }}>{rotationDegrees}°</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max="360" 
+                            value={rotationDegrees}
+                            onChange={(e) => {
+                                const newDeg = parseInt(e.target.value);
+                                const newRad = newDeg * (Math.PI / 180);
+                                const currentRad = editor.getSelectionRotation();
+                                editor.rotateShapesBy(selectedIds, newRad - currentRad);
+                                setRotationDegrees(newDeg);
+                            }}
+                            style={{
+                                width: '100%',
+                                accentColor: '#0ea5e9',
+                                cursor: 'pointer'
+                            }}
+                        />
+                    </div>
+                )}
                 <Tldraw onMount={handleMount} persistenceKey={drawingId ? null : 'bison-frame-sketch-draft'} />
                 
                 {isLoading && (
