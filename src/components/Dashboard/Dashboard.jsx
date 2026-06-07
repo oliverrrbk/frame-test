@@ -811,6 +811,7 @@ const Dashboard = () => {
                 showPreview: false,
                 isGeneratingPdf: false,
                 showDetailedBreakdown: false, // Nu skjult som standard
+                validityDays: 14,
                 customMessage: defaultMessage,
                 isKombi: isKombi,
                 subprojects: initialSubprojects
@@ -4601,12 +4602,29 @@ const Dashboard = () => {
                                                             <button onClick={() => setQuoteBuilder({...quoteBuilder, customLines: [...(quoteBuilder.customLines || []), { description: '', price: 0 }] })} style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed #94a3b8', color: '#6b7280', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Tilføj ekstra linje</button>
                                                         </div>
 
-                                                        <div style={{ padding: '16px', background: '#e8e6e1', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-                                                            <span style={{ fontWeight: 'bold' }}>Total inkl. 25% moms:</span>
-                                                            <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1d4ed8' }}>
-                                                                {new Intl.NumberFormat('da-DK').format(((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25)} kr.
-                                                            </span>
-                                                        </div>
+                                                        {(() => {
+                                                            const totalExVat = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
+                                                            const vat = totalExVat * 0.25;
+                                                            const totalIncVat = totalExVat + vat;
+                                                            return (
+                                                                <div style={{ padding: '16px', background: '#e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem', color: '#475569' }}>
+                                                                        <span>Total ekskl. moms:</span>
+                                                                        <span>{new Intl.NumberFormat('da-DK').format(totalExVat)} kr.</span>
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem', color: '#475569' }}>
+                                                                        <span>Moms (25%):</span>
+                                                                        <span>{new Intl.NumberFormat('da-DK').format(vat)} kr.</span>
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #cbd5e1', paddingTop: '8px', marginTop: '4px' }}>
+                                                                        <span style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#0f172a' }}>Total inkl. moms:</span>
+                                                                        <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1d4ed8' }}>
+                                                                            {new Intl.NumberFormat('da-DK').format(totalIncVat)} kr.
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()}
 
                                                         {/* PDF Customization UI */}
                                                         <div style={{ marginTop: '16px', padding: '16px', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(12px)' }}>
@@ -4624,6 +4642,18 @@ const Dashboard = () => {
                                                                     <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Fravælger du detaljer, skjules tømrer-timer, materialer og ekstra ydelser på PDF'en. Kunden ser kun én samlet "Entreprise" pris.</span>
                                                                 </div>
                                                             </label>
+
+                                                            <div style={{ marginBottom: '16px' }}>
+                                                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', color: '#374151', marginBottom: '6px' }}>Tilbuddets gyldighed (dage)</label>
+                                                                <input 
+                                                                    type="number" 
+                                                                    min="1"
+                                                                    value={quoteBuilder.validityDays || 14} 
+                                                                    onChange={(e) => setQuoteBuilder({...quoteBuilder, validityDays: parseInt(e.target.value) || 14})}
+                                                                    style={{ width: '100px', padding: '10px', borderRadius: '6px', border: '1px solid #e8e6e1' }}
+                                                                />
+                                                                <span style={{ marginLeft: '10px', fontSize: '0.85rem', color: '#6b7280' }}>Dage før tilbuddet udløber</span>
+                                                            </div>
 
                                                             <div>
                                                                 <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', color: '#374151', marginBottom: '6px' }}>Bemærkninger / Beskrivelse til kunden</label>
@@ -4887,7 +4917,7 @@ const Dashboard = () => {
                                                         </div>
 
                                                         <div style={{ marginTop: 'auto', fontSize: '9px', color: '#6b7280', borderTop: '1px solid #e8e6e1', paddingTop: '12px', lineHeight: '1.4' }}>
-                                                            <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i 45 dage fra ovenstående dato.</p>
+                                                            <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i {quoteBuilder.validityDays || 14} dage fra ovenstående dato.</p>
                                                             <p style={{ margin: 0 }}>Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.</p>
                                                         </div>
                                                     </div>
@@ -4969,7 +4999,7 @@ const Dashboard = () => {
                                                                                 customLines: quoteBuilder.customLines,
                                                                                 projects: quoteBuilder.subprojects,
                                                                             },
-                                                                            quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown },
+                                                                            quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown, validityDays: quoteBuilder.validityDays || 14 },
                                                                             custom_message: quoteBuilder.customMessage
                                                                         };
                                                                         
@@ -5064,7 +5094,7 @@ const Dashboard = () => {
                                                                                 customLines: quoteBuilder.customLines,
                                                                                 projects: quoteBuilder.subprojects,
                                                                             },
-                                                                            quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown },
+                                                                            quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown, validityDays: quoteBuilder.validityDays || 14 },
                                                                             custom_message: quoteBuilder.customMessage
                                                                         };
                                                                         

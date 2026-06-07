@@ -217,7 +217,8 @@ const QuoteAcceptPage = () => {
     const moms = totalPris * 0.25;
     const totalMedMoms = totalPris + moms;
 
-    const isExpired = lead?.created_at ? new Date() > new Date(new Date(lead.created_at).getTime() + 45 * 24 * 60 * 60 * 1000) : false;
+    const validityDays = settings?.validityDays || 45;
+    const isExpired = lead?.created_at ? new Date() > new Date(new Date(lead.created_at).getTime() + validityDays * 24 * 60 * 60 * 1000) : false;
 
     return (
         <div className="accept-page-wrapper" style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' }}>
@@ -335,7 +336,7 @@ const QuoteAcceptPage = () => {
                 <div style={{ padding: '32px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#fff' }}>
                     <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', color: '#1e293b' }}>Betingelser & Forbehold</h3>
                     <ul style={{ margin: 0, paddingLeft: '20px', color: '#475569', fontSize: '0.95rem', lineHeight: '1.7' }}>
-                        <li style={{ marginBottom: '8px' }}>Tilbuddet er gældende i <strong>45 dage</strong> fra modtagelsen.</li>
+                        <li style={{ marginBottom: '8px' }}>Tilbuddet er gældende i <strong>{validityDays} dage</strong> fra modtagelsen.</li>
                         <li style={{ marginBottom: '8px' }}>Arbejdet udføres i henhold til <strong>AB Forbruger</strong> (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen.</li>
                         <li>Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er <strong>ikke inkluderet</strong> og vil blive udbedret i samråd til gældende timepris.</li>
                     </ul>
@@ -348,7 +349,7 @@ const QuoteAcceptPage = () => {
                             <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}>⏳</span>
                             <h3 style={{ color: '#991b1b', margin: '0 0 8px 0', fontSize: '1.2rem' }}>Tilbuddet er udløbet</h3>
                             <p style={{ color: '#7f1d1d', margin: 0, lineHeight: '1.5' }}>
-                                Dette tilbud er mere end 45 dage gammelt og er desværre ikke længere gældende. 
+                                Dette tilbud er mere end {validityDays} dage gammelt og er desværre ikke længere gældende. 
                                 Kontakt venligst {carpenter?.company_name || 'din håndværker'} for at få et opdateret tilbud.
                             </p>
                         </div>
