@@ -47,7 +47,7 @@ export const pointToLineDistance = (p, p1, p2) => {
 
 // 2. Bounding Boxes
 export const getElementBounds = (element) => {
-    if (element.type === 'freehand') {
+    if (element.type === 'pen' || element.type === 'freehand') {
         if (!element.points || element.points.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         element.points.forEach(p => {
@@ -66,7 +66,7 @@ export const getElementBounds = (element) => {
         };
     }
     
-    if (element.type === 'rectangle' || element.type === 'image' || element.type === 'text' || element.type === 'circle') {
+    if (['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(element.type)) {
         const { x, y, w, h } = element;
         return {
             x: Math.min(x, x + w),
@@ -123,7 +123,7 @@ export const isPointInElement = (point, element) => {
         return false;
     }
     
-    if (element.type === 'rectangle' || element.type === 'image' || element.type === 'text' || element.type === 'circle') {
+    if (['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(element.type)) {
         const hitThreshold = 10 + (element.strokeWidth || 3);
         return (
             checkPoint.x >= bounds.x - hitThreshold &&
@@ -131,11 +131,6 @@ export const isPointInElement = (point, element) => {
             checkPoint.y >= bounds.y - hitThreshold &&
             checkPoint.y <= bounds.y + bounds.h + hitThreshold
         );
-    }
-
-    if (element.type === 'arrow' || element.type === 'dimension') {
-        const d = pointToLineDistance(checkPoint, {x: element.x, y: element.y}, {x: element.endX, y: element.endY});
-        return d < hitThreshold + 10; // Extra padding for easier clicking
     }
 
     return false;
@@ -150,4 +145,74 @@ export const getElementAtPosition = (x, y, elements) => {
         }
     }
     return null;
+};
+
+export const getElementPoints = (el) => {
+    if (el.type === 'line' || el.type === 'arrow' || el.type === 'dimension') {
+        return [{x: el.x, y: el.y}, {x: el.endX, y: el.endY}];
+    }
+    if (['rectangle', 'image', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(el.type)) {
+        return [
+            {x: el.x, y: el.y},
+            {x: el.x + el.w, y: el.y},
+            {x: el.x + el.w, y: el.y + el.h},
+            {x: el.x, y: el.y + el.h}
+        ];
+    }
+    return [];
+};
+
+export const findSnapPoint = (pos, elements, ignoreId = null) => {
+    let bestSnap = null;
+    let minDist = 15; // Snap threshold
+
+    elements.forEach(el => {
+        if (el.id === ignoreId) return;
+        const pts = getElementPoints(el);
+        pts.forEach(p => {
+            const dist = Math.hypot(p.x - pos.x, p.y - pos.y);
+            if (dist < minDist) {
+                minDist = dist;
+                bestSnap = { ...p };
+            }
+        });
+    });
+    return bestSnap;
+};
+
+export const getConnectedModule = (startId, elements) => {
+    const connected = new Set([startId]);
+    let added = true;
+    
+    const sharePoint = (el1, el2) => {
+        const pts1 = getElementPoints(el1);
+        const pts2 = getElementPoints(el2);
+        for (let p1 of pts1) {
+            for (let p2 of pts2) {
+                if (Math.hypot(p1.x - p2.x, p1.y - p2.y) < 1) return true;
+            }
+        }
+        return false;
+    };
+
+    while (added) {
+        added = false;
+        elements.forEach(el => {
+            if (!connected.has(el.id)) {
+                let connects = false;
+                for (let cid of connected) {
+                    const cel = elements.find(e => e.id === cid);
+                    if (cel && sharePoint(el, cel)) {
+                        connects = true;
+                        break;
+                    }
+                }
+                if (connects) {
+                    connected.add(el.id);
+                    added = true;
+                }
+            }
+        });
+    }
+    return Array.from(connected);
 };

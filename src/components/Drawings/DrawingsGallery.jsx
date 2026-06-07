@@ -7,6 +7,7 @@ import DrawingBoard from './DrawingBoard';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { jsPDF } from 'jspdf';
+import { renderElementsToCanvas } from './renderUtils';
 
 const DrawingsGallery = ({ leadId = null }) => {
     const [drawings, setDrawings] = useState([]);
@@ -121,65 +122,77 @@ const DrawingsGallery = ({ leadId = null }) => {
     const handleDownloadPdf = async (e, drawing) => {
         e.stopPropagation();
         
-        if (!drawing.image_url && !drawing.document_data?.thumbnail_svg) {
+        const hasNativeDocument = Array.isArray(drawing.document_data) && drawing.document_data.length > 0;
+        if (!hasNativeDocument && !drawing.image_url && !drawing.document_data?.thumbnail_svg) {
             toast.error("Skitsen har intet billede endnu. Åbn og gem den én gang for at generere et.");
             return;
         }
 
         try {
             toast.loading("Genererer PDF...", { id: "pdf_gen" });
-            
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            
-            if (drawing.image_url) {
-                // We have a direct JPEG/PNG URL
-                await new Promise((resolve, reject) => {
-                    img.onload = resolve;
-                    img.onerror = () => reject(new Error("Kunne ikke indlæse tegningen som billede."));
-                    img.src = drawing.image_url;
+
+            let canvas;
+
+            if (hasNativeDocument) {
+                const rendered = await renderElementsToCanvas(drawing.document_data, {
+                    width: 2480,
+                    height: 1754,
+                    padding: 140
                 });
+                canvas = rendered.canvas;
             } else {
-                // Fallback to old SVG string logic
-                let svgString = drawing.document_data.thumbnail_svg;
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
                 
-                // Chrome/Safari nægter at tegne SVGer uden xmlns på et canvas
-                if (!svgString.includes('xmlns=')) {
-                    svgString = svgString.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+                if (drawing.image_url) {
+                    // We have a direct JPEG/PNG URL
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = () => reject(new Error("Kunne ikke indlæse tegningen som billede."));
+                        img.src = drawing.image_url;
+                    });
+                } else {
+                    // Fallback to old SVG string logic
+                    let svgString = drawing.document_data.thumbnail_svg;
+                    
+                    // Chrome/Safari nægter at tegne SVGer uden xmlns på et canvas
+                    if (!svgString.includes('xmlns=')) {
+                        svgString = svgString.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+                    }
+                    // Hvis viewBox findes men ingen width/height, sæt default så billedet ikke bliver 0x0
+                    if (!svgString.includes('width=') && svgString.includes('viewBox=')) {
+                        svgString = svgString.replace('<svg ', '<svg width="1920" height="1080" ');
+                    }
+                    
+                    // Base64 encode for at undgå problemer med specialtegn i blob/data URL'er
+                    const url = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
+                    
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = () => reject(new Error("Kunne ikke indlæse tegningen som billede. SVG formatfejl."));
+                        img.src = url;
+                    });
                 }
-                // Hvis viewBox findes men ingen width/height, sæt default så billedet ikke bliver 0x0
-                if (!svgString.includes('width=') && svgString.includes('viewBox=')) {
-                    svgString = svgString.replace('<svg ', '<svg width="1920" height="1080" ');
-                }
                 
-                // Base64 encode for at undgå problemer med specialtegn i blob/data URL'er
-                const url = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
+                canvas = document.createElement('canvas');
+                canvas.width = 2480; 
+                canvas.height = 1754;
+                const ctx = canvas.getContext('2d');
                 
-                await new Promise((resolve, reject) => {
-                    img.onload = resolve;
-                    img.onerror = () => reject(new Error("Kunne ikke indlæse tegningen som billede. SVG formatfejl."));
-                    img.src = url;
-                });
+                // Hvid baggrund
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                const imgW = img.width || 2480;
+                const imgH = img.height || 1754;
+                const scale = Math.min(canvas.width / imgW, canvas.height / imgH);
+                const w = imgW * scale;
+                const h = imgH * scale;
+                const x = (canvas.width / 2) - (w / 2);
+                const y = (canvas.height / 2) - (h / 2);
+                
+                ctx.drawImage(img, x, y, w, h);
             }
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = 1920; 
-            canvas.height = 1080;
-            const ctx = canvas.getContext('2d');
-            
-            // Hvid baggrund
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            const imgW = img.width || 1920;
-            const imgH = img.height || 1080;
-            const scale = Math.min(canvas.width / imgW, canvas.height / imgH);
-            const w = imgW * scale;
-            const h = imgH * scale;
-            const x = (canvas.width / 2) - (w / 2);
-            const y = (canvas.height / 2) - (h / 2);
-            
-            ctx.drawImage(img, x, y, w, h);
             
             const pngDataUrl = canvas.toDataURL('image/png', 1.0);
             

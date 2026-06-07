@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle } from 'lucide-react';
-import { getElementBounds, getElementAtPosition, rotatePoint } from './engineUtils';
+import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3 } from 'lucide-react';
+import { getElementBounds, getElementAtPosition, rotatePoint, findSnapPoint, getConnectedModule } from './engineUtils';
+import { getDrawingBounds, renderElementsToCanvas } from './renderUtils';
 
 const COLORS = ['#0f172a', '#ef4444', '#3b82f6', '#22c55e', '#eab308'];
 
@@ -10,9 +11,12 @@ const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const canvasRef = useRef(null);
+    const lastPointerRef = useRef({ x: 0, y: 0 });
+    const saveTimeoutRef = useRef(null);
     const containerRef = useRef(null);
     const fileInputRef = useRef(null);
     const imageCache = useRef({});
+    const viewInitializedRef = useRef(false);
     
     // DB state
     const [isLoading, setIsLoading] = useState(!!drawingId);
@@ -23,17 +27,71 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const [elements, setElements] = useState([]);
     const [history, setHistory] = useState([]); // Stack of previous states
     const [appState, setAppState] = useState({
-        tool: 'pen', // 'select', 'pen', 'eraser', 'rectangle', 'arrow', 'image', 'text', 'dimension'
+        tool: 'select', // 'select', 'pen', 'eraser', 'rectangle', 'arrow', 'image', 'text', 'dimension'
         color: '#0f172a',
         strokeWidth: 3,
         selectedElementId: null,
+        drillDown: false,
         editingTextId: null, // For text and dimension input
         dragging: false,
         rotating: false,
         resizing: false, // false or 'nw', 'ne', 'sw', 'se'
         actionStartPoint: null, 
         initialRotation: 0,
+        zoom: 1,
+        selectedElementIds: [],
+        marqueeStartPoint: null,
+        marqueeCurrentPoint: null,
+        isSpaceDown: false,
+        showGrid: false
     });
+    const activeZoomRef = useRef(1);
+    const activePanRef = useRef({ x: 0, y: 0 });
+    const overlaysContainerRef = useRef(null);
+    const activeElementsRef = useRef(elements);
+    const activeModuleIdsRef = useRef([]);
+    const selectionOverlayRef = useRef(null);
+    const startHandleRef = useRef(null);
+    const endHandleRef = useRef(null);
+    const lastActionPointRef = useRef({ x: 0, y: 0 });
+    const dragHistoryPushedRef = useRef(false);
+    const [showShapesMenu, setShowShapesMenu] = useState(false);
+
+    const getOverlayTransform = useCallback(() => {
+        const zoom = activeZoomRef.current;
+        const pan = activePanRef.current;
+        return `matrix(${zoom}, 0, 0, ${zoom}, ${pan.x}, ${pan.y})`;
+    }, []);
+
+    const syncOverlayTransform = useCallback(() => {
+        if (overlaysContainerRef.current) {
+            overlaysContainerRef.current.style.transform = getOverlayTransform();
+        }
+    }, [getOverlayTransform]);
+
+    const getViewportCenter = useCallback(() => {
+        const container = containerRef.current;
+        const width = container?.clientWidth || window.innerWidth;
+        const height = container?.clientHeight || window.innerHeight;
+        return {
+            x: (width / 2 - activePanRef.current.x) / activeZoomRef.current,
+            y: (height / 2 - activePanRef.current.y) / activeZoomRef.current
+        };
+    }, []);
+
+    const constrainAngle = (origin, point) => {
+        const dx = point.x - origin.x;
+        const dy = point.y - origin.y;
+        const distance = Math.hypot(dx, dy);
+        if (!distance) return point;
+        const snap = Math.PI / 4;
+        const angle = Math.atan2(dy, dx);
+        const snappedAngle = Math.round(angle / snap) * snap;
+        return {
+            x: origin.x + Math.cos(snappedAngle) * distance,
+            y: origin.y + Math.sin(snappedAngle) * distance
+        };
+    };
 
     // Save to history before modifying
     const pushHistory = useCallback((newElements) => {
@@ -44,34 +102,78 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         if (history.length === 0) return;
         const previousState = history[history.length - 1];
         setHistory(prev => prev.slice(0, -1));
+        activeElementsRef.current = previousState;
         setElements(previousState);
-        setAppState(s => ({ ...s, selectedElementId: null, editingTextId: null }));
+        setAppState(s => ({ ...s, selectedElementId: null, selectedElementIds: [], editingTextId: null }));
     };
 
     // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if ((e.key === 'Backspace' || e.key === 'Delete') && appState.selectedElementId && !appState.editingTextId) {
-                pushHistory(elements);
-                setElements(prev => prev.filter(el => el.id !== appState.selectedElementId));
-                setAppState(s => ({ ...s, selectedElementId: null }));
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !appState.editingTextId) {
+                e.preventDefault();
+                if (history.length === 0) return;
+                const previousState = history[history.length - 1];
+                setHistory(prev => prev.slice(0, -1));
+                activeElementsRef.current = previousState;
+                setElements(previousState);
+                setAppState(s => ({ ...s, selectedElementId: null, selectedElementIds: [], editingTextId: null }));
+                return;
+            }
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                setAppState(s => ({ ...s, isSpaceDown: true }));
+            }
+            if ((e.key === 'Backspace' || e.key === 'Delete') && !appState.editingTextId) {
+                if (appState.selectedElementId) {
+                    pushHistory(elements);
+                    setElements(prev => prev.filter(el => el.id !== appState.selectedElementId));
+                    setAppState(s => ({ ...s, selectedElementId: null }));
+                } else if (appState.selectedElementIds && appState.selectedElementIds.length > 0) {
+                    pushHistory(elements);
+                    setElements(prev => prev.filter(el => !appState.selectedElementIds.includes(el.id)));
+                    setAppState(s => ({ ...s, selectedElementIds: [] }));
+                }
+            }
+        };
+        const handleKeyUp = (e) => {
+            if (e.code === 'Space') {
+                setAppState(s => ({ ...s, isSpaceDown: false }));
             }
         };
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [appState.selectedElementId, appState.editingTextId, elements, pushHistory]);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, [appState.selectedElementId, appState.selectedElementIds, appState.editingTextId, elements, history, pushHistory]);
 
     // Rendering Engine
     const redraw = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
+        
+        // Reset transform to clear the whole canvas
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Draw dot grid
-        drawGrid(ctx, canvas.width, canvas.height);
+        const dpr = window.devicePixelRatio || 1;
+        const cssWidth = canvas.width / dpr;
+        const cssHeight = canvas.height / dpr;
+        const zoom = activeZoomRef.current;
+        const pan = activePanRef.current;
+
+        // Map drawing-space coordinates to CSS pixels, then to backing-store pixels.
+        ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, dpr * pan.x, dpr * pan.y);
+
+        if (appState.showGrid) {
+            drawGrid(ctx, cssWidth, cssHeight);
+        }
         
-        elements.forEach(el => {
+        const elementsToDraw = activeElementsRef.current || elements;
+        elementsToDraw.forEach(el => {
             ctx.save();
             
             // Apply transformations
@@ -101,6 +203,40 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             } else if (el.type === 'circle') {
                 ctx.beginPath();
                 ctx.ellipse(el.x + el.w/2, el.y + el.h/2, Math.abs(el.w)/2, Math.abs(el.h)/2, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            } else if (el.type === 'triangle') {
+                ctx.beginPath();
+                ctx.moveTo(el.x + el.w/2, el.y);
+                ctx.lineTo(el.x + el.w, el.y + el.h);
+                ctx.lineTo(el.x, el.y + el.h);
+                ctx.closePath();
+                ctx.stroke();
+            } else if (el.type === 'polygon') {
+                const cx = el.x + el.w/2;
+                const cy = el.y + el.h/2;
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = i * Math.PI / 3 - Math.PI / 2;
+                    ctx.lineTo(cx + (el.w/2) * Math.cos(angle), cy + (el.h/2) * Math.sin(angle));
+                }
+                ctx.closePath();
+                ctx.stroke();
+            } else if (el.type === 'rhombus') {
+                ctx.beginPath();
+                ctx.moveTo(el.x + el.w/2, el.y);
+                ctx.lineTo(el.x + el.w, el.y + el.h/2);
+                ctx.lineTo(el.x + el.w/2, el.y + el.h);
+                ctx.lineTo(el.x, el.y + el.h/2);
+                ctx.closePath();
+                ctx.stroke();
+            } else if (el.type === 'parallelogram') {
+                const skew = el.w * 0.2;
+                ctx.beginPath();
+                ctx.moveTo(el.x + skew, el.y);
+                ctx.lineTo(el.x + el.w, el.y);
+                ctx.lineTo(el.x + el.w - skew, el.y + el.h);
+                ctx.lineTo(el.x, el.y + el.h);
+                ctx.closePath();
                 ctx.stroke();
             } else if (el.type === 'line') {
                 ctx.beginPath();
@@ -181,7 +317,39 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
             ctx.restore();
         });
-    }, [elements, appState.editingTextId]);
+    }, [appState.editingTextId, appState.showGrid]); // Element changes redraw through activeElementsRef.
+
+    const fitDrawingToView = useCallback((sourceElements = activeElementsRef.current) => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const bounds = getDrawingBounds(sourceElements);
+        if (!bounds) {
+            activeZoomRef.current = 1;
+            activePanRef.current = { x: 0, y: 0 };
+            setAppState(s => ({ ...s, zoom: 1 }));
+            syncOverlayTransform();
+            redraw();
+            return;
+        }
+
+        const padding = 96;
+        const viewW = Math.max(1, container.clientWidth);
+        const viewH = Math.max(1, container.clientHeight);
+        const availableW = Math.max(1, viewW - padding * 2);
+        const availableH = Math.max(1, viewH - padding * 2);
+        const nextZoom = Math.min(Math.max(Math.min(availableW / bounds.w, availableH / bounds.h), 0.1), 6);
+        const nextPan = {
+            x: viewW / 2 - bounds.cx * nextZoom,
+            y: viewH / 2 - bounds.cy * nextZoom
+        };
+
+        activeZoomRef.current = nextZoom;
+        activePanRef.current = nextPan;
+        setAppState(s => ({ ...s, zoom: nextZoom }));
+        syncOverlayTransform();
+        redraw();
+    }, [redraw, syncOverlayTransform]);
 
     // Canvas Resize Observer
     useEffect(() => {
@@ -194,8 +362,6 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 canvas.style.width = `${container.clientWidth}px`;
                 canvas.style.height = `${container.clientHeight}px`;
                 
-                const ctx = canvas.getContext('2d');
-                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
                 redraw();
             }
         };
@@ -207,13 +373,39 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
     // Draw on elements change
     useEffect(() => {
+        activeElementsRef.current = elements;
         redraw();
     }, [elements, redraw]);
+
+    useEffect(() => {
+        redraw();
+    }, [appState.editingTextId, appState.showGrid, redraw]);
+
+    useEffect(() => {
+        viewInitializedRef.current = false;
+    }, [drawingId]);
+
+    useEffect(() => {
+        if (isLoading || viewInitializedRef.current) return;
+        viewInitializedRef.current = true;
+        requestAnimationFrame(() => fitDrawingToView(activeElementsRef.current));
+    }, [elements, fitDrawingToView, isLoading]);
 
     // Load Data
     useEffect(() => {
         if (!drawingId || drawingId === 'new') {
             setIsLoading(false);
+            const localStr = localStorage.getItem('autosave_drawing_new');
+            if (localStr) {
+                try {
+                    const localData = JSON.parse(localStr);
+                    if (localData.elements && localData.elements.length > 0) {
+                        setElements(localData.elements);
+                        setDrawingName(localData.name || 'Ny Skitse');
+                        toast.success('Gendannede kladde!');
+                    }
+                } catch(e) {}
+            }
             return;
         }
 
@@ -223,10 +415,25 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 const { data, error } = await supabase.from('drawings').select('*').eq('id', drawingId).single();
                 if (error) throw error;
                 if (data) {
-                    setDrawingName(data.name || 'Ny Skitse');
-                    if (data.document_data && Array.isArray(data.document_data)) {
-                        setElements(data.document_data);
+                    let finalElements = data.document_data && Array.isArray(data.document_data) ? data.document_data : [];
+                    let finalName = data.name || 'Ny Skitse';
+                    
+                    // Check local autosave
+                    const localStr = localStorage.getItem(`autosave_drawing_${drawingId}`);
+                    if (localStr) {
+                        try {
+                            const localData = JSON.parse(localStr);
+                            const dbTime = new Date(data.updated_at || 0).getTime();
+                            if (localData.timestamp > dbTime) {
+                                finalElements = localData.elements;
+                                finalName = localData.name;
+                                toast.success('Gendannede ændringer der ikke var gemt!');
+                            }
+                        } catch(e) {}
                     }
+                    
+                    setElements(finalElements);
+                    setDrawingName(finalName);
                 }
             } catch (err) {
                 console.error("Fejl:", err);
@@ -235,27 +442,66 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 setIsLoading(false);
             }
         };
+        
         loadDrawing();
     }, [drawingId]);
+
+    // LocalStorage Autosave (Debounced to prevent lag)
+    useEffect(() => {
+        if (!isLoading) {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = setTimeout(() => {
+                const saveKey = `autosave_drawing_${drawingId || 'new'}`;
+                localStorage.setItem(saveKey, JSON.stringify({
+                    timestamp: Date.now(),
+                    elements,
+                    name: drawingName
+                }));
+            }, 1000);
+        }
+        return () => {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        };
+    }, [elements, drawingName, drawingId, isLoading]);
 
     // Interaction Helpers
     const getPointerPos = (e) => {
         const rect = containerRef.current.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { x: clientX - rect.left, y: clientY - rect.top };
+        const unscaledX = clientX - rect.left;
+        const unscaledY = clientY - rect.top;
+        return { 
+            x: (unscaledX - activePanRef.current.x) / activeZoomRef.current, 
+            y: (unscaledY - activePanRef.current.y) / activeZoomRef.current 
+        };
     };
 
     // Pointer Events
     const handlePointerDown = (e) => {
+        if (e.button === 1 || e.button === 2 || appState.isSpaceDown) {
+            lastPointerRef.current = { x: e.clientX || (e.touches && e.touches[0].clientX) || 0, y: e.clientY || (e.touches && e.touches[0].clientY) || 0 };
+            setAppState(s => ({ ...s, panning: true }));
+            return;
+        }
         const pos = getPointerPos(e);
+        lastActionPointRef.current = pos;
+        dragHistoryPushedRef.current = false;
         
         if (appState.tool === 'select') {
-            const clickedElement = getElementAtPosition(pos.x, pos.y, elements);
+            const clickedElement = getElementAtPosition(pos.x, pos.y, activeElementsRef.current);
             if (clickedElement) {
                 if (clickedElement.id === appState.selectedElementId && (clickedElement.type === 'text' || clickedElement.type === 'dimension')) {
                     setAppState(s => ({ ...s, editingTextId: clickedElement.id }));
                 } else {
+                    let moduleIds = [clickedElement.id];
+                    if (!appState.drillDown) {
+                        const moduleRootId = clickedElement.parentId || clickedElement.id;
+                        moduleIds = getConnectedModule(moduleRootId, activeElementsRef.current);
+                        if (!moduleIds.includes(clickedElement.id)) moduleIds.push(clickedElement.id);
+                    }
+                    activeModuleIdsRef.current = moduleIds;
+
                     setAppState(s => ({ 
                         ...s, 
                         selectedElementId: clickedElement.id, 
@@ -265,14 +511,23 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     }));
                 }
             } else {
-                setAppState(s => ({ ...s, selectedElementId: null, editingTextId: null }));
+                setAppState(s => ({ 
+                    ...s, 
+                    selectedElementId: null, 
+                    selectedElementIds: [],
+                    editingTextId: null, 
+                    marqueeStartPoint: pos,
+                    marqueeCurrentPoint: pos
+                }));
             }
         } 
         else if (appState.tool === 'eraser') {
-            const clickedElement = getElementAtPosition(pos.x, pos.y, elements);
+            const clickedElement = getElementAtPosition(pos.x, pos.y, activeElementsRef.current);
             if (clickedElement) {
                 pushHistory(elements);
-                setElements(prev => prev.filter(el => el.id !== clickedElement.id));
+                const updatedElements = activeElementsRef.current.filter(el => el.id !== clickedElement.id);
+                activeElementsRef.current = updatedElements;
+                setElements(updatedElements);
             }
         }
         else {
@@ -287,11 +542,11 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
             if (appState.tool === 'pen') {
                 newElement.points = [pos];
-            } else if (appState.tool === 'rectangle' || appState.tool === 'text' || appState.tool === 'circle') {
+            } else if (['rectangle', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(appState.tool)) {
                 newElement.x = pos.x;
                 newElement.y = pos.y;
-                newElement.w = appState.tool === 'text' ? 100 : 0;
-                newElement.h = appState.tool === 'text' ? 30 : 0;
+                newElement.w = appState.tool === 'text' ? 100 : 100;
+                newElement.h = appState.tool === 'text' ? 30 : 100;
                 newElement.text = '';
             } else if (appState.tool === 'arrow' || appState.tool === 'dimension' || appState.tool === 'line') {
                 newElement.x = pos.x;
@@ -301,23 +556,59 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 newElement.text = '';
             }
 
-            setElements([...elements, newElement]);
-            setAppState(s => ({ ...s, selectedElementId: newElement.id, dragging: true, actionStartPoint: pos }));
+            const updatedElements = [...activeElementsRef.current, newElement];
+            activeElementsRef.current = updatedElements;
+            setElements(updatedElements);
+            setAppState(s => ({ 
+                ...s, 
+                selectedElementId: newElement.id, 
+                dragging: true, 
+                actionStartPoint: pos,
+                editingTextId: appState.tool === 'text' ? newElement.id : null
+            }));
+            
+            // Calculate module IDs ONCE when drag starts
+            let moduleIds = [newElement.id];
+            if (!appState.drillDown) {
+                moduleIds = getConnectedModule(newElement.id, elements);
+            }
+            activeModuleIdsRef.current = moduleIds;
+            return;
         }
     };
 
     const handlePointerMove = (e) => {
+        if (appState.panning) {
+            const currentX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+            const currentY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+            const dx = currentX - lastPointerRef.current.x;
+            const dy = currentY - lastPointerRef.current.y;
+            
+            activePanRef.current = { x: activePanRef.current.x + dx, y: activePanRef.current.y + dy };
+            lastPointerRef.current = { x: currentX, y: currentY };
+            
+            syncOverlayTransform();
+            
+            redraw();
+            return;
+        }
+        
+        if (appState.marqueeStartPoint) {
+            setAppState(s => ({ ...s, marqueeCurrentPoint: getPointerPos(e) }));
+            return;
+        }
+
         if (!appState.dragging && !appState.rotating && !appState.resizing) return;
         const pos = getPointerPos(e);
 
         if (appState.resizing && appState.selectedElementId) {
-            setElements(prev => prev.map(el => {
+            activeElementsRef.current = activeElementsRef.current.map(el => {
                 if (el.id !== appState.selectedElementId) return el;
                 const bounds = getElementBounds(el);
                 let localPos = pos;
                 if (el.rotation) localPos = rotatePoint(pos, {x: bounds.cx, y: bounds.cy}, -el.rotation);
 
-                if (el.type === 'rectangle' || el.type === 'image' || el.type === 'text' || el.type === 'circle') {
+                if (el.type === 'rectangle' || el.type === 'image' || el.type === 'text' || el.type === 'circle' || el.type === 'triangle' || el.type === 'polygon' || el.type === 'rhombus' || el.type === 'parallelogram') {
                     let { x, y, w, h } = el;
                     if (appState.resizing.includes('w')) { w += x - localPos.x; x = localPos.x; }
                     if (appState.resizing.includes('e')) { w = localPos.x - x; }
@@ -330,53 +621,69 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 
                 if (el.type === 'arrow' || el.type === 'dimension' || el.type === 'line') {
                     if (appState.resizing === 'start') {
-                        const dx = localPos.x - el.endX;
-                        const dy = localPos.y - el.endY;
-                        const angle = Math.atan2(dy, dx);
-                        const snap = Math.PI / 4;
-                        const closestSnap = Math.round(angle / snap) * snap;
-                        if (Math.abs(angle - closestSnap) < 0.17) {
-                            const dist = Math.hypot(dx, dy);
-                            return { ...el, x: el.endX + Math.cos(closestSnap) * dist, y: el.endY + Math.sin(closestSnap) * dist };
-                        }
-                        return { ...el, x: localPos.x, y: localPos.y };
+                        const nextPos = e.shiftKey ? constrainAngle({ x: el.endX, y: el.endY }, localPos) : localPos;
+                        return { ...el, x: nextPos.x, y: nextPos.y };
                     }
                     if (appState.resizing === 'end') {
-                        const dx = localPos.x - el.x;
-                        const dy = localPos.y - el.y;
-                        const angle = Math.atan2(dy, dx);
-                        const snap = Math.PI / 4;
-                        const closestSnap = Math.round(angle / snap) * snap;
-                        if (Math.abs(angle - closestSnap) < 0.17) {
-                            const dist = Math.hypot(dx, dy);
-                            return { ...el, endX: el.x + Math.cos(closestSnap) * dist, endY: el.y + Math.sin(closestSnap) * dist };
-                        }
-                        return { ...el, endX: localPos.x, endY: localPos.y };
+                        const nextPos = e.shiftKey ? constrainAngle({ x: el.x, y: el.y }, localPos) : localPos;
+                        return { ...el, endX: nextPos.x, endY: nextPos.y };
                     }
                 }
                 
                 return el;
-            }));
+            });
+            
+            // Sync single overlay box if present
+            if (selectionOverlayRef.current) {
+                const el = activeElementsRef.current.find(e => e.id === appState.selectedElementId);
+                if (el) {
+                    const bounds = getElementBounds(el);
+                    const endpointHandleSize = 10 / (activeZoomRef.current || 1);
+                    selectionOverlayRef.current.style.left = `${bounds.x}px`;
+                    selectionOverlayRef.current.style.top = `${bounds.y}px`;
+                    selectionOverlayRef.current.style.width = `${bounds.w}px`;
+                    selectionOverlayRef.current.style.height = `${bounds.h}px`;
+                    
+                    if (startHandleRef.current) {
+                        startHandleRef.current.style.left = `${el.x - bounds.x - endpointHandleSize / 2}px`;
+                        startHandleRef.current.style.top = `${el.y - bounds.y - endpointHandleSize / 2}px`;
+                    }
+                    if (endHandleRef.current) {
+                        endHandleRef.current.style.left = `${el.endX - bounds.x - endpointHandleSize / 2}px`;
+                        endHandleRef.current.style.top = `${el.endY - bounds.y - endpointHandleSize / 2}px`;
+                    }
+                }
+            }
+            redraw();
             return;
         }
 
         if (appState.rotating && appState.selectedElementId) {
-            const el = elements.find(e => e.id === appState.selectedElementId);
+            const el = activeElementsRef.current.find(e => e.id === appState.selectedElementId);
             if (!el) return;
             const bounds = getElementBounds(el);
             const angle = Math.atan2(pos.y - bounds.cy, pos.x - bounds.cx);
             const rotation = angle + Math.PI / 2;
             
-            setElements(prev => prev.map(e => e.id === appState.selectedElementId ? { ...e, rotation } : e));
+            activeElementsRef.current = activeElementsRef.current.map(e => e.id === appState.selectedElementId ? { ...e, rotation } : e);
+            redraw();
             return;
         }
 
-        if (appState.dragging && appState.selectedElementId) {
-            const dx = pos.x - appState.actionStartPoint.x;
-            const dy = pos.y - appState.actionStartPoint.y;
+        if (appState.dragging && (appState.selectedElementId || (appState.selectedElementIds && appState.selectedElementIds.length > 0))) {
+            const dx = pos.x - lastActionPointRef.current.x;
+            const dy = pos.y - lastActionPointRef.current.y;
 
-            setElements(prev => prev.map(el => {
-                if (el.id !== appState.selectedElementId) return el;
+            if (appState.tool === 'select' && !dragHistoryPushedRef.current && (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01)) {
+                pushHistory(activeElementsRef.current);
+                dragHistoryPushedRef.current = true;
+            }
+
+            let moduleIds = appState.selectedElementId ? activeModuleIdsRef.current : appState.selectedElementIds;
+
+            activeElementsRef.current = activeElementsRef.current.map(el => {
+                const isMoving = moduleIds.includes(el.id) || moduleIds.includes(el.parentId);
+                if (!isMoving) return el;
 
                 if (appState.tool === 'select') {
                     if (el.type === 'pen') {
@@ -390,44 +697,120 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 else if (appState.tool === 'pen') {
                     return { ...el, points: [...el.points, pos] };
                 }
-                else if (appState.tool === 'rectangle' || appState.tool === 'circle' || appState.tool === 'image') {
-                    return { ...el, w: pos.x - el.x, h: pos.y - el.y };
-                }
-                else if (appState.tool === 'arrow' || appState.tool === 'dimension' || appState.tool === 'line') {
-                    const dx = pos.x - el.x;
-                    const dy = pos.y - el.y;
-                    const angle = Math.atan2(dy, dx);
-                    const snap = Math.PI / 4;
-                    const closestSnap = Math.round(angle / snap) * snap;
-                    let endX = pos.x, endY = pos.y;
-                    if (Math.abs(angle - closestSnap) < 0.17) {
-                        const dist = Math.hypot(dx, dy);
-                        endX = el.x + Math.cos(closestSnap) * dist;
-                        endY = el.y + Math.sin(closestSnap) * dist;
+                else if (['rectangle', 'circle', 'image', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(appState.tool)) {
+                    const snap = findSnapPoint(pos, activeElementsRef.current, el.id);
+                    const endPos = snap || pos;
+                    let w = endPos.x - el.x;
+                    let h = endPos.y - el.y;
+                    if (e.shiftKey && appState.tool !== 'image') {
+                        const size = Math.max(Math.abs(w), Math.abs(h));
+                        w = Math.sign(w || 1) * size;
+                        h = Math.sign(h || 1) * size;
                     }
-                    return { ...el, endX, endY };
+                    return { ...el, w, h };
+                }
+                else if (['arrow', 'dimension', 'line'].includes(appState.tool)) {
+                    const snap = findSnapPoint(pos, activeElementsRef.current, el.id);
+                    const rawEndPos = snap || pos;
+                    const endPos = e.shiftKey ? constrainAngle({ x: el.x, y: el.y }, rawEndPos) : rawEndPos;
+                    return { ...el, endX: endPos.x, endY: endPos.y };
                 }
                 return el;
-            }));
+            });
 
-            if (appState.tool === 'select') {
-                setAppState(s => ({ ...s, actionStartPoint: pos })); // Update start point for continuous drag
+            // Sync overlays directly via DOM during drag to avoid React render
+            if (appState.selectedElementId && selectionOverlayRef.current) {
+                    const el = activeElementsRef.current.find(e => e.id === appState.selectedElementId);
+                if (el) {
+                    const bounds = getElementBounds(el);
+                    const endpointHandleSize = 10 / (activeZoomRef.current || 1);
+                    selectionOverlayRef.current.style.left = `${bounds.x}px`;
+                    selectionOverlayRef.current.style.top = `${bounds.y}px`;
+                    selectionOverlayRef.current.style.width = `${bounds.w}px`;
+                    selectionOverlayRef.current.style.height = `${bounds.h}px`;
+                    
+                    if (startHandleRef.current) {
+                        startHandleRef.current.style.left = `${el.x - bounds.x - endpointHandleSize / 2}px`;
+                        startHandleRef.current.style.top = `${el.y - bounds.y - endpointHandleSize / 2}px`;
+                    }
+                    if (endHandleRef.current) {
+                        endHandleRef.current.style.left = `${el.endX - bounds.x - endpointHandleSize / 2}px`;
+                        endHandleRef.current.style.top = `${el.endY - bounds.y - endpointHandleSize / 2}px`;
+                    }
+                }
+            } else if (appState.selectedElementIds && appState.selectedElementIds.length > 0) {
+                appState.selectedElementIds.forEach(id => {
+                    const el = activeElementsRef.current.find(e => e.id === id);
+                    if (!el) return;
+                    const bounds = getElementBounds(el);
+                    const elNode = document.getElementById('multi-select-' + el.id);
+                    if (elNode) {
+                        elNode.style.left = `${bounds.x}px`;
+                        elNode.style.top = `${bounds.y}px`;
+                    }
+                });
             }
+
+            redraw();
+            lastActionPointRef.current = pos;
         }
     };
 
     const handlePointerUp = () => {
+        if (appState.panning) {
+            setAppState(s => ({ ...s, panning: false, pan: { ...activePanRef.current } }));
+        }
+
+        if (appState.marqueeStartPoint && appState.marqueeCurrentPoint) {
+            const x1 = Math.min(appState.marqueeStartPoint.x, appState.marqueeCurrentPoint.x);
+            const y1 = Math.min(appState.marqueeStartPoint.y, appState.marqueeCurrentPoint.y);
+            const x2 = Math.max(appState.marqueeStartPoint.x, appState.marqueeCurrentPoint.x);
+            const y2 = Math.max(appState.marqueeStartPoint.y, appState.marqueeCurrentPoint.y);
+            
+            // Allow clicking empty space to deselect without tiny marquee box
+            if (x2 - x1 < 5 && y2 - y1 < 5) {
+                setAppState(s => ({ ...s, marqueeStartPoint: null, marqueeCurrentPoint: null, selectedElementId: null, selectedElementIds: [] }));
+                return;
+            }
+
+            const selectedIds = [];
+            activeElementsRef.current.forEach(el => {
+                const bounds = getElementBounds(el);
+                if (!bounds) return;
+                // Simple intersection: if center is inside the marquee
+                if (bounds.cx >= x1 && bounds.cx <= x2 && bounds.cy >= y1 && bounds.cy <= y2) {
+                    selectedIds.push(el.id);
+                }
+            });
+
+            if (selectedIds.length === 1) {
+                setAppState(s => ({ ...s, selectedElementId: selectedIds[0], selectedElementIds: [], marqueeStartPoint: null, marqueeCurrentPoint: null }));
+            } else if (selectedIds.length > 1) {
+                setAppState(s => ({ ...s, selectedElementId: null, selectedElementIds: selectedIds, marqueeStartPoint: null, marqueeCurrentPoint: null }));
+            } else {
+                setAppState(s => ({ ...s, marqueeStartPoint: null, marqueeCurrentPoint: null, selectedElementId: null, selectedElementIds: [] }));
+            }
+            return;
+        }
+
         if (appState.dragging || appState.rotating || appState.resizing) {
             setAppState(s => ({ ...s, dragging: false, rotating: false, resizing: false }));
             
-            const activeEl = elements.find(e => e.id === appState.selectedElementId);
+            // SYNCHRONIZE BYPASS TO REACT STATE
+            setElements(activeElementsRef.current);
+            
+            const activeEl = activeElementsRef.current.find(e => e.id === appState.selectedElementId);
             if (activeEl && appState.tool !== 'select') {
                 // If drawing a rect/arrow that is tiny, remove it
-                if (activeEl.type === 'rectangle' && Math.abs(activeEl.w) < 5 && Math.abs(activeEl.h) < 5) {
-                    setElements(prev => prev.filter(e => e.id !== activeEl.id));
+                if (['rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(activeEl.type) && Math.abs(activeEl.w) < 5 && Math.abs(activeEl.h) < 5) {
+                    const filtered = activeElementsRef.current.filter(e => e.id !== activeEl.id);
+                    activeElementsRef.current = filtered;
+                    setElements(filtered);
                 }
-                else if ((activeEl.type === 'arrow' || activeEl.type === 'dimension') && Math.abs(activeEl.endX - activeEl.x) < 5 && Math.abs(activeEl.endY - activeEl.y) < 5) {
-                    setElements(prev => prev.filter(e => e.id !== activeEl.id));
+                else if ((activeEl.type === 'arrow' || activeEl.type === 'dimension' || activeEl.type === 'line') && Math.abs(activeEl.endX - activeEl.x) < 5 && Math.abs(activeEl.endY - activeEl.y) < 5) {
+                    const filtered = activeElementsRef.current.filter(e => e.id !== activeEl.id);
+                    activeElementsRef.current = filtered;
+                    setElements(filtered);
                 }
                 else if (activeEl.type === 'text' || activeEl.type === 'dimension') {
                     // Auto-focus text editing
@@ -435,8 +818,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 }
             }
             
-            // Automatically switch back to select after drawing a shape
-            if (['rectangle', 'arrow', 'text', 'dimension'].includes(appState.tool)) {
+            // Automatically switch back to select after drawing a shape/line
+            if (appState.tool !== 'select' && appState.tool !== 'eraser') {
                 setAppState(s => ({ ...s, tool: 'select' }));
             }
         }
@@ -450,24 +833,15 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         try {
             // 1. Generate Thumbnail Blob (small JPEG)
             let thumbUrl = null;
-            if (canvasRef.current) {
+            if (activeElementsRef.current.length > 0) {
                 try {
-                    const originalCanvas = canvasRef.current;
-                    const tempCanvas = document.createElement('canvas');
-                    const targetWidth = 600; 
-                    const scale = targetWidth / originalCanvas.width;
-                    tempCanvas.width = targetWidth;
-                    tempCanvas.height = originalCanvas.height * scale;
-                    const tempCtx = tempCanvas.getContext('2d');
-                    
-                    // Draw solid white background
-                    tempCtx.fillStyle = '#ffffff';
-                    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-                    // Draw scaled canvas content on top
-                    tempCtx.scale(scale, scale);
-                    tempCtx.drawImage(originalCanvas, 0, 0);
-
-                    const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/jpeg', 0.8));
+                    const { canvas: thumbCanvas } = await renderElementsToCanvas(activeElementsRef.current, {
+                        width: 1200,
+                        height: 800,
+                        padding: 60,
+                        imageCache: imageCache.current
+                    });
+                    const blob = await new Promise(resolve => thumbCanvas.toBlob(resolve, 'image/jpeg', 0.86));
                     const fileName = `thumb_${drawingId || 'new'}_${Date.now()}.jpg`;
 
                     const { error: uploadError } = await supabase.storage
@@ -488,7 +862,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             // 2. Save to Database
             if (drawingId && drawingId !== 'new') {
                 const updatePayload = { 
-                    document_data: elements, 
+                    document_data: activeElementsRef.current, 
                     name: drawingName,
                     updated_at: new Date().toISOString()
                 };
@@ -499,12 +873,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     .update(updatePayload)
                     .eq('id', drawingId);
                 if (error) throw error;
+                localStorage.removeItem(`autosave_drawing_${drawingId}`);
             } else {
                 const { data: { user } } = await supabase.auth.getUser();
                 
                 const payload = {
                     name: drawingName,
-                    document_data: elements,
+                    document_data: activeElementsRef.current,
                     user_id: user?.id
                 };
                 if (thumbUrl) payload.image_url = thumbUrl;
@@ -517,6 +892,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     .from('drawings')
                     .insert([payload]);
                 if (error) throw error;
+                localStorage.removeItem('autosave_drawing_new');
             }
             
             toast.success('Skitse gemt!', { id: tid });
@@ -533,9 +909,15 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         ctx.save();
         ctx.fillStyle = '#cbd5e1'; // Very subtle slate-300
         const gridSize = 40; // 40px grid spacing
-        // Pan offset if we implement panning later, but for now fixed
-        for (let x = 0; x < width; x += gridSize) {
-            for (let y = 0; y < height; y += gridSize) {
+        const zoom = activeZoomRef.current;
+        const pan = activePanRef.current;
+        const startX = Math.floor((-pan.x / zoom) / gridSize) * gridSize;
+        const startY = Math.floor((-pan.y / zoom) / gridSize) * gridSize;
+        const endX = ((width - pan.x) / zoom) + gridSize;
+        const endY = ((height - pan.y) / zoom) + gridSize;
+
+        for (let x = startX; x < endX; x += gridSize) {
+            for (let y = startY; y < endY; y += gridSize) {
                 ctx.beginPath();
                 ctx.arc(x, y, 1, 0, Math.PI * 2);
                 ctx.fill();
@@ -549,20 +931,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         const tid = toast.loading('Genererer officielt dokument...');
         
         try {
-            const originalCanvas = canvasRef.current;
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = originalCanvas.width;
-            tempCanvas.height = originalCanvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Draw solid white background
-            tempCtx.fillStyle = '#ffffff';
-            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            
-            // Draw canvas content on top (grid is included in originalCanvas)
-            tempCtx.drawImage(originalCanvas, 0, 0);
-
-            const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+            const { canvas: exportCanvas } = await renderElementsToCanvas(activeElementsRef.current, {
+                width: 2480,
+                height: 1754,
+                padding: 140,
+                imageCache: imageCache.current
+            });
+            const blob = await new Promise(resolve => exportCanvas.toBlob(resolve, 'image/png'));
             const fileName = `drawing_${leadId}_${Date.now()}.png`;
 
             const { data, error } = await supabase.storage
@@ -609,18 +984,25 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             const img = new window.Image();
             img.onload = () => {
                 pushHistory(elements);
+                const center = getViewportCenter();
+                const w = img.width > 600 ? 600 : img.width;
+                const h = img.width > 600 ? (img.height * (600 / img.width)) : img.height;
                 // Insert at the beginning so it's drawn behind other elements
                 const newElement = {
                     id: generateId(),
                     type: 'image',
-                    x: 50,
-                    y: 50,
-                    w: img.width > 600 ? 600 : img.width,
-                    h: img.width > 600 ? (img.height * (600 / img.width)) : img.height,
+                    x: center.x - w / 2,
+                    y: center.y - h / 2,
+                    w,
+                    h,
                     rotation: 0,
                     dataUrl: event.target.result
                 };
-                setElements([newElement, ...elements]);
+                const updatedElements = [newElement, ...activeElementsRef.current];
+                activeElementsRef.current = updatedElements;
+                setElements(updatedElements);
+                setAppState(s => ({ ...s, tool: 'select', selectedElementId: newElement.id, selectedElementIds: [] }));
+                e.target.value = '';
             };
             img.src = event.target.result;
         };
@@ -628,98 +1010,163 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     };
 
     // Selected Element Overlay
-    const selectedElement = elements.find(e => e.id === appState.selectedElementId);
     const selectionOverlay = () => {
-        if (!selectedElement) return null;
-        const bounds = getElementBounds(selectedElement);
-        if (!bounds) return null;
-
-        // In professional mode, padding is small or 0
+        if (appState.tool !== 'select') return null;
+        
+        const overlays = [];
         const padding = 0;
+        const zoom = activeZoomRef.current || 1;
+        const selectionBorderWidth = 1.5 / zoom;
+        const shapeHandleSize = 9 / zoom;
+        const endpointHandleSize = 10 / zoom;
 
-        return (
-            <div
+        // 1. Single selection (with resize/rotate handles)
+        const selectedElement = activeElementsRef.current.find(e => e.id === appState.selectedElementId);
+        if (selectedElement) {
+            const bounds = getElementBounds(selectedElement);
+            if (bounds) {
+                overlays.push(
+                    <div
+                        key={'single-' + selectedElement.id}
+                        ref={selectionOverlayRef}
                 style={{
                     position: 'absolute',
                     left: bounds.x - padding,
                     top: bounds.y - padding,
                     width: bounds.w + padding * 2,
                     height: bounds.h + padding * 2,
-                    border: '1.5px solid #2563eb', // Thinner, sharper blue like tldraw
+                    border: `${selectionBorderWidth}px solid #2563eb`, // Thinner, sharper blue like tldraw
                     pointerEvents: 'none',
                     zIndex: 50,
-                    transform: selectedElement.rotation ? `rotate(${selectedElement.rotation}rad)` : 'none',
-                    transformOrigin: 'center center'
                 }}
             >
                 {/* Rotation Handle */}
                 <div
                     style={{
-                        position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)',
-                        width: 12, height: 12, backgroundColor: '#ffffff', border: '1.5px solid #2563eb',
+                        position: 'absolute', top: -32 / zoom, left: '50%', transform: 'translateX(-50%)',
+                        width: 12 / zoom, height: 12 / zoom, backgroundColor: '#ffffff', border: `${selectionBorderWidth}px solid #2563eb`,
                         borderRadius: '50%', cursor: 'grab', pointerEvents: 'auto',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                     }}
                     onPointerDown={(e) => {
                         e.stopPropagation();
-                        setAppState(s => ({ ...s, resizing: 'rotate', actionStartPoint: getPointerPos(e) }));
+                        pushHistory(activeElementsRef.current);
+                        setAppState(s => ({ ...s, rotating: true, resizing: false, actionStartPoint: getPointerPos(e) }));
                     }}
                 />
                 
                 {/* Connecting line for rotation */}
                 <div style={{
-                    position: 'absolute', top: -20, left: '50%', transform: 'translateX(-50%)',
-                    width: 1.5, height: 20, backgroundColor: '#2563eb'
+                    position: 'absolute', top: -20 / zoom, left: '50%', transform: 'translateX(-50%)',
+                    width: 1.5 / zoom, height: 20 / zoom, backgroundColor: '#2563eb'
                 }} />
 
-                {/* Resize Handles (only for rect, text, image) */}
-                {['rectangle', 'image', 'text'].includes(selectedElement.type) && ['nw', 'ne', 'sw', 'se'].map(corner => (
+                {/* Resize Handles (for all shapes, image, text) */}
+                {['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(selectedElement.type) && ['nw', 'ne', 'sw', 'se'].map(corner => (
                     <div key={corner}
                         style={{
-                            position: 'absolute', width: 9, height: 9, backgroundColor: '#ffffff', border: '1.5px solid #2563eb',
-                            top: corner.includes('n') ? -4.5 : 'auto', bottom: corner.includes('s') ? -4.5 : 'auto',
-                            left: corner.includes('w') ? -4.5 : 'auto', right: corner.includes('e') ? -4.5 : 'auto',
+                            position: 'absolute', width: shapeHandleSize, height: shapeHandleSize, backgroundColor: '#ffffff', border: `${selectionBorderWidth}px solid #2563eb`,
+                            top: corner.includes('n') ? -shapeHandleSize / 2 : 'auto', bottom: corner.includes('s') ? -shapeHandleSize / 2 : 'auto',
+                            left: corner.includes('w') ? -shapeHandleSize / 2 : 'auto', right: corner.includes('e') ? -shapeHandleSize / 2 : 'auto',
                             cursor: `${corner}-resize`, pointerEvents: 'auto', borderRadius: '1px'
                         }}
                         onPointerDown={(e) => {
                             e.stopPropagation();
+                            pushHistory(activeElementsRef.current);
                             setAppState(s => ({ ...s, resizing: corner, actionStartPoint: getPointerPos(e) }));
                         }}
                     />
                 ))}
 
-                {/* Endpoint Handles for arrows/dimensions */}
-                {['arrow', 'dimension'].includes(selectedElement.type) && (
+                {/* Endpoint Handles for arrows/dimensions/lines */}
+                {['arrow', 'dimension', 'line'].includes(selectedElement.type) && (
                     <>
                         <div
+                            ref={startHandleRef}
                             style={{
-                                position: 'absolute', width: 10, height: 10, backgroundColor: '#ffffff', border: '1.5px solid #2563eb',
-                                left: selectedElement.x - bounds.x + padding - 5,
-                                top: selectedElement.y - bounds.y + padding - 5,
+                                position: 'absolute', width: endpointHandleSize, height: endpointHandleSize, backgroundColor: '#ffffff', border: `${selectionBorderWidth}px solid #2563eb`,
+                                left: selectedElement.x - bounds.x + padding - endpointHandleSize / 2,
+                                top: selectedElement.y - bounds.y + padding - endpointHandleSize / 2,
                                 cursor: 'move', pointerEvents: 'auto', borderRadius: '50%'
                             }}
                             onPointerDown={(e) => {
                                 e.stopPropagation();
+                                pushHistory(activeElementsRef.current);
                                 setAppState(s => ({ ...s, resizing: 'start', actionStartPoint: getPointerPos(e) }));
                             }}
                         />
                         <div
+                            ref={endHandleRef}
                             style={{
-                                position: 'absolute', width: 10, height: 10, backgroundColor: '#ffffff', border: '1.5px solid #2563eb',
-                                left: selectedElement.endX - bounds.x + padding - 5,
-                                top: selectedElement.endY - bounds.y + padding - 5,
+                                position: 'absolute', width: endpointHandleSize, height: endpointHandleSize, backgroundColor: '#ffffff', border: `${selectionBorderWidth}px solid #2563eb`,
+                                left: selectedElement.endX - bounds.x + padding - endpointHandleSize / 2,
+                                top: selectedElement.endY - bounds.y + padding - endpointHandleSize / 2,
                                 cursor: 'move', pointerEvents: 'auto', borderRadius: '50%'
                             }}
                             onPointerDown={(e) => {
                                 e.stopPropagation();
+                                pushHistory(activeElementsRef.current);
                                 setAppState(s => ({ ...s, resizing: 'end', actionStartPoint: getPointerPos(e) }));
                             }}
                         />
                     </>
                 )}
             </div>
-        );
+                );
+            }
+        }
+
+        // 2. Multiple selection (just blue borders, no handles)
+        if (appState.selectedElementIds && appState.selectedElementIds.length > 0) {
+            appState.selectedElementIds.forEach(id => {
+                const el = activeElementsRef.current.find(e => e.id === id);
+                if (!el) return;
+                const bounds = getElementBounds(el);
+                if (!bounds) return;
+                overlays.push(
+                    <div
+                        id={'multi-select-' + el.id}
+                        key={'multi-' + el.id}
+                        style={{
+                            position: 'absolute',
+                            left: bounds.x - padding,
+                            top: bounds.y - padding,
+                            width: bounds.w + padding * 2,
+                            height: bounds.h + padding * 2,
+                            border: `${selectionBorderWidth}px solid #2563eb`, // Thinner, sharper blue like tldraw
+                            pointerEvents: 'none',
+                            zIndex: 50,
+                        }}
+                    />
+                );
+            });
+        }
+
+        return <>{overlays}</>;
     }
+
+    // Marquee Selection Box
+    const renderMarquee = () => {
+        if (!appState.marqueeStartPoint || !appState.marqueeCurrentPoint) return null;
+        const x1 = Math.min(appState.marqueeStartPoint.x, appState.marqueeCurrentPoint.x);
+        const y1 = Math.min(appState.marqueeStartPoint.y, appState.marqueeCurrentPoint.y);
+        const x2 = Math.max(appState.marqueeStartPoint.x, appState.marqueeCurrentPoint.x);
+        const y2 = Math.max(appState.marqueeStartPoint.y, appState.marqueeCurrentPoint.y);
+        
+        return (
+            <div style={{
+                position: 'absolute',
+                left: x1,
+                top: y1,
+                width: x2 - x1,
+                height: y2 - y1,
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                border: `${1 / (activeZoomRef.current || 1)}px solid rgba(37, 99, 235, 0.5)`,
+                pointerEvents: 'none',
+                zIndex: 60
+            }} />
+        );
+    };
 
     // Text Editor Overlay
     let textOverlay = null;
@@ -750,12 +1197,16 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         outline: 'none',
                         zIndex: 1000,
                         minWidth: '150px',
-                        textAlign: textEl.type === 'dimension' ? 'center' : 'left'
+                        textAlign: textEl.type === 'dimension' ? 'center' : 'left',
+                        pointerEvents: 'auto'
                     }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     onBlur={(e) => {
                         const newText = e.target.value;
                         pushHistory(elements);
-                        setElements(prev => prev.map(el => {
+                        
+                        const updatedElements = activeElementsRef.current.map(el => {
                             if (el.id !== appState.editingTextId) return el;
                             
                             // Measure text width for accurate selection box later
@@ -767,8 +1218,12 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                                 return { ...el, text: newText, w: Math.max(100, width + 10) };
                             }
                             return { ...el, text: newText };
-                        }));
+                        });
+                        
+                        activeElementsRef.current = updatedElements;
+                        setElements(updatedElements);
                         setAppState(s => ({ ...s, editingTextId: null }));
+                        requestAnimationFrame(() => redraw());
                     }}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') e.target.blur();
@@ -778,21 +1233,87 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         }
     }
 
+    const handleWheel = (e) => {
+        e.preventDefault();
+        const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
+        const rect = containerRef.current.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        const worldBeforeZoom = getPointerPos(e);
+        const newZoom = Math.min(Math.max(activeZoomRef.current * zoomDelta, 0.1), 10);
+        activeZoomRef.current = newZoom;
+        activePanRef.current = {
+            x: screenX - worldBeforeZoom.x * newZoom,
+            y: screenY - worldBeforeZoom.y * newZoom
+        };
+        setAppState(s => ({ ...s, zoom: newZoom }));
+        syncOverlayTransform();
+        redraw();
+    };
+
+    const handleDoubleClick = (e) => {
+        const pos = getPointerPos(e);
+        const clickedElement = getElementAtPosition(pos.x, pos.y, activeElementsRef.current);
+        if (clickedElement) {
+            if (clickedElement.type === 'text') {
+                setAppState(s => ({ ...s, editingTextId: clickedElement.id }));
+                return;
+            }
+            if (['line', 'arrow', 'dimension', 'rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(clickedElement.type)) {
+                const textId = generateId();
+                pushHistory(elements);
+                
+                const newElement = {
+                    id: textId,
+                    type: 'text',
+                    parentId: clickedElement.id, // For linked moving!
+                    text: '',
+                    color: appState.color,
+                    x: pos.x,
+                    y: pos.y - 25, // Offset 25px!
+                    w: 100,
+                    h: 30
+                };
+                
+                const updatedElements = [...activeElementsRef.current, newElement];
+                activeElementsRef.current = updatedElements;
+                setElements(updatedElements);
+                setAppState(s => ({ ...s, editingTextId: textId }));
+            }
+        }
+    };
+
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', width: '100vw', height: '100vh', overflow: 'hidden' }}>
             
-            {/* The Canvas Area */}
             <div 
-                ref={containerRef} 
-                style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}
+                ref={containerRef}
+                style={{ position: 'fixed', inset: 0, overflow: 'hidden', cursor: appState.tool === 'select' ? 'default' : 'crosshair', backgroundColor: '#f8fafc', touchAction: 'none' }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
+                onDoubleClick={handleDoubleClick}
+                onWheel={handleWheel}
             >
-                <canvas ref={canvasRef} style={{ touchAction: 'none' }} />
-                {selectionOverlay()}
-                {textOverlay}
+                <canvas
+                    ref={canvasRef}
+                    style={{ display: 'block', position: 'absolute', top: 0, left: 0 }}
+                />
+                <div
+                    ref={overlaysContainerRef}
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        transform: getOverlayTransform(),
+                        transformOrigin: '0 0',
+                        pointerEvents: 'none'
+                    }}
+                >
+                    {selectionOverlay()}
+                    {renderMarquee()}
+                    {textOverlay}
+                </div>
             </div>
 
             {/* 1. TOP BAR (Header) - ORIGINAL FLOATING STYLE */}
@@ -950,6 +1471,22 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
                 <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
 
+                <button
+                    onClick={() => fitDrawingToView()}
+                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
+                    title="Vis hele tegningen"
+                >
+                    <Maximize2 size={18} />
+                </button>
+
+                <button
+                    onClick={() => setAppState(s => ({ ...s, showGrid: !s.showGrid }))}
+                    className={`p-1.5 rounded-lg transition-all active:scale-95 ${appState.showGrid ? 'text-blue-600 bg-blue-50' : 'text-slate-500 hover:bg-slate-100'}`}
+                    title={appState.showGrid ? 'Skjul hjælpegrid' : 'Vis hjælpegrid'}
+                >
+                    <Grid3X3 size={18} />
+                </button>
+
                 <button 
                     onClick={handleUndo} 
                     disabled={history.length === 0} 
@@ -972,9 +1509,68 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     { id: 'select', icon: MousePointer2, title: 'Markør' },
                     { id: 'pen', icon: PenTool, title: 'Fritegning' },
                     { id: 'line', icon: Minus, title: 'Lige Streg' },
-                    { id: 'rectangle', icon: Square, title: 'Firkant' },
-                    { id: 'circle', icon: Circle, title: 'Cirkel' },
-                    { id: 'arrow', icon: ArrowRight, title: 'Pil' },
+                    { id: 'arrow', icon: ArrowRight, title: 'Pil' }
+                ].map(t => (
+                    <button
+                        key={t.id}
+                        onClick={() => setAppState(s => ({ ...s, tool: t.id, selectedElementId: null }))}
+                        className={`p-2 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center
+                            ${appState.tool === t.id 
+                                ? 'bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100' 
+                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                        style={{ width: '36px', height: '36px' }}
+                        title={t.title}
+                    >
+                        <t.icon size={18} strokeWidth={appState.tool === t.id ? 2.5 : 2} />
+                    </button>
+                ))}
+
+                {/* Shapes Menu Toggle */}
+                <div style={{ position: 'relative' }}>
+                    <button
+                        onClick={() => setShowShapesMenu(!showShapesMenu)}
+                        className={`p-2 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center
+                            ${['rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(appState.tool) 
+                                ? 'bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100' 
+                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                        style={{ width: '36px', height: '36px' }}
+                        title="Figurer"
+                    >
+                        <Shapes size={18} strokeWidth={['rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(appState.tool) ? 2.5 : 2} />
+                    </button>
+                    {showShapesMenu && (
+                        <div style={{
+                            position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px',
+                            backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                            border: '1px solid rgba(226, 232, 240, 1)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px'
+                        }}>
+                            {[
+                                { id: 'rectangle', icon: Square, title: 'Firkant' },
+                                { id: 'circle', icon: Circle, title: 'Cirkel' },
+                                { id: 'triangle', icon: Triangle, title: 'Trekant' },
+                                { id: 'polygon', icon: Hexagon, title: 'Polygon' },
+                                { id: 'rhombus', icon: Diamond, title: 'Rombe' },
+                                { id: 'parallelogram', icon: Square, title: 'Parallelogram' }
+                            ].map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => {
+                                        setAppState(s => ({ ...s, tool: t.id, selectedElementId: null }));
+                                        setShowShapesMenu(false);
+                                    }}
+                                    className={`p-2 rounded-lg transition-all duration-200 active:scale-95 flex items-center justify-center
+                                        ${appState.tool === t.id ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-100'}`}
+                                    style={{ width: '32px', height: '32px' }}
+                                    title={t.title}
+                                >
+                                    <t.icon size={16} strokeWidth={2} style={t.id === 'parallelogram' ? { transform: 'skewX(-20deg)' } : {}} />
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {[
                     { id: 'dimension', icon: Ruler, title: 'Målebånd' },
                     { id: 'text', icon: Type, title: 'Tekst' },
                     { id: 'eraser', icon: Eraser, title: 'Viskelæder' }
