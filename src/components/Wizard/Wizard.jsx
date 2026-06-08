@@ -13,7 +13,7 @@ import { fetchCalibrationFactor } from '../../utils/calibration';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
-const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTestMode = false, testSettings = null, testMaterials = null }) => {
+const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTestMode = false, testSettings = null, testMaterials = null, draftCreator = null }) => {
     const [projectData, setProjectData] = useState({
         category: null,
         details: {},
@@ -474,8 +474,17 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
             }
 
             if (!isUpdate) {
-                // OPRET LEAD TIDLIGT SOM "Overslag (Afventer)"
+                // OPRET LEAD TIDLIGT SOM "Overslag (Afventer)" ELLER "Kladde"
                 const newLeadToken = crypto.randomUUID();
+                
+                let initialStatus = isFastTrack ? 'Ny forespørgsel' : 'Overslag (Afventer)';
+                let extraRawData = {};
+                
+                if (draftCreator) {
+                    initialStatus = 'Kladde';
+                    extraRawData = { created_by: draftCreator.id, draft_mode: true };
+                }
+
                 const { error } = await supabase
                     .from('leads')
                     .insert([{
@@ -487,9 +496,9 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
                         project_category: categoryName,
                         price_estimate: res.priceRange,
                         contact_preference: isFastTrack ? 'Hurtigst muligt' : 'Afventer accept',
-                        raw_data: { ...updatedProjectData, calc_data: res.calcData, breakdownArr: res.breakdownArr },
+                        raw_data: { ...updatedProjectData, calc_data: res.calcData, breakdownArr: res.breakdownArr, ...extraRawData },
                         carpenter_id: carpenter?.id || null,
-                        status: isFastTrack ? 'Ny forespørgsel' : 'Overslag (Afventer)'
+                        status: initialStatus
                     }]);
                 
                 if (error) throw error;
@@ -498,7 +507,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
                 updatedProjectData.leadId = leadId;
             }
 
-            if (insertedData && customerDetails?.email) {
+            if (insertedData && customerDetails?.email && !draftCreator) {
                 // SEND EMAIL MED OVERSLAGET TIL KUNDEN
                 import('../../utils/sendEmail').then(({ sendEmail }) => {
                     import('../../utils/emailTemplates').then(({ getCustomerEstimateTemplate, getCustomerUpdatedEstimateTemplate, getCarpenterSenderName }) => {
@@ -747,7 +756,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
             )}
             {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} onAddAnotherProject={projectData.category !== 'special' ? handleAddAnotherProject : null} projects={projects} />}
             {currentStep === 3 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} isTestMode={isTestMode} />}
-            {currentStep === 4 && <StepResult projectData={projectData} notes={projectData.details?.notes || ''} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} isTestMode={isTestMode} />}
+            {currentStep === 4 && <StepResult projectData={projectData} notes={projectData.details?.notes || ''} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} isTestMode={isTestMode} draftCreator={draftCreator} />}
             {currentStep === 5 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
 
             <AiSupportWidget 

@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SubcontractorManager } from './Subcontractors';
 
 const roles = [
     { value: 'sales', label: 'Projektleder', desc: 'Ser kun egne leads og opretter tilbud.' },
     { value: 'worker', label: 'Tømrersvend', desc: 'Kan registrere timer og se checklister.' },
     { value: 'apprentice', label: 'Tømrerlærling', desc: 'Registrerer egne timer på sager.' },
-    { value: 'subcontractor', label: 'Underleverandør (B2B)', desc: 'Ekstern partner. Timer ignoreres ved løn-eksport.' },
     { value: 'accountant', label: 'Bogholder / Sekretær', desc: 'Godkender timer og ser økonomisk bogføring.' },
     { value: 'admin', label: 'Mester (Administrator)', desc: 'Fuld adgang til priser og systemindstillinger.' }
 ];
@@ -98,6 +98,40 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
         }
     };
 
+    const handleVacationQuotaUpdate = async (employeeId, currentRawData, newQuota) => {
+        const parsedQuota = parseInt(newQuota);
+        if (isNaN(parsedQuota) || parsedQuota < 0) return;
+        
+        const newRawData = { ...currentRawData, vacation_quota: parsedQuota };
+        
+        // Optimistic UI update
+        setTeam(team.map(m => m.id === employeeId ? { ...m, raw_data: newRawData } : m));
+
+        // DB update
+        const { error } = await supabase
+            .from('carpenters')
+            .update({ raw_data: newRawData })
+            .eq('id', employeeId);
+            
+        if (error) {
+            console.error("Kunne ikke opdatere feriesaldo:", error);
+            fetchTeam();
+        }
+    };
+
+    const handleLonnummerUpdate = async (employeeId, currentRawData, value) => {
+        const newRawData = { ...currentRawData, lonnummer: value };
+        setTeam(team.map(m => m.id === employeeId ? { ...m, raw_data: newRawData } : m));
+        const { error } = await supabase
+            .from('carpenters')
+            .update({ raw_data: newRawData })
+            .eq('id', employeeId);
+        if (error) {
+            console.error("Kunne ikke opdatere lønnummer:", error);
+            fetchTeam();
+        }
+    };
+
     const handleInvite = async (e) => {
         e.preventDefault();
         setIsInviting(true);
@@ -158,9 +192,9 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
 
     return (
         <div className="team-management-workspace space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div className="team-management-grid grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            <div className="team-management-grid grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" style={{ position: 'relative', zIndex: 20 }}>
                 {/* Inviter Medarbejder Formular */}
-                <div className="team-invite-column lg:col-span-1">
+                <div className="team-invite-column lg:col-span-1" style={{ position: 'relative', zIndex: 30 }}>
                     <div className="settings-card sticky top-6" style={{ overflow: 'visible' }}>
                         <div className="card-header">
                             <div className="icon-wrapper">
@@ -366,7 +400,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                         // Beregn Projektleder-Statistikker
                                         const assignedLeads = leadsData.filter(l => l.assigned_to === member.id);
                                         const wonLeads = assignedLeads.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status));
-                                        const lostLeads = assignedLeads.filter(l => ['Afvist', 'Fortrudt'].includes(l.status));
+                                        const lostLeads = assignedLeads.filter(l => ['Afvist', 'Fortrudt', 'Afbrudt Sag'].includes(l.status));
                                         const activeLeads = assignedLeads.filter(l => l.status === 'Sendt tilbud');
                                         
                                         const revenueWon = wonLeads.reduce((total, lead) => {
@@ -513,6 +547,86 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                 </div>
                                                             </div>
 
+                                                            {/* PERSONALE ADMINISTRATION */}
+                                                            <div className="px-6 pb-6">
+                                                                <div className="glass-panel" style={{ padding: '24px' }}>
+                                                                    <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
+                                                                        <Briefcase size={18} color="#f59e0b" />
+                                                                        <h5 style={{ fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Personale & HR Indstillinger</h5>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                        <div className="flex items-center justify-between gap-4 p-3 rounded-2xl" style={{ border: '1px solid var(--border-light)', background: 'rgba(255, 255, 255, 0.5)' }}>
+                                                                            <div style={{ flex: 1 }}>
+                                                                                <p style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 4px' }}>Årlig Feriesaldo (Dage)</p>
+                                                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Hvor mange betalte feriedage har personen ret til?</p>
+                                                                            </div>
+                                                                            <div style={{ position: 'relative' }}>
+                                                                                <input 
+                                                                                    type="number" 
+                                                                                    min="0"
+                                                                                    max="100"
+                                                                                    value={member.raw_data?.vacation_quota ?? 30}
+                                                                                    onChange={(e) => handleVacationQuotaUpdate(member.id, member.raw_data || {}, e.target.value)}
+                                                                                    style={{
+                                                                                        width: '80px',
+                                                                                        padding: '10px 12px',
+                                                                                        borderRadius: '12px',
+                                                                                        border: '2px solid transparent',
+                                                                                        background: 'var(--surface-bg)',
+                                                                                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05)',
+                                                                                        fontSize: '1.05rem',
+                                                                                        fontWeight: '700',
+                                                                                        color: '#3b82f6',
+                                                                                        textAlign: 'center',
+                                                                                        transition: 'all 0.2s ease',
+                                                                                        outline: 'none'
+                                                                                    }}
+                                                                                    onFocus={(e) => {
+                                                                                        e.target.style.borderColor = '#3b82f6';
+                                                                                        e.target.style.background = '#fff';
+                                                                                        e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                                                                                    }}
+                                                                                    onBlur={(e) => {
+                                                                                        e.target.style.borderColor = 'transparent';
+                                                                                        e.target.style.background = 'var(--surface-bg)';
+                                                                                        e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05)';
+                                                                                    }}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="flex items-center justify-between gap-4 p-3 rounded-2xl" style={{ border: '1px solid var(--border-light)', background: 'rgba(255, 255, 255, 0.5)' }}>
+                                                                            <div style={{ flex: 1 }}>
+                                                                                <p style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 4px' }}>Lønnummer / Medarbejdernr.</p>
+                                                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Bruges i løneksporten til lønsystemet.</p>
+                                                                            </div>
+                                                                            <input
+                                                                                type="text"
+                                                                                value={member.raw_data?.lonnummer ?? ''}
+                                                                                placeholder="f.eks. 1001"
+                                                                                onChange={(e) => handleLonnummerUpdate(member.id, member.raw_data || {}, e.target.value)}
+                                                                                style={{
+                                                                                    width: '110px',
+                                                                                    padding: '10px 12px',
+                                                                                    borderRadius: '12px',
+                                                                                    border: '2px solid transparent',
+                                                                                    background: 'var(--surface-bg)',
+                                                                                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05)',
+                                                                                    fontSize: '1.05rem',
+                                                                                    fontWeight: '700',
+                                                                                    color: '#7c3aed',
+                                                                                    textAlign: 'center',
+                                                                                    transition: 'all 0.2s ease',
+                                                                                    outline: 'none'
+                                                                                }}
+                                                                                onFocus={(e) => { e.target.style.borderColor = '#7c3aed'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)'; }}
+                                                                                onBlur={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.background = 'var(--surface-bg)'; e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05)'; }}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
                                                         </motion.div>
                                                     )}
                                                 </AnimatePresence>
@@ -525,6 +639,9 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Underleverandører (eksterne partnere uden login) */}
+            <SubcontractorManager profile={profile} />
         </div>
     );
 };

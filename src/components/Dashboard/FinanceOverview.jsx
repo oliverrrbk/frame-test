@@ -50,7 +50,12 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
             const history = c.raw_data?.invoice_history || [];
             const casePaid = history.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
 
-            totalRevenue += caseTotal;
+            if (c.status !== 'Afbrudt Sag' && c.status !== 'Afvist' && c.status !== 'Fortrudt') {
+                totalRevenue += caseTotal;
+                if (remaining > 0) {
+                    totalMissingInvoice += remaining;
+                }
+            }
             totalInvoiced += invoiced;
             totalPaid += casePaid;
             
@@ -59,8 +64,7 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                 finance: { caseTotal, invoiced, remaining, extraPrice, casePaid }
             };
 
-            if (remaining > 0) {
-                totalMissingInvoice += remaining;
+            if (remaining > 0 || c.status === 'Afbrudt Sag') {
                 pendingCases.push(caseData);
             } else {
                 completedCases.push(caseData);
@@ -197,8 +201,13 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                                                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                                             >
                                                 <td style={{ padding: '16px 24px' }}>
-                                                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.05rem', marginBottom: '4px' }}>
-                                                        Sag {c.case_number || String(c.id).substring(0,8)} - {c.project_category}
+                                                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.05rem', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span>Sag {c.case_number || String(c.id).substring(0,8)} - {c.project_category}</span>
+                                                        {c.status === 'Afbrudt Sag' && (
+                                                            <span style={{ backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                                <AlertCircle size={12} /> Afbrudt / Konkurs
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <div style={{ color: '#64748b', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                         <PackageCheck size={14} /> {c.customer_name} {c.finance.extraPrice > 0 && <span style={{ color: '#10b981', fontSize: '0.8rem', padding: '2px 6px', backgroundColor: '#ecfdf5', borderRadius: '4px' }}>+ Aftalesedler</span>}

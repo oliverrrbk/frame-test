@@ -72,8 +72,11 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
     const handleSaveList = async (materialsToSave = materials, metaToSave = materialListsMeta) => {
         setIsSaving(true);
         try {
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const currentRawData = latestData?.raw_data || lead.raw_data || {};
+
             const updatedRawData = {
-                ...(lead.raw_data || {}),
+                ...currentRawData,
                 material_list: materialsToSave,
                 material_lists_meta: metaToSave,
                 delivery_info: deliveryInfo

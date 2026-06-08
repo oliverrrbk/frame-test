@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient';
 import { MATERIAL_INDEX } from '../../prices';
 import toast from 'react-hot-toast';
 
-const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
+const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = null }) => {
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessingAI, setIsProcessingAI] = useState(false);
     const [aiSummary, setAiSummary] = useState('');
@@ -438,10 +438,11 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel }) => {
             customer_address: `${customerInfo.address || ''}, ${customerInfo.zip || ''} ${customerInfo.city || ''}`.replace(/^, | , | $/g, '').trim() || 'Ukendt adresse',
             customer_email: customerInfo.email || 'Ukendt',
             customer_phone: customerInfo.phone || 'Ukendt',
-            status: 'Ny forespørgsel',
+            status: draftCreator ? 'Kladde' : 'Ny forespørgsel',
             project_category: 'special',
             price_estimate: totals.totalSales.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' kr.',
             raw_data: {
+                ...(draftCreator ? { created_by: draftCreator.id, draft_mode: true } : {}),
                 details: { 
                     title: projectTitle || 'Skræddersyet Opgave',
                     notes: projectNotes,

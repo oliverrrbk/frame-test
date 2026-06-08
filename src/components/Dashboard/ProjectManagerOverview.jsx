@@ -8,7 +8,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
     const activeManagerCases = useMemo(() => {
         return leadsData.filter(lead => {
             const workers = lead.raw_data?.assigned_workers || [];
-            return workers.includes(myProfile?.id) && ['Sendt tilbud', 'Bekræftet opgave', 'Historik'].includes(lead.status || '');
+            return workers.includes(myProfile?.id) && ['Sendt tilbud', 'Bekræftet opgave', 'Historik', 'Afbrudt Sag'].includes(lead.status || '');
         });
     }, [leadsData, myProfile]);
 
@@ -43,9 +43,12 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
             employeeName: myProfile?.owner_name || myProfile?.company_name || 'Ukendt medarbejder'
         };
         
-        const currentEntries = leadToUpdate.raw_data?.time_entries || [];
+        const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', leadToUpdate.id).single();
+        const currentRawData = latestData?.raw_data || leadToUpdate.raw_data || {};
+
+        const currentEntries = currentRawData.time_entries || [];
         const updatedEntries = [entry, ...currentEntries];
-        const newRawData = { ...leadToUpdate.raw_data, time_entries: updatedEntries };
+        const newRawData = { ...currentRawData, time_entries: updatedEntries };
         
         const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', leadToUpdate.id);
         if (error) {
@@ -62,7 +65,10 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
         const { lead, activeEntry } = activeCheckInInfo;
         const nowTime = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
         
-        const currentEntries = [...(lead.raw_data?.time_entries || [])];
+        const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+        const currentRawData = latestData?.raw_data || lead.raw_data || {};
+
+        const currentEntries = [...(currentRawData.time_entries || [])];
         const entryIndex = currentEntries.findIndex(t => t.id === activeEntry.id);
         if (entryIndex === -1) return;
         
@@ -79,7 +85,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
         entry.desc = 'Arbejde udført (Tjek-ud)';
         
         currentEntries[entryIndex] = entry;
-        const newRawData = { ...lead.raw_data, time_entries: currentEntries };
+        const newRawData = { ...currentRawData, time_entries: currentEntries };
         
         const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', lead.id);
         if (error) {
@@ -267,6 +273,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
                             const address = lead.customer_address || lead.raw_data?.customerDetails?.address || 'Adresse ikke angivet';
                             const customerPhone = lead.customer_phone || lead.raw_data?.customerDetails?.phone || lead.raw_data?.customerDetails?.telephone || null;
                             const isArchived = lead.status === 'Historik';
+                            const isAborted = lead.status === 'Afbrudt Sag';
                             
                             return (
                                 <div key={lead.id || idx} className="glass-panel" style={{ padding: '0', display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer', border: '1px solid var(--border-light)', overflow: 'hidden' }}
@@ -277,7 +284,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
                                      onMouseOver={(e) => {
                                          e.currentTarget.style.transform = 'translateY(-4px)';
                                          e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.06)';
-                                         e.currentTarget.style.borderColor = isArchived ? 'rgba(100, 116, 139, 0.3)' : 'rgba(16, 185, 129, 0.3)';
+                                         e.currentTarget.style.borderColor = isAborted ? 'rgba(239, 68, 68, 0.3)' : (isArchived ? 'rgba(100, 116, 139, 0.3)' : 'rgba(16, 185, 129, 0.3)');
                                      }}
                                      onMouseOut={(e) => {
                                          e.currentTarget.style.transform = 'translateY(0)';
@@ -291,7 +298,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
                                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px' }}>SAG #{caseNo}</div>
                                             <h4 style={{ margin: '0', fontSize: '1.15rem', color: 'var(--text-primary)', fontWeight: '700', lineHeight: '1.2' }}>{title}</h4>
                                         </div>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: isArchived ? '#94a3b8' : '#10b981', boxShadow: isArchived ? '0 0 0 4px rgba(148,163,184,0.1)' : '0 0 0 4px rgba(16,185,129,0.1)' }} title={isArchived ? "Afsluttet" : "Aktiv"} />
+                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: isAborted ? '#ef4444' : (isArchived ? '#94a3b8' : '#10b981'), boxShadow: isAborted ? '0 0 0 4px rgba(239,68,68,0.1)' : (isArchived ? '0 0 0 4px rgba(148,163,184,0.1)' : '0 0 0 4px rgba(16,185,129,0.1)') }} title={isAborted ? "Afbrudt (Konkurs)" : (isArchived ? "Afsluttet" : "Aktiv")} />
                                     </div>
                                     
                                     {/* Card Body */}

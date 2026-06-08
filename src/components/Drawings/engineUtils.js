@@ -45,6 +45,10 @@ export const pointToLineDistance = (p, p1, p2) => {
     return Math.sqrt(dx * dx + dy * dy);
 };
 
+const SHAPE_TYPES = ['rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'];
+const LINE_TYPES = ['arrow', 'dimension', 'line'];
+const PRIORITY_TYPES = ['text', 'arrow', 'dimension', 'line', 'pen', 'freehand'];
+
 // 2. Bounding Boxes
 export const getElementBounds = (element) => {
     if (element.type === 'pen' || element.type === 'freehand') {
@@ -95,7 +99,8 @@ export const getElementBounds = (element) => {
 };
 
 // 3. Hit Testing
-export const isPointInElement = (point, element) => {
+export const isPointInElement = (point, element, options = {}) => {
+    const { mode = 'normal' } = options;
     // If element is rotated, we un-rotate the point around the element's center
     const bounds = getElementBounds(element);
     let checkPoint = point;
@@ -104,7 +109,7 @@ export const isPointInElement = (point, element) => {
         checkPoint = rotatePoint(point, {x: bounds.cx, y: bounds.cy}, -element.rotation);
     }
 
-    if (element.type === 'arrow' || element.type === 'dimension' || element.type === 'line') {
+    if (LINE_TYPES.includes(element.type)) {
         const { x, y, endX, endY } = element;
         // Øget tolerance (fra 8 til 16) for touch screens og iPad
         const tolerance = 16;
@@ -122,9 +127,41 @@ export const isPointInElement = (point, element) => {
         }
         return false;
     }
+
+    if (element.type === 'text') {
+        const hitThreshold = mode === 'fallback' ? 10 : 4;
+        return (
+            checkPoint.x >= bounds.x - hitThreshold &&
+            checkPoint.x <= bounds.x + bounds.w + hitThreshold &&
+            checkPoint.y >= bounds.y - hitThreshold &&
+            checkPoint.y <= bounds.y + bounds.h + hitThreshold
+        );
+    }
     
-    if (['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(element.type)) {
+    if (element.type === 'image') {
         const hitThreshold = 10 + (element.strokeWidth || 3);
+        return (
+            checkPoint.x >= bounds.x - hitThreshold &&
+            checkPoint.x <= bounds.x + bounds.w + hitThreshold &&
+            checkPoint.y >= bounds.y - hitThreshold &&
+            checkPoint.y <= bounds.y + bounds.h + hitThreshold
+        );
+    }
+
+    if (SHAPE_TYPES.includes(element.type)) {
+        const hitThreshold = 10 + (element.strokeWidth || 3);
+
+        if (mode !== 'fallback') {
+            if (element.type === 'circle') {
+                return isPointNearEllipse(checkPoint, element, hitThreshold);
+            }
+            const outlineHit = getShapeSegments(element).some(([p1, p2]) => (
+                pointToLineDistance(checkPoint, p1, p2) <= hitThreshold
+            ));
+            if (outlineHit) return true;
+            return false;
+        }
+
         return (
             checkPoint.x >= bounds.x - hitThreshold &&
             checkPoint.x <= bounds.x + bounds.w + hitThreshold &&
@@ -136,11 +173,94 @@ export const isPointInElement = (point, element) => {
     return false;
 };
 
+export const getShapeSegments = (element) => {
+    if (element.type === 'rectangle' || element.type === 'image' || element.type === 'text') {
+        const points = [
+            { x: element.x, y: element.y },
+            { x: element.x + element.w, y: element.y },
+            { x: element.x + element.w, y: element.y + element.h },
+            { x: element.x, y: element.y + element.h }
+        ];
+        return points.map((p, i) => [p, points[(i + 1) % points.length]]);
+    }
+
+    if (element.type === 'triangle') {
+        const points = [
+            { x: element.x + element.w / 2, y: element.y },
+            { x: element.x + element.w, y: element.y + element.h },
+            { x: element.x, y: element.y + element.h }
+        ];
+        return points.map((p, i) => [p, points[(i + 1) % points.length]]);
+    }
+
+    if (element.type === 'polygon') {
+        const cx = element.x + element.w / 2;
+        const cy = element.y + element.h / 2;
+        const points = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = i * Math.PI / 3 - Math.PI / 2;
+            points.push({
+                x: cx + (element.w / 2) * Math.cos(angle),
+                y: cy + (element.h / 2) * Math.sin(angle)
+            });
+        }
+        return points.map((p, i) => [p, points[(i + 1) % points.length]]);
+    }
+
+    if (element.type === 'rhombus') {
+        const points = [
+            { x: element.x + element.w / 2, y: element.y },
+            { x: element.x + element.w, y: element.y + element.h / 2 },
+            { x: element.x + element.w / 2, y: element.y + element.h },
+            { x: element.x, y: element.y + element.h / 2 }
+        ];
+        return points.map((p, i) => [p, points[(i + 1) % points.length]]);
+    }
+
+    if (element.type === 'parallelogram') {
+        const skew = element.w * 0.2;
+        const points = [
+            { x: element.x + skew, y: element.y },
+            { x: element.x + element.w, y: element.y },
+            { x: element.x + element.w - skew, y: element.y + element.h },
+            { x: element.x, y: element.y + element.h }
+        ];
+        return points.map((p, i) => [p, points[(i + 1) % points.length]]);
+    }
+
+    if (element.type === 'circle') {
+        return [];
+    }
+
+    return [];
+};
+
+const isPointNearEllipse = (point, element, tolerance) => {
+    const cx = element.x + element.w / 2;
+    const cy = element.y + element.h / 2;
+    const rx = Math.abs(element.w) / 2;
+    const ry = Math.abs(element.h) / 2;
+    if (rx === 0 || ry === 0) return false;
+    const normalized = Math.hypot((point.x - cx) / rx, (point.y - cy) / ry);
+    const avgRadius = (rx + ry) / 2;
+    return Math.abs(normalized - 1) * avgRadius <= tolerance;
+};
+
 // Find top-most element that was clicked
 export const getElementAtPosition = (x, y, elements) => {
-    // Iterate backwards so we hit top elements first
+    const point = {x, y};
+
+    // First pass: annotations and precise shape outlines win over big filled hitboxes.
     for (let i = elements.length - 1; i >= 0; i--) {
-        if (isPointInElement({x, y}, elements[i])) {
+        const element = elements[i];
+        if ((PRIORITY_TYPES.includes(element.type) || SHAPE_TYPES.includes(element.type)) && isPointInElement(point, element, { mode: 'precise' })) {
+            return element;
+        }
+    }
+
+    // Second pass: images and broad shape areas are fallback targets.
+    for (let i = elements.length - 1; i >= 0; i--) {
+        if (isPointInElement(point, elements[i], { mode: 'fallback' })) {
             return elements[i];
         }
     }
@@ -149,14 +269,41 @@ export const getElementAtPosition = (x, y, elements) => {
 
 export const getElementPoints = (el) => {
     if (el.type === 'line' || el.type === 'arrow' || el.type === 'dimension') {
-        return [{x: el.x, y: el.y}, {x: el.endX, y: el.endY}];
-    }
-    if (['rectangle', 'image', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(el.type)) {
         return [
-            {x: el.x, y: el.y},
-            {x: el.x + el.w, y: el.y},
-            {x: el.x + el.w, y: el.y + el.h},
-            {x: el.x, y: el.y + el.h}
+            {x: el.x, y: el.y, type: 'endpoint'},
+            {x: el.endX, y: el.endY, type: 'endpoint'},
+            {x: (el.x + el.endX) / 2, y: (el.y + el.endY) / 2, type: 'midpoint'}
+        ];
+    }
+    if (['rectangle', 'image', 'text', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(el.type)) {
+        const corners = [
+            {x: el.x, y: el.y, type: 'corner'},
+            {x: el.x + el.w, y: el.y, type: 'corner'},
+            {x: el.x + el.w, y: el.y + el.h, type: 'corner'},
+            {x: el.x, y: el.y + el.h, type: 'corner'}
+        ];
+        return [
+            ...corners,
+            {x: el.x + el.w / 2, y: el.y, type: 'midpoint'},
+            {x: el.x + el.w, y: el.y + el.h / 2, type: 'midpoint'},
+            {x: el.x + el.w / 2, y: el.y + el.h, type: 'midpoint'},
+            {x: el.x, y: el.y + el.h / 2, type: 'midpoint'},
+            {x: el.x + el.w / 2, y: el.y + el.h / 2, type: 'center'}
+        ];
+    }
+    if (el.type === 'circle') {
+        return [
+            {x: el.x + el.w / 2, y: el.y + el.h / 2, type: 'center'},
+            {x: el.x, y: el.y + el.h / 2, type: 'midpoint'},
+            {x: el.x + el.w, y: el.y + el.h / 2, type: 'midpoint'},
+            {x: el.x + el.w / 2, y: el.y, type: 'midpoint'},
+            {x: el.x + el.w / 2, y: el.y + el.h, type: 'midpoint'}
+        ];
+    }
+    if (el.type === 'pen' && el.points && el.points.length > 0) {
+        return [
+            { ...el.points[0], type: 'endpoint' },
+            { ...el.points[el.points.length - 1], type: 'endpoint' }
         ];
     }
     return [];

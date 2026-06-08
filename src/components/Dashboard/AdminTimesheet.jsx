@@ -4,6 +4,13 @@ import { Download, ChevronDown, Check, FileText, User, Calendar, Plus, Clock, Se
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { isWeekendOrHoliday } from '../../utils/holidays';
+import PayrollControls from './PayrollControls';
+import {
+    fetchPayrollSettings, isDateLocked, formatDa, currentPeriod, getEffectiveLockedUntil, getConfig,
+    lastCompletedPeriodRange, aggregatePayroll, buildSummaryCSV, buildLonartCSV, downloadCSV, toDateKey
+} from '../../utils/payroll';
+import { Lock, FileSpreadsheet, RotateCcw } from 'lucide-react';
 
 const CustomSelect = ({ value, onChange, options, placeholder }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -26,6 +33,16 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
         <div ref={dropdownRef} style={{ position: 'relative', width: '100%', minWidth: '180px' }}>
             <div 
                 onClick={() => setIsOpen(!isOpen)}
+                onMouseEnter={(e) => {
+                    if(!isOpen) {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.08)';
+                    }
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = isOpen ? '0 0 0 4px rgba(59, 130, 246, 0.1)' : '0 2px 4px rgba(0,0,0,0.02)';
+                }}
                 style={{ 
                     padding: '12px 16px', 
                     borderRadius: '12px', 
@@ -103,11 +120,26 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
     );
 };
 
+const ExportMenuItem = ({ title, desc, onClick }) => (
+    <div onClick={onClick}
+        style={{ padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', transition: 'background 0.12s' }}
+        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>{title}</div>
+        <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '1px' }}>{desc}</div>
+    </div>
+);
+
 export default function AdminTimesheet({ leadsData, profile }) {
     const [teamMembers, setTeamMembers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedPeriod, setSelectedPeriod] = useState('this_month');
     const [selectedUser, setSelectedUser] = useState('all');
+    const [payrollSettings, setPayrollSettings] = useState(null);
+    const [exportMenuOpen, setExportMenuOpen] = useState(false);
+    const exportMenuRef = useRef(null);
+    const payrollCompanyId = profile?.company_id || profile?.id;
+    const lockedUntil = getEffectiveLockedUntil(payrollSettings);
     
     // CRUD States
     const [isAdding, setIsAdding] = useState(false);
@@ -115,6 +147,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
     const [deletingEntry, setDeletingEntry] = useState(null);
     const [formData, setFormData] = useState({ 
         date: new Date().toISOString().substring(0, 10), 
+        endDate: new Date().toISOString().substring(0, 10),
         employeeId: '', 
         regType: 'project',
         leadId: '', 
@@ -148,7 +181,93 @@ export default function AdminTimesheet({ leadsData, profile }) {
         };
 
         if (profile) fetchTeam();
+        if (payrollCompanyId) fetchPayrollSettings(payrollCompanyId).then(setPayrollSettings);
     }, [profile]);
+
+    // Payroll Reminder Widget Logic
+    const [payrollReminder, setPayrollReminder] = useState(null);
+
+    useEffect(() => {
+        if (!payrollSettings || !teamMembers.length || !leadsData) {
+            setPayrollReminder(null);
+            return;
+        }
+        
+        const cycle = payrollSettings.payroll_cycle;
+        const anchor = payrollSettings.cycle_anchor_date;
+        if (!cycle) return;
+
+        try {
+            const { start, end } = currentPeriod(cycle, anchor);
+            const endDate = new Date(end);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
+            const diffDays = Math.floor((endDate - today) / (1000 * 60 * 60 * 24));
+            
+            // Hvis vi er 3 dage eller mindre fra lønperiodens afslutning (eller den lige er overskredet men ikke låst endnu)
+            if (diffDays >= -3 && diffDays <= 3) {
+                const startDate = new Date(start);
+                let workdaysPassed = 0;
+                for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
+                    if (d > endDate) break; // Don't count days after the period ended
+                    const day = d.getDay();
+                    if (day !== 0 && day !== 6) { // Not weekend
+                        workdaysPassed++;
+                    }
+                }
+                
+                const expectedHours = workdaysPassed * 7.4;
+                const missingEmployees = [];
+                
+                teamMembers.forEach(member => {
+                    let registeredHours = 0;
+                    
+                    // Internal
+                    const internalEntries = member.raw_data?.time_entries || [];
+                    internalEntries.forEach(entry => {
+                        if (entry.date >= start && entry.date <= end) {
+                            registeredHours += parseFloat(entry.hours) || 0;
+                        }
+                    });
+                    
+                    // Projects
+                    leadsData.forEach(lead => {
+                        const leadEntries = lead.raw_data?.time_entries || [];
+                        leadEntries.forEach(entry => {
+                            if (entry.employeeId === member.id && entry.date >= start && entry.date <= end) {
+                                registeredHours += parseFloat(entry.hours) || 0;
+                            }
+                        });
+                    });
+                    
+                    const missing = expectedHours - registeredHours;
+                    // Tærskel på 7.4 (en fuld dag) før de flagges
+                    if (missing >= 7.4) {
+                        missingEmployees.push({
+                            name: member.owner_name || member.company_name || 'Ukendt',
+                            missingHours: Math.round(missing * 10) / 10
+                        });
+                    }
+                });
+                
+                if (missingEmployees.length > 0) {
+                    setPayrollReminder({
+                        endDate: end,
+                        diffDays,
+                        missingEmployees
+                    });
+                } else {
+                    setPayrollReminder(null);
+                }
+            } else {
+                setPayrollReminder(null);
+            }
+        } catch (err) {
+            console.error("Fejl ved beregning af løn-reminder:", err);
+            setPayrollReminder(null);
+        }
+    }, [payrollSettings, teamMembers, leadsData]);
 
     // Auto-beregn timer ud fra start og slut og pause
     useEffect(() => {
@@ -255,7 +374,9 @@ export default function AdminTimesheet({ leadsData, profile }) {
             if (!dataMap[dateStr]) dataMap[dateStr] = { name: dateStr, hours: 0, absenceHours: 0 };
             
             if (entry.leadId === 'internal') {
-                dataMap[dateStr].absenceHours += (entry.hours || 0);
+                if (!['Ferie', 'Skole'].includes(entry.absenceType)) {
+                    dataMap[dateStr].absenceHours += (entry.hours || 0);
+                }
             } else {
                 dataMap[dateStr].hours += (entry.hours || 0);
             }
@@ -266,7 +387,107 @@ export default function AdminTimesheet({ leadsData, profile }) {
     // Aggregeringer
     const totalHours = filteredEntries.reduce((acc, curr) => acc + (curr.leadId !== 'internal' ? (curr.hours || 0) : 0), 0);
     const totalKm = filteredEntries.reduce((acc, curr) => acc + (curr.km || 0), 0);
-    const absenceEntries = filteredEntries.filter(e => e.leadId === 'internal');
+    
+    // Vi ekskluderer Ferie og Skole fra fraværsboksen, da de vises særskilt/grupperet
+    const absenceEntries = filteredEntries.filter(e => e.leadId === 'internal' && !['Ferie', 'Skole'].includes(e.absenceType));
+
+    // Grupperet data til tabellen (så 14 dages ferie bliver én række)
+    const groupedTableEntries = useMemo(() => {
+        const grouped = [];
+        const groupMap = {};
+
+        filteredEntries.forEach(entry => {
+            if (entry.leadId === 'internal' && ['Ferie', 'Skole'].includes(entry.absenceType)) {
+                // Udled baseId (f.eks. 'time-12345678')
+                const parts = entry.id.split('-');
+                const baseId = parts.length >= 2 ? `${parts[0]}-${parts[1]}` : entry.id;
+                const groupKey = `${entry.employeeId}-${entry.absenceType}-${baseId}`;
+
+                if (!groupMap[groupKey]) {
+                    groupMap[groupKey] = {
+                        ...entry,
+                        isGrouped: true,
+                        groupCount: 1,
+                        allDates: [new Date(entry.date)]
+                    };
+                    grouped.push(groupMap[groupKey]);
+                } else {
+                    groupMap[groupKey].groupCount++;
+                    groupMap[groupKey].allDates.push(new Date(entry.date));
+                }
+            } else {
+                grouped.push(entry);
+            }
+        });
+
+        // Sørg for at grupperede entries viser korrekt dato-interval
+        grouped.forEach(g => {
+            if (g.isGrouped && g.allDates.length > 1) {
+                const sortedDates = g.allDates.sort((a, b) => a - b);
+                const startDateStr = sortedDates[0].toLocaleDateString('da-DK', { day: '2-digit', month: 'short' });
+                const endDateStr = sortedDates[sortedDates.length - 1].toLocaleDateString('da-DK', { day: '2-digit', month: 'short' });
+                g.displayDate = `${startDateStr} - ${endDateStr}`;
+                // Opdater selve 'date' feltet til det tidligste, for sorterings skyld
+                g.date = sortedDates[0].toISOString();
+            } else if (g.isGrouped) {
+                g.displayDate = g.allDates[0].toLocaleDateString('da-DK', { day: '2-digit', month: 'short' });
+            }
+        });
+
+        return grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }, [filteredEntries]);
+
+    // Ferie-saldo udregning (Gennemsnit for alle, specifik for én)
+    const vacationStats = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        
+        if (selectedUser === 'all') {
+            if (!teamMembers || teamMembers.length === 0) return { title: 'Gns. Feriesaldo pr. mand', remaining: 0 };
+            
+            let totalQuota = 0;
+            const usedPerEmployee = {};
+            
+            teamMembers.forEach(member => {
+                totalQuota += member.raw_data?.vacation_quota || 30;
+            });
+            
+            allEntries.forEach(e => {
+                if (e.absenceType !== 'Ferie') return;
+                if (new Date(e.date).getFullYear() !== currentYear) return;
+                if (isWeekendOrHoliday(e.date)) return;
+                if (!teamMembers.some(m => m.id === e.employeeId)) return;
+                
+                if (!usedPerEmployee[e.employeeId]) usedPerEmployee[e.employeeId] = new Set();
+                usedPerEmployee[e.employeeId].add(e.date);
+            });
+            
+            let totalUsed = 0;
+            Object.values(usedPerEmployee).forEach(datesSet => {
+                totalUsed += datesSet.size;
+            });
+            
+            const totalRemaining = totalQuota - totalUsed;
+            const averageRemaining = Math.round((totalRemaining / teamMembers.length) * 10) / 10;
+            
+            return { title: 'Gns. Feriesaldo pr. mand', remaining: averageRemaining };
+        } else {
+            const member = teamMembers.find(m => m.id === selectedUser);
+            const quota = member?.raw_data?.vacation_quota || 30;
+            
+            const ferieEntries = allEntries.filter(e => {
+                if (e.employeeId !== selectedUser) return false;
+                if (e.absenceType !== 'Ferie') return false;
+                if (new Date(e.date).getFullYear() !== currentYear) return false;
+                if (isWeekendOrHoliday(e.date)) return false;
+                return true;
+            });
+            
+            const uniqueFerieDates = new Set(ferieEntries.map(e => e.date));
+            const used = uniqueFerieDates.size;
+            
+            return { title: 'Feriesaldo i år', remaining: quota - used };
+        }
+    }, [selectedUser, allEntries, teamMembers]);
     
     const handleExportCSV = () => {
         let csvContent = "Dato,Medarbejder,Sag/Type,Beskrivelse,Starttid,Sluttid,Timer,Kilometer\n";
@@ -296,6 +517,43 @@ export default function AdminTimesheet({ leadsData, profile }) {
         document.body.removeChild(link);
     };
 
+    // Luk eksport-menuen ved klik udenfor
+    useEffect(() => {
+        const handler = (e) => { if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setExportMenuOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    // Universel løneksport for den senest afsluttede lønperiode
+    const exportPayroll = (format) => {
+        const cycle = payrollSettings?.cycle || 'monthly';
+        const anchor = payrollSettings?.anchor;
+        const cfg = getConfig(payrollSettings);
+        const { start, end } = lastCompletedPeriodRange(cycle, anchor);
+        const inRange = allEntries.filter(e => {
+            const k = toDateKey(e.date);
+            return k >= start && k <= end;
+        });
+        if (inRange.length === 0) {
+            toast.error(`Ingen registreringer i seneste periode (${formatDa(start)} – ${formatDa(end)}).`);
+            setExportMenuOpen(false);
+            return;
+        }
+        const agg = aggregatePayroll(inRange, cfg);
+        const rows = Object.values(agg).map(r => {
+            const m = teamMembers.find(t => t.id === r.employeeId);
+            return { ...r, name: m?.owner_name || m?.company_name || 'Ukendt', lonnummer: m?.raw_data?.lonnummer || '' };
+        }).filter(r => r.normalHours || r.vacation || r.sick || r.other || r.mileage);
+        const periodLabel = `${start} – ${end}`;
+        if (format === 'lonart') {
+            downloadCSV(`Loneksport_lonart_${start}_${end}.csv`, buildLonartCSV(rows, cfg.lonart, periodLabel));
+        } else {
+            downloadCSV(`Loneksport_opsummering_${start}_${end}.csv`, buildSummaryCSV(rows));
+        }
+        toast.success(`Løneksport hentet for ${formatDa(start)} – ${formatDa(end)}.`);
+        setExportMenuOpen(false);
+    };
+
     const handleDeleteEntry = (entry) => {
         setDeletingEntry(entry);
     };
@@ -303,20 +561,42 @@ export default function AdminTimesheet({ leadsData, profile }) {
     const confirmDeleteEntry = async () => {
         const entry = deletingEntry;
         if (!entry) return;
-        
+        if (entryLocked(entry)) {
+            toast.error('Registreringen er låst efter lønkørsel og kan ikke slettes.');
+            setDeletingEntry(null);
+            return;
+        }
+
         if (entry.leadId === 'internal') {
             const member = teamMembers.find(m => m.id === entry.employeeId);
             if (!member) return toast.error('Medarbejder ikke fundet');
-            const currentEntries = (member.raw_data?.time_entries || []).filter(t => t.id !== entry.id);
-            const newRawData = { ...member.raw_data, time_entries: currentEntries };
+            const { data: latestData } = await supabase.from('carpenters').select('raw_data').eq('id', member.id).single();
+            const currentRawData = latestData?.raw_data || member.raw_data || {};
+            
+            let currentEntries = currentRawData.time_entries || [];
+            if (entry.isGrouped) {
+                const parts = entry.id.split('-');
+                const baseId = parts.length >= 2 ? `${parts[0]}-${parts[1]}` : entry.id;
+                currentEntries = currentEntries.filter(t => {
+                    const tParts = t.id.split('-');
+                    const tBaseId = tParts.length >= 2 ? `${tParts[0]}-${tParts[1]}` : t.id;
+                    return tBaseId !== baseId;
+                });
+            } else {
+                currentEntries = currentEntries.filter(t => t.id !== entry.id);
+            }
+
+            const newRawData = { ...currentRawData, time_entries: currentEntries };
             const { error } = await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', member.id);
             if (error) toast.error('Kunne ikke slette fravær/internt.');
-            else { toast.success('Registrering slettet.'); setTimeout(() => window.location.reload(), 800); }
+            else { toast.success(entry.isGrouped ? 'Ferie-periode slettet.' : 'Registrering slettet.'); setTimeout(() => window.location.reload(), 800); }
         } else {
             const lead = leadsData.find(l => l.id === entry.leadId);
             if (!lead) return toast.error('Sag ikke fundet');
-            const currentEntries = (lead.raw_data?.time_entries || []).filter(t => t.id !== entry.id);
-            const newRawData = { ...lead.raw_data, time_entries: currentEntries };
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const currentRawData = latestData?.raw_data || lead.raw_data || {};
+            const currentEntries = (currentRawData.time_entries || []).filter(t => t.id !== entry.id);
+            const newRawData = { ...currentRawData, time_entries: currentEntries };
             const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', lead.id);
             if (error) toast.error('Kunne ikke slette tiden.');
             else { toast.success('Tidsregistrering slettet.'); setTimeout(() => window.location.reload(), 800); }
@@ -329,54 +609,161 @@ export default function AdminTimesheet({ leadsData, profile }) {
         if (formData.regType === 'project' && !formData.leadId) return toast.error('Vælg venligst en sag');
         if (!formData.date) return toast.error('Vælg en dato');
         
-        const finalEntry = {
-            id: isAdding ? `time-${Date.now()}` : editingEntry.id,
-            startTime: formData.startTime || '',
-            endTime: formData.endTime || '',
-            pauseMinutes: parseInt(formData.pauseMinutes) || 0,
-            hours: parseFloat(formData.hours) || 0,
-            date: formData.date,
-            desc: formData.desc || '',
-            employeeId: formData.employeeId,
-            employeeName: teamMembers.find(m => m.id === formData.employeeId)?.owner_name || '',
-            km: formData.km ? parseFloat(formData.km) : 0
-        };
+        const isMultiDayAbsence = formData.regType === 'internal' && ['Ferie', 'Skole'].includes(formData.absenceType);
+        const startDato = new Date(formData.date);
+        const slutDato = (isMultiDayAbsence && formData.endDate) ? new Date(formData.endDate) : startDato;
+        
+        if (slutDato < startDato) return toast.error('Til-dato skal være efter Fra-dato');
 
-        if (formData.regType === 'internal') {
-            finalEntry.absenceType = formData.absenceType || 'Internt';
-            const member = teamMembers.find(m => m.id === formData.employeeId);
-            if (!member) return toast.error('Medarbejder ikke fundet');
-            
-            let currentEntries = member.raw_data?.time_entries || [];
-            if (!isAdding) currentEntries = currentEntries.filter(t => t.id !== finalEntry.id);
-            currentEntries = [...currentEntries, finalEntry];
-            
-            const newRawData = { ...member.raw_data, time_entries: currentEntries };
-            const { error } = await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', member.id);
-            if (error) return toast.error('Fejl ved gem internt.');
-        } else {
-            const lead = leadsData.find(l => String(l.id) === String(formData.leadId));
-            if (!lead) return toast.error('Sag ikke fundet');
-            
-            let currentEntries = lead.raw_data?.time_entries || [];
-            if (!isAdding) currentEntries = currentEntries.filter(t => t.id !== finalEntry.id);
-            currentEntries = [...currentEntries, finalEntry];
-            
-            const newRawData = { ...lead.raw_data, time_entries: currentEntries };
-            const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', lead.id);
-            if (error) return toast.error('Fejl ved gem tid på sag.');
+        if (isDateLocked(formData.date, lockedUntil) || (isMultiDayAbsence && isDateLocked(formData.endDate, lockedUntil))) {
+            return toast.error(`Datoen ligger i en låst lønperiode (til og med ${formatDa(lockedUntil)}). Genåbn perioden for at registrere her.`);
         }
 
-        toast.success(isAdding ? 'Registrering tilføjet!' : 'Registrering opdateret!');
-        setEditingEntry(null);
-        setIsAdding(false);
-        setTimeout(() => window.location.reload(), 800);
+        // Generer liste af datoer
+        const datesToSave = [];
+        let currDate = new Date(startDato);
+        while (currDate <= slutDato) {
+            // Hvis det er ferie/skole, tjek om det er weekend eller helligdag
+            if (isMultiDayAbsence) {
+                const day = currDate.getDay();
+                if (day !== 0 && day !== 6 && !isWeekendOrHoliday(currDate.toISOString().substring(0, 10))) {
+                    datesToSave.push(currDate.toISOString().substring(0, 10));
+                }
+            } else {
+                datesToSave.push(currDate.toISOString().substring(0, 10));
+                break; // Kun én dag hvis ikke ferie
+            }
+            currDate.setDate(currDate.getDate() + 1);
+        }
+
+        if (datesToSave.length === 0) {
+            return toast.error('Ingen gyldige arbejdsdage valgt (f.eks. kun weekender).');
+        }
+
+        try {
+            if (formData.regType === 'internal') {
+                if (formData.employeeId === 'collective') {
+                    // KOLLEKTIV FERIE (Alle medarbejdere)
+                    const updates = teamMembers.map(async (member) => {
+                        const { data: latestData } = await supabase.from('carpenters').select('raw_data').eq('id', member.id).single();
+                        const currentRawData = latestData?.raw_data || member.raw_data || {};
+                        let currentEntries = currentRawData.time_entries || [];
+
+                        datesToSave.forEach((dateStr, idx) => {
+                            const finalEntry = {
+                                id: `time-${Date.now()}-${member.id}-${idx}`,
+                                startTime: '',
+                                endTime: '',
+                                pauseMinutes: 0,
+                                hours: 7.4,
+                                date: dateStr,
+                                desc: formData.desc || 'Kollektiv Ferie / Lukket',
+                                employeeId: member.id,
+                                employeeName: member.owner_name || member.company_name || 'Ukendt',
+                                km: 0,
+                                absenceType: formData.absenceType || 'Ferie'
+                            };
+                            currentEntries.push(finalEntry);
+                        });
+
+                        const newRawData = { ...currentRawData, time_entries: currentEntries };
+                        return supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', member.id);
+                    });
+
+                    await Promise.all(updates);
+                } else {
+                    // ENKELT MEDARBEJDER
+                    const member = teamMembers.find(m => m.id === formData.employeeId);
+                    if (!member) return toast.error('Medarbejder ikke fundet');
+                    
+                    const { data: latestData } = await supabase.from('carpenters').select('raw_data').eq('id', member.id).single();
+                    const currentRawData = latestData?.raw_data || member.raw_data || {};
+                let currentEntries = currentRawData.time_entries || [];
+
+                if (!isAdding && editingEntry) {
+                    currentEntries = currentEntries.filter(t => t.id !== editingEntry.id);
+                }
+
+                datesToSave.forEach((dateStr, idx) => {
+                    const finalEntry = {
+                        id: (isAdding || datesToSave.length > 1) ? `time-${Date.now()}-${idx}` : editingEntry.id,
+                        startTime: isMultiDayAbsence ? '' : (formData.startTime || ''),
+                        endTime: isMultiDayAbsence ? '' : (formData.endTime || ''),
+                        pauseMinutes: isMultiDayAbsence ? 0 : (parseInt(formData.pauseMinutes) || 0),
+                        hours: isMultiDayAbsence ? 7.4 : (parseFloat(formData.hours) || 0),
+                        date: dateStr,
+                        desc: formData.desc || '',
+                        employeeId: formData.employeeId,
+                        employeeName: member.owner_name || member.company_name || 'Ukendt',
+                        km: isMultiDayAbsence ? 0 : (formData.km ? parseFloat(formData.km) : 0),
+                        absenceType: formData.absenceType || 'Internt'
+                    };
+                    currentEntries.push(finalEntry);
+                });
+
+                    const newRawData = { ...currentRawData, time_entries: currentEntries };
+                    const { error } = await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', member.id);
+                    if (error) {
+                        console.error("Supabase update error (carpenters):", error);
+                        throw new Error('Fejl ved gem internt: ' + error.message);
+                    }
+                }
+            } else {
+                const finalEntry = {
+                    id: isAdding ? `time-${Date.now()}` : editingEntry.id,
+                    startTime: formData.startTime || '',
+                    endTime: formData.endTime || '',
+                    pauseMinutes: parseInt(formData.pauseMinutes) || 0,
+                    hours: parseFloat(formData.hours) || 0,
+                    date: formData.date,
+                    desc: formData.desc || '',
+                    employeeId: formData.employeeId,
+                    employeeName: teamMembers.find(m => m.id === formData.employeeId)?.owner_name || '',
+                    km: formData.km ? parseFloat(formData.km) : 0
+                };
+
+                const lead = leadsData.find(l => String(l.id) === String(formData.leadId));
+                if (!lead) return toast.error('Sag ikke fundet');
+                
+                const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+                const currentRawData = latestData?.raw_data || lead.raw_data || {};
+                let currentEntries = currentRawData.time_entries || [];
+
+                if (!isAdding && editingEntry) {
+                    currentEntries = currentEntries.filter(t => t.id !== finalEntry.id);
+                }
+                currentEntries.push(finalEntry);
+                
+                const newRawData = { ...currentRawData, time_entries: currentEntries };
+                const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', lead.id);
+                if (error) {
+                    console.error("Supabase update error (leads):", error);
+                    throw new Error('Fejl ved gem tid på sag: ' + error.message);
+                }
+            }
+
+            toast.success(isAdding ? 'Registrering tilføjet!' : 'Registrering opdateret!');
+            setEditingEntry(null);
+            setIsAdding(false);
+            setTimeout(() => window.location.reload(), 800);
+        } catch (err) {
+            console.error(err);
+            const errorMsg = 'Fejl detaljer: ' + (err.message || JSON.stringify(err));
+            toast.error(errorMsg);
+        }
     };
 
+    const entryLocked = (entry) => isDateLocked(entry?.date, lockedUntil);
+
     const openEdit = (entry) => {
+        if (entryLocked(entry)) {
+            toast.error(`Perioden er lønkørt og låst (til og med ${formatDa(lockedUntil)}). Genåbn for at redigere.`);
+            return;
+        }
         const isInternal = entry.leadId === 'internal';
         setFormData({
             date: entry.date || '',
+            endDate: entry.date || '',
             employeeId: entry.employeeId || '',
             regType: isInternal ? 'internal' : 'project',
             leadId: isInternal ? '' : (entry.leadId || ''),
@@ -395,6 +782,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
     const openAdd = () => {
         setFormData({ 
             date: new Date().toISOString().substring(0, 10), 
+            endDate: new Date().toISOString().substring(0, 10),
             employeeId: profile?.id || '', 
             regType: 'project',
             leadId: '', 
@@ -408,6 +796,29 @@ export default function AdminTimesheet({ leadsData, profile }) {
         });
         setIsAdding(true);
         setEditingEntry(null);
+    };
+
+    // "Som i går": udfyld med den valgte medarbejders seneste registrering, på dags dato
+    const fillFromLast = () => {
+        if (!formData.employeeId) { toast.error('Vælg en medarbejder først.'); return; }
+        const last = allEntries.find(e => e.employeeId === formData.employeeId);
+        if (!last) { toast.error('Ingen tidligere registrering at kopiere.'); return; }
+        const today = new Date().toISOString().substring(0, 10);
+        setFormData({
+            ...formData,
+            date: today,
+            endDate: today,
+            regType: last.leadId === 'internal' ? 'internal' : 'project',
+            leadId: last.leadId === 'internal' ? '' : (last.leadId || ''),
+            absenceType: last.absenceType || 'Sygdom',
+            desc: last.desc || '',
+            hours: last.hours || '',
+            km: last.km || '',
+            startTime: last.startTime || '07:00',
+            endTime: last.endTime || '15:00',
+            pauseMinutes: last.pauseMinutes !== undefined ? String(last.pauseMinutes) : '30'
+        });
+        toast.success('Udfyldt som seneste registrering.');
     };
 
     if (isLoading) {
@@ -462,27 +873,86 @@ export default function AdminTimesheet({ leadsData, profile }) {
 
                     <button 
                         onClick={openAdd}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff', color: '#1a1a1a', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff', color: '#1a1a1a', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.06)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; }}
                     >
                         <Plus size={18} /> Opret registrering
                     </button>
 
-                    <button 
-                        onClick={handleExportCSV}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', border: 'none', backgroundColor: '#000', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
-                    >
-                        <Download size={18} /> Eksportér (CSV)
-                    </button>
+                    <div ref={exportMenuRef} style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => setExportMenuOpen(o => !o)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: 'none', backgroundColor: '#000', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}
+                        >
+                            <FileSpreadsheet size={18} /> Løneksport
+                            <ChevronDown size={16} style={{ transform: exportMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                        </button>
+
+                        {exportMenuOpen && (
+                            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: '300px', background: '#fff', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 16px 32px -8px rgba(15,23,42,0.18)', zIndex: 100000, overflow: 'hidden', padding: '6px', animation: 'fadeIn 0.15s ease-out' }}>
+                                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '8px 12px 4px' }}>Til lønsystem — seneste periode</div>
+                                <ExportMenuItem title="Lønart-fil (universal)" desc="Medarbejdernr · lønart · antal — importeres direkte" onClick={() => exportPayroll('lonart')} />
+                                <ExportMenuItem title="Opsummering" desc="Normaltimer, ferie, sygdom, kørsel pr. medarbejder" onClick={() => exportPayroll('summary')} />
+                                <div style={{ height: '1px', background: '#f1f5f9', margin: '6px 0' }} />
+                                <ExportMenuItem title="Kontrol-CSV (valgt periode)" desc="Alle rå linjer til internt overblik" onClick={() => { handleExportCSV(); setExportMenuOpen(false); }} />
+                            </div>
+                        )}
+                    </div>
+
+                    <PayrollControls
+                        companyId={payrollCompanyId}
+                        role={profile?.role}
+                        actorId={profile?.id}
+                        actorName={profile?.owner_name || profile?.company_name || profile?.email}
+                        settings={payrollSettings}
+                        onUpdated={setPayrollSettings}
+                    />
                 </div>
             </div>
 
+            {/* PAYROLL REMINDER WIDGET */}
+            {payrollReminder && (
+                <div style={{ backgroundColor: '#fff7ed', border: '1px solid #fdba74', borderRadius: '12px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#f97316' }} />
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                        <div style={{ backgroundColor: '#ffedd5', padding: '12px', borderRadius: '50%', color: '#ea580c' }}>
+                            <AlertTriangle size={24} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <h3 style={{ margin: '0 0 8px 0', color: '#9a3412', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                                Husk! Lønkørsel for perioden (slutter {formatDa(payrollReminder.endDate)}) nærmer sig.
+                            </h3>
+                            <p style={{ margin: '0 0 16px 0', color: '#c2410c', fontSize: '1rem', lineHeight: '1.5' }}>
+                                Følgende medarbejdere mangler minimum en hel dags timer for at ramme det forventede antal timer indtil i dag:
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
+                                {payrollReminder.missingEmployees.map((emp, i) => (
+                                    <div key={i} style={{ backgroundColor: '#fff', border: '1px solid #fed7aa', borderRadius: '8px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <User size={16} color="#ea580c" />
+                                            <strong style={{ color: '#9a3412', fontSize: '0.95rem' }}>{emp.name}</strong>
+                                        </div>
+                                        <span style={{ fontSize: '0.85rem', color: '#ea580c', fontWeight: 'bold', backgroundColor: '#ffedd5', padding: '4px 8px', borderRadius: '4px' }}>
+                                            Mangler ~{emp.missingHours} timer
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* STAT BOXES */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-                <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="glass-panel" 
+                    style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = ''; }}
+                >
                     <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Arbejdstimer ({getPeriodLabel()})</span>
                     <strong style={{ fontSize: '2.5rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(59,130,246,0.1)' }}>
@@ -491,7 +961,11 @@ export default function AdminTimesheet({ leadsData, profile }) {
                         {totalHours.toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </strong>
                 </div>
-                <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="glass-panel" 
+                    style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = ''; }}
+                >
                     <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kørte Kilometer ({getPeriodLabel()})</span>
                     <strong style={{ fontSize: '2.5rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(16,185,129,0.1)' }}>
@@ -500,15 +974,34 @@ export default function AdminTimesheet({ leadsData, profile }) {
                         {totalKm} km
                     </strong>
                 </div>
-                <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="glass-panel" 
+                    style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = ''; }}
+                >
                     <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fravær / Internt ({getPeriodLabel()})</span>
                     <strong style={{ fontSize: '2.5rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(245,158,11,0.1)' }}>
                             <AlertTriangle size={28} color="#f59e0b" />
                         </div>
-                        {absenceEntries.reduce((acc, curr) => acc + (curr.hours || 0), 0)} t
+                        {absenceEntries.reduce((acc, curr) => acc + (curr.hours || 0), 0).toFixed(2).replace('.', ',')} t
                     </strong>
                 </div>
+                {vacationStats && (
+                    <div className="glass-panel" 
+                        style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = ''; }}
+                    >
+                        <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{vacationStats.title}</span>
+                        <strong style={{ fontSize: '2.5rem', color: vacationStats.remaining <= 0 ? '#ef4444' : '#1a1a1a', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ padding: '10px', borderRadius: '12px', background: vacationStats.remaining <= 0 ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)' }}>
+                                <Calendar size={28} color={vacationStats.remaining <= 0 ? '#ef4444' : '#3b82f6'} />
+                            </div>
+                            {vacationStats.remaining.toLocaleString('da-DK', { maximumFractionDigits: 1 })} dage
+                        </strong>
+                    </div>
+                )}
             </div>
 
             {/* GRAF (Kun for specifik medarbejder) */}
@@ -535,7 +1028,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
 
             {/* TABEL */}
             <div className="glass-panel" style={{ overflow: 'hidden', padding: 0 }}>
-                {filteredEntries.length === 0 ? (
+                {groupedTableEntries.length === 0 ? (
                     <div style={{ padding: '64px', textAlign: 'center', color: '#94a3b8' }}>
                         <Calendar size={64} style={{ opacity: 0.2, margin: '0 auto 16px auto' }} />
                         <h4 style={{ margin: '0 0 8px 0', color: '#475569', fontSize: '1.2rem' }}>Ingen registreringer fundet</h4>
@@ -557,21 +1050,24 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredEntries.map((entry, idx) => {
+                                {groupedTableEntries.map((entry, idx) => {
                                     const member = teamMembers.find(m => m.id === entry.employeeId);
                                     const memberName = member?.owner_name || member?.company_name || 'Slettet';
                                     const isInternal = entry.leadId === 'internal';
+                                    const locked = entryLocked(entry);
 
                                     return (
                                         <tr 
-                                            key={entry.id} 
-                                            onClick={() => openEdit(entry)}
-                                            style={{ borderBottom: idx === filteredEntries.length - 1 ? 'none' : '1px solid rgba(0,0,0,0.04)', transition: 'background 0.2s', cursor: 'pointer' }} 
+                                            key={entry.isGrouped ? `group-${entry.id}` : entry.id} 
+                                            style={{ borderBottom: '1px solid rgba(0,0,0,0.06)', transition: 'background-color 0.2s', cursor: entry.isGrouped ? 'default' : 'pointer' }}
                                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)'} 
                                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                            onClick={() => {
+                                                if (!entry.isGrouped) openEdit(entry);
+                                            }}
                                         >
                                             <td data-label="Dato" style={{ padding: '20px 24px', color: '#1e293b', fontWeight: '600', fontSize: '0.95rem' }}>
-                                                {new Date(entry.date).toLocaleDateString('da-DK', { day: '2-digit', month: 'short' })}
+                                                {entry.isGrouped ? entry.displayDate : new Date(entry.date).toLocaleDateString('da-DK', { day: '2-digit', month: 'short' })}
                                             </td>
                                             <td data-label="Medarbejder" style={{ padding: '20px 24px', color: '#334155', fontSize: '0.95rem', fontWeight: '500' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -596,35 +1092,43 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                                 {entry.desc || '-'}
                                             </td>
                                             <td data-label="Tidsrum" style={{ padding: '20px 24px', color: '#475569', fontSize: '0.95rem', fontWeight: '500' }}>
-                                                {entry.startTime} - {entry.endTime || '?'}
+                                                {entry.isGrouped ? '-' : `${entry.startTime} - ${entry.endTime || '?'}`}
                                             </td>
-                                            <td data-label="Timer" style={{ padding: '20px 24px', color: '#1a1a1a', fontWeight: '800', fontSize: '1.1rem', textAlign: 'right' }}>
-                                                {entry.hours || 0}
+                                            <td data-label="Timer" style={{ padding: '20px 24px', textAlign: 'right', fontWeight: '600', color: '#1e293b', fontSize: '1.05rem' }}>
+                                                {entry.isGrouped ? `${entry.groupCount} dage` : (entry.hours ? entry.hours : '-')}
                                             </td>
-                                            <td data-label="Kørsel" style={{ padding: '20px 24px', color: '#047857', fontWeight: '700', fontSize: '1rem', textAlign: 'right' }}>
-                                                {entry.km > 0 ? `${entry.km} km` : '-'}
+                                            <td data-label="Kørsel" style={{ padding: '20px 24px', textAlign: 'right', fontWeight: '600', color: entry.km ? '#10b981' : '#94a3b8' }}>
+                                                {entry.isGrouped ? '-' : (entry.km ? `${entry.km} km` : '-')}
                                             </td>
                                             <td data-label="Handlinger" style={{ padding: '20px 24px', textAlign: 'right' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                                                    <button 
-                                                        onClick={() => openEdit(entry)}
-                                                        style={{ background: '#f1f5f9', border: 'none', padding: '8px', borderRadius: '8px', color: '#475569', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
-                                                        onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
-                                                        title="Rediger registrering"
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry); }}
-                                                        style={{ background: '#fef2f2', border: 'none', padding: '8px', borderRadius: '8px', color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
-                                                        onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}
-                                                        title="Slet registrering"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
+                                                {locked ? (
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '999px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.78rem', fontWeight: 700 }} title={`Lønkørt og låst til og med ${formatDa(lockedUntil)}`}>
+                                                        <Lock size={13} /> Låst
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                        {!entry.isGrouped && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); openEdit(entry); }}
+                                                                title="Rediger registrering"
+                                                                style={{ padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                                onMouseEnter={(e) => { e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; }}
+                                                                onMouseLeave={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; }}
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry); }}
+                                                            title={entry.isGrouped ? "Slet hele perioden" : "Slet registrering"}
+                                                            style={{ background: '#fef2f2', border: 'none', padding: '8px', borderRadius: '8px', color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                            onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+                                                            onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     );
@@ -645,8 +1149,11 @@ export default function AdminTimesheet({ leadsData, profile }) {
                         <h3 style={{ margin: '0 0 12px 0', fontSize: '1.25rem', color: '#0f172a', fontWeight: 'bold' }}>
                             Slet timeregistrering?
                         </h3>
-                        <p style={{ margin: '0 0 32px 0', color: '#64748b', fontSize: '0.95rem', lineHeight: '1.5' }}>
-                            Er du sikker på, at du vil slette denne registrering? Dette kan ikke fortrydes.
+                        <p style={{ color: '#475569', marginBottom: '24px', lineHeight: '1.5' }}>
+                            {deletingEntry.isGrouped 
+                                ? `Er du sikker på, du vil slette hele perioden (${deletingEntry.displayDate})? Dette fjerner alle underliggende feriedage på én gang.`
+                                : `Er du sikker på, du vil slette registreringen fra d. ${new Date(deletingEntry.date).toLocaleDateString('da-DK')}? Dette kan ikke fortrydes.`
+                            }
                         </p>
                         <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
                             <button 
@@ -687,30 +1194,29 @@ export default function AdminTimesheet({ leadsData, profile }) {
                         </div>
 
                         <form onSubmit={handleSaveEntry} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            
+
+                            {isAdding && (
+                                <button type="button" onClick={fillFromLast}
+                                    style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', border: '1px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.transform = 'none'; }}>
+                                    <RotateCcw size={16} /> Som i går
+                                </button>
+                            )}
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                     <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Medarbejder</label>
                                     <CustomSelect 
                                         value={formData.employeeId}
                                         onChange={(val) => setFormData({...formData, employeeId: val})}
-                                        options={teamMembers.map(m => ({ value: m.id, label: m.owner_name || m.company_name }))}
+                                        options={[
+                                            ...(isAdding && formData.regType === 'internal' ? [{ value: 'collective', label: '🏖️ Kollektiv Ferie (Alle medarbejdere)' }] : []),
+                                            ...teamMembers.map(m => ({ value: m.id, label: m.owner_name || m.company_name }))
+                                        ]}
                                         placeholder="-- Vælg medarbejder --"
                                     />
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Dato</label>
-                                    <input 
-                                        type="date" 
-                                        required
-                                        value={formData.date}
-                                        onChange={(e) => setFormData({...formData, date: e.target.value})}
-                                        style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
-                                    />
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                     <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Kategori</label>
                                     <CustomSelect 
@@ -724,7 +1230,9 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                         ]}
                                     />
                                 </div>
-                                
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 {formData.regType === 'project' ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                         <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Vælg Sag</label>
@@ -732,7 +1240,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                             value={formData.leadId}
                                             onChange={(val) => setFormData({...formData, leadId: val})}
                                             placeholder="-- Vælg Sag --"
-                                            options={leadsData.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status)).map(l => ({ value: l.id, label: `Sag ${l.case_number || String(l.id).substring(0,6)} - ${l.customer_name}` }))}
+                                            options={leadsData.filter(l => ['Bekræftet opgave', 'Historik', 'Afbrudt Sag'].includes(l.status)).map(l => ({ value: l.id, label: `Sag ${l.case_number || String(l.id).substring(0,6)} - ${l.customer_name}` }))}
                                         />
                                     </div>
                                 ) : (
@@ -751,71 +1259,112 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                         />
                                     </div>
                                 )}
+                                
+                                {formData.regType === 'internal' && ['Ferie', 'Skole'].includes(formData.absenceType) ? (
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Fra Dato</label>
+                                            <input 
+                                                type="date" 
+                                                required
+                                                value={formData.date}
+                                                onChange={(e) => setFormData({...formData, date: e.target.value})}
+                                                style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Til Dato</label>
+                                            <input 
+                                                type="date" 
+                                                required
+                                                min={formData.date}
+                                                value={formData.endDate}
+                                                onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                                                style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Dato</label>
+                                        <input 
+                                            type="date" 
+                                            required
+                                            value={formData.date}
+                                            onChange={(e) => setFormData({...formData, date: e.target.value})}
+                                            style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Start tid (valgfri)</label>
-                                    <input 
-                                        type="time" 
-                                        value={formData.startTime}
-                                        onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                                        style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Slut tid (valgfri)</label>
-                                    <input 
-                                        type="time" 
-                                        value={formData.endTime}
-                                        onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                                        style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Pause (min.)</label>
-                                    <input 
-                                        type="number" 
-                                        min="0"
-                                        placeholder="F.eks. 30"
-                                        value={formData.pauseMinutes}
-                                        onChange={(e) => setFormData({...formData, pauseMinutes: e.target.value})}
-                                        style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
-                                    />
-                                </div>
-                            </div>
+                            {!(formData.regType === 'internal' && ['Ferie', 'Skole'].includes(formData.absenceType)) && (
+                                <>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Start tid (valgfri)</label>
+                                            <input 
+                                                type="time" 
+                                                value={formData.startTime}
+                                                onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                                                style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Slut tid (valgfri)</label>
+                                            <input 
+                                                type="time" 
+                                                value={formData.endTime}
+                                                onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                                                style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Pause (min.)</label>
+                                            <input 
+                                                type="number" 
+                                                min="0"
+                                                placeholder="F.eks. 30"
+                                                value={formData.pauseMinutes}
+                                                onChange={(e) => setFormData({...formData, pauseMinutes: e.target.value})}
+                                                style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
+                                            />
+                                        </div>
+                                    </div>
 
-                            <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <label style={{ fontSize: '1rem', fontWeight: '700', color: '#334155', margin: 0 }}>Timer i alt (Totalt) *</label>
-                                <input 
-                                    type="number" 
-                                    required
-                                    step="0.25"
-                                    min="0"
-                                    placeholder="F.eks. 7.5"
-                                    value={formData.hours}
-                                    onChange={(e) => setFormData({...formData, hours: e.target.value})}
-                                    style={{ padding: '10px 16px', borderRadius: '8px', border: '2px solid #3b82f6', outline: 'none', fontSize: '1.25rem', color: '#1e293b', backgroundColor: '#fff', fontWeight: '900', width: '120px', textAlign: 'center' }}
-                                />
-                            </div>
+                                    <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <label style={{ fontSize: '1rem', fontWeight: '700', color: '#334155', margin: 0 }}>Timer i alt (Totalt) *</label>
+                                        <input 
+                                            type="number" 
+                                            required
+                                            step="0.25"
+                                            min="0"
+                                            placeholder="F.eks. 7.5"
+                                            value={formData.hours}
+                                            onChange={(e) => setFormData({...formData, hours: e.target.value})}
+                                            style={{ padding: '10px 16px', borderRadius: '8px', border: '2px solid #3b82f6', outline: 'none', fontSize: '1.25rem', color: '#1e293b', backgroundColor: '#fff', fontWeight: '900', width: '120px', textAlign: 'center' }}
+                                        />
+                                    </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Kørte kilometer (Kørepenge)</label>
-                                <input 
-                                    type="number" 
-                                    step="1"
-                                    min="0"
-                                    placeholder="F.eks. 45"
-                                    value={formData.km}
-                                    onChange={(e) => setFormData({...formData, km: e.target.value})}
-                                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
-                                />
-                            </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Kørte kilometer (Kørepenge)</label>
+                                        <input 
+                                            type="number" 
+                                            step="1"
+                                            min="0"
+                                            placeholder="F.eks. 45"
+                                            value={formData.km}
+                                            onChange={(e) => setFormData({...formData, km: e.target.value})}
+                                            style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
+                                        />
+                                    </div>
+                                </>
+                            )}
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Beskrivelse / Type Fravær</label>
                                 <textarea 
-                                    required
+                                    required={!(formData.regType === 'internal' && ['Ferie', 'Skole'].includes(formData.absenceType))}
                                     rows="3"
                                     placeholder={formData.regType === 'internal' ? "Valgfri note til fraværet..." : "F.eks. 'Opsat gipslofter og spartlet'"}
                                     value={formData.desc}

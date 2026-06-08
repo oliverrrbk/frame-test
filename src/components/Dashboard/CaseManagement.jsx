@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { createPortal } from 'react-dom';
-import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool } from 'lucide-react';
+import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle } from 'lucide-react';
 import MaterialList from './MaterialList';
 import AftalesedlerTab from './AftalesedlerTab';
 import CaseDrawingsTab from './CaseDrawingsTab';
 import BilagManager from './BilagManager';
+import { SubcontractorModal } from './Subcontractors';
+import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
+import { Lock, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const CustomSelect = ({ value, onChange, options, placeholder }) => {
@@ -142,6 +145,17 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isSavingTeam, setIsSavingTeam] = useState(false);
     const [isSavedTeam, setIsSavedTeam] = useState(false);
+    const [showAbortConfirmModal, setShowAbortConfirmModal] = useState(false);
+
+    // Løn-lås: timer i en lønkørt periode kan ikke redigeres
+    const [payrollSettings, setPayrollSettings] = useState(null);
+    const lockedUntil = getEffectiveLockedUntil(payrollSettings);
+    const isTimeLocked = (dateVal) => isDateLocked(dateVal, lockedUntil);
+
+    // Underleverandører på sagen (per sag — svende kan variere fra sag til sag)
+    const [assignedSubs, setAssignedSubs] = useState([]);
+    const [expandedSubId, setExpandedSubId] = useState(null);
+    const [newSubWorker, setNewSubWorker] = useState({ name: '', phone: '' });
 
     // States til to-do
     const [todoList, setTodoList] = useState([]);
@@ -157,6 +171,53 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     // States til Fakturering (Finance)
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [subcontractors, setSubcontractors] = useState([]);
+    const [subcontractorSearch, setSubcontractorSearch] = useState('');
+    const [showInviteSubcontractorModal, setShowInviteSubcontractorModal] = useState(false);
+    
+    // DAILY MESSAGE STATE
+    const [isDailyMessageOpen, setIsDailyMessageOpen] = useState(false);
+    const [newDailyMessage, setNewDailyMessage] = useState('');
+    
+    useEffect(() => {
+        if (selectedCase?.raw_data?.daily_message?.date) {
+            const msgDate = new Date(selectedCase.raw_data.daily_message.date).toDateString();
+            const today = new Date().toDateString();
+            if (msgDate === today) {
+                setNewDailyMessage(selectedCase.raw_data.daily_message.text || '');
+            } else {
+                setNewDailyMessage('');
+            }
+        } else {
+            setNewDailyMessage('');
+        }
+    }, [selectedCase]);
+
+    const handleSaveDailyMessage = async () => {
+        if (!newDailyMessage.trim()) return;
+        const msgData = {
+            text: newDailyMessage,
+            date: new Date().toISOString(),
+            author: profile.name || profile.role,
+            seen_by: [profile.id] // Mark as seen by the author immediately
+        };
+        
+        const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', selectedCase.id).single();
+        const currentRawData = latestData?.raw_data || selectedCase.raw_data || {};
+        
+        const updatedRawData = {
+            ...currentRawData,
+            daily_message: msgData
+        };
+        
+        const updatedLead = { ...selectedCase, raw_data: updatedRawData };
+        onUpdateLead(updatedLead);
+        setIsDailyMessageOpen(false);
+        toast.success("Dagens besked gemt!");
+        
+        await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', selectedCase.id);
+    };
+
     const [invoiceLines, setInvoiceLines] = useState([]);
     const [isReverseCharge, setIsReverseCharge] = useState(false);
     const [invoiceActionType, setInvoiceActionType] = useState('draft'); // 'draft' eller 'book_and_send'
@@ -184,13 +245,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     // Indlæs data
     useEffect(() => {
-        const confirmed = leads.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status));
+        const confirmed = leads.filter(l => ['Bekræftet opgave', 'Historik', 'Afbrudt Sag'].includes(l.status));
         
         if (['worker', 'apprentice', 'sales'].includes(profile?.role)) {
             if (simulatedRole) {
                 setActiveCases(confirmed);
             } else {
                 const filtered = confirmed.filter(c => {
+                    if (c.status === 'Afbrudt Sag' && profile.role !== 'sales') return false;
                     const workers = c.raw_data?.assigned_workers || [];
                     const pm = c.raw_data?.assigned_pm;
                     return workers.includes(profile.id) || pm === profile.id;
@@ -203,6 +265,13 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
         // Hent teamet (carpenters)
         fetchTeam();
+
+        // Hent gemte underleverandører (eksterne partnere uden login)
+        fetchSubcontractors();
+
+        // Hent løn-lås (så låste timer ikke kan redigeres)
+        const payCid = profile?.company_id || profile?.id;
+        if (payCid) fetchPayrollSettings(payCid).then(setPayrollSettings);
 
         // Hvis det er modal-visning (vi har åbnet en sag direkte i lead detail modalen)
         if (isModalView && selectedLeadId) {
@@ -269,6 +338,21 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         }
     };
 
+    const fetchSubcontractors = async () => {
+        try {
+            const companyId = profile.company_id || profile.id;
+            const { data, error } = await supabase
+                .from('subcontractors')
+                .select('*')
+                .eq('company_id', companyId)
+                .order('created_at', { ascending: false });
+            if (!error && data) setSubcontractors(data);
+        } catch (err) {
+            // Tabellen findes måske ikke endnu — fejl ignoreres, så intet eksisterende går i stykker
+            console.warn('Kunne ikke hente underleverandører:', err);
+        }
+    };
+
     const loadCaseData = async () => {
         const caseId = selectedCase.id;
 
@@ -277,6 +361,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         setPmIds(Array.isArray(savedPm) ? savedPm : (savedPm ? [savedPm] : []));
         const savedWorkers = selectedCase.raw_data?.assigned_workers || [];
         setAssignedWorkers(savedWorkers);
+        const savedSubs = selectedCase.raw_data?.assigned_subcontractors || [];
+        setAssignedSubs(Array.isArray(savedSubs) ? savedSubs : []);
 
         // 2. Indlæs To-Do Liste
         const savedTodo = selectedCase.raw_data?.checklist || [];
@@ -541,13 +627,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     // Gemmer sagsoplysninger i Supabase/localStorage
-    const handleStatusChange = async (newStatus) => {
+    const handleStatusChange = async (newStatus, skipConfirm = false) => {
         if (!selectedCase) return;
-        const confirmMsg = newStatus === 'Udgået opgave' 
-            ? 'Er du sikker på, at du vil annullere sagen?' 
-            : `Er du sikker på, at du vil ændre status til "${newStatus}"?`;
-            
-        if (!window.confirm(confirmMsg)) return;
+        
+        if (!skipConfirm) {
+            const confirmMsg = newStatus === 'Udgået opgave' 
+                ? 'Er du sikker på, at du vil annullere sagen?' 
+                : `Er du sikker på, at du vil ændre status til "${newStatus}"?`;
+                
+            if (!window.confirm(confirmMsg)) return;
+        }
 
         const { error } = await supabase
             .from('leads')
@@ -577,8 +666,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     const saveCaseDataToDb = async (updatedFields) => {
         try {
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', selectedCase.id).single();
+            const currentRawData = latestData?.raw_data || selectedCase.raw_data || {};
+
             const updatedRawData = {
-                ...(selectedCase.raw_data || {}),
+                ...currentRawData,
                 ...updatedFields
             };
 
@@ -613,7 +705,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         setIsSavingTeam(true);
         await saveCaseDataToDb({
             assigned_pm: pmIds,
-            assigned_workers: assignedWorkers
+            assigned_workers: assignedWorkers,
+            assigned_subcontractors: assignedSubs
         });
         setIsSavingTeam(false);
         setIsSavedTeam(true);
@@ -627,6 +720,48 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         } else {
             setAssignedWorkers([...assignedWorkers, workerId]);
         }
+    };
+
+    // --- Underleverandører på sagen ---
+    const attachSubcontractor = (sc) => {
+        if (assignedSubs.some(s => s.id === sc.id)) {
+            setAssignedSubs(assignedSubs.filter(s => s.id !== sc.id)); // toggle af
+            return;
+        }
+        // Gem et snapshot af firma+mester på sagen, så oplysningerne bevares
+        setAssignedSubs([...assignedSubs, {
+            id: sc.id,
+            company_name: sc.company_name,
+            trade: sc.trade || '',
+            contact_name: sc.contact_name || '',
+            contact_phone: sc.contact_phone || '',
+            contact_email: sc.contact_email || '',
+            workers: []
+        }]);
+    };
+
+    const removeSubcontractor = (subId) => {
+        setAssignedSubs(assignedSubs.filter(s => s.id !== subId));
+    };
+
+    // Nyoprettet underleverandør fra modal: gem i registret OG sæt på sagen
+    const handleSubcontractorCreated = (saved) => {
+        setSubcontractors(prev => prev.some(s => s.id === saved.id) ? prev : [saved, ...prev]);
+        attachSubcontractor(saved);
+    };
+
+    const addSubWorker = (subId) => {
+        if (!newSubWorker.name.trim()) { toast.error('Angiv et navn på svenden/lærlingen.'); return; }
+        setAssignedSubs(assignedSubs.map(s => s.id === subId
+            ? { ...s, workers: [...(s.workers || []), { id: `sw-${Date.now()}`, name: newSubWorker.name.trim(), phone: newSubWorker.phone.trim() }] }
+            : s));
+        setNewSubWorker({ name: '', phone: '' });
+    };
+
+    const removeSubWorker = (subId, workerId) => {
+        setAssignedSubs(assignedSubs.map(s => s.id === subId
+            ? { ...s, workers: (s.workers || []).filter(w => w.id !== workerId) }
+            : s));
     };
 
     // To-Do / Checklist-håndtering
@@ -790,6 +925,28 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         setLogFiles(logFiles.filter((_, idx) => idx !== indexToRemove));
     };
 
+    // Beregn "Timer i alt" automatisk ud fra start/slut og pause
+    useEffect(() => {
+        if (!newTime.startTime || !newTime.endTime) return;
+        const s = new Date(`1970-01-01T${newTime.startTime}`);
+        const e = new Date(`1970-01-01T${newTime.endTime}`);
+        let diff = (e - s) / 3600000;
+        if (diff < 0) diff += 24;
+        if (deductPause) diff -= 0.5;
+        if (diff < 0) diff = 0;
+        setNewTime(prev => ({ ...prev, hours: String(Math.round(diff * 4) / 4) }));
+    }, [newTime.startTime, newTime.endTime, deductPause]);
+
+    // "Som i går": udfyld med seneste registrering på sagen, på dags dato
+    const fillFromLastCase = () => {
+        const empId = newTime.employeeId || profile?.id;
+        const sorted = [...timeEntries].filter(t => t.employeeId === empId).sort((a, b) => new Date(b.date) - new Date(a.date));
+        const last = sorted[0] || [...timeEntries].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        if (!last) { toast.error('Ingen tidligere registrering på sagen at kopiere.'); return; }
+        setNewTime({ ...newTime, startTime: last.startTime || '07:00', endTime: last.endTime || '15:00', date: new Date().toISOString().substring(0, 10), desc: last.desc || '' });
+        toast.success('Udfyldt som seneste registrering.');
+    };
+
     // Timeregistrering-håndtering
     const handleAddTimeEntry = (e) => {
         e.preventDefault();
@@ -798,6 +955,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         
         if (!newTime.startTime || !newTime.endTime || !effectiveEmployeeId) {
             toast.error('Udfyld venligst medarbejder, samt start- og sluttidspunkt');
+            return;
+        }
+
+        if (isTimeLocked(newTime.date)) {
+            toast.error(`Datoen er i en låst lønperiode (til og med ${formatDa(lockedUntil)}).`);
             return;
         }
 
@@ -830,6 +992,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         // Afrund til nærmeste kvarter
         diffHours = Math.round(diffHours * 4) / 4;
 
+        // Manuel overskrivning af "Timer i alt" har forrang, ellers bruges den beregnede total
+        const manualHours = parseFloat(String(newTime.hours ?? '').replace(',', '.'));
+        const finalHours = (newTime.hours !== '' && newTime.hours != null && !isNaN(manualHours)) ? manualHours : diffHours;
+
         let updated;
         if (editingTimeId) {
             updated = timeEntries.map(t => {
@@ -838,7 +1004,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         ...t,
                         startTime: newTime.startTime,
                         endTime: newTime.endTime,
-                        hours: diffHours,
+                        hours: finalHours,
                         date: newTime.date,
                         desc: (newTime.desc || '').trim() || 'Almindeligt tømrerarbejde',
                         employeeId: effectiveEmployeeId,
@@ -870,6 +1036,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     const handleEditTime = (entry) => {
+        if (isTimeLocked(entry.date)) {
+            toast.error(`Timen er lønkørt og låst (til og med ${formatDa(lockedUntil)}).`);
+            return;
+        }
         setEditingTimeId(entry.id);
         setNewTime({
             startTime: entry.startTime,
@@ -887,6 +1057,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     const confirmDeleteTime = () => {
         if (!deletingTimeEntryId) return;
+        const target = timeEntries.find(t => t.id === deletingTimeEntryId);
+        if (target && isTimeLocked(target.date)) {
+            toast.error('Timen er låst efter lønkørsel og kan ikke slettes.');
+            setDeletingTimeEntryId(null);
+            return;
+        }
         const updated = timeEntries.filter(t => t.id !== deletingTimeEntryId);
         setTimeEntries(updated);
         saveCaseDataToDb({ time_entries: updated });
@@ -1296,7 +1472,18 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     
                     {/* SAGS DETALJER HEADER */}
-                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                    {selectedCase.status === 'Afbrudt Sag' && (
+                        <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.05)', border: '1px solid #ef4444', borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', backdropFilter: 'blur(8px)', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.1)', marginBottom: '16px' }}>
+                            <div style={{ padding: '10px', background: '#ef4444', color: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <AlertTriangle size={28} />
+                            </div>
+                            <div>
+                                <h4 style={{ margin: '0 0 4px 0', color: '#b91c1c', fontSize: '1.15rem', fontWeight: 'bold' }}>⚠️ SAG AFBRUDT: Produktionen er stoppet.</h4>
+                                <p style={{ margin: 0, color: '#991b1b', fontSize: '0.95rem' }}>Sagen er afbrudt (Konkurs/Aflyst). Kun økonomisk afvikling er åben. Fanerne 'To-Do' og 'Aftalesedler' er låst for ændringer.</p>
+                            </div>
+                        </div>
+                    )}
+                    <div style={{ padding: '24px', backgroundColor: selectedCase.status === 'Afbrudt Sag' ? '#fef2f2' : '#ffffff', borderRadius: '16px', border: selectedCase.status === 'Afbrudt Sag' ? '1px solid #fca5a5' : '1px solid #e8e6e1', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                         <div>
                             <button 
                                 onClick={() => !isModalView && setSelectedCaseIdState(null)} 
@@ -1339,6 +1526,100 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         
                         {/* Status bar */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            {/* DAGENS BESKED PILL */}
+                            <div style={{ position: 'relative' }}>
+                                {(() => {
+                                    const msg = selectedCase?.raw_data?.daily_message;
+                                    const isToday = msg?.date && new Date(msg.date).toDateString() === new Date().toDateString();
+                                    const hasUnread = isToday && !(msg.seen_by || []).includes(profile?.id);
+                                    const canWrite = ['admin', 'accountant', 'boss', 'sales'].includes(profile?.role);
+                                    
+                                    if (!isToday && !canWrite) return null;
+                                    
+                                    return (
+                                        <button 
+                                            onClick={() => setIsDailyMessageOpen(!isDailyMessageOpen)}
+                                            style={{ 
+                                                padding: '8px 16px', 
+                                                borderRadius: '99px', 
+                                                border: hasUnread ? '1px solid #3b82f6' : '1px solid #e2e8f0', 
+                                                background: hasUnread ? '#eff6ff' : '#fff', 
+                                                fontSize: '0.85rem', 
+                                                fontWeight: '600', 
+                                                color: hasUnread ? '#2563eb' : '#475569', 
+                                                cursor: 'pointer', 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                gap: '8px',
+                                                boxShadow: hasUnread ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            <MessageCircle size={16} /> Dagens Besked {hasUnread && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }}/>}
+                                        </button>
+                                    );
+                                })()}
+                                
+                                {isDailyMessageOpen && (
+                                    <div style={{ 
+                                        position: 'absolute', 
+                                        top: '100%', 
+                                        right: 0, 
+                                        marginTop: '12px', 
+                                        width: '320px',
+                                        background: 'rgba(255, 255, 255, 0.95)',
+                                        backdropFilter: 'blur(12px)', 
+                                        border: '1px solid #e2e8f0', 
+                                        borderRadius: '16px', 
+                                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', 
+                                        padding: '16px', 
+                                        zIndex: 100,
+                                        animation: 'slideDown 0.2s ease-out'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                            <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}><MessageCircle size={16} /> Dagens Besked</h4>
+                                            <button onClick={() => setIsDailyMessageOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={16}/></button>
+                                        </div>
+                                        
+                                        {(() => {
+                                            const msg = selectedCase?.raw_data?.daily_message;
+                                            const isToday = msg?.date && new Date(msg.date).toDateString() === new Date().toDateString();
+                                            const canWrite = ['admin', 'accountant', 'boss', 'sales'].includes(profile?.role);
+                                            
+                                            return (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                    {isToday && (
+                                                        <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                                                            <p style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#334155', lineHeight: '1.5' }}>{msg.text}</p>
+                                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Skrevet af: {msg.author}</div>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {canWrite && (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: isToday ? '8px' : '0' }}>
+                                                            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b' }}>{isToday ? 'Overskriv besked' : 'Skriv ny besked for i dag'}</label>
+                                                            <textarea 
+                                                                value={newDailyMessage}
+                                                                onChange={(e) => setNewDailyMessage(e.target.value)}
+                                                                placeholder="F.eks. Husk fugepistol..."
+                                                                rows={3}
+                                                                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', resize: 'none' }}
+                                                            />
+                                                            <button 
+                                                                onClick={handleSaveDailyMessage}
+                                                                style={{ padding: '8px', background: '#1e293b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
+                                                            >
+                                                                Gem Besked
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                )}
+                            </div>
+
                             {['admin', 'accountant', 'boss', 'sales'].includes(profile?.role) && (
                                 <button
                                     onClick={() => onOpenInvoice && onOpenInvoice(selectedCase.id)}
@@ -1358,23 +1639,39 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         Skift Status <ChevronRight size={14} style={{ transform: isStatusDropdownOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
                                     </button>
                                     {isStatusDropdownOpen && (
-                                        <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '8px', zIndex: 50, minWidth: '180px' }}>
-                                            <button 
-                                                onClick={() => { handleStatusChange('Sæt i bero'); setIsStatusDropdownOpen(false); }}
-                                                style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#f97316', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = '#fff7ed'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                            >
-                                                Sæt i bero
-                                            </button>
-                                            <button 
-                                                onClick={() => { handleStatusChange('Udgået opgave'); setIsStatusDropdownOpen(false); }}
-                                                style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = '#fef2f2'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                            >
-                                                Annullér (Udgået)
-                                            </button>
+                                        <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '8px', zIndex: 50, minWidth: '220px' }}>
+                                            {selectedCase.status !== 'Afbrudt Sag' ? (
+                                                <>
+                                                    <button 
+                                                        onClick={() => { handleStatusChange('Sæt i bero'); setIsStatusDropdownOpen(false); }}
+                                                        style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#f97316', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#fff7ed'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                    >
+                                                        Sæt i bero
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => { 
+                                                            setShowAbortConfirmModal(true);
+                                                            setIsStatusDropdownOpen(false);
+                                                        }}
+                                                        style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#fef2f2'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                    >
+                                                        <AlertTriangle size={16}/> Afbryd Sag (Konkurs)
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => { handleStatusChange('Historik', true); setIsStatusDropdownOpen(false); toast.success('Sagen er flyttet til Historik og kan nu genoptages derfra.'); }}
+                                                    style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#10b981', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = '#ecfdf5'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    <CheckCircle size={16}/> Genoptag Sag (Lås op)
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -1630,20 +1927,180 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     </div>
                                                 );
                                             })}
+
+                                            {/* Eksterne underleverandører */}
+                                            <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '8px 0' }}></div>
+                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Eksterne underleverandører</div>
+                                            {subcontractors.map(sc => {
+                                                const isAttached = assignedSubs.some(s => s.id === sc.id);
+                                                return (
+                                                    <div
+                                                        key={sc.id}
+                                                        onClick={() => attachSubcontractor(sc)}
+                                                        style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px', backgroundColor: isAttached ? '#f5f3ff' : 'transparent', transition: 'all 0.1s' }}
+                                                        onMouseEnter={(e) => !isAttached && (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                                                        onMouseLeave={(e) => !isAttached && (e.currentTarget.style.backgroundColor = 'transparent')}
+                                                    >
+                                                        <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: isAttached ? 'none' : '1px solid #cbd5e1', backgroundColor: isAttached ? '#7c3aed' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            {isAttached && <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>✓</span>}
+                                                        </div>
+                                                        <span style={{ fontSize: '0.9rem', color: isAttached ? '#6d28d9' : '#334155', fontWeight: isAttached ? '600' : 'normal' }}>
+                                                            {sc.company_name}{sc.trade ? ` · ${sc.trade}` : ''}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                            <div
+                                                onClick={() => { setWorkerDropdownOpen(false); setShowInviteSubcontractorModal(true); }}
+                                                style={{ padding: '10px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px', color: '#7c3aed', fontWeight: 600, fontSize: '0.9rem', transition: 'all 0.1s' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f3ff'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                            >
+                                                <Plus size={16} /> Opret ny underleverandør
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                             )}
 
                             {/* Tomt hold besked */}
-                            {(pmIds.length === 0 && assignedWorkers.length === 0) && (
+                            {(pmIds.length === 0 && assignedWorkers.length === 0 && assignedSubs.length === 0) && (
                                 <div style={{ display: 'flex', alignItems: 'center', color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic', padding: '12px 0' }}>
                                     Der er endnu ikke tilføjet nogen til sagen...
                                 </div>
                             )}
                         </div>
+
+                        {/* EKSTERNE UNDERLEVERANDØRER PÅ SAGEN */}
+                        {assignedSubs.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    <Store size={16} /> Eksterne underleverandører ({assignedSubs.length})
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '14px' }}>
+                                    {assignedSubs.map(sub => {
+                                        const isOpen = expandedSubId === sub.id;
+                                        const workers = sub.workers || [];
+                                        const canEdit = profile?.role !== 'worker' && profile?.role !== 'apprentice';
+                                        return (
+                                            <div key={sub.id} style={{ border: '1px solid #ede9fe', borderRadius: '14px', background: '#ffffff', overflow: 'hidden', boxShadow: '0 2px 4px rgba(124,58,237,0.04)' }}>
+                                                {/* Header: firma + mester */}
+                                                <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#f5f3ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                                <Store size={19} />
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.95rem', lineHeight: 1.2 }}>{sub.company_name}</div>
+                                                                {sub.trade && <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#7c3aed', marginTop: '2px' }}>{sub.trade}</div>}
+                                                            </div>
+                                                        </div>
+                                                        {canEdit && (
+                                                            <button onClick={() => removeSubcontractor(sub.id)} title="Fjern fra sagen"
+                                                                style={{ background: '#ffffff', border: '1px solid #e2e8f0', color: '#94a3b8', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', flexShrink: 0, transition: 'all 0.2s' }}
+                                                                onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = '#fca5a5'; }}
+                                                                onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>×</button>
+                                                        )}
+                                                    </div>
+                                                    {/* Mester kontakt */}
+                                                    {(sub.contact_name || sub.contact_phone) && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#475569', background: '#faf9ff', padding: '8px 10px', borderRadius: '10px' }}>
+                                                            <HardHat size={15} style={{ color: '#7c3aed', flexShrink: 0 }} />
+                                                            <span style={{ fontWeight: 600 }}>{sub.contact_name || 'Mester'}</span>
+                                                            {sub.contact_phone && (
+                                                                <a href={`tel:${sub.contact_phone}`} style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#7c3aed', textDecoration: 'none', fontWeight: 600 }}>
+                                                                    <Phone size={13} /> {sub.contact_phone}
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Svende/lærlinge på denne sag */}
+                                                <div style={{ borderTop: '1px solid #f1f5f9', padding: '12px 16px', background: '#fcfcfd' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: workers.length ? '8px' : '0' }}>
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Svende på sagen ({workers.length})</span>
+                                                        {canEdit && (
+                                                            <button onClick={() => { setExpandedSubId(isOpen ? null : sub.id); setNewSubWorker({ name: '', phone: '' }); }}
+                                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: '#7c3aed', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                                                                <Plus size={14} /> Tilføj svend
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    {workers.map(w => (
+                                                        <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', fontSize: '0.85rem', color: '#334155' }}>
+                                                            <User size={14} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                                                            <span style={{ fontWeight: 500 }}>{w.name}</span>
+                                                            {w.phone && (
+                                                                <a href={`tel:${w.phone}`} style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#475569', textDecoration: 'none' }}
+                                                                    onMouseEnter={(e) => e.currentTarget.style.color = '#7c3aed'}
+                                                                    onMouseLeave={(e) => e.currentTarget.style.color = '#475569'}>
+                                                                    <Phone size={12} /> {w.phone}
+                                                                </a>
+                                                            )}
+                                                            {canEdit && (
+                                                                <button onClick={() => removeSubWorker(sub.id, w.id)} title="Fjern svend"
+                                                                    style={{ background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px', display: 'flex', marginLeft: w.phone ? '0' : 'auto', transition: 'color 0.2s' }}
+                                                                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                                                                    onMouseLeave={(e) => e.currentTarget.style.color = '#cbd5e1'}>
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
+
+                                                    {workers.length === 0 && !isOpen && (
+                                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic', paddingTop: '2px' }}>Ingen svende tilføjet på denne sag endnu.</div>
+                                                    )}
+
+                                                    {/* Inline tilføj-formular */}
+                                                    {isOpen && canEdit && (
+                                                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                                                            <input
+                                                                value={newSubWorker.name}
+                                                                onChange={(e) => setNewSubWorker({ ...newSubWorker, name: e.target.value })}
+                                                                placeholder="Navn på svend/lærling"
+                                                                onKeyDown={(e) => e.key === 'Enter' && addSubWorker(sub.id)}
+                                                                style={{ flex: '1 1 130px', minWidth: 0, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }}
+                                                                autoFocus
+                                                            />
+                                                            <input
+                                                                value={newSubWorker.phone}
+                                                                onChange={(e) => setNewSubWorker({ ...newSubWorker, phone: e.target.value })}
+                                                                placeholder="Telefon"
+                                                                onKeyDown={(e) => e.key === 'Enter' && addSubWorker(sub.id)}
+                                                                style={{ flex: '1 1 90px', minWidth: 0, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }}
+                                                            />
+                                                            <button onClick={() => addSubWorker(sub.id)}
+                                                                style={{ padding: '8px 14px', border: 'none', borderRadius: '8px', background: '#7c3aed', color: 'white', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+                                                                Tilføj
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                        Husk at trykke "Gem holdet" for at gemme ændringer i underleverandører og svende.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
-                    
+
+                    {/* Modal: opret ny underleverandør direkte fra sagen */}
+                    <SubcontractorModal
+                        open={showInviteSubcontractorModal}
+                        onClose={() => setShowInviteSubcontractorModal(false)}
+                        companyId={profile.company_id || profile.id}
+                        onSaved={handleSubcontractorCreated}
+                    />
+
                     {/* CASE WORKSPACE TABS */}
                                         {/* MODERN HORIZONTAL TABS (2026 DESIGN) */}
                     <div className="case-workspace-tabs modern-tab-scroll" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', paddingTop: '4px', paddingBottom: '8px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none', marginBottom: '16px', marginTop: '24px' }}>
@@ -1651,12 +2108,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             .modern-tab-scroll::-webkit-scrollbar { display: none; }
                         `}</style>
                         {[
-                            { id: 'todo', label: 'Bygge To-Do (KS)', icon: <CheckSquare size={18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: true },
+                            { id: 'todo', label: selectedCase.status === 'Afbrudt Sag' ? 'Bygge To-Do (Låst)' : 'Bygge To-Do (KS)', icon: <CheckSquare size={18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: true },
                             { id: 'materials', label: 'Materialer & Indkøb', icon: <PackageCheck size={18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: true },
                             { id: 'logs', label: 'Byggeproces', icon: <ClipboardList size={18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
                             { id: 'timesheet', label: 'Timeregistrering', icon: <Clock size={18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
                             { id: 'invoices', label: 'Bilag', icon: <Receipt size={18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
-                            { id: 'extra-work', label: 'Aftalesedler', icon: <PenTool size={18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' },
+                            { id: 'extra-work', label: selectedCase.status === 'Afbrudt Sag' ? 'Aftalesedler (Låst)' : 'Aftalesedler', icon: <PenTool size={18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' },
                             { id: 'drawings', label: 'Tegninger', icon: <FileImage size={18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: true }
                         ].filter(tab => tab.show).map(tab => {
                             const isActive = activeSubTab === tab.id;
@@ -1709,7 +2166,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         
                         {/* TAB 1: TO-DO / CHECKLIST */}
                         {activeSubTab === 'todo' && (
-                            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', pointerEvents: selectedCase.status === 'Afbrudt Sag' ? 'none' : 'auto', opacity: selectedCase.status === 'Afbrudt Sag' ? 0.7 : 1, backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e8e6e1' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <h4 style={{ margin: 0, color: '#1a1a1a' }}>Udførelsesmetode & Bygge-anvisninger</h4>
                                     <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
@@ -2164,7 +2621,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
                                                             {new Date(entry.date).toLocaleDateString('da-DK')}
                                                         </span>
-                                                        {(!['worker', 'apprentice'].includes(simulatedRole || profile?.role) || entry.employeeId === profile?.id) && (
+                                                        {isTimeLocked(entry.date) ? (
+                                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '999px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.72rem', fontWeight: 700 }} title={`Lønkørt og låst til og med ${formatDa(lockedUntil)}`}>
+                                                                <Lock size={11} /> Låst
+                                                            </span>
+                                                        ) : (!['worker', 'apprentice'].includes(simulatedRole || profile?.role) || entry.employeeId === profile?.id) && (
                                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                                 <button onClick={() => handleEditTime(entry)} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}>Ret</button>
                                                                 <button onClick={() => handleDeleteTime(entry.id)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}>Slet</button>
@@ -2189,7 +2650,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             </h3>
                                             
                                             <form onSubmit={handleAddTimeEntry} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                                
+
+                                                {!editingTimeId && (
+                                                    <button type="button" onClick={fillFromLastCase}
+                                                        style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', border: '1px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.transform = 'none'; }}>
+                                                        <RotateCcw size={16} /> Som i går
+                                                    </button>
+                                                )}
+
                                                 {(!['worker', 'apprentice'].includes(simulatedRole || profile?.role)) && (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                                         <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Medarbejder (Hvem)</label>
@@ -2232,6 +2702,21 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     />
                                                     <span style={{ fontWeight: '500' }}>Fratræk 30 min. selvbetalt frokostpause</span>
                                                 </label>
+
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '14px 16px', background: '#eef2ff', border: '1px solid #e0e7ff', borderRadius: '12px' }}>
+                                                    <div>
+                                                        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#334155' }}>Timer i alt</div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Beregnes automatisk — kan rettes</div>
+                                                    </div>
+                                                    <input
+                                                        type="number"
+                                                        step="0.25"
+                                                        min="0"
+                                                        value={newTime.hours ?? ''}
+                                                        onChange={(e) => setNewTime({ ...newTime, hours: e.target.value })}
+                                                        style={{ width: '90px', padding: '10px 12px', borderRadius: '10px', border: '1px solid #c7d2fe', textAlign: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#3b82f6', outline: 'none', background: '#fff' }}
+                                                    />
+                                                </div>
 
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                                     <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Dato</label>
@@ -2300,7 +2785,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
                         {/* TAB 6: AFTALESEDLER (EKSTRAARBEJDE) */}
                         {activeSubTab === 'extra-work' && (
-                            <div className="case-tab-content">
+                            <div className="case-tab-content" style={{ pointerEvents: selectedCase.status === 'Afbrudt Sag' ? 'none' : 'auto', opacity: selectedCase.status === 'Afbrudt Sag' ? 0.7 : 1 }}>
                                 <AftalesedlerTab 
                                     selectedCase={selectedCase} 
                                     profile={profile} 
@@ -2530,6 +3015,45 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             onMouseLeave={e => e.currentTarget.style.background = '#ef4444'}
                         >
                             Ja, slet
+                        </button>
+                    </div>
+                </div>
+            </div>,
+            document.body
+        )}
+        {/* MODAL TIL BEKRÆFTELSE AF "AFBRUDT SAG" */}
+        {showAbortConfirmModal && createPortal(
+            <div className="dashboard-modal-overlay delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+                <div className="dashboard-modal-panel" style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '24px', padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+                    <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: '0 0 0 8px rgba(239, 68, 68, 0.1)' }}>
+                        <AlertTriangle size={36} color="#ef4444" />
+                    </div>
+                    <h3 style={{ margin: '0 0 12px 0', fontSize: '1.4rem', color: '#0f172a', fontWeight: '800' }}>
+                        Er du helt sikker?
+                    </h3>
+                    <p style={{ margin: '0 0 24px 0', color: '#475569', fontSize: '1rem', lineHeight: '1.5' }}>
+                        Du er ved at ændre statussen til <strong style={{ color: '#ef4444' }}>Afbrudt Sag (Konkurs / Aflyst)</strong>.<br/><br/>
+                        Dette vil <strong style={{ color: '#0f172a' }}>stoppe al produktion</strong> øjeblikkeligt og fjerne sagen fra svendenes telefoner, så de ikke længere kan registrere timer på den.
+                    </p>
+                    <div style={{ display: 'flex', gap: '16px', width: '100%', marginTop: '8px' }}>
+                        <button 
+                            onClick={() => setShowAbortConfirmModal(false)}
+                            style={{ flex: 1, padding: '14px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '14px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
+                        >
+                            Nej, annuller
+                        </button>
+                        <button 
+                            onClick={() => {
+                                handleStatusChange('Afbrudt Sag', true);
+                                setShowAbortConfirmModal(false);
+                            }}
+                            style={{ flex: 1, padding: '14px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(239, 68, 68, 0.2)' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(239, 68, 68, 0.3)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(239, 68, 68, 0.2)'; }}
+                        >
+                            Ja, afbryd sag
                         </button>
                     </div>
                 </div>

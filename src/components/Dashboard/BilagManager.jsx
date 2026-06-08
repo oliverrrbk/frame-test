@@ -36,10 +36,13 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
                 return inv;
             });
             
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const currentRawData = latestData?.raw_data || lead.raw_data || {};
+
             const updatedCase = {
                 ...lead,
                 raw_data: {
-                    ...(lead.raw_data || {}),
+                    ...currentRawData,
                     supplier_invoices: updatedInvoices
                 }
             };
@@ -79,10 +82,13 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
                 inv.id === invId ? { ...inv, is_sent_to_accounting: true } : inv
             );
             
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const currentRawData = latestData?.raw_data || lead.raw_data || {};
+
             const updatedCase = {
                 ...lead,
                 raw_data: {
-                    ...(lead.raw_data || {}),
+                    ...currentRawData,
                     supplier_invoices: updatedInvoices
                 }
             };
@@ -116,15 +122,18 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
 
         const updatedInvoices = rawSupplierInvoices.filter(inv => inv.id !== invId);
         
-        const updatedCase = {
-            ...lead,
-            raw_data: {
-                ...(lead.raw_data || {}),
-                supplier_invoices: updatedInvoices
-            }
-        };
-
         try {
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const currentRawData = latestData?.raw_data || lead.raw_data || {};
+
+            const updatedCase = {
+                ...lead,
+                raw_data: {
+                    ...currentRawData,
+                    supplier_invoices: updatedInvoices
+                }
+            };
+
             const { error } = await supabase
                 .from('leads')
                 .update({ raw_data: updatedCase.raw_data })
@@ -163,15 +172,18 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
             file_name: newSupplierInvoice.file_name
         };
 
-        const updatedCase = {
-            ...lead,
-            raw_data: {
-                ...(lead.raw_data || {}),
-                supplier_invoices: [...rawSupplierInvoices, newInv]
-            }
-        };
-
         try {
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const currentRawData = latestData?.raw_data || lead.raw_data || {};
+
+            const updatedCase = {
+                ...lead,
+                raw_data: {
+                    ...currentRawData,
+                    supplier_invoices: [...(currentRawData.supplier_invoices || []), newInv]
+                }
+            };
+
             const { error } = await supabase
                 .from('leads')
                 .update({ raw_data: updatedCase.raw_data })

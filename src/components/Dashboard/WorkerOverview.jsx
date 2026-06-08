@@ -3,6 +3,7 @@ import { Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Phone } fr
 import { startOfWeek, startOfMonth, isAfter, isSameDay } from 'date-fns';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import TimeRegistrationReminder from './TimeRegistrationReminder';
 
 export default function WorkerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId, simulatedRole }) {
     // Filtrer sager, som arbejderen er tilknyttet
@@ -27,11 +28,11 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             // Hvis det er en simulator for en svend/lærling ELLER projektleder, lader vi dem se relevante sager 
             // så de kan teste systemet uden at skulle assigne sig selv først.
             if (simulatedRole && ['worker', 'apprentice', 'sales'].includes(role)) {
-                return ['Bekræftet opgave'].includes(lead.status);
+                return ['Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag'].includes(lead.status);
             }
 
             // For produktion vis de sager man er assignet til
-            return isAssigned && ['Bekræftet opgave'].includes(lead.status || '');
+            return isAssigned && ['Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag'].includes(lead.status || '');
         });
     }, [leadsData, myProfile, simulatedRole]);
 
@@ -66,9 +67,12 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             employeeName: myProfile?.owner_name || myProfile?.company_name || myProfile?.email || 'Ukendt medarbejder'
         };
         
-        const currentEntries = leadToUpdate.raw_data?.time_entries || [];
+        const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', leadToUpdate.id).single();
+        const currentRawData = latestData?.raw_data || leadToUpdate.raw_data || {};
+
+        const currentEntries = currentRawData.time_entries || [];
         const updatedEntries = [entry, ...currentEntries];
-        const newRawData = { ...leadToUpdate.raw_data, time_entries: updatedEntries };
+        const newRawData = { ...currentRawData, time_entries: updatedEntries };
         
         const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', leadToUpdate.id);
         if (error) {
@@ -85,7 +89,10 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         const { lead, activeEntry } = activeCheckInInfo;
         const nowTime = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
         
-        const currentEntries = [...(lead.raw_data?.time_entries || [])];
+        const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+        const currentRawData = latestData?.raw_data || lead.raw_data || {};
+
+        const currentEntries = [...(currentRawData.time_entries || [])];
         const entryIndex = currentEntries.findIndex(t => t.id === activeEntry.id);
         if (entryIndex === -1) return;
         
@@ -102,7 +109,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         entry.desc = 'Arbejde udført (Tjek-ud)';
         
         currentEntries[entryIndex] = entry;
-        const newRawData = { ...lead.raw_data, time_entries: currentEntries };
+        const newRawData = { ...currentRawData, time_entries: currentEntries };
         
         const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', lead.id);
         if (error) {
@@ -156,6 +163,8 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                     Her er dit overblik over timer og projekter.
                 </p>
             </div>
+
+            <TimeRegistrationReminder leadsData={leadsData} myProfile={myProfile} setActiveTab={setActiveTab} />
 
             {/* GLOBAL STEMPLING MODUL */}
             <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', background: '#ffffff', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center', position: 'relative', zIndex: 20, overflow: 'visible' }}>
@@ -331,7 +340,15 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                                         {/* Card Header */}
                                         <div style={{ padding: '20px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'rgba(248, 250, 252, 0.5)' }}>
                                             <div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px' }}>SAG #{caseNo}</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                    <span>SAG #{caseNo}</span>
+                                                    {lead.status === 'Sæt i bero' && (
+                                                        <span style={{ fontSize: '0.65rem', backgroundColor: '#ffedd5', color: '#c2410c', padding: '2px 6px', borderRadius: '6px', border: '1px solid #fdba74' }}>Sat i bero</span>
+                                                    )}
+                                                    {lead.status === 'Afbrudt Sag' && (
+                                                        <span style={{ fontSize: '0.65rem', backgroundColor: '#fee2e2', color: '#991b1b', padding: '2px 6px', borderRadius: '6px', border: '1px solid #fca5a5' }}>Afbrudt</span>
+                                                    )}
+                                                </div>
                                                 <h4 style={{ margin: '0', fontSize: '1.15rem', color: 'var(--text-primary)', fontWeight: '700', lineHeight: '1.2' }}>{title}</h4>
                                             </div>
                                             <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: isArchived ? '#94a3b8' : '#10b981', boxShadow: isArchived ? '0 0 0 4px rgba(148,163,184,0.1)' : '0 0 0 4px rgba(16,185,129,0.1)' }} title={isArchived ? "Afsluttet" : "Aktiv"} />

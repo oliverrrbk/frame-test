@@ -101,15 +101,18 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
             file_name: newSupplierInvoice.file_name
         };
 
-        const updatedCase = {
-            ...lead,
-            raw_data: {
-                ...(lead.raw_data || {}),
-                supplier_invoices: [...supplierInvoices, newInv]
-            }
-        };
-
         try {
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const currentRawData = latestData?.raw_data || lead.raw_data || {};
+
+            const updatedCase = {
+                ...lead,
+                raw_data: {
+                    ...currentRawData,
+                    supplier_invoices: [...(currentRawData.supplier_invoices || []), newInv]
+                }
+            };
+
             const { error } = await supabase
                 .from('leads')
                 .update({ raw_data: updatedCase.raw_data })

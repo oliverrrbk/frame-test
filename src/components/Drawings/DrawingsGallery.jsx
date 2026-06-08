@@ -9,7 +9,7 @@ import { da } from 'date-fns/locale';
 import { jsPDF } from 'jspdf';
 import { renderElementsToCanvas } from './renderUtils';
 
-const DrawingsGallery = ({ leadId = null }) => {
+const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
     const [drawings, setDrawings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeDrawingId, setActiveDrawingId] = useState(null);
@@ -26,9 +26,8 @@ const DrawingsGallery = ({ leadId = null }) => {
             
             if (leadId) {
                 query = query.eq('lead_id', leadId);
-            } else {
-                // If no leadId is provided, we fetch ALL drawings for the user
-                // RLS will ensure they only see their own
+            } else if (myProfile?.id) {
+                query = query.eq('user_id', myProfile.id);
             }
 
             const { data, error } = await query;
@@ -80,7 +79,7 @@ const DrawingsGallery = ({ leadId = null }) => {
         if (!leadId) { // Only needed in generic gallery
             loadLeads();
         }
-    }, [leadId]);
+    }, [leadId, myProfile]);
 
     const handleNewDrawing = () => {
         setActiveDrawingId(null);

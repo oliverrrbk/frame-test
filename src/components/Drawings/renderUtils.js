@@ -1,7 +1,11 @@
 import { getElementBounds } from './engineUtils';
 
+const NON_DRAWING_TYPES = ['settings'];
+
+const isDrawableElement = (el) => el && el.type && !NON_DRAWING_TYPES.includes(el.type);
+
 export const getDrawingBounds = (elements = []) => {
-    const drawable = elements.filter(el => el && el.type);
+    const drawable = elements.filter(isDrawableElement);
     if (drawable.length === 0) return null;
 
     let minX = Infinity;
@@ -154,7 +158,8 @@ export const drawElement = async (ctx, el, options = {}) => {
         ctx.save(); ctx.translate(el.x, el.y); ctx.rotate(angle); ctx.beginPath(); ctx.moveTo(0, -tickLen); ctx.lineTo(0, tickLen); ctx.stroke(); ctx.restore();
         ctx.save(); ctx.translate(el.endX, el.endY); ctx.rotate(angle); ctx.beginPath(); ctx.moveTo(0, -tickLen); ctx.lineTo(0, tickLen); ctx.stroke(); ctx.restore();
         if (el.text && el.id !== skipTextId) {
-            ctx.font = '600 16px Inter, sans-serif';
+            const fontSize = el.fontSize || 16;
+            ctx.font = `600 ${fontSize}px Inter, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             const textWidth = ctx.measureText(el.text).width;
@@ -164,14 +169,14 @@ export const drawElement = async (ctx, el, options = {}) => {
             if (textAngle > Math.PI / 2 || textAngle < -Math.PI / 2) textAngle += Math.PI;
             ctx.rotate(textAngle);
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(-textWidth / 2 - 6, -12, textWidth + 12, 24);
+            ctx.fillRect(-textWidth / 2 - 6, -fontSize / 2 - 4, textWidth + 12, fontSize + 8);
             ctx.fillStyle = el.color || '#0f172a';
             ctx.fillText(el.text, 0, 0);
             ctx.restore();
         }
     } else if (el.type === 'text') {
         if (el.text && el.id !== skipTextId) {
-            ctx.font = '600 20px Inter, sans-serif';
+            ctx.font = `600 ${el.fontSize || 20}px Inter, sans-serif`;
             ctx.textBaseline = 'top';
             ctx.fillStyle = el.color || '#0f172a';
             ctx.fillText(el.text, el.x, el.y);
@@ -213,6 +218,7 @@ export const renderElementsToCanvas = async (elements = [], options = {}) => {
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
     for (const el of elements) {
+        if (!isDrawableElement(el)) continue;
         await drawElement(ctx, el, { imageCache });
     }
     ctx.restore();

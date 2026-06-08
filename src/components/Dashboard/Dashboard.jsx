@@ -19,6 +19,7 @@ import CaseManagement from './CaseManagement';
 import MaterialList from './MaterialList';
 import WorkerTimesheet from './WorkerTimesheet';
 import AdminTimesheet from './AdminTimesheet';
+import WorkerDrafts from './WorkerDrafts';
 import ProjectManagerOverview from './ProjectManagerOverview';
 import FinanceOverview from './FinanceOverview';
 import OnboardingModal from './OnboardingModal';
@@ -33,6 +34,7 @@ import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import CustomProjectCreator from './CustomProjectCreator';
 import DrawingsGallery from '../Drawings/DrawingsGallery';
+import CalendarView from './CalendarView';
 
 // Konfiguration til det nye Google Map
 const MAP_LIBRARIES = ['places'];
@@ -463,6 +465,11 @@ const Dashboard = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
     const [isTestWizardOpen, setIsTestWizardOpen] = useState(false);
+    
+    // DAILY MESSAGE GLOBAL STATE
+    const [showDailyMessagePopup, setShowDailyMessagePopup] = useState(false);
+    const [unreadDailyMessages, setUnreadDailyMessages] = useState([]);
+
 
     useEffect(() => {
         if (selectedLead) {
@@ -577,6 +584,52 @@ const Dashboard = () => {
     useEffect(() => {
         // Tjek URL parametre først
         const params = new URLSearchParams(window.location.search);
+        
+        // DAILY MESSAGE AUTO-CHECK
+        if (myProfile && leadsData && leadsData.length > 0) {
+            const effectiveRole = simulatedRole || myProfile.role;
+            const userId = myProfile.id;
+            
+            const userLeads = leadsData.filter(lead => {
+                if (['admin', 'accountant', 'boss'].includes(effectiveRole)) return true;
+                if (effectiveRole === 'sales') {
+                    return (lead.raw_data?.assigned_pm || []).includes(userId);
+                }
+                const assignedWorkers = lead.raw_data?.assigned_workers || [];
+                return assignedWorkers.includes(userId);
+            });
+
+            const unreadMessages = [];
+            
+            userLeads.forEach(lead => {
+                const msg = lead.raw_data?.daily_message;
+                if (msg && msg.date) {
+                    const msgDate = new Date(msg.date).toDateString();
+                    const today = new Date().toDateString();
+                    
+                    if (msgDate === today) {
+                        const seenBy = msg.seen_by || [];
+                        if (!seenBy.includes(userId)) {
+                            unreadMessages.push({
+                                leadId: lead.id,
+                                caseNumber: lead.case_number || String(lead.id).substring(0,8),
+                                title: lead.raw_data?.project_title || lead.raw_data?.details?.title || lead.project_category || 'Skræddersyet opgave',
+                                text: msg.text,
+                                author: msg.author
+                            });
+                        }
+                    }
+                }
+            });
+            
+            if (unreadMessages.length > 0) {
+                setUnreadDailyMessages(unreadMessages);
+                setShowDailyMessagePopup(true);
+            } else {
+                setShowDailyMessagePopup(false);
+            }
+        }
+        
         const tabParam = params.get('tab');
         if (tabParam === 'Bekræftet opgave') {
             setActiveTab('leads');
@@ -820,6 +873,34 @@ const Dashboard = () => {
             setQuoteBuilder(null);
         }
     }, [selectedLead, carpenterProfile]);
+
+    const handleAcknowledgeDailyMessages = async () => {
+        if (!myProfile) return;
+        const userId = myProfile.id;
+        
+        setShowDailyMessagePopup(false);
+        
+        const updatedLeads = [...leadsData];
+        for (const unreadMsg of unreadDailyMessages) {
+            const leadIndex = updatedLeads.findIndex(l => l.id === unreadMsg.leadId);
+            if (leadIndex !== -1) {
+                const lead = updatedLeads[leadIndex];
+                const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+                const currentRawData = latestData?.raw_data || lead.raw_data || {};
+                
+                const newMsgData = {
+                    ...(currentRawData.daily_message || {}),
+                    seen_by: [...((currentRawData.daily_message || {}).seen_by || []), userId]
+                };
+                const newRawData = { ...currentRawData, daily_message: newMsgData };
+                
+                updatedLeads[leadIndex] = { ...lead, raw_data: newRawData };
+                await supabase.from('leads').update({ raw_data: newRawData }).eq('id', lead.id);
+            }
+        }
+        setLeadsData(updatedLeads);
+    };
+
 
     const initProfileAndData = async (authUser) => {
         const userId = authUser.id;
@@ -1200,7 +1281,7 @@ const Dashboard = () => {
             
             if (isSelf && userRole !== 'admin' && !userPermissions.view_all_leads) {
                 if (userRole === 'accountant') {
-                    const confirmedStatuses = ['Bekræftet opgave', 'Sæt i bero', 'Historik'];
+                    const confirmedStatuses = ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'];
                     workingLeads = workingLeads.filter(l => confirmedStatuses.includes(l.status));
                 } else if (userRole === 'sales') {
                     workingLeads = workingLeads.filter(l => (l.raw_data?.assigned_pm || []).includes(userId) || l.assigned_to === userId);
@@ -1268,8 +1349,10 @@ const Dashboard = () => {
                 } else {
                     toast.success(data.message || `Fakturakladde oprettet i Dinero! (ID: ${data.invoiceId})`);
                     
-                    let newRawData = { ...(leadForInvoice.raw_data || {}) };
-                    const history = newRawData.invoice_history || [];
+                    const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+                    let currentRawData = latestData?.raw_data || leadForInvoice.raw_data || {};
+
+                    const history = currentRawData.invoice_history || [];
                     history.push({
                         id: data.invoiceId,
                         amount: totalAmountToBill || 0,
@@ -1277,11 +1360,11 @@ const Dashboard = () => {
                         system: 'dinero',
                         status: action === 'book_and_send' ? 'booked' : 'draft'
                     });
-                    newRawData.invoice_history = history;
-                    newRawData.invoiced_amount = (newRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
-                    newRawData.synced_to_accounting = true;
+                    currentRawData.invoice_history = history;
+                    currentRawData.invoiced_amount = (currentRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
+                    currentRawData.synced_to_accounting = true;
                     
-                    const updatedLead = { ...leadForInvoice, raw_data: newRawData };
+                    const updatedLead = { ...leadForInvoice, raw_data: currentRawData };
                     await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
                     setSelectedLead(updatedLead);
                     setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
@@ -1300,8 +1383,10 @@ const Dashboard = () => {
                 } else {
                     toast.success(data.message || `Fakturakladde oprettet i e-conomic! (ID: ${data.invoiceId})`);
                     
-                    let newRawData = { ...(leadForInvoice.raw_data || {}) };
-                    const history = newRawData.invoice_history || [];
+                    const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+                    let currentRawData = latestData?.raw_data || leadForInvoice.raw_data || {};
+
+                    const history = currentRawData.invoice_history || [];
                     history.push({
                         id: data.invoiceId,
                         amount: totalAmountToBill || 0,
@@ -1309,11 +1394,11 @@ const Dashboard = () => {
                         system: 'economic',
                         status: action === 'book_and_send' ? 'booked' : 'draft'
                     });
-                    newRawData.invoice_history = history;
-                    newRawData.invoiced_amount = (newRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
-                    newRawData.synced_to_accounting = true;
+                    currentRawData.invoice_history = history;
+                    currentRawData.invoiced_amount = (currentRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
+                    currentRawData.synced_to_accounting = true;
 
-                    const updatedLead = { ...leadForInvoice, raw_data: newRawData };
+                    const updatedLead = { ...leadForInvoice, raw_data: currentRawData };
                     await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
                     setSelectedLead(updatedLead);
                     setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
@@ -1892,7 +1977,7 @@ const Dashboard = () => {
         // Rolle-baseret filtrering til Simulator (lokal)
         if (isDev && effectiveRole !== 'admin') {
             if (effectiveRole === 'accountant') {
-                const confirmedStatuses = ['Bekræftet opgave', 'Sæt i bero', 'Historik'];
+                const confirmedStatuses = ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'];
                 if (!confirmedStatuses.includes(l.status)) return false;
             } else if (effectiveRole === 'sales') {
                 if (simulatedRole) {
@@ -1915,7 +2000,7 @@ const Dashboard = () => {
 
     const filteredLeads = roleFilteredLeads.filter(l => {
         const currentStatus = l.status || 'Ny forespørgsel';
-        const matchesStatus = currentStatus === leadFilter;
+        const matchesStatus = currentStatus === leadFilter || (leadFilter === 'Ny forespørgsel' && currentStatus === 'Intern Kladde');
         if (!searchQuery) return matchesStatus;
         
         const query = searchQuery.toLowerCase();
@@ -2113,9 +2198,19 @@ const Dashboard = () => {
                             <Briefcase size={20} /> {['worker', 'apprentice'].includes(effectiveRole) ? 'Mine opgaver' : 'Sager & Ordrestyring'}
                         </button>
                     )}
+                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
+                        <button className={activeTab === 'calendar' ? 'active' : ''} onClick={() => { setActiveTab('calendar'); setIsMobileMenuOpen(false); }}>
+                            <Calendar size={20} /> Kalender
+                        </button>
+                    )}
                     {['worker', 'apprentice', 'sales'].includes(effectiveRole) && (
                         <button className={activeTab === 'worker_timesheet' ? 'active' : ''} onClick={() => { setActiveTab('worker_timesheet'); setIsMobileMenuOpen(false); }}>
                             <Clock size={20} /> Timeregistrering
+                        </button>
+                    )}
+                    {['worker', 'sales'].includes(effectiveRole) && (
+                        <button className={activeTab === 'worker_drafts' ? 'active' : ''} onClick={() => { setActiveTab('worker_drafts'); setIsMobileMenuOpen(false); }}>
+                            <PenTool size={20} /> Dine Tilbudskladder
                         </button>
                     )}
                     {['admin', 'accountant'].includes(effectiveRole) && (
@@ -2542,6 +2637,15 @@ const Dashboard = () => {
                         />
                     )}
 
+                    {activeTab === 'worker_drafts' && ['worker', 'sales'].includes(effectiveRole) && (
+                        <WorkerDrafts
+                            profile={myProfile}
+                            supabase={supabase}
+                            leadsData={leadsData}
+                            setLeadsData={setLeadsData}
+                        />
+                    )}
+
                     {activeTab === 'team' && ['admin', 'sales', 'accountant'].includes(effectiveRole) && (
                         <div className="dashboard-workspace team-overview tab-pane active" style={{ height: '100%', overflowY: 'auto', paddingRight: '10px' }}>
                             {carpenterProfile?.tier === 'enterprise' ? (
@@ -2782,10 +2886,27 @@ const Dashboard = () => {
                             />
                         </div>
                     )}
+                    {activeTab === 'calendar' && (
+                        <div className="tab-pane active" style={{ height: '100%', overflowY: 'auto' }}>
+                            <CalendarView 
+                                leadsData={leadsData}
+                                myProfile={myProfile}
+                                simulatedRole={simulatedRole}
+                                setLeadsData={setLeadsData}
+                                teamMembers={teamMembers}
+                                carpenterProfile={carpenterProfile}
+                                setCarpenterProfile={setCarpenterProfile}
+                                onCaseClick={(lead) => {
+                                    setTargetCaseId(lead.id);
+                                    setActiveTab('cases');
+                                }}
+                            />
+                        </div>
+                    )}
                     {activeTab === 'finance' && (
                         <div className="tab-pane active " style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
                             <FinanceOverview 
-                                cases={leadsData.filter(l => ['Bekræftet opgave', 'Sæt i bero', 'Historik'].includes(l.status))}
+                                cases={leadsData.filter(l => ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(l.status))}
                                 carpenterProfile={carpenterProfile}
                                 onSendToAccounting={syncToAccounting}
                                 targetInvoiceCaseId={targetInvoiceCaseId}
@@ -2820,7 +2941,7 @@ const Dashboard = () => {
                                     {/* Pipeline Menu with Action Button */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingBottom: '10px', flexWrap: 'wrap', gap: '16px' }}>
                                     <div className="desktop-filters" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-                                        {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Sæt i bero', 'Udgået opgave', 'Historik']
+                                        {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag', 'Historik']
                                             .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Sæt i bero' || status === 'Historik')
                                             .map(status => (
                                             <button 
@@ -2851,7 +2972,10 @@ const Dashboard = () => {
                                             >
                                                 {status}
                                                 <span style={{ marginLeft: '8px', background: leadFilter === status ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Sæt i bero' ? '#f97316' : status === 'Historik' ? '#6b7280' : '#ef4444') : 'rgba(255,255,255,0.2)', color: leadFilter === status ? '#fff' : 'var(--text-secondary)', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem' }}>
-                                                    {leadsData.filter(l => (l.status || 'Ny forespørgsel') === status).length}
+                                                    {leadsData.filter(l => {
+                                                        const s = l.status || 'Ny forespørgsel';
+                                                        return s === status || (status === 'Ny forespørgsel' && s === 'Intern Kladde');
+                                                    }).length}
                                                 </span>
                                             </button>
                                         ))}
@@ -2887,7 +3011,10 @@ const Dashboard = () => {
                                                     padding: '2px 8px', 
                                                     fontSize: '0.8rem' 
                                                 }}>
-                                                    {leadsData.filter(l => (l.status || 'Ny forespørgsel') === leadFilter).length}
+                                                    {leadsData.filter(l => {
+                                                        const s = l.status || 'Ny forespørgsel';
+                                                        return s === leadFilter || (leadFilter === 'Ny forespørgsel' && s === 'Intern Kladde');
+                                                    }).length}
                                                 </span>
                                             </div>
                                             <svg style={{ transform: isFilterDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -2907,7 +3034,7 @@ const Dashboard = () => {
                                                 zIndex: 50,
                                                 overflow: 'hidden'
                                             }}>
-                                                {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Udgået opgave', 'Historik']
+                                                {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Afbrudt Sag', 'Historik']
                                                     .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
                                                     .map(status => (
                                                         <button
@@ -3008,13 +3135,24 @@ const Dashboard = () => {
                                             {/* Header */}
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                                                 <div>
-                                                    <h3 style={{ margin: '0 0 4px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem' }}>
+                                                    <h3 style={{ margin: '0 0 4px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '1.2rem' }}>
                                                         {lead.customer_name} 
                                                         {(lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' && lead.is_read === false && (
                                                             <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', letterSpacing: '0.05em' }}>
                                                                 NY
                                                             </span>
                                                         )}
+                                                        {lead.status === 'Intern Kladde' && lead.raw_data?.created_by && (() => {
+                                                            const creator = teamMembers.find(m => m.id === lead.raw_data.created_by);
+                                                            if (creator) {
+                                                                return (
+                                                                    <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '6px', backgroundColor: '#f1f5f9', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #e2e8f0' }}>
+                                                                        <User size={12} /> Lavet af {creator.full_name || creator.email}
+                                                                    </span>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        })()}
                                                     </h3>
                                                     <p style={{ margin: '0', color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                         <Clock size={14} /> Modtaget: {new Date(lead.created_at).toLocaleDateString('da-DK')} kl. {new Date(lead.created_at).toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'})}
@@ -3023,9 +3161,9 @@ const Dashboard = () => {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <span style={{ 
                                                         fontSize: '0.8rem', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold',
-                                                        backgroundColor: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? 'rgba(37,99,235,0.1)' : ((lead.status || '') === 'Sendt tilbud' ? 'rgba(202,138,4,0.1)' : (lead.status || '') === 'Bekræftet opgave' ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.1)'),
-                                                        color: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#3b82f6' : ((lead.status || '') === 'Sendt tilbud' ? '#eab308' : (lead.status || '') === 'Bekræftet opgave' ? '#10b981' : '#ef4444'),
-                                                        border: `1px solid ${(lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#3b82f6' : ((lead.status || '') === 'Sendt tilbud' ? '#eab308' : (lead.status || '') === 'Bekræftet opgave' ? '#10b981' : '#ef4444')}40`
+                                                        backgroundColor: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? 'rgba(37,99,235,0.1)' : ((lead.status || '') === 'Sendt tilbud' ? 'rgba(202,138,4,0.1)' : (lead.status || '') === 'Bekræftet opgave' ? 'rgba(5,150,105,0.1)' : (lead.status === 'Intern Kladde' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(220,38,38,0.1)')),
+                                                        color: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#3b82f6' : ((lead.status || '') === 'Sendt tilbud' ? '#eab308' : (lead.status || '') === 'Bekræftet opgave' ? '#10b981' : (lead.status === 'Intern Kladde' ? '#059669' : '#ef4444')),
+                                                        border: `1px solid ${(lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#3b82f6' : ((lead.status || '') === 'Sendt tilbud' ? '#eab308' : (lead.status || '') === 'Bekræftet opgave' ? '#10b981' : (lead.status === 'Intern Kladde' ? '#10b981' : '#ef4444'))}40`
                                                     }}>{lead.status || 'Ny forespørgsel'}</span>
                                                     {(lead.status === 'Sendt tilbud') && (
                                                         lead.opened_at ? (
@@ -3111,7 +3249,7 @@ const Dashboard = () => {
                                                                 { value: "Ny forespørgsel", label: "Mappe: Ny forespørgsel" },
                                                                 { value: "Sendt tilbud", label: "Mappe: Sendt tilbud" },
                                                                 { value: "Bekræftet opgave", label: "Mappe: Bekræftet opgave" },
-                                                                { value: "Udgået opgave", label: "Mappe: Udgået opgave" },
+                                                                { value: "Afbrudt Sag", label: "Mappe: Afbrudt Sag" },
                                                                 { value: "Historik", label: "Mappe: Historik (Afsluttet)" }
                                                             ]}
                                                         />
@@ -3469,7 +3607,10 @@ const Dashboard = () => {
                 
                 const newTitle = e.target.value.trim();
                 if (newTitle && newTitle !== (selectedLead.raw_data?.details?.title || 'Skræddersyet Opgave')) {
-                    const newRawData = { ...selectedLead.raw_data, details: { ...selectedLead.raw_data?.details, title: newTitle } };
+                    const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', selectedLead.id).single();
+                    const currentRawData = latestData?.raw_data || selectedLead.raw_data || {};
+                    
+                    const newRawData = { ...currentRawData, details: { ...currentRawData.details, title: newTitle } };
                     const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', selectedLead.id);
                     if (!error) {
                         setSelectedLead({ ...selectedLead, raw_data: newRawData });
@@ -4769,11 +4910,11 @@ const Dashboard = () => {
                                             </div>
                                         )}
 
-                                        {selectedLead.status !== 'Udgået opgave' && selectedLead.status !== 'Historik' && (
+                                        {selectedLead.status !== 'Afbrudt Sag' && selectedLead.status !== 'Historik' && (
                                             <div style={{ marginTop: selectedLead.status !== 'Bekræftet opgave' ? '32px' : '16px', borderTop: selectedLead.status !== 'Bekræftet opgave' ? '2px solid #e2e8f0' : 'none', paddingTop: selectedLead.status !== 'Bekræftet opgave' ? '24px' : '0', display: 'flex', justifyContent: 'center' }}>
                                                 <button 
                                                     onClick={() => {
-                                                        updateLeadStatus(selectedLead.id, 'Udgået opgave');
+                                                        updateLeadStatus(selectedLead.id, 'Afbrudt Sag');
                                                         setSelectedLead(null);
                                                     }} 
                                                     style={{ padding: '12px 24px', fontSize: '1rem', background: 'transparent', color: '#64748b', border: '2px solid #cbd5e1', borderRadius: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
@@ -4918,8 +5059,14 @@ const Dashboard = () => {
 
                                                         <div style={{ marginTop: 'auto', fontSize: '9px', color: '#6b7280', borderTop: '1px solid #e8e6e1', paddingTop: '12px', lineHeight: '1.4' }}>
                                                             <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i {quoteBuilder.validityDays || 14} dage fra ovenstående dato.</p>
+                                                            {quoteBuilder.laborHours > 0 && (
+                                                                <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#0f172a', fontWeight: 'bold' }}>
+                                                                    Estimeret varighed for udførelse: Ca. {Math.max(1, Math.ceil(quoteBuilder.laborHours / 37))} arbejdsuger. Den præcise opstartsdato aftales nærmere, når tilbuddet er bekræftet.
+                                                                </p>
+                                                            )}
                                                             <p style={{ margin: 0 }}>Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.</p>
                                                         </div>
+
                                                     </div>
                                                 </PdfMobileWrapper>
 
@@ -5137,7 +5284,7 @@ const Dashboard = () => {
                     
                     {activeTab === 'drawings' && (
                         <div className="dashboard-workspace fade-in" style={{ height: '100%' }}>
-                            <DrawingsGallery />
+                            <DrawingsGallery myProfile={myProfile} />
                         </div>
                     )}
                     
@@ -5202,7 +5349,7 @@ const Dashboard = () => {
                                             </div>
                                             <div className="hide-on-mobile" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f3f1ed', borderRadius: '8px', borderLeft: '3px solid #cbd5e1', fontSize: '0.85rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                                                <span>Opgaver i "Historik" og "Udgået opgave" er automatisk skjult for at holde kortet rent. Zoom ind hvis prikkerne ligger tæt.</span>
+                                                <span>Opgaver i "Historik" og "Afbrudt Sag" er automatisk skjult for at holde kortet rent. Zoom ind hvis prikkerne ligger tæt.</span>
                                             </div>
                                         </>
                                     ) : (
@@ -5237,7 +5384,7 @@ const Dashboard = () => {
                                                     const pm = l.raw_data?.assigned_pm;
                                                     return (workers.includes(myProfile?.id) || pm === myProfile?.id) && ['Bekræftet opgave', 'Historik'].includes(l.status);
                                                 } else {
-                                                    if (l.status === 'Udgået opgave' || l.status === 'Historik' || l.status === 'Slettet') return false;
+                                                    if (l.status === 'Afbrudt Sag' || l.status === 'Historik' || l.status === 'Slettet') return false;
                                                     if (l.status === 'Ny forespørgsel' && !mapFilters.showNew) return false;
                                                     if (l.status === 'Sendt tilbud' && !mapFilters.showSent) return false;
                                                     if (l.status === 'Bekræftet opgave' && !mapFilters.showConfirmed) return false;
@@ -5288,7 +5435,7 @@ const Dashboard = () => {
                                         const pm = l.raw_data?.assigned_pm;
                                         return (workers.includes(myProfile?.id) || pm === myProfile?.id) && ['Bekræftet opgave', 'Historik'].includes(l.status);
                                     } else {
-                                        return l.status !== 'Udgået opgave' && l.status !== 'Historik' && l.status !== 'Slettet';
+                                        return l.status !== 'Afbrudt Sag' && l.status !== 'Historik' && l.status !== 'Slettet';
                                     }
                                 });
                                 return (
@@ -6159,7 +6306,49 @@ const Dashboard = () => {
             {activeTab === 'overview' && (
                 <MobileQuickShare carpenterProfile={carpenterProfile} />
             )}
+
+            {/* DAGENS BESKED POP-UP */}
+            {showDailyMessagePopup && unreadDailyMessages.length > 0 && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(12px)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                    <div style={{ background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflow: 'hidden', animation: 'slideUp 0.3s ease-out', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <MessageSquare size={20} />
+                            </div>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 'bold' }}>Godmorgen, {myProfile?.name?.split(' ')[0] || 'Hold'}!</h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: '#64748b' }}>Her er dine vigtige beskeder for i dag.</p>
+                            </div>
+                        </div>
+                        
+                        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '60vh', overflowY: 'auto' }}>
+                            {unreadDailyMessages.map((msg, idx) => (
+                                <div key={idx} style={{ padding: '16px', borderRadius: '16px', background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#3b82f6' }}>Sag {msg.caseNumber} - {msg.title}</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Fra: {msg.author}</div>
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: '1rem', color: '#334155', lineHeight: '1.6' }}>"{msg.text}"</p>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        <div style={{ padding: '24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                            <button 
+                                onClick={handleAcknowledgeDailyMessages}
+                                style={{ width: '100%', padding: '16px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = '#0f172a'; e.currentTarget.style.transform = 'none'; }}
+                            >
+                                <CheckCircle size={20} /> OK, JEG HAR FORSTÅET
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
             
+
             {isTestWizardOpen && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(10px)', zIndex: 100000, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                     <div style={{ padding: '16px', display: 'flex', justifyContent: 'flex-end', position: 'sticky', top: 0, zIndex: 100001 }}>
