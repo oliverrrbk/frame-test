@@ -410,37 +410,37 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
 
             {/* MINIMALIST BUDGET DASHBOARD (INLINE) */}
             {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && !isLead) && (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Wallet size={14} />
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', color: '#0f172a', fontWeight: '700' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Wallet size={18} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Budget</span>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Budget</span>
                             <span>{originalBudget.toLocaleString('da-DK')} kr.</span>
                         </div>
                     </div>
 
-                    <div style={{ height: '24px', width: '1px', backgroundColor: '#e2e8f0' }}></div>
+                    <div style={{ height: '28px', width: '1px', backgroundColor: '#e2e8f0' }}></div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <ShoppingCart size={14} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', color: '#0f172a', fontWeight: '700' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ShoppingCart size={18} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Forbrug</span>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Forbrug</span>
                             <span>{totalSpent.toLocaleString('da-DK')} kr.</span>
                         </div>
                     </div>
 
-                    <div style={{ height: '24px', width: '1px', backgroundColor: '#e2e8f0' }}></div>
+                    <div style={{ height: '28px', width: '1px', backgroundColor: '#e2e8f0' }}></div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', color: isOverBudget ? '#dc2626' : '#10b981', fontWeight: '600' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: isOverBudget ? '#fee2e2' : '#dcfce7', color: isOverBudget ? '#ef4444' : '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {isOverBudget ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', color: isOverBudget ? '#dc2626' : '#10b981', fontWeight: '700' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: isOverBudget ? '#fee2e2' : '#dcfce7', color: isOverBudget ? '#ef4444' : '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {isOverBudget ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.65rem', color: isOverBudget ? '#991b1b' : '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Rest</span>
+                            <span style={{ fontSize: '0.75rem', color: isOverBudget ? '#991b1b' : '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Rest</span>
                             <span>{budgetRemaining > 0 ? '+' : ''}{(budgetRemaining).toLocaleString('da-DK')} kr.</span>
                         </div>
                     </div>
