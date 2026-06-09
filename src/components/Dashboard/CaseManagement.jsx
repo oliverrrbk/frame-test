@@ -2963,22 +2963,44 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 
                                 {/* TIMEOUT OVERSIGT */}
                                 <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                                        <h4 style={{ margin: 0, color: '#1a1a1a', fontSize: '1.2rem' }}>Registrerede arbejdstimer på sagen</h4>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            {(!['worker', 'apprentice'].includes(profile?.role)) && (
-                                                <div style={{ fontSize: '0.9rem', color: '#6b7280' }}>
-                                                    Forbrug: <strong style={{ color: totalActualHours > budgetedHours ? '#ef4444' : '#10b981' }}>{totalActualHours} t</strong> / {budgetedHours} t
+                                    {(() => {
+                                        const myTotalHours = timeEntries.filter(t => t.employeeId === profile?.id).reduce((sum, t) => sum + parseFloat(t.hours || 0), 0).toFixed(2);
+                                        const isWorker = ['worker', 'apprentice'].includes(profile?.role);
+                                        
+                                        return (
+                                            <>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                                                    <div>
+                                                        <h4 style={{ margin: 0, color: '#1a1a1a', fontSize: '1.2rem', marginBottom: '8px' }}>
+                                                            {isWorker ? 'Dine registrerede timer på sagen' : 'Registrerede arbejdstimer på sagen'}
+                                                        </h4>
+                                                        
+                                                        {isWorker ? (
+                                                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#3b82f6' }}>
+                                                                {myTotalHours} t
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                                                                <div style={{ fontSize: '0.95rem', color: '#475569' }}>
+                                                                    Holdets forbrug: <strong style={{ color: totalActualHours > budgetedHours ? '#ef4444' : '#10b981' }}>{totalActualHours} t</strong> / {budgetedHours} t
+                                                                </div>
+                                                                <div style={{ fontSize: '0.95rem', color: '#475569', paddingLeft: '16px', borderLeft: '2px solid #e2e8f0' }}>
+                                                                    Dine egne timer: <strong style={{ color: '#3b82f6' }}>{myTotalHours} t</strong>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <button 
+                                                        onClick={() => setIsTimeModalOpen(true)}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                                    >
+                                                        <Plus size={18} /> Tilføj timer
+                                                    </button>
                                                 </div>
-                                            )}
-                                            <button 
-                                                onClick={() => setIsTimeModalOpen(true)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                            >
-                                                <Plus size={18} /> Tilføj timer
-                                            </button>
-                                        </div>
-                                    </div>
+                                            </>
+                                        );
+                                    })()}
 
                                     {/* BOGHOLDER / ØKONOMI OVERBLIK (Simpel Version UDEN Export) */}
                                     {(!['worker', 'apprentice'].includes(profile?.role)) && (

@@ -39,6 +39,62 @@ const CARPENTER_TEMPLATES = [
     { id: 'wallOpenings', icon: LayoutTemplate, title: 'Væg m. åbninger' }
 ];
 
+const TOOLTIP_DESCRIPTIONS = {
+    'Farve': 'Skifter farve på valgt element eller næste element du tegner.',
+    'Flere farver': 'Åbner flere farver og brugerdefineret farvevælger.',
+    'Tykkelse 2': 'Tynd streg til lette hjælpelinjer og detaljer.',
+    'Tykkelse 4': 'Normal streg til de fleste skitser.',
+    'Tykkelse 8': 'Kraftig streg til vigtige kanter eller markeringer.',
+    'Præcis længde': 'Skriv en længde direkte. Brug cm/m efter kalibrering.',
+    'Præcis vinkel': 'Skriv vinklen direkte i grader.',
+    'B præcis størrelse': 'Sæt bredden på den valgte figur.',
+    'H præcis størrelse': 'Sæt højden på den valgte figur.',
+    'Tilføj bredde-mål': 'Laver en mållinje for bredden.',
+    'Tilføj højde-mål': 'Laver en mållinje for højden.',
+    'Tilføj bredde og højde': 'Laver både bredde- og højdemål på én gang.',
+    'Mindre tekst': 'Gør valgt tekst eller måltekst mindre.',
+    'Større tekst': 'Gør valgt tekst eller måltekst større.',
+    'Tekststørrelse': 'Justerer tekststørrelsen for valgt tekst eller nye tekster.',
+    'Måltekst': 'Teksten der vises på den valgte mållinje.',
+    'Brug mål som Tal': 'Sætter målteksten til tegningens rå enheder.',
+    'Brug mål som cm': 'Sætter målteksten til centimeter, hvis målestok er sat.',
+    'Brug mål som m': 'Sætter målteksten til meter, hvis målestok er sat.',
+    'Brug denne mållinje som målestok': 'Fortæl systemet hvor lang denne mållinje er i virkeligheden.',
+    'Målsæt markeringens bredde': 'Laver et breddemål for hele markeringen.',
+    'Målsæt markeringens højde': 'Laver et højdemål for hele markeringen.',
+    'Målsæt bredde og højde': 'Laver begge mål for hele markeringen.',
+    'Ret venstre': 'Lægger valgte elementer på samme venstre kant.',
+    'Ret lodret center': 'Centrerer valgte elementer lodret i forhold til hinanden.',
+    'Ret højre': 'Lægger valgte elementer på samme højre kant.',
+    'Ret top': 'Lægger valgte elementer på samme topkant.',
+    'Ret vandret center': 'Centrerer valgte elementer vandret i forhold til hinanden.',
+    'Ret bund': 'Lægger valgte elementer på samme bundkant.',
+    'Fordel vandret': 'Fordeler valgte elementer med lige afstand vandret.',
+    'Fordel lodret': 'Fordeler valgte elementer med lige afstand lodret.',
+    'Roter 90 grader': 'Roterer markeringen 90 grader.',
+    'Spejl vandret': 'Spejler markeringen fra venstre mod højre.',
+    'Spejl lodret': 'Spejler markeringen op og ned.',
+    'Gem valgte som skabelon': 'Gemmer markeringen lokalt under Skabeloner -> Egne.',
+    'Indsæt materialenote': 'Laver en lille note med mål, areal og antal elementer.',
+    'Dupliker': 'Kopierer markeringen og lægger kopien lidt ved siden af.',
+    'Gruppér valgte': 'Samler flere elementer, så de kan flyttes som én ting.',
+    'Opløs gruppe': 'Skiller en gruppe ad igen.',
+    'Send frem': 'Lægger markeringen oven på andre elementer.',
+    'Send bagud': 'Lægger markeringen bag andre elementer.',
+    'Lås op': 'Gør låste elementer flytbare igen.',
+    'Lås valgte elementer': 'Forhindrer at markeringen flyttes ved en fejl.',
+    'Vis avancerede værktøjer': 'Åbner gruppering, lag, spejling, fordeling og andre power-user værktøjer.',
+    'Skjul avancerede værktøjer': 'Skjuler de tunge værktøjer, så panelet bliver mere roligt.',
+    'Indsæt A4 titelblok': 'Indsætter en print-ramme og titelblok på tegningen.',
+    'Kontroller tegning': 'Tjekker mål, målestok, titelblok og andre afleveringspunkter.',
+    'Vis hele tegningen': 'Zoomer ud så hele tegningen er synlig.',
+    'Skjul hjælpegrid': 'Slår baggrundsgitteret fra.',
+    'Vis hjælpegrid': 'Slår baggrundsgitteret til.',
+    'Slå snap fra': 'Slår automatisk fangst af punkter fra.',
+    'Slå snap til': 'Slår automatisk fangst af punkter til.',
+    'Fortryd (Undo)': 'Fortryder seneste ændring.'
+};
+
 const createLineElement = ({ id, parentId, x, y, endX, endY, color, strokeWidth }) => ({
     id,
     parentId,
@@ -753,6 +809,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const [showSymbolsMenu, setShowSymbolsMenu] = useState(false);
     const [showTemplatesMenu, setShowTemplatesMenu] = useState(false);
     const [templateSaveDraft, setTemplateSaveDraft] = useState(null);
+    const [panelTooltip, setPanelTooltip] = useState(null);
+    const [showAdvancedTools, setShowAdvancedTools] = useState(false);
     const [templateCategory, setTemplateCategory] = useState('standard');
     const [customTemplates, setCustomTemplates] = useState(() => {
         if (typeof window === 'undefined') return [];
@@ -3181,6 +3239,70 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const canUngroupSelection = selectedLockableElements.some(el => el.parentId && selectedIdsForPanel.includes(el.parentId));
     const canAlignSelection = selectedLockableElements.length > 1;
     const canDistributeSelection = selectedLockableElements.length > 2;
+    const handlePanelTooltipMove = (e) => {
+        const target = e.target.closest('[title], [data-tooltip-title]');
+        if (!target) {
+            setPanelTooltip(null);
+            return;
+        }
+
+        const title = target.getAttribute('data-tooltip-title') || target.getAttribute('title');
+        if (!title) {
+            setPanelTooltip(null);
+            return;
+        }
+
+        if (target.hasAttribute('title')) {
+            target.setAttribute('data-tooltip-title', title);
+            target.removeAttribute('title');
+        }
+
+        setPanelTooltip({
+            title,
+            description: TOOLTIP_DESCRIPTIONS[title] || '',
+            x: Math.max(16, e.clientX - 250),
+            y: Math.min(window.innerHeight - 120, Math.max(16, e.clientY - 18))
+        });
+    };
+    const clearPanelTooltip = () => setPanelTooltip(null);
+    const PanelLabel = ({ children }) => (
+        <div style={{
+            width: 86,
+            color: '#94a3b8',
+            fontSize: 10,
+            fontWeight: 900,
+            letterSpacing: 0.5,
+            textTransform: 'uppercase',
+            textAlign: 'center',
+            paddingTop: 2
+        }}>
+            {children}
+        </div>
+    );
+    const PanelRule = () => <div style={{ width: 20, height: 1, backgroundColor: '#e2e8f0' }} />;
+    const panelTooltipElement = panelTooltip && (
+        <div style={{
+            position: 'fixed',
+            left: panelTooltip.x,
+            top: panelTooltip.y,
+            width: 218,
+            zIndex: 30000,
+            pointerEvents: 'none',
+            background: 'rgba(15, 23, 42, 0.96)',
+            color: '#ffffff',
+            borderRadius: 10,
+            padding: '9px 10px',
+            boxShadow: '0 18px 40px rgba(15, 23, 42, 0.24)',
+            border: '1px solid rgba(255,255,255,0.08)'
+        }}>
+            <div style={{ fontSize: 12, fontWeight: 900, lineHeight: 1.2 }}>{panelTooltip.title}</div>
+            {panelTooltip.description && (
+                <div style={{ marginTop: 4, fontSize: 11, fontWeight: 650, lineHeight: 1.35, color: '#cbd5e1' }}>
+                    {panelTooltip.description}
+                </div>
+            )}
+        </div>
+    );
     const templateSaveModal = templateSaveDraft && (
         <div
             style={{
@@ -3450,7 +3572,11 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px', gap: '8px',
                 border: '1px solid rgba(226, 232, 240, 0.9)'
-            }}>
+            }}
+                onMouseMove={handlePanelTooltipMove}
+                onMouseLeave={clearPanelTooltip}
+            >
+                <PanelLabel>Stil</PanelLabel>
                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
                     {COLORS.map(c => (
                         <button
@@ -3525,7 +3651,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         </div>
                     )}
                 </div>
-                <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
+                <PanelRule />
                 
                 {/* Stroke Width Selector */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
@@ -3547,10 +3673,11 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     ))}
                 </div>
 
-                <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
+                <PanelRule />
 
                 {selectedMetrics && (
                     <>
+                        <PanelLabel>Mål</PanelLabel>
                         <div
                             style={{
                                 width: 86,
@@ -3629,12 +3756,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                                 Skala aktiv
                             </div>
                         )}
-                        <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
+                        <PanelRule />
                     </>
                 )}
 
                 {selectedShapeMetrics && (
                     <>
+                        <PanelLabel>Størrelse</PanelLabel>
                         <div
                             style={{
                                 width: 86,
@@ -3713,12 +3841,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                                 B/H
                             </button>
                         </div>
-                        <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
+                        <PanelRule />
                     </>
                 )}
 
                 {(selectedElement?.type === 'text' || selectedElement?.type === 'dimension' || appState.tool === 'text') && (
                     <>
+                        <PanelLabel>Tekst</PanelLabel>
                         <button
                             onClick={() => applyFontSize(Math.max(10, selectedFontSize - 2))}
                             className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
@@ -3742,12 +3871,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         >
                             <Type size={20} />
                         </button>
-                        <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
+                        <PanelRule />
                     </>
                 )}
 
                 {selectedElement?.type === 'dimension' && (
                     <>
+                        <PanelLabel>Måltekst</PanelLabel>
                         <input
                             key={`dimension-text-${selectedElement.id}-${selectedElement.text || ''}`}
                             defaultValue={selectedElement.text || ''}
@@ -3805,12 +3935,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         >
                             Kalibrer
                         </button>
-                        <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
+                        <PanelRule />
                     </>
                 )}
 
                 {hasSelection && (
                     <>
+                        <PanelLabel>Markering</PanelLabel>
                         {!selectedShapeMetrics && !selectedMetrics && (
                             <>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: 86 }}>
@@ -3839,138 +3970,164 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                                         B/H
                                     </button>
                                 </div>
-                                <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
                             </>
                         )}
-                        {canAlignSelection && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: 86 }}>
+                            <button
+                                onClick={saveSelectionAsTemplate}
+                                className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                style={{ height: 28 }}
+                                title="Gem valgte som skabelon"
+                            >
+                                <LayoutTemplate size={15} />
+                            </button>
+                            <button
+                                onClick={insertMaterialNoteFromSelection}
+                                className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                style={{ height: 28 }}
+                                title="Indsæt materialenote"
+                            >
+                                <ClipboardList size={15} />
+                            </button>
+                            <button
+                                onClick={toggleSelectedLock}
+                                className={`rounded-md transition-all active:scale-95 flex items-center justify-center ${selectionIsLocked ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-100'}`}
+                                style={{ height: 28 }}
+                                title={selectionIsLocked ? 'Lås op' : 'Lås valgte elementer'}
+                            >
+                                {selectionIsLocked ? <Lock size={15} /> : <Unlock size={15} />}
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => setShowAdvancedTools(v => !v)}
+                            className={`rounded-lg transition-all active:scale-95 ${showAdvancedTools ? 'text-blue-700 bg-blue-50' : 'text-slate-600 hover:bg-slate-100'}`}
+                            style={{ width: 86, height: 30, fontSize: 11, fontWeight: 900 }}
+                            title={showAdvancedTools ? 'Skjul avancerede værktøjer' : 'Vis avancerede værktøjer'}
+                        >
+                            {showAdvancedTools ? 'Skjul' : 'Mere'}
+                        </button>
+                        {showAdvancedTools && (
                             <>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: 78 }}>
-                                    {[
-                                        { mode: 'left', icon: AlignHorizontalJustifyStart, title: 'Ret venstre' },
-                                        { mode: 'centerX', icon: AlignHorizontalJustifyCenter, title: 'Ret lodret center' },
-                                        { mode: 'right', icon: AlignHorizontalJustifyEnd, title: 'Ret højre' },
-                                        { mode: 'top', icon: AlignVerticalJustifyStart, title: 'Ret top' },
-                                        { mode: 'centerY', icon: AlignVerticalJustifyCenter, title: 'Ret vandret center' },
-                                        { mode: 'bottom', icon: AlignVerticalJustifyEnd, title: 'Ret bund' }
-                                    ].map(item => (
-                                        <button
-                                            key={item.mode}
-                                            onClick={() => alignSelectedElements(item.mode)}
-                                            className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
-                                            style={{ width: 23, height: 23 }}
-                                            title={item.title}
-                                        >
-                                            <item.icon size={14} />
-                                        </button>
-                                    ))}
-                                </div>
-                                {canDistributeSelection && (
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, width: 78, marginTop: 4 }}>
-                                        <button
-                                            onClick={() => distributeSelectedElements('horizontal')}
-                                            className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
-                                            style={{ height: 24 }}
-                                            title="Fordel vandret"
-                                        >
-                                            <AlignHorizontalSpaceBetween size={14} />
-                                        </button>
-                                        <button
-                                            onClick={() => distributeSelectedElements('vertical')}
-                                            className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
-                                            style={{ height: 24 }}
-                                            title="Fordel lodret"
-                                        >
-                                            <AlignVerticalSpaceBetween size={14} />
-                                        </button>
-                                    </div>
+                                <PanelLabel>Avanceret</PanelLabel>
+                                {canAlignSelection && (
+                                    <>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: 78 }}>
+                                            {[
+                                                { mode: 'left', icon: AlignHorizontalJustifyStart, title: 'Ret venstre' },
+                                                { mode: 'centerX', icon: AlignHorizontalJustifyCenter, title: 'Ret lodret center' },
+                                                { mode: 'right', icon: AlignHorizontalJustifyEnd, title: 'Ret højre' },
+                                                { mode: 'top', icon: AlignVerticalJustifyStart, title: 'Ret top' },
+                                                { mode: 'centerY', icon: AlignVerticalJustifyCenter, title: 'Ret vandret center' },
+                                                { mode: 'bottom', icon: AlignVerticalJustifyEnd, title: 'Ret bund' }
+                                            ].map(item => (
+                                                <button
+                                                    key={item.mode}
+                                                    onClick={() => alignSelectedElements(item.mode)}
+                                                    className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                                    style={{ width: 23, height: 23 }}
+                                                    title={item.title}
+                                                >
+                                                    <item.icon size={14} />
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {canDistributeSelection && (
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, width: 78, marginTop: 4 }}>
+                                                <button
+                                                    onClick={() => distributeSelectedElements('horizontal')}
+                                                    className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                                    style={{ height: 24 }}
+                                                    title="Fordel vandret"
+                                                >
+                                                    <AlignHorizontalSpaceBetween size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => distributeSelectedElements('vertical')}
+                                                    className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                                    style={{ height: 24 }}
+                                                    title="Fordel lodret"
+                                                >
+                                                    <AlignVerticalSpaceBetween size={14} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
-                                <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: 86 }}>
+                                    <button
+                                        onClick={() => transformSelectedElements('rotate90')}
+                                        className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                        style={{ height: 28 }}
+                                        title="Roter 90 grader"
+                                    >
+                                        <RotateCw size={15} />
+                                    </button>
+                                    <button
+                                        onClick={() => transformSelectedElements('flipH')}
+                                        className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                        style={{ height: 28 }}
+                                        title="Spejl vandret"
+                                    >
+                                        <FlipHorizontal2 size={15} />
+                                    </button>
+                                    <button
+                                        onClick={() => transformSelectedElements('flipV')}
+                                        className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                        style={{ height: 28 }}
+                                        title="Spejl lodret"
+                                    >
+                                        <FlipVertical2 size={15} />
+                                    </button>
+                                    <button
+                                        onClick={duplicateSelectedElements}
+                                        className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                        style={{ height: 28 }}
+                                        title="Dupliker"
+                                    >
+                                        <Copy size={15} />
+                                    </button>
+                                    <button
+                                        onClick={groupSelectedElements}
+                                        disabled={!canGroupSelection}
+                                        className="rounded-md text-slate-600 hover:bg-slate-100 disabled:opacity-30 transition-all active:scale-95 flex items-center justify-center"
+                                        style={{ height: 28 }}
+                                        title="Gruppér valgte"
+                                    >
+                                        <Group size={15} />
+                                    </button>
+                                    <button
+                                        onClick={ungroupSelectedElements}
+                                        disabled={!canUngroupSelection}
+                                        className="rounded-md text-slate-600 hover:bg-slate-100 disabled:opacity-30 transition-all active:scale-95 flex items-center justify-center"
+                                        style={{ height: 28 }}
+                                        title="Opløs gruppe"
+                                    >
+                                        <Ungroup size={15} />
+                                    </button>
+                                    <button
+                                        onClick={() => moveSelectedLayer('front')}
+                                        className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                        style={{ height: 28 }}
+                                        title="Send frem"
+                                    >
+                                        <Layers size={15} />
+                                    </button>
+                                    <button
+                                        onClick={() => moveSelectedLayer('back')}
+                                        className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                        style={{ height: 28 }}
+                                        title="Send bagud"
+                                    >
+                                        <Layers size={15} style={{ transform: 'rotate(180deg)' }} />
+                                    </button>
+                                </div>
                             </>
                         )}
-                        <button
-                            onClick={() => transformSelectedElements('rotate90')}
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
-                            title="Roter 90 grader"
-                        >
-                            <RotateCw size={18} />
-                        </button>
-                        <button
-                            onClick={() => transformSelectedElements('flipH')}
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
-                            title="Spejl vandret"
-                        >
-                            <FlipHorizontal2 size={18} />
-                        </button>
-                        <button
-                            onClick={() => transformSelectedElements('flipV')}
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
-                            title="Spejl lodret"
-                        >
-                            <FlipVertical2 size={18} />
-                        </button>
-                        <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
-                        <button
-                            onClick={saveSelectionAsTemplate}
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
-                            title="Gem valgte som skabelon"
-                        >
-                            <LayoutTemplate size={18} />
-                        </button>
-                        <button
-                            onClick={insertMaterialNoteFromSelection}
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
-                            title="Indsæt materialenote"
-                        >
-                            <ClipboardList size={18} />
-                        </button>
-                        <button
-                            onClick={duplicateSelectedElements}
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
-                            title="Dupliker"
-                        >
-                            <Copy size={18} />
-                        </button>
-                        <button
-                            onClick={groupSelectedElements}
-                            disabled={!canGroupSelection}
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-all active:scale-95"
-                            title="Gruppér valgte"
-                        >
-                            <Group size={18} />
-                        </button>
-                        <button
-                            onClick={ungroupSelectedElements}
-                            disabled={!canUngroupSelection}
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-all active:scale-95"
-                            title="Opløs gruppe"
-                        >
-                            <Ungroup size={18} />
-                        </button>
-                        <button
-                            onClick={() => moveSelectedLayer('front')}
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
-                            title="Send frem"
-                        >
-                            <Layers size={18} />
-                        </button>
-                        <button
-                            onClick={() => moveSelectedLayer('back')}
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
-                            title="Send bagud"
-                        >
-                            <Layers size={18} style={{ transform: 'rotate(180deg)' }} />
-                        </button>
-                        <button
-                            onClick={toggleSelectedLock}
-                            className={`p-1.5 rounded-lg transition-all active:scale-95 ${selectionIsLocked ? 'text-blue-600 bg-blue-50' : 'text-slate-500 hover:bg-slate-100'}`}
-                            title={selectionIsLocked ? 'Lås op' : 'Lås valgte elementer'}
-                        >
-                            {selectionIsLocked ? <Lock size={18} /> : <Unlock size={18} />}
-                        </button>
-                        <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
+                        <PanelRule />
                     </>
                 )}
 
+                <PanelLabel>Output</PanelLabel>
                 <button
                     onClick={insertPrintTitleBlock}
                     className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
@@ -4020,6 +4177,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     <Undo size={18} />
                 </button>
             </div>
+            {panelTooltipElement}
 
             {/* 3. BOTTOM TOOLBAR (Drawing Tools) - TLDRAW CLONE */}
             <div style={{
