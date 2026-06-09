@@ -493,7 +493,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             return (
                                 <>
                                     {matchedEvents.map(e => (
-                                        <div key={e.id} onClick={() => openModalForEvent(e)} style={{ padding: '16px', background: '#ecfdf5', borderLeft: '4px solid #10b981', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                                        <div key={e.id} onClick={() => openModalForDate(null, e)} style={{ padding: '16px', background: '#ecfdf5', borderLeft: '4px solid #10b981', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                                             <div>
                                                 <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#065f46' }}>{e.title}</h4>
                                                 <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#059669' }}>{format(new Date(e.date), 'd. MMM yyyy', { locale: da })} - {e.type}</p>
@@ -507,7 +507,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                         </div>
                                     ))}
                                     {matchedLeads.map(l => (
-                                        <div key={l.id} style={{ padding: '16px', background: '#f8fafc', borderLeft: '4px solid #3b82f6', borderRadius: '12px' }}>
+                                        <div key={l.id} onClick={() => onCaseClick(l)} style={{ padding: '16px', background: '#f8fafc', borderLeft: '4px solid #3b82f6', borderRadius: '12px', cursor: 'pointer' }}>
                                             <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#1e293b' }}>{l.project_category} (Sag {l.case_number || l.id})</h4>
                                             <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#475569' }}>Start: {format(new Date(l.raw_data?.start_date), 'd. MMM yyyy', { locale: da })}</p>
                                         </div>
