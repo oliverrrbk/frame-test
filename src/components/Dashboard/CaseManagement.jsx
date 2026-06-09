@@ -1376,8 +1376,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             const newEvent = {
                 id: Date.now().toString(),
                 title: 'Levering af materialer - Sag ' + (selectedCase?.case_number || selectedCase?.id?.substring(0,4)),
-                type: 'delivery',
+                type: 'Materialelevering',
                 date: dateString,
+                participants: ['all'],
                 description: 'Automatisk oprettet fra materialeliste.'
             };
             
@@ -3090,6 +3091,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 lead={selectedCase} 
                                 profile={profile} 
                                 onUpdate={onUpdateLead} 
+                                onAddDeliveryToCalendar={handleAddDeliveryToCalendar}
                             />
                         )}
 

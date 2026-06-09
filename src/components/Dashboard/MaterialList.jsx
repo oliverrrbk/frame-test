@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { jsPDF } from 'jspdf';
-import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck, Upload, FileText, ExternalLink, Calculator, Send, AlertTriangle, CheckCircle, Package, ArrowRight, Printer, Info, CreditCard, Minus, MapPin, Wallet, ShoppingCart, TrendingDown, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck, Upload, FileText, ExternalLink, Calculator, Send, AlertTriangle, CheckCircle, Package, ArrowRight, Printer, Info, CreditCard, Minus, MapPin, Wallet, ShoppingCart, TrendingDown, TrendingUp, Calendar } from 'lucide-react';
 import { generateMaterialList } from '../../utils/materialGenerator';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
-const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
+const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryToCalendar }) => {
     const [materials, setMaterials] = useState([]);
     const [materialListsMeta, setMaterialListsMeta] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
@@ -929,6 +929,75 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                     </div>
                 </div>
                 )}
+            </div>
+            )}
+
+            {/* TILFØJ TIL KALENDER (Ny Boks) */}
+            {onAddDeliveryToCalendar && (
+            <div style={{ marginTop: '16px', marginBottom: '24px' }}>
+                <div style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
+                    border: '1px solid #e2e8f0',
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+                        <div style={{ 
+                            width: '40px', height: '40px', 
+                            borderRadius: '12px', 
+                            backgroundColor: '#eff6ff', 
+                            color: '#2563eb',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <Calendar size={20} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', fontWeight: 'bold' }}>
+                                Tilføj levering til kalender
+                            </h3>
+                            <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                                Opret en aftale for hele holdet
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style={{ position: 'relative' }}>
+                        <button style={{ 
+                            padding: '8px 16px', 
+                            backgroundColor: '#f8fafc', 
+                            color: '#0f172a', 
+                            border: '1px solid #cbd5e1', 
+                            borderRadius: '8px', 
+                            fontWeight: 'bold', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '6px', 
+                            cursor: 'pointer' 
+                        }}>
+                            Vælg dato
+                        </button>
+                        <input 
+                            type="date" 
+                            onChange={onAddDeliveryToCalendar}
+                            style={{ 
+                                position: 'absolute', 
+                                top: 0, 
+                                left: 0, 
+                                width: '100%', 
+                                height: '100%', 
+                                opacity: 0, 
+                                cursor: 'pointer' 
+                            }}
+                        />
+                    </div>
+                </div>
             </div>
             )}
 
