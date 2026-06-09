@@ -154,7 +154,7 @@ const CustomSelect = function({ value, onChange, options, placeholder }) {
     );
 };
 
-export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onUpdateLead, isModalView = false, selectedLeadId = null }) {
+export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile }) {
     const [activeCases, setActiveCases] = useState([]);
     const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
     const selectedCase = activeCases.find(c => c.id === selectedCaseIdState) || null;
@@ -1368,6 +1368,34 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const notOrderedMaterials = totalMaterials - orderedMaterials;
     const materialProgress = totalMaterials > 0 ? Math.round((orderedMaterials / totalMaterials) * 100) : 0;
 
+    const handleAddDeliveryToCalendar = async (e) => {
+        const dateString = e.target.value;
+        if (!dateString) return;
+        
+        try {
+            const newEvent = {
+                id: Date.now().toString(),
+                title: 'Levering af materialer - Sag ' + (selectedCase?.case_number || selectedCase?.id?.substring(0,4)),
+                type: 'delivery',
+                date: dateString,
+                description: 'Automatisk oprettet fra materialeliste.'
+            };
+            
+            const updatedEvents = [...(carpenterProfile?.raw_data?.calendar_events || []), newEvent];
+            const updatedRawData = { ...carpenterProfile?.raw_data, calendar_events: updatedEvents };
+            
+            await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
+            if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: updatedRawData });
+            
+            const [y, m, d] = dateString.split('-');
+            toast.success(`Levering d. ${d}/${m}/${y} er tilføjet kalenderen!`);
+            setInfoSheetType(null);
+        } catch (error) {
+            console.error(error);
+            toast.error('Kunne ikke tilføje til kalender');
+        }
+    };
+
     // Økonomi Totaler
     const totalToBill = baseTotalPrice > 0 ? (baseTotalPrice + totalExtraPrice) : (totalExtraPrice > 0 ? totalExtraPrice : 0);
     
@@ -1699,9 +1727,33 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         )}
                                         {infoSheetType === 'materials' && (
                                             <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center' }}>
-                                                <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{orderedMaterials} <span style={{ fontSize: '1rem', color: '#94a3b8' }}>/ {totalMaterials}</span></h1>
-                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Ordrer er bestilt eller leveret</p>
-                                                <button onClick={() => { setInfoSheetType(null); setActiveSubTab('materials'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#2563eb', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Indkøb</button>
+                                                {deliveredMaterials === totalMaterials && totalMaterials > 0 ? (
+                                                    <>
+                                                        <h1 style={{ margin: '0 0 8px 0', fontSize: '1.8rem', fontWeight: '800', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><CheckCircle size={28} /> Ordre er leveret</h1>
+                                                    </>
+                                                ) : orderedMaterials === totalMaterials && totalMaterials > 0 ? (
+                                                    <>
+                                                        <h1 style={{ margin: '0 0 8px 0', fontSize: '1.8rem', fontWeight: '800', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><PackageCheck size={28} /> Ordre er bestilt</h1>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{orderedMaterials} <span style={{ fontSize: '1rem', color: '#94a3b8' }}>/ {totalMaterials}</span></h1>
+                                                        <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Ordrer er bestilt eller leveret</p>
+                                                    </>
+                                                )}
+                                                
+                                                <button onClick={() => { setInfoSheetType(null); setActiveSubTab('materials'); }} style={{ marginTop: '24px', width: '100%', padding: '14px', background: '#2563eb', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Gå til materialeliste</button>
+                                                
+                                                <div style={{ position: 'relative', marginTop: '12px' }}>
+                                                    <button style={{ width: '100%', padding: '14px', background: '#eff6ff', color: '#2563eb', borderRadius: '12px', fontWeight: 'bold', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
+                                                        <Calendar size={18} /> Tilføj leveringsdato til kalender
+                                                    </button>
+                                                    <input 
+                                                        type="date" 
+                                                        onChange={handleAddDeliveryToCalendar}
+                                                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                                                    />
+                                                </div>
                                             </div>
                                         )}
                                         {infoSheetType === 'finance' && (

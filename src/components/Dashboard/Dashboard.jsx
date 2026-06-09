@@ -2917,6 +2917,8 @@ const Dashboard = () => {
                                 clearTargetCase={() => setTargetCaseId(null)}
                                 leads={leadsData} 
                                 profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.id }} 
+                                carpenterProfile={carpenterProfile}
+                                setCarpenterProfile={setCarpenterProfile}
                                 simulatedRole={simulatedRole}
                                 syncToAccounting={syncToAccounting}
                                 onOpenInvoice={(caseId) => {
