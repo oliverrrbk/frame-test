@@ -230,6 +230,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [deductPause, setDeductPause] = useState(true);
     const [editingTimeId, setEditingTimeId] = useState(null);
     const [deletingTimeEntryId, setDeletingTimeEntryId] = useState(null);
+    const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
 
     // States til Mesterens ugentlige medarbejder-tidsstyring
     const [selectedEmployeeForTidslog, setSelectedEmployeeForTidslog] = useState('');
@@ -2956,77 +2957,95 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             </div>
                         )}
 
-{/* TAB 4: TIMEREGISTRERING */}
+{/* TAB 4: TIMEREGISTRERING (Apple-agtigt Redesign) */}
                         {activeSubTab === 'timesheet' && (
-                            <div className="case-tab-content" style={{ display: 'grid', gridTemplateColumns: (!['worker', 'apprentice'].includes(profile?.role)) ? '1fr 340px' : '1fr', gap: '24px', alignItems: 'start', maxWidth: (!['worker', 'apprentice'].includes(profile?.role)) ? 'none' : '500px', margin: (!['worker', 'apprentice'].includes(profile?.role)) ? '0' : '0 auto' }}>
+                            <div className="case-tab-content" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', alignItems: 'start' }}>
                                 
                                 {/* TIMEOUT OVERSIGT */}
-                                {(!['worker', 'apprentice'].includes(profile?.role)) && (
                                 <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <h4 style={{ margin: 0, color: '#1a1a1a' }}>Registrerede arbejdstimer på sagen</h4>
-                                        <div style={{ fontSize: '0.9rem', color: '#6b7280' }}>
-                                            Samlet timeforbrug: <strong style={{ color: totalActualHours > budgetedHours ? '#ef4444' : '#10b981' }}>{totalActualHours} timer</strong> (Systembudget: {budgetedHours} t)
-                                        </div>
-                                    </div>
-
-                                    {/* BOGHOLDER / ØKONOMI OVERBLIK */}
-                                    <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                                        <div>
-                                            <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold' }}>Samlet Tidsforbrug</div>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#1e293b' }}>{totalActualHours} t</div>
-                                        </div>
-                                        <div style={{ width: '1px', backgroundColor: '#cbd5e1' }}></div>
-                                        <div>
-                                            <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Ekstraregning</div>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#10b981' }}>+ {totalExtraPrice} kr.</div>
-                                        </div>
-                                        <div style={{ width: '1px', backgroundColor: '#cbd5e1' }}></div>
-                                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
-                                            <button onClick={handleExportLonsystem} style={{ padding: '8px 16px', border: '1px solid #10b981', backgroundColor: '#ecfdf5', color: '#047857', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}>
-                                                Eksportér til Lønsystem (CSV)
-                                            </button>
-                                            <button onClick={() => window.print()} style={{ padding: '8px 16px', border: '1px solid #cbd5e1', backgroundColor: 'white', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', color: '#334155' }}>
-                                                Udskriv Timeseddel
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                                        <h4 style={{ margin: 0, color: '#1a1a1a', fontSize: '1.2rem' }}>Registrerede arbejdstimer på sagen</h4>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            {(!['worker', 'apprentice'].includes(profile?.role)) && (
+                                                <div style={{ fontSize: '0.9rem', color: '#6b7280' }}>
+                                                    Forbrug: <strong style={{ color: totalActualHours > budgetedHours ? '#ef4444' : '#10b981' }}>{totalActualHours} t</strong> / {budgetedHours} t
+                                                </div>
+                                            )}
+                                            <button 
+                                                onClick={() => setIsTimeModalOpen(true)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                            >
+                                                <Plus size={18} /> Tilføj timer
                                             </button>
                                         </div>
                                     </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {/* BOGHOLDER / ØKONOMI OVERBLIK (Simpel Version UDEN Export) */}
+                                    {(!['worker', 'apprentice'].includes(profile?.role)) && (
+                                        <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em' }}>Samlet Tidsforbrug</div>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>{totalActualHours} t</div>
+                                            </div>
+                                            <div style={{ width: '1px', height: '30px', backgroundColor: '#e2e8f0' }}></div>
+                                            <div>
+                                                <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em' }}>Total Ekstraregning</div>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#10b981' }}>+ {totalExtraPrice} kr.</div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         {timeEntries.length === 0 ? (
-                                            <p style={{ color: '#6b7280', fontSize: '0.9rem', fontStyle: 'italic', padding: '16px', textAlign: 'center', border: '1px dashed #cbd5e1', borderRadius: '8px' }}>Ingen arbejdstimer er registreret på denne sag endnu.</p>
+                                            <p style={{ color: '#6b7280', fontSize: '0.9rem', fontStyle: 'italic', padding: '40px 16px', textAlign: 'center' }}>Ingen arbejdstimer er registreret endnu.</p>
                                         ) : (
                                             timeEntries.map(entry => (
                                                 <div 
                                                     key={entry.id} 
                                                     className="timesheet-row log-card"
-                                                    style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}
+                                                    style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
                                                 >
-                                                    <div>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-                                                            <strong style={{ fontSize: '0.9rem', color: '#1a1a1a' }}>{entry.employeeName}</strong>
-                                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                                                            <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{entry.employeeName}</strong>
+                                                            <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '6px' }}>
                                                                 <Clock size={12} /> {entry.startTime} - {entry.endTime || 'Nu'}
                                                             </span>
-                                                            <span style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '30px', background: entry.endTime ? '#3b82f6' : '#10b981', color: 'white', fontWeight: 'bold' }}>
+                                                            <span style={{ padding: '4px 10px', fontSize: '0.8rem', borderRadius: '20px', background: entry.endTime ? '#eff6ff' : '#ecfdf5', color: entry.endTime ? '#2563eb' : '#059669', fontWeight: 'bold' }}>
                                                                 {entry.endTime ? `${entry.hours} timer` : 'I gang'}
                                                             </span>
                                                         </div>
-                                                        <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>{entry.desc}</span>
+                                                        {entry.desc && <span style={{ fontSize: '0.9rem', color: '#475569', fontStyle: 'italic' }}>"{entry.desc}"</span>}
                                                     </div>
                                                     
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                                                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                                                            {new Date(entry.date).toLocaleDateString('da-DK')}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                        <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: '500' }}>
+                                                            {new Date(entry.date).toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short' })}
                                                         </span>
                                                         {isTimeLocked(entry.date) ? (
-                                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '999px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.72rem', fontWeight: 700 }} title={`Lønkørt og låst til og med ${formatDa(lockedUntil)}`}>
-                                                                <Lock size={11} /> Låst
+                                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '20px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.75rem', fontWeight: 700 }} title={`Lønkørt og låst til og med ${formatDa(lockedUntil)}`}>
+                                                                <Lock size={12} /> Låst
                                                             </span>
                                                         ) : (!['worker', 'apprentice'].includes(simulatedRole || profile?.role) || entry.employeeId === profile?.id) && (
                                                             <div style={{ display: 'flex', gap: '8px' }}>
-                                                                <button onClick={() => handleEditTime(entry)} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}>Ret</button>
-                                                                <button onClick={() => handleDeleteTime(entry.id)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}>Slet</button>
+                                                                <button 
+                                                                    onClick={() => { handleEditTime(entry); setIsTimeModalOpen(true); }} 
+                                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#3b82f6', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; }}
+                                                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
+                                                                    title="Ret timer"
+                                                                >
+                                                                    <Edit2 size={16} />
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleDeleteTime(entry.id)} 
+                                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '10px', background: '#fef2f2', color: '#ef4444', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; }}
+                                                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                                                                    title="Slet timer"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
                                                             </div>
                                                         )}
                                                     </div>
@@ -3035,31 +3054,40 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         )}
                                     </div>
                                 </div>
-                                )}
 
-                                {/* INDTAST NY TIMESEDDEL (MANUELT) */}
-                                <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(16px)', padding: isMobile ? '24px' : '32px', borderRadius: '24px', border: '1px solid rgba(255, 255, 255, 0.5)', boxShadow: '0 10px 40px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '24px', position: 'sticky', top: '24px' }}>
-                                    
-                                    {profile && (
-                                        <>
-                                            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                {editingTimeId ? <Edit2 size={20} color="#3b82f6" /> : <Plus size={20} color="#3b82f6" />}
-                                                {editingTimeId ? 'Ret timeregistrering' : 'Registrer timer (Manuelt)'}
-                                            </h3>
+                                {/* MODAL TIL AT REGISTRERE TIMER MANUELT */}
+                                {isTimeModalOpen && createPortal(
+                                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out', padding: '16px' }}>
+                                        <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'fadeInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '90vh', overflowY: 'auto' }}>
                                             
-                                            <form onSubmit={handleAddTimeEntry} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                                <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    {editingTimeId ? <Edit2 size={24} color="#3b82f6" /> : <Clock size={24} color="#3b82f6" />}
+                                                    {editingTimeId ? 'Ret timeregistrering' : 'Registrer timer'}
+                                                </h3>
+                                                <button 
+                                                    onClick={() => { setIsTimeModalOpen(false); setEditingTimeId(null); }}
+                                                    style={{ background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
 
-                                                {!editingTimeId && (
+                                            {/* SOM I GÅR KNAP LIGGER ØVERST */}
+                                            {!editingTimeId && (
+                                                <div style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid #f1f5f9' }}>
                                                     <button type="button" onClick={fillFromLastCase}
-                                                        style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', border: '1px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', borderRadius: '16px', border: '1px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(109, 40, 217, 0.1)' }}
                                                         onMouseEnter={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                                                         onMouseLeave={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.transform = 'none'; }}>
-                                                        <RotateCcw size={16} /> Som i går
+                                                        <RotateCcw size={18} /> Som i går
                                                     </button>
-                                                )}
-
+                                                </div>
+                                            )}
+                                            
+                                            <form onSubmit={(e) => { handleAddTimeEntry(e); setIsTimeModalOpen(false); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                                 {(!['worker', 'apprentice'].includes(simulatedRole || profile?.role)) && (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                         <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Medarbejder (Hvem)</label>
                                                         <CustomSelect
                                                             value={newTime.employeeId}
@@ -3071,40 +3099,40 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 )}
 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                         <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Starttid</label>
                                                         <input 
                                                             type="time"
                                                             value={newTime.startTime}
                                                             onChange={(e) => setNewTime({ ...newTime, startTime: e.target.value })}
-                                                            style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b', width: '100%', boxSizing: 'border-box' }}
+                                                            style={{ padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '1rem', color: '#0f172a', width: '100%', boxSizing: 'border-box', backgroundColor: '#f8fafc' }}
                                                         />
                                                     </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                         <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Sluttid</label>
                                                         <input 
                                                             type="time"
                                                             value={newTime.endTime}
                                                             onChange={(e) => setNewTime({ ...newTime, endTime: e.target.value })}
-                                                            style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b', width: '100%', boxSizing: 'border-box' }}
+                                                            style={{ padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '1rem', color: '#0f172a', width: '100%', boxSizing: 'border-box', backgroundColor: '#f8fafc' }}
                                                         />
                                                     </div>
                                                 </div>
 
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: '#475569', cursor: 'pointer', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.9rem', color: '#0f172a', cursor: 'pointer', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                                                     <input 
                                                         type="checkbox"
                                                         checked={deductPause}
                                                         onChange={(e) => setDeductPause(e.target.checked)}
-                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                                        style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#3b82f6' }}
                                                     />
-                                                    <span style={{ fontWeight: '500' }}>Fratræk 30 min. selvbetalt frokostpause</span>
+                                                    <span style={{ fontWeight: '600' }}>Fratræk 30 min. frokostpause</span>
                                                 </label>
 
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '14px 16px', background: '#eef2ff', border: '1px solid #e0e7ff', borderRadius: '12px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '16px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '16px' }}>
                                                     <div>
-                                                        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#334155' }}>Timer i alt</div>
-                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Beregnes automatisk — kan rettes</div>
+                                                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#1e3a8a' }}>Timer i alt</div>
+                                                        <div style={{ fontSize: '0.8rem', color: '#3b82f6' }}>Beregnes automatisk — kan rettes</div>
                                                     </div>
                                                     <input
                                                         type="number"
@@ -3112,65 +3140,51 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         min="0"
                                                         value={newTime.hours ?? ''}
                                                         onChange={(e) => setNewTime({ ...newTime, hours: e.target.value })}
-                                                        style={{ width: '90px', padding: '10px 12px', borderRadius: '10px', border: '1px solid #c7d2fe', textAlign: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#3b82f6', outline: 'none', background: '#fff' }}
+                                                        style={{ width: '100px', padding: '12px', borderRadius: '12px', border: '2px solid #bfdbfe', textAlign: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#2563eb', outline: 'none', background: '#fff' }}
                                                     />
                                                 </div>
 
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                     <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Dato</label>
                                                     <input 
                                                         type="date"
                                                         value={newTime.date}
                                                         onChange={(e) => setNewTime({ ...newTime, date: e.target.value })}
-                                                        style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b', width: '100%', boxSizing: 'border-box' }}
+                                                        style={{ padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '1rem', color: '#0f172a', width: '100%', boxSizing: 'border-box', backgroundColor: '#f8fafc' }}
                                                     />
                                                 </div>
 
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Beskrivelse / Arbejdsopgave</label>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Arbejdsopgave (Valgfri)</label>
                                                     <textarea 
                                                         rows="3"
                                                         value={newTime.desc}
                                                         onChange={(e) => setNewTime({ ...newTime, desc: e.target.value })}
                                                         placeholder="F.eks. 'Opsat gipslofter og spartlet'"
-                                                        style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', fontFamily: 'inherit', resize: 'vertical', color: '#1e293b', width: '100%', boxSizing: 'border-box' }}
+                                                        style={{ padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '1rem', fontFamily: 'inherit', resize: 'vertical', color: '#0f172a', width: '100%', boxSizing: 'border-box', backgroundColor: '#f8fafc' }}
                                                     />
                                                 </div>
 
-                                                <div style={{ marginTop: '4px', paddingTop: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                                                    {editingTimeId && (
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setEditingTimeId(null);
-                                                                setNewTime({ startTime: '07:00', endTime: '15:00', date: new Date().toISOString().substring(0, 10), desc: '', employeeId: profile?.role === 'worker' || profile?.role === 'apprentice' ? profile.id : '' });
-                                                                setDeductPause(true);
-                                                            }}
-                                                            style={{ padding: '12px 24px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                            onMouseOver={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                                            onMouseOut={(e) => e.currentTarget.style.background = '#fff'}
-                                                        >
-                                                            Annuller
-                                                        </button>
-                                                    )}
+                                                <div style={{ marginTop: '12px', display: 'flex', gap: '12px' }}>
                                                     <button 
                                                         type="submit"
-                                                        style={{ flex: editingTimeId ? 0 : 1, padding: '12px 24px', borderRadius: '12px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}
-                                                        onMouseOver={(e) => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                                                        onMouseOut={(e) => { e.currentTarget.style.background = '#0f172a'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                                        style={{ flex: 1, padding: '16px', borderRadius: '16px', border: 'none', background: '#1a1a1a', color: '#fff', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#000000'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.transform = 'translateY(0)'; }}
                                                     >
-                                                        <Save size={18} />
-                                                        {editingTimeId ? 'Gem ændringer' : 'Registrer timer'}
+                                                        <Save size={20} />
+                                                        {editingTimeId ? 'Gem ændringer' : 'Gem Tidsregistrering'}
                                                     </button>
                                                 </div>
                                             </form>
-                                        </>
-                                    )}
-                                </div>
+                                        </div>
+                                    </div>,
+                                    document.body
+                                )}
                             </div>
                         )}
 
-                        {/* TAB 5: LEVERANDØRBILAG */}
+{/* TAB 5: LEVERANDØRBILAG */}
                         {activeSubTab === 'invoices' && (
                             <div className="case-tab-content">
                                 <BilagManager 
