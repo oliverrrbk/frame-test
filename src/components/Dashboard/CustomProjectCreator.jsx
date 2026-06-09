@@ -10,6 +10,22 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
     const [aiSummary, setAiSummary] = useState('');
     const [viewMode, setViewMode] = useState('selection'); // 'selection', 'notepad', 'editor'
     const [notepadText, setNotepadText] = useState('');
+    const [hasLocalDraft, setHasLocalDraft] = useState(() => {
+        const draft = localStorage.getItem('custom_project_draft');
+        if (draft) {
+            try {
+                const parsed = JSON.parse(draft);
+                const hasData = 
+                    (parsed.customerInfo && Object.values(parsed.customerInfo).some(v => v)) ||
+                    parsed.projectTitle || 
+                    parsed.notepadText || 
+                    parsed.aiSummary ||
+                    (parsed.phases && parsed.phases.some(p => p.hours !== '' || p.materials.length > 0 || p.name !== 'Etape 1: Generelt'));
+                return !!hasData;
+            } catch(e) {}
+        }
+        return false;
+    });
     
     // Voice Recording Refs
     const mediaRecorderRef = React.useRef(null);
@@ -44,6 +60,49 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
     const [searchQuery, setSearchQuery] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(null); // { phaseIndex, matIndex } eller null
     const [suggestions, setSuggestions] = useState([]);
+
+    useEffect(() => {
+        if (!draftCreator && !hasLocalDraft) {
+            const draftData = {
+                customerInfo, projectTitle, projectNotes, hourlyRate, laborType, fixedLaborPrice, globalCosts, phases, aiSummary, viewMode, notepadText
+            };
+            localStorage.setItem('custom_project_draft', JSON.stringify(draftData));
+        }
+    }, [customerInfo, projectTitle, projectNotes, hourlyRate, laborType, fixedLaborPrice, globalCosts, phases, aiSummary, viewMode, notepadText, draftCreator, hasLocalDraft]);
+
+    const restoreDraft = () => {
+        const draft = localStorage.getItem('custom_project_draft');
+        if (draft) {
+            try {
+                const parsed = JSON.parse(draft);
+                if (parsed.customerInfo) setCustomerInfo(parsed.customerInfo);
+                if (parsed.projectTitle) setProjectTitle(parsed.projectTitle);
+                if (parsed.projectNotes) setProjectNotes(parsed.projectNotes);
+                if (parsed.hourlyRate) setHourlyRate(parsed.hourlyRate);
+                if (parsed.laborType) setLaborType(parsed.laborType);
+                if (parsed.fixedLaborPrice) setFixedLaborPrice(parsed.fixedLaborPrice);
+                if (parsed.globalCosts) setGlobalCosts(parsed.globalCosts);
+                if (parsed.phases) setPhases(parsed.phases);
+                if (parsed.aiSummary) setAiSummary(parsed.aiSummary);
+                if (parsed.notepadText) setNotepadText(parsed.notepadText);
+                
+                if (parsed.viewMode && parsed.viewMode !== 'selection') {
+                    setViewMode(parsed.viewMode);
+                } else if (parsed.phases && parsed.phases.some(p => p.hours !== '' || p.materials.length > 0 || p.name !== 'Etape 1: Generelt')) {
+                    setViewMode('editor');
+                }
+                
+                setHasLocalDraft(false);
+                toast.success('Kladde gendannet!');
+            } catch(e) {}
+        }
+    };
+    
+    const clearDraft = () => {
+        localStorage.removeItem('custom_project_draft');
+        setHasLocalDraft(false);
+        toast.success('Kladde slettet. Du starter på en frisk.');
+    };
 
     useEffect(() => {
         // Flatten MATERIAL_INDEX for search
@@ -205,9 +264,9 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
             
             if (result.error) throw new Error(result.error);
 
-            setProjectTitle(result.title || '');
-            setProjectNotes(result.notes || '');
-            setAiSummary(`Kilde-noter:\n${notepadText}`);
+            setProjectTitle(prev => prev || result.title || '');
+            setProjectNotes(prev => prev + (prev ? '\n\n' : '') + (result.notes || ''));
+            setAiSummary(prev => prev + (prev ? '\n\n' : '') + `Kilde-noter:\n${notepadText}`);
             
             if (result.phases && result.phases.length > 0) {
                 const mappedPhases = result.phases.map((p, pIndex) => {
@@ -223,23 +282,26 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                     });
                     return {
                         id: crypto.randomUUID(),
-                        name: p.name || `Etape ${pIndex + 1}`,
+                        name: p.name || `Etape`,
                         hours: p.hours ? p.hours.toString() : '',
                         materials: mappedMats
                     };
                 });
-                setPhases(mappedPhases);
+                
+                const existingPhases = phases.filter(p => p.name !== 'Etape 1: Generelt' || p.hours !== '' || p.materials.length > 0);
+                setPhases([...existingPhases, ...mappedPhases]);
             }
             
             if (result.global_costs) {
-                setGlobalCosts({
-                    containers: result.global_costs.containers || 0,
-                    scaffolding: result.global_costs.scaffolding || 0,
-                    invisibleMaterials: result.global_costs.invisible_materials || 0,
-                    transportHours: result.global_costs.transport_hours || 0
-                });
+                setGlobalCosts(prev => ({
+                    containers: (parseFloat(prev.containers) || 0) + (parseFloat(result.global_costs.containers) || 0),
+                    scaffolding: (parseFloat(prev.scaffolding) || 0) + (parseFloat(result.global_costs.scaffolding) || 0),
+                    invisibleMaterials: (parseFloat(prev.invisibleMaterials) || 0) + (parseFloat(result.global_costs.invisible_materials) || 0),
+                    transportHours: (parseFloat(prev.transportHours) || 0) + (parseFloat(result.global_costs.transport_hours) || 0)
+                }));
             }
             
+            setNotepadText(''); // Tøm input-feltet
             toast.success("Tilbud bygget!", { id: "structuring" });
             setViewMode('editor');
         } catch (error) {
@@ -433,6 +495,21 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
 
         const effectiveMaterialMarkup = phaseMaterialsCost > 0 ? (phaseMaterialsSales / phaseMaterialsCost) : 1;
 
+        // Byg den officielle materialeliste (SOP: Synkronisering)
+        const globalMaterialList = [];
+        phases.forEach(p => {
+            p.materials.forEach(m => {
+                globalMaterialList.push({
+                    item: m.name,
+                    qty: parseFloat(m.quantity) || 1,
+                    unit: m.unit || 'stk',
+                    section: p.name || 'Hovedmaterialer',
+                    status: 'Ikke bestilt',
+                    listId: 'default'
+                });
+            });
+        });
+
         const payload = {
             customer_name: customerInfo.name,
             customer_address: `${customerInfo.address || ''}, ${customerInfo.zip || ''} ${customerInfo.city || ''}`.replace(/^, | , | $/g, '').trim() || 'Ukendt adresse',
@@ -443,6 +520,8 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
             price_estimate: totals.totalSales.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' kr.',
             raw_data: {
                 ...(draftCreator ? { created_by: draftCreator.id, draft_mode: true } : {}),
+                material_list: globalMaterialList,
+                material_lists_meta: [{ id: 'default', name: 'Materialeliste til Opgaven', price: '' }],
                 details: { 
                     title: projectTitle || 'Skræddersyet Opgave',
                     notes: projectNotes,
@@ -472,6 +551,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
             const { data, error } = await supabase.from('leads').insert([payload]).select();
             if (error) throw error;
             
+            localStorage.removeItem('custom_project_draft');
             toast.success("Sagen er oprettet!", { id: "save_custom" });
             if (onComplete) onComplete(data[0]);
         } catch (err) {
@@ -501,13 +581,32 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                     )}
                     {viewMode === 'editor' && <div style={{ height: '40px', width: '1px', backgroundColor: '#e2e8f0' }}></div>}
                     <div style={{ display: 'flex', gap: '12px' }}>
-                        <button onClick={onCancel} style={{ padding: '10px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#64748b', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fff'}>Annuller</button>
+                        <button onClick={onCancel} style={{ padding: '10px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#64748b', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fff'}>Luk</button>
                         <button onClick={handleSaveProject} style={{ padding: '10px 24px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)', transition: 'all 0.2s ease' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'; }}>
                             <Save size={18} /> Gem & Opret Tilbud
                         </button>
                     </div>
                 </div>
             </div>
+            
+            {/* DRAFT BANNER */}
+            {hasLocalDraft && viewMode === 'selection' && (
+                <div style={{ padding: '16px 32px', backgroundColor: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', animation: 'fadeInDown 0.3s ease-out' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#0f172a' }}>
+                        <div style={{ width: '36px', height: '36px', backgroundColor: '#eff6ff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6', boxShadow: 'inset 0 2px 4px rgba(59, 130, 246, 0.1)' }}>
+                            <Save size={18} />
+                        </div>
+                        <div>
+                            <p style={{ margin: 0, fontWeight: '700', fontSize: '1rem' }}>Du har en igangværende kladde</p>
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Vil du fortsætte, hvor du slap?</p>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                        <button onClick={clearDraft} style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#ef4444', padding: '8px 16px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fef2f2'} onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fff'}>Start Forfra</button>
+                        <button onClick={restoreDraft} style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', border: 'none', color: '#fff', padding: '8px 20px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)'; }}>Fortsæt Kladde</button>
+                    </div>
+                </div>
+            )}
 
             <div className="custom-project-main" style={{ padding: '32px' }}>
                 
@@ -555,7 +654,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                         <div style={{ backgroundColor: '#fff', padding: '32px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                 <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <FileText size={20} color="#10b981" /> Den Magiske Notesblok
+                                    <FileText size={20} color="#10b981" /> Din Notesblok
                                 </h3>
                                 <button onClick={() => setViewMode('editor')} style={{ background: 'none', border: 'none', color: '#64748b', textDecoration: 'underline', cursor: 'pointer' }}>
                                     Spring over og byg manuelt
@@ -612,6 +711,31 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                 {viewMode === 'editor' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                     
+                    {/* Add more with AI Button */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', animation: 'fadeIn 0.3s ease-out' }}>
+                        <button 
+                            onClick={() => setViewMode('notepad')}
+                            style={{ 
+                                padding: '12px 24px', 
+                                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', 
+                                border: '1px solid rgba(255,255,255,0.1)', 
+                                borderRadius: '12px', 
+                                color: '#fff', 
+                                fontWeight: '600', 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px', 
+                                boxShadow: '0 4px 15px rgba(15, 23, 42, 0.2), inset 0 1px 0 rgba(255,255,255,0.1)', 
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(15, 23, 42, 0.3), inset 0 1px 0 rgba(255,255,255,0.1)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(15, 23, 42, 0.2), inset 0 1px 0 rgba(255,255,255,0.1)'; }}
+                        >
+                            <Cpu size={18} color="#38bdf8" /> Tilføj flere noter med AI
+                        </button>
+                    </div>
+
                     {/* 1. Projekt Detaljer & Arbejdsløn */}
                     <div className="desc-hours-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
                         <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>

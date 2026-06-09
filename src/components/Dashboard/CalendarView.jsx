@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Clock, CheckCircle, MessageSquare, Plus, Users, X, Trash2, Truck, ChevronDown, Palmtree, Thermometer } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Clock, CheckCircle, MessageSquare, Plus, Users, X, Trash2, Truck, ChevronDown, Palmtree, Thermometer, Briefcase, Coffee, PartyPopper, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import GorgeousMultiSelect from './GorgeousMultiSelect';
+import GorgeousSingleSelect from './GorgeousSingleSelect';
 
 // ----------------- DANSKE HELLIGDAGE -----------------
 const DANISH_HOLIDAYS_2026 = [
@@ -27,6 +28,23 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const isManager = ['admin', 'boss', 'accountant'].includes(effectiveRole);
     const userId = myProfile?.id;
 
+    // Define event types
+    const EVENT_TYPES = [
+        { id: 'Internt Møde', name: 'Internt Møde', icon: Users },
+        { id: 'Kundemøde', name: 'Kundemøde', icon: Briefcase },
+        { id: 'Materialelevering', name: 'Materialelevering', icon: Truck },
+        { id: 'Firmaarrangement', name: 'Firmaarrangement', icon: PartyPopper },
+        { id: 'Andet', name: 'Andet', icon: Coffee }
+    ];
+
+    const getEventStyle = (type) => {
+        if (type === 'Materialelevering') return { bg: '#fff7ed', border: '#fdba74', text: '#c2410c', leftBorder: '#f97316', icon: Truck };
+        if (type === 'Kundemøde') return { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', leftBorder: '#0284c7', icon: Briefcase };
+        if (type === 'Firmaarrangement') return { bg: '#fdf4ff', border: '#f0abfc', text: '#a21caf', leftBorder: '#d946ef', icon: PartyPopper };
+        if (type === 'Andet') return { bg: '#f1f5f9', border: '#cbd5e1', text: '#475569', leftBorder: '#94a3b8', icon: Coffee };
+        return { bg: '#f0fdfa', border: '#5eead4', text: '#0f766e', leftBorder: '#14b8a6', icon: Users }; // Internt Møde fallback
+    };
+
     // States
     const [view, setView] = useState('month'); // 'month', 'week', 'year'
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -42,12 +60,34 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
     const [eventFormData, setEventFormData] = useState({
         title: '',
-        type: 'Møde', // 'Møde' eller 'Levering'
+        type: 'Internt Møde', // 'Internt Møde', 'Kundemøde', 'Materialelevering'
         date: new Date().toISOString().substring(0,10),
         startTime: '10:00',
         endTime: '11:00',
-        participants: ['all'] // 'all' eller array af userIds
+        participants: ['all'],
+        selectedLeadId: '' // For Materialelevering
     });
+
+    const [searchTerm, setSearchTerm] = useState('');
+    const [hoverTooltip, setHoverTooltip] = useState(null); // { x, y, content }
+
+    const openModalForDate = (dateObj) => {
+        if (!isManager) return;
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        
+        setEventFormData({
+            title: '',
+            type: 'Internt Møde',
+            date: `${year}-${month}-${day}`,
+            startTime: '10:00',
+            endTime: '11:00',
+            participants: ['all'],
+            selectedLeadId: ''
+        });
+        setShowEventModal(true);
+    };
 
     // ----------------- DATA PREPARATION -----------------
     
@@ -157,21 +197,28 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         
         const isHoliday = DANISH_HOLIDAYS_2026.includes(dateStr);
 
-        const leads = scheduledLeads.filter(lead => {
+        let leads = scheduledLeads.filter(lead => {
             const start = new Date(lead.raw_data.start_date); start.setHours(0,0,0,0);
             const end = new Date(lead.raw_data.end_date); end.setHours(23,59,59,999);
             return checkDate >= start && checkDate <= end;
         });
 
-        const absences = allAbsences.filter(a => {
+        let absences = allAbsences.filter(a => {
             const d = new Date(a.date); d.setHours(0,0,0,0);
             return d.getTime() === checkDate.getTime();
         });
 
-        const events = calendarEvents.filter(e => {
+        let events = calendarEvents.filter(e => {
             const d = new Date(e.date); d.setHours(0,0,0,0);
             return d.getTime() === checkDate.getTime();
         });
+
+        if (searchTerm.trim() !== '') {
+            const term = searchTerm.toLowerCase();
+            leads = leads.filter(l => (l.case_number?.toLowerCase().includes(term) || l.project_category?.toLowerCase().includes(term) || l.raw_data?.project_title?.toLowerCase().includes(term)));
+            absences = absences.filter(a => a.employeeName?.toLowerCase().includes(term) || a.absenceType?.toLowerCase().includes(term));
+            events = events.filter(e => e.title?.toLowerCase().includes(term) || e.type?.toLowerCase().includes(term));
+        }
 
         return { isHoliday, leads, absences, events };
     };
@@ -180,9 +227,33 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
     const saveEvent = async (e) => {
         e.preventDefault();
+        
+        let finalParticipants = [...eventFormData.participants];
+        let finalTitle = eventFormData.title;
+
+        if (eventFormData.type === 'Materialelevering' && eventFormData.selectedLeadId) {
+            const lead = relevantLeads.find(l => String(l.id) === String(eventFormData.selectedLeadId));
+            if (lead) {
+                const workers = lead.raw_data?.assigned_workers || [];
+                const pms = lead.raw_data?.assigned_pm || [];
+                finalParticipants = [...new Set([...workers, ...pms])];
+                if (finalParticipants.length === 0) finalParticipants = ['all'];
+                
+                if (!finalTitle.includes(lead.project_category)) {
+                    finalTitle = `Levering: ${lead.project_category} (${lead.case_number || String(lead.id).substring(0,6)}) - ${finalTitle}`;
+                }
+            }
+        }
+
         const newEvent = {
             id: `evt-${Date.now()}`,
-            ...eventFormData
+            title: finalTitle,
+            type: eventFormData.type,
+            date: eventFormData.date,
+            startTime: eventFormData.startTime,
+            endTime: eventFormData.endTime,
+            participants: finalParticipants,
+            relatedLeadId: eventFormData.selectedLeadId || null
         };
         const updatedEvents = [...(carpenterProfile?.raw_data?.calendar_events || []), newEvent];
         const updatedRawData = { ...carpenterProfile.raw_data, calendar_events: updatedEvents };
@@ -217,12 +288,16 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         const endDate = new Date(selectedDate);
         endDate.setDate(endDate.getDate() + daysDuration - 1);
         
-        // Simpel kollisions-tjek: Har nogen team members på sagen ferie i perioden?
+        // Simpel kollisions-tjek: Har nogen team members på sagen ferie i perioden, eller er der andre sager?
         let collisionFound = false;
         const assigned = draggedLead.raw_data?.assigned_workers || [];
         for (let d = new Date(selectedDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-             const abs = getItemsForDay(new Date(d)).absences;
-             if (abs.some(a => assigned.includes(a.employeeId))) {
+             const items = getItemsForDay(new Date(d));
+             if (items.absences.some(a => assigned.includes(a.employeeId))) {
+                 collisionFound = true;
+                 break;
+             }
+             if (items.leads.filter(l => l.id !== draggedLead.id).length > 0) {
                  collisionFound = true;
                  break;
              }
@@ -277,9 +352,10 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
     const renderMonthView = () => {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
-                {/* Grid Header */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', marginBottom: '12px' }}>
+            <div className="custom-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflowX: 'auto' }}>
+                <div style={{ minWidth: '900px', display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px' }}>
+                    {/* Grid Header */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', marginBottom: '12px' }}>
                     {['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'].map(day => (
                         <div key={day} style={{ textAlign: 'center', fontWeight: '700', fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>
                             {day}
@@ -302,6 +378,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         return (
                             <div 
                                 key={day}
+                                onClick={() => openModalForDate(checkDate)}
+                                onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
+                                onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = isToday ? '#3b82f6' : '#e2e8f0'; }}
                                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(226, 232, 240, 0.8)'; }}
                                 onDragLeave={(e) => { e.currentTarget.style.background = isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'); }}
                                 onDrop={(e) => { e.preventDefault(); e.currentTarget.style.background = isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'); handleDropLead(day); }}
@@ -324,16 +403,26 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }}>
                                     
                                     {/* MØDER & LEVERINGER */}
-                                    {events.map(e => (
-                                        <div key={e.id} style={{ background: e.type === 'Levering' ? '#fff7ed' : '#f0fdfa', border: `1px solid ${e.type === 'Levering' ? '#fdba74' : '#5eead4'}`, borderRadius: '8px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: '700', color: e.type === 'Levering' ? '#c2410c' : '#0f766e', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            {e.type === 'Levering' ? <Truck size={12}/> : <Clock size={12}/>}
-                                            {e.startTime} - {e.title}
-                                        </div>
-                                    ))}
+                                    {events.map(e => {
+                                        const style = getEventStyle(e.type);
+                                        const Icon = style.icon;
+                                        return (
+                                            <div key={e.id} onClick={(evt) => evt.stopPropagation()} 
+                                                onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: `${e.type}: ${e.title} (${e.startTime})` }); }}
+                                                onMouseLeave={() => setHoverTooltip(null)}
+                                                style={{ background: style.bg, border: `1px solid ${style.border}`, borderRadius: '8px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: '700', color: style.text, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <Icon size={12}/>
+                                                {e.startTime} - {e.title}
+                                            </div>
+                                        )
+                                    })}
 
                                     {/* FRAVÆR */}
                                     {absences.map((a, i) => (
-                                        <div key={`abs-${i}`} style={{ background: a.absenceType === 'Sygdom' ? '#fef2f2' : '#fff7ed', border: `1px solid ${a.absenceType === 'Sygdom' ? '#fca5a5' : '#fed7aa'}`, borderRadius: '8px', padding: '4px 8px', fontSize: '0.7rem', fontWeight: '700', color: a.absenceType === 'Sygdom' ? '#dc2626' : '#ea580c', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <div key={`abs-${i}`} 
+                                            onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: `${a.absenceType}: ${a.employeeName}` }); }}
+                                            onMouseLeave={() => setHoverTooltip(null)}
+                                            style={{ background: a.absenceType === 'Sygdom' ? '#fef2f2' : '#fff7ed', border: `1px solid ${a.absenceType === 'Sygdom' ? '#fca5a5' : '#fed7aa'}`, borderRadius: '8px', padding: '4px 8px', fontSize: '0.7rem', fontWeight: '700', color: a.absenceType === 'Sygdom' ? '#dc2626' : '#ea580c', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             {a.absenceType === 'Sygdom' ? <Thermometer size={12}/> : <Palmtree size={12}/>}
                                             {a.absenceType}: {a.employeeName?.split(' ')[0]}
                                         </div>
@@ -347,9 +436,12 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                             <div 
                                                 key={lead.id}
                                                 onClick={(e) => {
+                                                    e.stopPropagation();
                                                     const rect = e.currentTarget.getBoundingClientRect();
                                                     setPopoverLead({ lead, x: rect.left, y: rect.top });
                                                 }}
+                                                onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: `Sag: ${lead.project_category} (${lead.case_number || 'Ny'})` }); }}
+                                                onMouseLeave={() => setHoverTooltip(null)}
                                                 draggable={isManager}
                                                 onDragStart={() => setDraggedLead(lead)}
                                                 style={{
@@ -372,25 +464,30 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     })}
                 </div>
             </div>
+            </div>
         );
     };
 
     const renderWeekView = () => {
-        // Find mandag i denne uge
-        const d = new Date(currentDate);
-        const day = d.getDay() === 0 ? 6 : d.getDay() - 1;
-        d.setDate(d.getDate() - day);
+        const startOfWeek = new Date(currentDate);
+        const dayOfWeek = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Mandag er 1
+        startOfWeek.setDate(diff);
 
         return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', flex: 1, height: '100%', overflowY: 'auto' }}>
-                {Array.from({ length: 7 }).map((_, idx) => {
-                    const checkDate = new Date(d);
-                    checkDate.setDate(d.getDate() + idx);
+            <div className="custom-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflowX: 'auto' }}>
+                <div style={{ minWidth: '900px', display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', height: '100%', paddingBottom: '16px' }}>
+                    {Array.from({ length: 7 }).map((_, idx) => {
+                    const checkDate = new Date(startOfWeek);
+                    checkDate.setDate(startOfWeek.getDate() + idx);
                     const isToday = new Date().getDate() === checkDate.getDate() && new Date().getMonth() === checkDate.getMonth();
                     const { isHoliday, leads, absences, events } = getItemsForDay(checkDate);
 
                     return (
-                        <div key={idx} style={{ background: isToday ? '#eff6ff' : '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div key={idx} onClick={() => openModalForDate(checkDate)} style={{ background: isToday ? '#eff6ff' : '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: isManager ? 'pointer' : 'default', transition: 'all 0.2s' }}
+                            onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
+                            onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                        >
                             <div style={{ textAlign: 'center', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
                                 <div style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>{['Man','Tir','Ons','Tor','Fre','Lør','Søn'][idx]}</div>
                                 <div style={{ fontSize: '1.5rem', fontWeight: '800', color: isToday ? '#2563eb' : '#0f172a' }}>{checkDate.getDate()}</div>
@@ -402,7 +499,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 {leads.map(lead => {
                                     const colors = getStatusColor(lead.status);
                                     return (
-                                        <div key={lead.id} onClick={() => onCaseClick(lead)} style={{ background: colors.bg, borderRadius: '8px', padding: '8px', fontSize: '0.8rem', fontWeight: '700', color: colors.text, cursor: 'pointer' }}>
+                                        <div key={lead.id} onClick={(e) => { e.stopPropagation(); onCaseClick(lead); }} style={{ background: colors.bg, borderRadius: '8px', padding: '8px', fontSize: '0.8rem', fontWeight: '700', color: colors.text, cursor: 'pointer' }}>
                                             {lead.case_number} - {lead.project_category}
                                         </div>
                                     )
@@ -421,15 +518,19 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
                             {/* Tidsbestemte Møder under */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-                                {events.map(e => (
-                                    <div key={e.id} style={{ background: e.type==='Levering'?'#fff7ed':'#f0fdfa', borderLeft: `4px solid ${e.type==='Levering'?'#f97316':'#14b8a6'}`, borderRadius: '0 8px 8px 0', padding: '8px', fontSize: '0.8rem' }}>
-                                        <strong>{e.startTime}</strong><br/>{e.title}
-                                    </div>
-                                ))}
+                                {events.map(e => {
+                                    const style = getEventStyle(e.type);
+                                    return (
+                                        <div key={e.id} onClick={(evt) => evt.stopPropagation()} style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, borderRadius: '0 8px 8px 0', padding: '8px', fontSize: '0.8rem' }}>
+                                            <strong>{e.startTime}</strong><br/>{e.title}
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
                     );
                 })}
+                </div>
             </div>
         );
     };
@@ -439,7 +540,13 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', flex: 1, overflowY: 'auto', padding: '4px' }}>
                 {Array.from({ length: 12 }).map((_, mIdx) => {
                     return (
-                        <div key={mIdx} style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px' }}>
+                        <div 
+                            key={mIdx} 
+                            onClick={() => { setView('month'); setCurrentDate(new Date(currentDate.getFullYear(), mIdx, 1)); }}
+                            style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px', cursor: 'pointer', transition: 'all 0.2s' }}
+                            onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 25px -5px rgba(0,0,0,0.1)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
+                            onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                        >
                             <h4 style={{ margin: '0 0 12px', textAlign: 'center', color: '#0f172a' }}>{monthNames[mIdx]}</h4>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                 {Array.from({ length: new Date(currentDate.getFullYear(), mIdx + 1, 0).getDate() }).map((_, dIdx) => {
@@ -448,10 +555,11 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     let color = '#f1f5f9';
                                     if (items.isHoliday) color = '#e2e8f0';
                                     if (items.absences.length > 0) color = '#fed7aa';
-                                    if (items.leads.length > 0) color = '#93c5fd';
+                                    if (items.leads.length > 0) color = getStatusColor(items.leads[0].status).bg;
+                                    if (items.events.length > 0 && items.leads.length === 0) color = '#bae6fd';
                                     if (items.leads.length > 2) color = '#3b82f6'; // Travl
                                     
-                                    return <div key={dIdx} style={{ width: '12px', height: '12px', borderRadius: '3px', background: color }} title={`${dIdx+1}. ${monthNames[mIdx]}`} />
+                                    return <div key={dIdx} onClick={(e) => { e.stopPropagation(); openModalForDate(d); }} style={{ width: '12px', height: '12px', borderRadius: '3px', background: color, cursor: isManager ? 'pointer' : 'default' }} title={`${dIdx+1}. ${monthNames[mIdx]}`} />
                                 })}
                             </div>
                         </div>
@@ -476,6 +584,20 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     </div>
                     
                     <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        {/* Søge felt */}
+                        <div style={{ position: 'relative' }}>
+                            <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                            <input 
+                                type="text" 
+                                placeholder="Søg i kalender..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{ padding: '10px 12px 10px 36px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', outline: 'none', width: '220px', transition: 'all 0.2s', fontWeight: '500' }}
+                                onFocus={e=>e.target.style.borderColor='#3b82f6'}
+                                onBlur={e=>e.target.style.borderColor='#e2e8f0'}
+                            />
+                        </div>
+
                         {/* Medarbejder Filter */}
                         <GorgeousMultiSelect 
                             options={[
@@ -507,6 +629,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 key={v}
                                 onClick={() => setView(v)}
                                 style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: view === v ? '#fff' : 'transparent', color: view === v ? '#0f172a' : '#64748b', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: view === v ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', textTransform: 'capitalize' }}
+                                onMouseOver={e=> { if(view !== v) e.currentTarget.style.color = '#0f172a'; }}
+                                onMouseOut={e=> { if(view !== v) e.currentTarget.style.color = '#64748b'; }}
                             >
                                 {v === 'month' ? 'Måned' : v === 'week' ? 'Uge' : 'År'}
                             </button>
@@ -514,9 +638,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={prevPeriod} style={{ width: '40px', height: '40px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><ChevronLeft size={20}/></button>
-                        <button onClick={() => setCurrentDate(new Date())} style={{ height: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', fontWeight: '600', cursor: 'pointer' }}>I dag</button>
-                        <button onClick={nextPeriod} style={{ width: '40px', height: '40px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><ChevronRight size={20}/></button>
+                        <button onClick={prevPeriod} style={{ width: '40px', height: '40px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e=>e.currentTarget.style.background='#f8fafc'} onMouseOut={e=>e.currentTarget.style.background='#fff'}><ChevronLeft size={20}/></button>
+                        <button onClick={() => setCurrentDate(new Date())} style={{ height: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e=>e.currentTarget.style.background='#f8fafc'} onMouseOut={e=>e.currentTarget.style.background='#fff'}>I dag</button>
+                        <button onClick={nextPeriod} style={{ width: '40px', height: '40px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e=>e.currentTarget.style.background='#f8fafc'} onMouseOut={e=>e.currentTarget.style.background='#fff'}><ChevronRight size={20}/></button>
                     </div>
                 </div>
 
@@ -591,14 +715,14 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         </div>
                         <form onSubmit={saveEvent} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <input required placeholder="Titel (fx Internt Møde, Gipslevering)" value={eventFormData.title} onChange={e=>setEventFormData({...eventFormData, title: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                            {/* Type knapper */}
-                            <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '6px', borderRadius: '12px' }}>
-                                <button type="button" onClick={() => setEventFormData({...eventFormData, type: 'Møde'})} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: eventFormData.type === 'Møde' ? '#fff' : 'transparent', color: eventFormData.type === 'Møde' ? '#0f172a' : '#64748b', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: eventFormData.type === 'Møde' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                    <Users size={16} /> Internt / Kundemøde
-                                </button>
-                                <button type="button" onClick={() => setEventFormData({...eventFormData, type: 'Levering'})} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: eventFormData.type === 'Levering' ? '#fff' : 'transparent', color: eventFormData.type === 'Levering' ? '#0f172a' : '#64748b', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: eventFormData.type === 'Levering' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                    <Truck size={16} /> Materialelevering
-                                </button>
+                            {/* Type knapper erstattet af GorgeousSingleSelect */}
+                            <div style={{ zIndex: 2000, position: 'relative' }}>
+                                <GorgeousSingleSelect
+                                    options={EVENT_TYPES}
+                                    selectedId={eventFormData.type}
+                                    onChange={(newType) => setEventFormData({...eventFormData, type: newType})}
+                                    placeholder="Vælg type"
+                                />
                             </div>
 
                             <div style={{ display: 'flex', gap: '12px' }}>
@@ -606,25 +730,81 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 <input type="time" required value={eventFormData.startTime} onChange={e=>setEventFormData({...eventFormData, startTime: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100px' }} />
                             </div>
 
-                            {/* Deltagere - Modern Chips */}
-                            <div>
-                                <p style={{ margin: '0 0 8px', fontSize: '0.9rem', fontWeight: '700', color: '#0f172a' }}>Deltagere:</p>
-                                <GorgeousMultiSelect 
-                                    options={[
-                                        { id: myProfile?.id, name: myProfile?.owner_name || myProfile?.company_name || 'Mig', isMe: true },
-                                        ...teamMembers.filter(m => String(m.id) !== String(myProfile?.id)).map(m => ({
-                                            id: m.id,
-                                            name: m.owner_name || m.company_name || 'Ukendt',
-                                            isMe: false
-                                        }))
-                                    ]}
-                                    selectedIds={eventFormData.participants}
-                                    onChange={(newIds) => setEventFormData({...eventFormData, participants: newIds.includes('all') ? ['all'] : newIds})}
-                                />
-                            </div>
+                            {eventFormData.type === 'Materialelevering' ? (
+                                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                    <p style={{ margin: '0 0 8px', fontSize: '0.9rem', fontWeight: '700', color: '#0f172a' }}>Vælg Sag (Projekt):</p>
+                                    <div style={{ zIndex: 1000, position: 'relative' }}>
+                                        <GorgeousSingleSelect
+                                            options={relevantLeads.map(lead => ({
+                                                id: lead.id,
+                                                name: `${lead.case_number || String(lead.id).substring(0,6)} - ${lead.raw_data?.project_title || lead.project_category}`
+                                            }))}
+                                            selectedId={eventFormData.selectedLeadId}
+                                            onChange={(newId) => setEventFormData({...eventFormData, selectedLeadId: newId})}
+                                            placeholder="-- Vælg en sag --"
+                                            showSearch={true}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginTop: '12px', background: '#eff6ff', padding: '12px', borderRadius: '8px' }}>
+                                        <AlertCircle size={16} color="#3b82f6" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#1e3a8a', lineHeight: '1.4' }}>De håndværkere og byggeledere, der er tilknyttet denne sag, bliver automatisk sat som deltagere for materialeleveringen.</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <p style={{ margin: '0 0 8px', fontSize: '0.9rem', fontWeight: '700', color: '#0f172a' }}>Deltagere:</p>
+                                    <GorgeousMultiSelect 
+                                        options={[
+                                            { id: myProfile?.id, name: myProfile?.owner_name || myProfile?.company_name || 'Mig', isMe: true },
+                                            ...teamMembers.filter(m => String(m.id) !== String(myProfile?.id)).map(m => ({
+                                                id: m.id,
+                                                name: m.owner_name || m.company_name || 'Ukendt',
+                                                isMe: false
+                                            }))
+                                        ]}
+                                        selectedIds={eventFormData.participants}
+                                        onChange={(newIds) => setEventFormData({...eventFormData, participants: newIds.includes('all') ? ['all'] : newIds})}
+                                    />
+                                </div>
+                            )}
 
                             <button type="submit" style={{ padding: '14px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '8px' }}>Gem Aftale</button>
                         </form>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Hover Tooltip */}
+            <AnimatePresence>
+                {hoverTooltip && createPortal(
+                    <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        style={{ position: 'fixed', left: hoverTooltip.x, top: hoverTooltip.y - 10, transform: 'translate(-50%, -100%)', background: '#0f172a', color: '#fff', padding: '8px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '600', pointerEvents: 'none', zIndex: 100000, boxShadow: '0 10px 25px rgba(0,0,0,0.2)', whiteSpace: 'nowrap' }}
+                    >
+                        {hoverTooltip.content}
+                        <div style={{ position: 'absolute', bottom: '-4px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #0f172a' }} />
+                    </motion.div>,
+                    document.body
+                )}
+            </AnimatePresence>
+
+            {/* MODAL: KOLLISION ADVARSEL */}
+            {collisionWarning && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000 }}>
+                    <div style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '32px', textAlign: 'center' }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: '24px', background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                            <AlertCircle size={24} />
+                        </div>
+                        <h3 style={{ margin: '0 0 12px', fontSize: '1.25rem', color: '#0f172a' }}>Er du sikker?</h3>
+                        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.95rem', lineHeight: '1.5' }}>Der er allerede planlagt en anden sag eller ferie på denne dato. Vil du lægge sagen her alligevel?</p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={() => setCollisionWarning(null)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: '600', cursor: 'pointer' }}>Fortryd</button>
+                            <button onClick={() => confirmScheduleLead(collisionWarning.lead, collisionWarning.selectedDate, collisionWarning.endDate)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#dc2626', color: '#fff', fontWeight: '700', cursor: 'pointer' }}>Ja, planlæg alligevel</button>
+                        </div>
                     </div>
                 </div>,
                 document.body

@@ -3,6 +3,7 @@ import { supabase } from '../../supabaseClient';
 import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SubcontractorManager } from './Subcontractors';
+import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
 
 const roles = [
     { value: 'sales', label: 'Projektleder', desc: 'Ser kun egne leads og opretter tilbud.' },
@@ -119,15 +120,31 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
         }
     };
 
-    const handleLonnummerUpdate = async (employeeId, currentRawData, value) => {
-        const newRawData = { ...currentRawData, lonnummer: value };
-        setTeam(team.map(m => m.id === employeeId ? { ...m, raw_data: newRawData } : m));
-        const { error } = await supabase
-            .from('carpenters')
-            .update({ raw_data: newRawData })
-            .eq('id', employeeId);
+    // Lokal redigering mens man taster (gemmes ikke endnu)
+    const handleLonnummerInput = (employeeId, value) => {
+        setTeam(team.map(m => m.id === employeeId ? { ...m, raw_data: { ...(m.raw_data || {}), lonnummer: value } } : m));
+    };
+
+    // Validér + gem ved blur: kun tal, og må ikke være i brug af en anden
+    const handleLonnummerBlur = async (member) => {
+        const v = String(member.raw_data?.lonnummer ?? '').trim();
+        if (v && !isValidLonnummer(v)) {
+            toast.error('Lønnummer må kun indeholde tal.');
+            fetchTeam();
+            return;
+        }
+        const dup = [...team, { id: profile.id, raw_data: profile.raw_data }]
+            .some(m => m.id !== member.id && v && String(m.raw_data?.lonnummer ?? '').trim() === v);
+        if (dup) {
+            toast.error('Lønnummeret er allerede i brug af en anden.');
+            fetchTeam();
+            return;
+        }
+        const newRawData = { ...(member.raw_data || {}), lonnummer: v };
+        const { error } = await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', member.id);
         if (error) {
             console.error("Kunne ikke opdatere lønnummer:", error);
+            toast.error('Kunne ikke gemme lønnummer.');
             fetchTeam();
         }
     };
@@ -159,10 +176,21 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             const result = await response.json();
 
             if (response.ok) {
+                // Auto-tildel næste ledige lønnummer, så det aldrig glemmes (kan ændres bagefter).
+                const existingNumbers = [
+                    ...team.map(m => m.raw_data?.lonnummer),
+                    profile.raw_data?.lonnummer
+                ].filter(Boolean);
+                const autoLonnummer = nextLonnummer(existingNumbers);
+
+                // Hent ny række så vi ikke overskriver evt. raw_data sat ved oprettelsen
+                const { data: newRow } = await supabase.from('carpenters').select('raw_data').eq('email', inviteData.email).single();
+                const mergedRaw = { ...(newRow?.raw_data || {}), lonnummer: autoLonnummer };
+
                 // Sikr at requires_password_change står til true i databasen for den nye bruger, så de får pop-uppen!
-                await supabase.from('carpenters').update({ requires_password_change: true }).eq('email', inviteData.email);
-                
-                setSuccessMsg(`Medarbejder oprettet! Der er automatisk sendt en velkomstmail med login-oplysninger.`);
+                await supabase.from('carpenters').update({ requires_password_change: true, raw_data: mergedRaw }).eq('email', inviteData.email);
+
+                setSuccessMsg(`Medarbejder oprettet med lønnummer ${autoLonnummer}! Der er automatisk sendt en velkomstmail med login-oplysninger.`);
                 setInviteData({ name: '', email: '', phone: '', role: 'sales' });
                 fetchTeam(); // Opdater listen
             } else {
@@ -604,7 +632,8 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                                 type="text"
                                                                                 value={member.raw_data?.lonnummer ?? ''}
                                                                                 placeholder="f.eks. 1001"
-                                                                                onChange={(e) => handleLonnummerUpdate(member.id, member.raw_data || {}, e.target.value)}
+                                                                                inputMode="numeric"
+                                                                                onChange={(e) => handleLonnummerInput(member.id, e.target.value)}
                                                                                 style={{
                                                                                     width: '110px',
                                                                                     padding: '10px 12px',
@@ -620,7 +649,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                                     outline: 'none'
                                                                                 }}
                                                                                 onFocus={(e) => { e.target.style.borderColor = '#7c3aed'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)'; }}
-                                                                                onBlur={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.background = 'var(--surface-bg)'; e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05)'; }}
+                                                                                onBlur={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.background = 'var(--surface-bg)'; e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05)'; handleLonnummerBlur(member); }}
                                                                             />
                                                                         </div>
                                                                     </div>

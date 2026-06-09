@@ -5,7 +5,7 @@ import { supabase } from '../../supabaseClient';
 
 const BilagManager = ({ lead, profile, onUpdateLead }) => {
     const [showUploadForm, setShowUploadForm] = useState(false);
-    const [newSupplierInvoice, setNewSupplierInvoice] = useState({ amount: '', description: '', category: 'Materialer', file_data: null, file_name: '' });
+    const [newSupplierInvoice, setNewSupplierInvoice] = useState({ amount: '', description: '', category: 'Materialer', file: null, file_name: '' });
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
     const [sendingId, setSendingId] = useState(null);
     const [isSendingAll, setIsSendingAll] = useState(false);
@@ -159,16 +159,35 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
             return;
         }
 
+        let fileUrl = null;
+        try {
+            if (newSupplierInvoice.file) {
+                const f = newSupplierInvoice.file;
+                const ext = (f.name.split('.').pop() || 'pdf').toLowerCase();
+                const fileName = `bilag_${lead.id}_${Date.now()}.${ext}`;
+                const { error: uploadError } = await supabase.storage
+                    .from('uploads')
+                    .upload(fileName, f, { cacheControl: '3600', upsert: false });
+                if (uploadError) throw uploadError;
+                const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
+                fileUrl = publicUrl;
+            }
+        } catch (err) {
+            console.error("Fejl ved upload af bilagsfil:", err);
+            toast.error("Kunne ikke uploade filen. Prøv igen.");
+            return;
+        }
+
         const newInv = {
             id: `supp_${Date.now()}`,
-            name: newSupplierInvoice.description, 
+            name: newSupplierInvoice.description,
             description: newSupplierInvoice.description,
             amount: parseFloat(String(newSupplierInvoice.amount).replace(/\./g, '').replace(',', '.')) || 0,
             date: new Date().toISOString(),
             uploaded_by: profile?.owner_name || profile?.email || 'Ukendt',
             status: 'Godkendt',
             category: newSupplierInvoice.category || 'Materialer',
-            file_data: newSupplierInvoice.file_data,
+            file_url: fileUrl,        // Storage-URL (nyt)
             file_name: newSupplierInvoice.file_name
         };
 
@@ -196,7 +215,7 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
             }
             
             toast.success("Bilag gemt!");
-            setNewSupplierInvoice({ amount: '', description: '', category: 'Materialer', file_data: null, file_name: '' });
+            setNewSupplierInvoice({ amount: '', description: '', category: 'Materialer', file: null, file_name: '' });
             setShowUploadForm(false);
         } catch (err) {
             console.error("Fejl ved gem bilag:", err);
@@ -213,16 +232,13 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
             return;
         }
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setNewSupplierInvoice(prev => ({
-                ...prev,
-                file_data: reader.result,
-                file_name: file.name
-            }));
-            toast.success("Fil vedhæftet!");
-        };
-        reader.readAsDataURL(file);
+        // Gem selve filen (uploades til Storage ved gem) — ikke base64 i databasen
+        setNewSupplierInvoice(prev => ({
+            ...prev,
+            file,
+            file_name: file.name
+        }));
+        toast.success("Fil vedhæftet!");
     };
 
     return (
@@ -261,7 +277,7 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
                                     onChange={handleFileUpload}
                                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}
                                 />
-                                {newSupplierInvoice.file_data ? (
+                                {newSupplierInvoice.file ? (
                                     <>
                                         <div style={{ color: '#10b981', marginBottom: '4px' }}><CheckCircle2 size={24} /></div>
                                         <div style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: 'bold' }}>{newSupplierInvoice.file_name}</div>
@@ -370,17 +386,17 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
                                 key={inv.id} 
                                 className="log-card"
                                 onClick={() => {
-                                    if (inv.file_data) {
-                                        const newWindow = window.open();
-                                        newWindow.document.write(`<iframe src="${inv.file_data}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                                    const fileSrc = inv.file_url || inv.file_data;
+                                    if (fileSrc) {
+                                        window.open(fileSrc, '_blank', 'noopener,noreferrer');
                                     } else {
                                         toast.error("Intet fysisk bilag vedhæftet.");
                                     }
                                 }}
-                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: inv.file_data ? 'pointer' : 'default' }}
+                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: (inv.file_url || inv.file_data) ? 'pointer' : 'default' }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flex: 1, minWidth: 0 }}>
-                                    <div style={{ color: inv.file_data ? '#10b981' : '#cbd5e1', marginTop: '4px' }}>
+                                    <div style={{ color: (inv.file_url || inv.file_data) ? '#10b981' : '#cbd5e1', marginTop: '4px' }}>
                                         <FileText size={24} />
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>

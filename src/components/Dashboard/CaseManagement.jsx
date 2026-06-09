@@ -700,6 +700,28 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         }
     };
 
+    // Samtidigheds-sikker mutation af en liste i raw_data: henter altid den FRISKE
+    // liste fra DB og fletter ændringen ind på element-niveau, så to brugere der
+    // arbejder på samme sag samtidig ikke overskriver hinandens registreringer.
+    const mutateCaseField = async (field, mutator, applyLocal) => {
+        try {
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', selectedCase.id).single();
+            const currentRawData = latestData?.raw_data || selectedCase.raw_data || {};
+            const currentArr = Array.isArray(currentRawData[field]) ? currentRawData[field] : [];
+            const newArr = mutator(currentArr);
+            const updatedRawData = { ...currentRawData, [field]: newArr };
+            const { error } = await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', selectedCase.id);
+            if (error) throw error;
+            if (applyLocal) applyLocal(newArr);
+            if (onUpdateLead) onUpdateLead({ ...selectedCase, raw_data: updatedRawData });
+            return newArr;
+        } catch (err) {
+            console.error(`Kunne ikke gemme ${field}:`, err);
+            toast.error('Kunne ikke gemme – tjek forbindelsen og prøv igen.');
+            return null;
+        }
+    };
+
     // Delegerings-håndtering
     const handleSaveAssignments = async () => {
         setIsSavingTeam(true);
@@ -895,12 +917,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             photos: uploadedPhotoUrls
         };
 
-        const updated = [newLog, ...logsList];
-        setLogsList(updated);
+        // Tilføj til frisk liste, så samtidige logposter fra andre på sagen bevares
+        await mutateCaseField('logs', arr => [newLog, ...arr], setLogsList);
         setNewLogText('');
         setLogPhotos([]);
         setLogFiles([]);
-        saveCaseDataToDb({ logs: updated });
         setIsUploadingLog(false);
         toast.success('Dagens arbejde gemt!');
     };
@@ -948,7 +969,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     // Timeregistrering-håndtering
-    const handleAddTimeEntry = (e) => {
+    const handleAddTimeEntry = async (e) => {
         e.preventDefault();
         
         const effectiveEmployeeId = newTime.employeeId || profile?.id;
@@ -996,43 +1017,29 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         const manualHours = parseFloat(String(newTime.hours ?? '').replace(',', '.'));
         const finalHours = (newTime.hours !== '' && newTime.hours != null && !isNaN(manualHours)) ? manualHours : diffHours;
 
-        let updated;
+        const fields = {
+            startTime: newTime.startTime,
+            endTime: newTime.endTime,
+            hours: finalHours,
+            date: newTime.date,
+            desc: (newTime.desc || '').trim() || 'Almindeligt tømrerarbejde',
+            employeeId: effectiveEmployeeId,
+            employeeName: employeeName
+        };
+
         if (editingTimeId) {
-            updated = timeEntries.map(t => {
-                if (t.id === editingTimeId) {
-                    return {
-                        ...t,
-                        startTime: newTime.startTime,
-                        endTime: newTime.endTime,
-                        hours: finalHours,
-                        date: newTime.date,
-                        desc: (newTime.desc || '').trim() || 'Almindeligt tømrerarbejde',
-                        employeeId: effectiveEmployeeId,
-                        employeeName: employeeName
-                    };
-                }
-                return t;
-            });
+            // Flet mod frisk liste: opdater kun den ene registrering (rør ikke andres)
+            await mutateCaseField('time_entries', arr => arr.map(t => t.id === editingTimeId ? { ...t, ...fields } : t), setTimeEntries);
             toast.success('Timeregistrering opdateret!');
             setEditingTimeId(null);
         } else {
-            const entry = {
-                id: `time-${Date.now()}`,
-                startTime: newTime.startTime,
-                endTime: newTime.endTime,
-                hours: diffHours,
-                date: newTime.date,
-                desc: (newTime.desc || '').trim() || 'Almindeligt tømrerarbejde',
-                employeeId: effectiveEmployeeId,
-                employeeName: employeeName
-            };
-            updated = [entry, ...timeEntries];
+            const entry = { id: `time-${Date.now()}`, ...fields };
+            // Tilføj til frisk liste, så samtidige registreringer fra andre bevares
+            await mutateCaseField('time_entries', arr => [entry, ...arr], setTimeEntries);
             toast.success('Timer registreret på sagen!');
         }
 
-        setTimeEntries(updated);
         setNewTime({ startTime: '07:00', endTime: '15:00', date: new Date().toISOString().substring(0, 10), desc: '', employeeId: ['worker', 'apprentice', 'sales'].includes(simulatedRole || profile?.role) ? profile.id : '' });
-        saveCaseDataToDb({ time_entries: updated });
     };
 
     const handleEditTime = (entry) => {
@@ -1055,7 +1062,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         setDeletingTimeEntryId(entryId);
     };
 
-    const confirmDeleteTime = () => {
+    const confirmDeleteTime = async () => {
         if (!deletingTimeEntryId) return;
         const target = timeEntries.find(t => t.id === deletingTimeEntryId);
         if (target && isTimeLocked(target.date)) {
@@ -1063,9 +1070,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             setDeletingTimeEntryId(null);
             return;
         }
-        const updated = timeEntries.filter(t => t.id !== deletingTimeEntryId);
-        setTimeEntries(updated);
-        saveCaseDataToDb({ time_entries: updated });
+        // Slet kun den ene registrering mod frisk liste (rør ikke andres)
+        await mutateCaseField('time_entries', arr => arr.filter(t => t.id !== deletingTimeEntryId), setTimeEntries);
         toast.success('Timeregistrering slettet.');
         setDeletingTimeEntryId(null);
     };

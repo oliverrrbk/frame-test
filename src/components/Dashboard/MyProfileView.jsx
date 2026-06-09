@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { User, Lock, Upload, Camera, Smartphone, Copy, CheckCircle } from 'lucide-react';
+import PushSubscriber from './PushSubscriber';
 
 const MyProfileView = ({ myProfile, setMyProfile }) => {
 
@@ -302,6 +303,11 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div className="settings-card" style={{ marginTop: '32px', background: '#ffffff', border: '1px solid #e2e8f0', overflow: 'hidden', padding: '24px' }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: '1.2rem', color: '#0f172a', fontWeight: 'bold' }}>Notifikationer</h3>
+            <PushSubscriber />
         </div>
         </>
     );

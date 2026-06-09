@@ -554,6 +554,19 @@ export default function AdminTimesheet({ leadsData, profile }) {
         setExportMenuOpen(false);
     };
 
+    // Gem den aktuelle brugers (Mester/Bogholder) eget lønnummer — med validering.
+    const saveActorLonnummer = async (value) => {
+        const v = String(value ?? '').trim();
+        if (v && !/^\d+$/.test(v)) throw new Error('Lønnummer må kun indeholde tal.');
+        const dup = teamMembers.some(m => m.id !== profile.id && v && String(m.raw_data?.lonnummer ?? '').trim() === v);
+        if (dup) throw new Error('Lønnummeret er allerede i brug af en anden.');
+        const me = teamMembers.find(m => m.id === profile.id);
+        const newRaw = { ...(me?.raw_data || {}), lonnummer: v };
+        const { error } = await supabase.from('carpenters').update({ raw_data: newRaw }).eq('id', profile.id);
+        if (error) throw new Error(error.message);
+        setTeamMembers(prev => prev.map(m => m.id === profile.id ? { ...m, raw_data: newRaw } : m));
+    };
+
     const handleDeleteEntry = (entry) => {
         setDeletingEntry(entry);
     };
@@ -909,6 +922,9 @@ export default function AdminTimesheet({ leadsData, profile }) {
                         actorName={profile?.owner_name || profile?.company_name || profile?.email}
                         settings={payrollSettings}
                         onUpdated={setPayrollSettings}
+                        actorLonnummer={teamMembers.find(m => m.id === profile?.id)?.raw_data?.lonnummer || ''}
+                        existingLonnumre={teamMembers.filter(m => m.id !== profile?.id).map(m => m.raw_data?.lonnummer).filter(Boolean)}
+                        onSaveActorLonnummer={saveActorLonnummer}
                     />
                 </div>
             </div>

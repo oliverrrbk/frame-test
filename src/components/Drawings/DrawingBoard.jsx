@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2 } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet } from 'lucide-react';
 import { getElementBounds, getElementAtPosition, rotatePoint, findSnapPoint, getConnectedModule } from './engineUtils';
 import { getDrawingBounds, renderElementsToCanvas } from './renderUtils';
 
@@ -239,6 +239,22 @@ const getShapeMetrics = (element, settings = null) => {
     };
 };
 
+const parseLengthInputToDrawingUnits = (value, settings = null) => {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+
+    const physicalMeters = parseMeasurementText(raw);
+    if (physicalMeters) {
+        const scale = settings?.measurementScale?.metersPerUnit;
+        if (!Number.isFinite(scale) || scale <= 0) return { error: 'Kalibrer målestok før du bruger cm/m.' };
+        return { value: physicalMeters / scale };
+    }
+
+    const numericValue = Number(raw.replace(',', '.').replace(/[^\d.-]/g, ''));
+    if (!Number.isFinite(numericValue) || numericValue <= 0) return null;
+    return { value: numericValue };
+};
+
 const transformBoxElement = (element, transformPoint, mode) => {
     const p1 = { x: element.x, y: element.y };
     const p2 = { x: element.x + element.w, y: element.y };
@@ -269,6 +285,31 @@ const transformBoxElement = (element, transformPoint, mode) => {
         w: nextP3.x - nextP1.x,
         h: nextP3.y - nextP1.y
     };
+};
+
+const translateElement = (element, dx, dy) => {
+    if (element.type === 'pen' || element.type === 'freehand') {
+        return {
+            ...element,
+            points: (element.points || []).map(p => ({ x: p.x + dx, y: p.y + dy }))
+        };
+    }
+
+    if (element.type === 'line' || element.type === 'arrow' || element.type === 'dimension') {
+        return {
+            ...element,
+            x: element.x + dx,
+            y: element.y + dy,
+            endX: element.endX + dx,
+            endY: element.endY + dy
+        };
+    }
+
+    if (['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(element.type)) {
+        return { ...element, x: element.x + dx, y: element.y + dy };
+    }
+
+    return element;
 };
 
 const DrawingBoard = ({ drawingId, leadId, onClose }) => {
@@ -307,6 +348,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         marqueeCurrentPoint: null,
         isSpaceDown: false,
         showGrid: false,
+        snapEnabled: true,
         fontSize: 20,
         snapPoint: null
     });
@@ -482,6 +524,196 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         setElements(updatedElements);
     }, [getSelectionWithChildren, pushHistory]);
 
+    const groupSelectedElements = useCallback(() => {
+        const directSelectedIds = appState.selectedElementIds?.length > 1
+            ? appState.selectedElementIds
+            : getSelectedIds();
+
+        if (directSelectedIds.length < 2) {
+            toast.error('Vælg mindst to elementer for at gruppere.');
+            return;
+        }
+
+        const selectedIds = getSelectionWithChildren(directSelectedIds);
+        const firstElement = activeElementsRef.current.find(el => el.id === directSelectedIds[0]);
+        const rootId = firstElement?.parentId || firstElement?.id;
+        if (!rootId) return;
+
+        pushHistory(activeElementsRef.current);
+        const selectedSet = new Set(selectedIds);
+        const updatedElements = activeElementsRef.current.map(el => {
+            if (!selectedSet.has(el.id) || el.id === rootId || el.type === 'settings') return el;
+            return { ...el, parentId: rootId };
+        });
+
+        activeElementsRef.current = updatedElements;
+        setElements(updatedElements);
+        setAppState(s => ({
+            ...s,
+            tool: 'select',
+            selectedElementId: rootId,
+            selectedElementIds: [],
+            editingTextId: null
+        }));
+    }, [appState.selectedElementIds, getSelectedIds, getSelectionWithChildren, pushHistory]);
+
+    const ungroupSelectedElements = useCallback(() => {
+        const selectedIds = getSelectionWithChildren();
+        if (selectedIds.length === 0) return;
+
+        const selectedSet = new Set(selectedIds);
+        const hasGroupLinks = activeElementsRef.current.some(el => selectedSet.has(el.id) && el.parentId && selectedSet.has(el.parentId));
+        if (!hasGroupLinks) {
+            toast.error('Der er ikke en gruppe at opløse.');
+            return;
+        }
+
+        pushHistory(activeElementsRef.current);
+        const updatedElements = activeElementsRef.current.map(el => {
+            if (selectedSet.has(el.id) && el.parentId && selectedSet.has(el.parentId)) {
+                const { parentId, ...rest } = el;
+                return rest;
+            }
+            return el;
+        });
+
+        activeElementsRef.current = updatedElements;
+        setElements(updatedElements);
+        setAppState(s => ({
+            ...s,
+            tool: 'select',
+            selectedElementId: null,
+            selectedElementIds: selectedIds.filter(id => id !== SETTINGS_ELEMENT_ID),
+            editingTextId: null
+        }));
+    }, [getSelectionWithChildren, pushHistory]);
+
+    const alignSelectedElements = useCallback((mode) => {
+        const selectedIds = getSelectionWithChildren();
+        if (selectedIds.length < 2) return;
+
+        const selectedSet = new Set(selectedIds);
+        const unitRootIds = selectedIds.filter(id => {
+            const el = activeElementsRef.current.find(item => item.id === id);
+            if (!el || el.type === 'settings') return false;
+            return !el.parentId || !selectedSet.has(el.parentId);
+        });
+
+        const units = unitRootIds.map(rootId => {
+            const unitElements = activeElementsRef.current.filter(el => (
+                el.id === rootId || el.parentId === rootId
+            ));
+            return {
+                rootId,
+                elementIds: unitElements.map(el => el.id),
+                bounds: getDrawingBounds(unitElements),
+                locked: unitElements.some(el => el.locked)
+            };
+        }).filter(unit => unit.bounds);
+
+        if (units.length < 2) return;
+
+        const overallBounds = getDrawingBounds(units.flatMap(unit => (
+            activeElementsRef.current.filter(el => unit.elementIds.includes(el.id))
+        )));
+        if (!overallBounds) return;
+
+        const getDelta = (bounds) => {
+            if (mode === 'left') return { dx: overallBounds.x - bounds.x, dy: 0 };
+            if (mode === 'centerX') return { dx: overallBounds.cx - bounds.cx, dy: 0 };
+            if (mode === 'right') return { dx: (overallBounds.x + overallBounds.w) - (bounds.x + bounds.w), dy: 0 };
+            if (mode === 'top') return { dx: 0, dy: overallBounds.y - bounds.y };
+            if (mode === 'centerY') return { dx: 0, dy: overallBounds.cy - bounds.cy };
+            if (mode === 'bottom') return { dx: 0, dy: (overallBounds.y + overallBounds.h) - (bounds.y + bounds.h) };
+            return { dx: 0, dy: 0 };
+        };
+
+        const moveMap = new Map();
+        units.forEach(unit => {
+            if (unit.locked) return;
+            const delta = getDelta(unit.bounds);
+            unit.elementIds.forEach(id => moveMap.set(id, delta));
+        });
+
+        if (moveMap.size === 0) return;
+
+        pushHistory(activeElementsRef.current);
+        const updatedElements = activeElementsRef.current.map(el => {
+            const delta = moveMap.get(el.id);
+            if (!delta || el.locked || el.type === 'settings') return el;
+            return translateElement(el, delta.dx, delta.dy);
+        });
+
+        activeElementsRef.current = updatedElements;
+        setElements(updatedElements);
+        setAppState(s => ({ ...s, tool: 'select', editingTextId: null }));
+    }, [getSelectionWithChildren, pushHistory]);
+
+    const distributeSelectedElements = useCallback((axis) => {
+        const selectedIds = getSelectionWithChildren();
+        if (selectedIds.length < 3) return;
+
+        const selectedSet = new Set(selectedIds);
+        const unitRootIds = selectedIds.filter(id => {
+            const el = activeElementsRef.current.find(item => item.id === id);
+            if (!el || el.type === 'settings') return false;
+            return !el.parentId || !selectedSet.has(el.parentId);
+        });
+
+        const units = unitRootIds.map(rootId => {
+            const unitElements = activeElementsRef.current.filter(el => (
+                el.id === rootId || el.parentId === rootId
+            ));
+            return {
+                rootId,
+                elementIds: unitElements.map(el => el.id),
+                bounds: getDrawingBounds(unitElements),
+                locked: unitElements.some(el => el.locked)
+            };
+        }).filter(unit => unit.bounds);
+
+        if (units.length < 3) return;
+
+        const isHorizontal = axis === 'horizontal';
+        const sortedUnits = [...units].sort((a, b) => (
+            isHorizontal ? a.bounds.x - b.bounds.x : a.bounds.y - b.bounds.y
+        ));
+        const first = sortedUnits[0];
+        const last = sortedUnits[sortedUnits.length - 1];
+        const totalSize = sortedUnits.reduce((sum, unit) => sum + (isHorizontal ? unit.bounds.w : unit.bounds.h), 0);
+        const start = isHorizontal ? first.bounds.x : first.bounds.y;
+        const end = isHorizontal ? last.bounds.x + last.bounds.w : last.bounds.y + last.bounds.h;
+        const availableGap = end - start - totalSize;
+        const gap = availableGap / (sortedUnits.length - 1);
+
+        const moveMap = new Map();
+        let cursor = start;
+        sortedUnits.forEach(unit => {
+            const currentStart = isHorizontal ? unit.bounds.x : unit.bounds.y;
+            const deltaValue = cursor - currentStart;
+            if (!unit.locked) {
+                unit.elementIds.forEach(id => moveMap.set(id, {
+                    dx: isHorizontal ? deltaValue : 0,
+                    dy: isHorizontal ? 0 : deltaValue
+                }));
+            }
+            cursor += (isHorizontal ? unit.bounds.w : unit.bounds.h) + gap;
+        });
+
+        if (moveMap.size === 0) return;
+
+        pushHistory(activeElementsRef.current);
+        const updatedElements = activeElementsRef.current.map(el => {
+            const delta = moveMap.get(el.id);
+            if (!delta || el.locked || el.type === 'settings') return el;
+            return translateElement(el, delta.dx, delta.dy);
+        });
+
+        activeElementsRef.current = updatedElements;
+        setElements(updatedElements);
+        setAppState(s => ({ ...s, tool: 'select', editingTextId: null }));
+    }, [getSelectionWithChildren, pushHistory]);
+
     const transformSelectedElements = useCallback((mode) => {
         const selectedIds = getSelectionWithChildren();
         if (selectedIds.length === 0) return;
@@ -655,6 +887,43 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         }));
     }, [appState.color, appState.fontSize, appState.selectedElementId, appState.strokeWidth, pushHistory]);
 
+    const updateSelectedShapeSize = useCallback((axis, rawValue) => {
+        const shapeId = appState.selectedElementId;
+        const shapeElement = activeElementsRef.current.find(el => el.id === shapeId);
+        const settings = getDrawingSettings(activeElementsRef.current);
+        const parsed = parseLengthInputToDrawingUnits(rawValue, settings);
+
+        if (!shapeElement || !SHAPE_DIMENSION_TYPES.includes(shapeElement.type)) return;
+        if (shapeElement.locked) {
+            toast.error('Elementet er låst.');
+            return;
+        }
+        if (!parsed || !parsed.value) return;
+        if (parsed.error) {
+            toast.error(parsed.error);
+            return;
+        }
+
+        const bounds = getElementBounds(shapeElement);
+        const nextValue = Math.max(1, parsed.value);
+
+        pushHistory(activeElementsRef.current);
+        const updatedElements = activeElementsRef.current.map(el => {
+            if (el.id !== shapeId) return el;
+            return {
+                ...el,
+                x: bounds.x,
+                y: bounds.y,
+                w: axis === 'width' ? nextValue : bounds.w,
+                h: axis === 'height' ? nextValue : bounds.h
+            };
+        });
+
+        activeElementsRef.current = updatedElements;
+        setElements(updatedElements);
+        setAppState(s => ({ ...s, tool: 'select', editingTextId: null }));
+    }, [appState.selectedElementId, pushHistory]);
+
     const toggleSelectedLock = useCallback(() => {
         const selectedIds = getSelectionWithChildren();
         if (selectedIds.length === 0) return;
@@ -679,13 +948,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         const updatedElements = activeElementsRef.current.map(el => {
             const isMoving = selectedSet.has(el.id) || selectedSet.has(el.parentId);
             if (!isMoving || el.locked) return el;
-            if (el.type === 'pen') {
-                return { ...el, points: el.points.map(p => ({ x: p.x + dx, y: p.y + dy })) };
-            }
-            if (el.type === 'arrow' || el.type === 'line' || el.type === 'dimension') {
-                return { ...el, x: el.x + dx, y: el.y + dy, endX: el.endX + dx, endY: el.endY + dy };
-            }
-            return { ...el, x: el.x + dx, y: el.y + dy };
+            return translateElement(el, dx, dy);
         });
         activeElementsRef.current = updatedElements;
         setElements(updatedElements);
@@ -1025,7 +1288,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
     useEffect(() => {
         redraw();
-    }, [appState.editingTextId, appState.showGrid, redraw]);
+    }, [appState.editingTextId, appState.showGrid, appState.snapEnabled, redraw]);
 
     useEffect(() => {
         viewInitializedRef.current = false;
@@ -1277,14 +1540,14 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 
                 if (el.type === 'arrow' || el.type === 'dimension' || el.type === 'line') {
                     if (appState.resizing === 'start') {
-                        const snap = findSnapPoint(localPos, activeElementsRef.current, el.id);
+                        const snap = appState.snapEnabled && !e.altKey ? findSnapPoint(localPos, activeElementsRef.current, el.id) : null;
                         setAppState(s => ({ ...s, snapPoint: snap }));
                         const rawPos = snap || localPos;
                         const nextPos = e.shiftKey ? constrainAngle({ x: el.endX, y: el.endY }, rawPos) : rawPos;
                         return { ...el, x: nextPos.x, y: nextPos.y };
                     }
                     if (appState.resizing === 'end') {
-                        const snap = findSnapPoint(localPos, activeElementsRef.current, el.id);
+                        const snap = appState.snapEnabled && !e.altKey ? findSnapPoint(localPos, activeElementsRef.current, el.id) : null;
                         setAppState(s => ({ ...s, snapPoint: snap }));
                         const rawPos = snap || localPos;
                         const nextPos = e.shiftKey ? constrainAngle({ x: el.x, y: el.y }, rawPos) : rawPos;
@@ -1361,7 +1624,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     return { ...el, points: [...el.points, pos] };
                 }
                 else if (['rectangle', 'circle', 'image', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(appState.tool)) {
-                    const snap = findSnapPoint(pos, activeElementsRef.current, el.id);
+                    const snap = appState.snapEnabled && !e.altKey ? findSnapPoint(pos, activeElementsRef.current, el.id) : null;
                     setAppState(s => ({ ...s, snapPoint: snap }));
                     const endPos = snap || pos;
                     let w = endPos.x - el.x;
@@ -1374,7 +1637,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     return { ...el, w, h };
                 }
                 else if (['arrow', 'dimension', 'line', 'callout'].includes(appState.tool)) {
-                    const snap = findSnapPoint(pos, activeElementsRef.current, el.id);
+                    const snap = appState.snapEnabled && !e.altKey ? findSnapPoint(pos, activeElementsRef.current, el.id) : null;
                     setAppState(s => ({ ...s, snapPoint: snap }));
                     const rawEndPos = snap || pos;
                     const endPos = e.shiftKey ? constrainAngle({ x: el.x, y: el.y }, rawEndPos) : rawEndPos;
@@ -2128,6 +2391,10 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const selectedIdsForPanel = hasSelection ? getSelectionWithChildren() : [];
     const selectedLockableElements = elements.filter(el => selectedIdsForPanel.includes(el.id) && el.type !== 'settings');
     const selectionIsLocked = selectedLockableElements.length > 0 && selectedLockableElements.every(el => el.locked);
+    const canGroupSelection = appState.selectedElementIds?.length > 1;
+    const canUngroupSelection = selectedLockableElements.some(el => el.parentId && selectedIdsForPanel.includes(el.parentId));
+    const canAlignSelection = selectedLockableElements.length > 1;
+    const canDistributeSelection = selectedLockableElements.length > 2;
 
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', width: '100vw', height: '100vh', overflow: 'hidden' }}>
@@ -2440,6 +2707,40 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                             <div>B {selectedShapeMetrics.widthLabel}</div>
                             <div>H {selectedShapeMetrics.heightLabel}</div>
                         </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '18px 1fr', gap: 4, width: 86, alignItems: 'center' }}>
+                            {[
+                                { axis: 'width', label: 'B', value: selectedShapeMetrics.widthLabel },
+                                { axis: 'height', label: 'H', value: selectedShapeMetrics.heightLabel }
+                            ].map(item => (
+                                <React.Fragment key={item.axis}>
+                                    <span style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textAlign: 'center' }}>{item.label}</span>
+                                    <input
+                                        key={`${selectedElement.id}-${item.axis}-${item.value}`}
+                                        defaultValue={item.value}
+                                        disabled={selectedElement.locked}
+                                        onBlur={(e) => updateSelectedShapeSize(item.axis, e.target.value)}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') e.currentTarget.blur();
+                                            if (e.key === 'Escape') e.currentTarget.blur();
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            height: 25,
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: 7,
+                                            padding: '0 6px',
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            color: '#0f172a',
+                                            outline: 'none',
+                                            background: selectedElement.locked ? '#f1f5f9' : '#ffffff'
+                                        }}
+                                        title={`${item.label} præcis størrelse`}
+                                    />
+                                </React.Fragment>
+                            ))}
+                        </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, width: 78 }}>
                             <button
                                 onClick={() => addDimensionForSelectedShape('width')}
@@ -2556,6 +2857,51 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
                 {hasSelection && (
                     <>
+                        {canAlignSelection && (
+                            <>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: 78 }}>
+                                    {[
+                                        { mode: 'left', icon: AlignHorizontalJustifyStart, title: 'Ret venstre' },
+                                        { mode: 'centerX', icon: AlignHorizontalJustifyCenter, title: 'Ret lodret center' },
+                                        { mode: 'right', icon: AlignHorizontalJustifyEnd, title: 'Ret højre' },
+                                        { mode: 'top', icon: AlignVerticalJustifyStart, title: 'Ret top' },
+                                        { mode: 'centerY', icon: AlignVerticalJustifyCenter, title: 'Ret vandret center' },
+                                        { mode: 'bottom', icon: AlignVerticalJustifyEnd, title: 'Ret bund' }
+                                    ].map(item => (
+                                        <button
+                                            key={item.mode}
+                                            onClick={() => alignSelectedElements(item.mode)}
+                                            className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                            style={{ width: 23, height: 23 }}
+                                            title={item.title}
+                                        >
+                                            <item.icon size={14} />
+                                        </button>
+                                    ))}
+                                </div>
+                                {canDistributeSelection && (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, width: 78, marginTop: 4 }}>
+                                        <button
+                                            onClick={() => distributeSelectedElements('horizontal')}
+                                            className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                            style={{ height: 24 }}
+                                            title="Fordel vandret"
+                                        >
+                                            <AlignHorizontalSpaceBetween size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => distributeSelectedElements('vertical')}
+                                            className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                            style={{ height: 24 }}
+                                            title="Fordel lodret"
+                                        >
+                                            <AlignVerticalSpaceBetween size={14} />
+                                        </button>
+                                    </div>
+                                )}
+                                <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
+                            </>
+                        )}
                         <button
                             onClick={() => transformSelectedElements('rotate90')}
                             className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
@@ -2584,6 +2930,22 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                             title="Dupliker"
                         >
                             <Copy size={18} />
+                        </button>
+                        <button
+                            onClick={groupSelectedElements}
+                            disabled={!canGroupSelection}
+                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-all active:scale-95"
+                            title="Gruppér valgte"
+                        >
+                            <Group size={18} />
+                        </button>
+                        <button
+                            onClick={ungroupSelectedElements}
+                            disabled={!canUngroupSelection}
+                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-all active:scale-95"
+                            title="Opløs gruppe"
+                        >
+                            <Ungroup size={18} />
                         </button>
                         <button
                             onClick={() => moveSelectedLayer('front')}
@@ -2624,6 +2986,14 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     title={appState.showGrid ? 'Skjul hjælpegrid' : 'Vis hjælpegrid'}
                 >
                     <Grid3X3 size={18} />
+                </button>
+
+                <button
+                    onClick={() => setAppState(s => ({ ...s, snapEnabled: !s.snapEnabled, snapPoint: null }))}
+                    className={`p-1.5 rounded-lg transition-all active:scale-95 ${appState.snapEnabled ? 'text-blue-600 bg-blue-50' : 'text-slate-500 hover:bg-slate-100'}`}
+                    title={appState.snapEnabled ? 'Slå snap fra' : 'Slå snap til'}
+                >
+                    <Magnet size={18} />
                 </button>
 
                 <button 

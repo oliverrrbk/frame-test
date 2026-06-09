@@ -100,10 +100,16 @@ export function getEffectiveLockedUntil(settings) {
     const anchor = settings.anchor;
     const grace = Number(cfg.grace_days) || 0;
     const shifted = new Date(Date.now() - grace * DAY);
-    let auto = lastCompletedPeriodEnd(cycle, anchor, shifted);
-    // Hvis seneste periode er manuelt genåbnet, hold den åben indtil næste periode er afsluttet.
+    const auto = lastCompletedPeriodEnd(cycle, anchor, shifted);
+    // Manuel genåbning: hold låsen på den valgte 'open_to'-dato, indtil en NY periode er afsluttet.
+    const r = cfg.reopen;
+    if (r && r.at_auto) {
+        if (auto <= r.at_auto) return r.open_to || null; // stadig i det genåbnede vindue
+        return auto; // ny periode afsluttet -> genlås automatisk
+    }
+    // Bagudkompatibel med tidligere 'reopen_marker'
     if (cfg.reopen_marker && auto <= cfg.reopen_marker) {
-        auto = previousPeriodEnd(cycle, anchor, auto);
+        return previousPeriodEnd(cycle, anchor, auto);
     }
     return auto;
 }
@@ -188,6 +194,21 @@ export function downloadCSV(filename, csv) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// --- Lønnummer ---
+// Gyldigt lønnummer = kun cifre (lønsystemer kan ikke håndtere bogstaver/tegn).
+export function isValidLonnummer(v) {
+    return /^\d+$/.test(String(v ?? '').trim());
+}
+
+// Næste ledige lønnummer (starter ved 1001, tæller op fra højeste eksisterende).
+export function nextLonnummer(existing) {
+    const nums = (existing || [])
+        .map(x => parseInt(String(x).trim(), 10))
+        .filter(n => !isNaN(n));
+    const max = Math.max(1000, ...nums);
+    return String(max + 1);
 }
 
 // Hent firmaets løn-indstillinger (eller null hvis ingen findes / tabel mangler).

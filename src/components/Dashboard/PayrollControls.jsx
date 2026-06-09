@@ -5,7 +5,7 @@ import { Settings, Lock, Unlock, X, Loader2, CalendarClock, ShieldCheck, AlertTr
 import toast from 'react-hot-toast';
 import {
     canManagePayroll, savePayrollSettings, lastCompletedPeriodEnd,
-    previousPeriodEnd, currentPeriod, formatDa, getConfig, getEffectiveLockedUntil
+    previousPeriodEnd, currentPeriod, formatDa, getConfig, getEffectiveLockedUntil, nextLonnummer
 } from '../../utils/payroll';
 
 /*
@@ -13,13 +13,14 @@ import {
  * lønperioden, samt genåbn. Kun Mester (admin) og Bogholder (accountant).
  * Selve låsen håndhæves i timesheet-komponenterne via isDateLocked().
  */
-export default function PayrollControls({ companyId, role, actorId, actorName, settings, onUpdated }) {
+export default function PayrollControls({ companyId, role, actorId, actorName, settings, onUpdated, actorLonnummer = '', existingLonnumre = [], onSaveActorLonnummer }) {
     const [showSettings, setShowSettings] = useState(false);
     const [showLock, setShowLock] = useState(false);
     const [showReopen, setShowReopen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(null);
     const [lockDate, setLockDate] = useState('');
+    const [reopenDate, setReopenDate] = useState('');
 
     if (!canManagePayroll(role)) return null;
 
@@ -38,7 +39,12 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
     const setLonart = (patch) => setForm(f => ({ ...f, config: { ...f.config, lonart: { ...f.config.lonart, ...patch } } }));
 
     const openSettings = () => {
-        setForm({ cycle, anchor: anchor || new Date().toISOString().substring(0, 10), config: { ...cfg } });
+        setForm({
+            cycle,
+            anchor: anchor || new Date().toISOString().substring(0, 10),
+            config: { ...cfg },
+            lonnummer: actorLonnummer || nextLonnummer(existingLonnumre)
+        });
         setShowSettings(true);
     };
 
@@ -47,6 +53,8 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
     const saveSettings = async () => {
         setSaving(true);
         try {
+            // Gem eget lønnummer først (kaster ved ugyldigt/optaget nummer)
+            if (onSaveActorLonnummer) await onSaveActorLonnummer(form.lonnummer);
             const data = await savePayrollSettings(companyId, {
                 cycle: form.cycle,
                 anchor: form.cycle === 'biweekly' ? form.anchor : null,
@@ -78,25 +86,26 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
         } finally { setSaving(false); }
     };
 
-    // Genåbn: i auto-tilstand sættes et "reopen_marker" så seneste periode holdes åben;
-    // i manuel tilstand sænkes den gemte låsedato én periode.
-    const reopenTo = cfg.auto_lock
-        ? previousPeriodEnd(cycle, anchor, lastCompletedPeriodEnd(cycle, anchor, new Date(Date.now() - (Number(cfg.grace_days) || 0) * 86400000)))
-        : previousPeriodEnd(cycle, anchor, settings?.locked_until);
+    // Forslag til hvor langt der åbnes op: én periode tilbage fra den nuværende lås.
+    const reopenDefault = previousPeriodEnd(cycle, anchor, effectiveLock) || '';
+
+    const openReopen = () => { setReopenDate(reopenDefault); setShowReopen(true); };
 
     const doReopen = async () => {
         setSaving(true);
         try {
+            const openTo = reopenDate || null; // tom = lås helt op
             let fields;
             if (cfg.auto_lock) {
-                const marker = lastCompletedPeriodEnd(cycle, anchor, new Date(Date.now() - (Number(cfg.grace_days) || 0) * 86400000));
-                fields = { config: { ...cfg, reopen_marker: marker }, log: appendLog('reopen', reopenTo) };
+                // Gem 'open_to' + tidspunktets auto-dato, så den genlåser når næste periode er afsluttet.
+                const atAuto = lastCompletedPeriodEnd(cycle, anchor, new Date(Date.now() - (Number(cfg.grace_days) || 0) * 86400000));
+                fields = { config: { ...cfg, reopen: { open_to: openTo, at_auto: atAuto } }, log: appendLog('reopen', openTo) };
             } else {
-                fields = { locked_until: reopenTo, log: appendLog('reopen', reopenTo) };
+                fields = { locked_until: openTo, log: appendLog('reopen', openTo) };
             }
             const data = await savePayrollSettings(companyId, fields);
             onUpdated(data);
-            toast.success(reopenTo ? `Genåbnet — nu låst til og med ${formatDa(reopenTo)}.` : 'Lønperioden er genåbnet.');
+            toast.success(openTo ? `Genåbnet — nu låst til og med ${formatDa(openTo)}.` : 'Hele perioden er låst op.');
             setShowReopen(false);
         } catch (err) {
             console.error('Genåbn lønperiode fejlede:', err);
@@ -111,7 +120,7 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '12px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#475569', fontSize: '0.85rem', fontWeight: 600 }}>
                     <Lock size={15} style={{ color: '#0f172a' }} />
                     {cfg.auto_lock ? 'Auto-låst til' : 'Låst til'} {formatDa(effectiveLock)}
-                    <button onClick={() => setShowReopen(true)} title="Genåbn seneste lønperiode"
+                    <button onClick={openReopen} title="Genåbn seneste lønperiode"
                         style={{ marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#7c3aed', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.2s' }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.borderColor = '#ddd6fe'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
@@ -163,6 +172,10 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
                                 </div>
                             </Section>
 
+                            <Section title="Mit eget lønnummer" hint="Dit nummer i lønsystemet — bruges når du selv får løn.">
+                                <input value={form.lonnummer} inputMode="numeric" onChange={(e) => setForm(f => ({ ...f, lonnummer: e.target.value }))} placeholder="f.eks. 1001" style={fieldStyle} />
+                            </Section>
+
                             <Section title="Automatisk lås">
                                 <Toggle checked={form.config.auto_lock} onChange={(v) => setCfg({ auto_lock: v })}
                                     label="Lås perioder automatisk" desc="Hver afsluttet periode låses af sig selv — ingen manuel handling." />
@@ -182,22 +195,33 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
                                     <input type="number" step="0.1" min="0" value={form.config.daily_hours} onChange={(e) => setCfg({ daily_hours: parseFloat(e.target.value) || 0 })} style={fieldStyle} />
                                 </label>
                                 <div style={{ marginTop: '12px' }}>
-                                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Eksportér ferie/fravær som</span>
+                                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>Eksportér ferie/fravær som</span>
+                                    <span style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginBottom: '8px' }}>Gælder kun ferie/fravær — arbejdstimer eksporteres altid som timer. De fleste lønsystemer bruger dage til ferie.</span>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                        <CycleCard active={form.config.absence_unit === 'days'} onClick={() => setCfg({ absence_unit: 'days' })} title="Dage" desc="Antal feriedage" />
+                                        <CycleCard active={form.config.absence_unit === 'days'} onClick={() => setCfg({ absence_unit: 'days' })} title="Dage" desc="Antal feriedage (anbefalet)" />
                                         <CycleCard active={form.config.absence_unit === 'hours'} onClick={() => setCfg({ absence_unit: 'hours' })} title="Timer" desc={`Dage × ${form.config.daily_hours || 7.4}t`} />
                                     </div>
                                 </div>
                             </Section>
 
-                            <Section title="Lønart-koder" hint="Indtast jeres egne numre fra lønsystemet — bruges i løneksporten.">
+                            <Section title="Lønart-koder" hint="Indtast jeres egne numre fra lønsystemet — hver type skal have sit eget nummer.">
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                    <LonartField label="Normaltimer" value={form.config.lonart.normal} onChange={(v) => setLonart({ normal: v })} />
-                                    <LonartField label="Ferie" value={form.config.lonart.vacation} onChange={(v) => setLonart({ vacation: v })} />
-                                    <LonartField label="Sygdom" value={form.config.lonart.sick} onChange={(v) => setLonart({ sick: v })} />
-                                    <LonartField label="Øvrigt fravær" value={form.config.lonart.other_absence} onChange={(v) => setLonart({ other_absence: v })} />
-                                    <LonartField label="Kørsel (km)" value={form.config.lonart.mileage} onChange={(v) => setLonart({ mileage: v })} />
+                                    <LonartField label="Normaltimer" placeholder="f.eks. 1000" value={form.config.lonart.normal} onChange={(v) => setLonart({ normal: v })} />
+                                    <LonartField label="Ferie" placeholder="f.eks. 3000" value={form.config.lonart.vacation} onChange={(v) => setLonart({ vacation: v })} />
+                                    <LonartField label="Sygdom" placeholder="f.eks. 3100" value={form.config.lonart.sick} onChange={(v) => setLonart({ sick: v })} />
+                                    <LonartField label="Øvrigt fravær" placeholder="f.eks. 3200" value={form.config.lonart.other_absence} onChange={(v) => setLonart({ other_absence: v })} />
+                                    <LonartField label="Kørsel (km)" placeholder="f.eks. 8000" value={form.config.lonart.mileage} onChange={(v) => setLonart({ mileage: v })} />
                                 </div>
+                                {(() => {
+                                    const codes = Object.values(form.config.lonart).map(c => String(c).trim()).filter(Boolean);
+                                    const hasDup = new Set(codes).size !== codes.length;
+                                    return hasDup ? (
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '10px', padding: '10px 12px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '10px', fontSize: '0.8rem', color: '#b45309' }}>
+                                            <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                            To lønarter har samme nummer — er det med vilje? Normalt har hver type sit eget nummer.
+                                        </div>
+                                    ) : null;
+                                })()}
                             </Section>
 
                             <ModalActions onCancel={() => setShowSettings(false)} onConfirm={saveSettings} saving={saving} confirmLabel="Gem indstillinger" confirmIcon={<CalendarClock size={18} />} />
@@ -225,15 +249,21 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
 
             {/* ---- REOPEN MODAL ---- */}
             <Overlay open={showReopen} onClose={() => setShowReopen(false)}>
-                        <ModalHeader icon={<Unlock size={22} />} title="Genåbn lønperiode" subtitle="Lås den seneste periode op igen" onClose={() => setShowReopen(false)} accent="#f59e0b" />
+                        <ModalHeader icon={<Unlock size={22} />} title="Genåbn lønperiode" subtitle="Lås op til en valgt dato" onClose={() => setShowReopen(false)} accent="#f59e0b" />
                         <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '14px', padding: '16px' }}>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Lås op til og med</span>
+                                <input type="date" value={reopenDate} onChange={(e) => setReopenDate(e.target.value)}
+                                    style={{ width: '100%', padding: '12px 14px', border: '1px solid #fde68a', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', background: '#fff', outline: 'none' }} />
+                                <span style={{ fontSize: '0.78rem', color: '#b45309' }}>Alt EFTER denne dato kan redigeres igen. Vælg en tidligere dato for at åbne længere tilbage — eller ryd feltet for at låse helt op.</span>
+                            </label>
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '0.88rem', color: '#475569', lineHeight: 1.5 }}>
                                 <AlertTriangle size={18} style={{ color: '#f59e0b', flexShrink: 0, marginTop: '2px' }} />
-                                {reopenTo
-                                    ? <span>Den seneste lønperiode låses op, så den kan redigeres igen. Låsen flyttes tilbage til <strong>{formatDa(reopenTo)}</strong>. Handlingen logges.</span>
-                                    : <span>Hele låsen ophæves, så alle timer kan redigeres igen. Handlingen logges.</span>}
+                                {cfg.auto_lock
+                                    ? <span>Perioden låses automatisk igen, så snart den næste lønperiode er afsluttet. Handlingen logges.</span>
+                                    : <span>Låsen flyttes til den valgte dato. Handlingen logges.</span>}
                             </div>
-                            <ModalActions onCancel={() => setShowReopen(false)} onConfirm={doReopen} saving={saving} confirmLabel="Genåbn perioden" confirmIcon={<Unlock size={18} />} confirmColor="#f59e0b" />
+                            <ModalActions onCancel={() => setShowReopen(false)} onConfirm={doReopen} saving={saving} confirmLabel="Genåbn" confirmIcon={<Unlock size={18} />} confirmColor="#f59e0b" />
                         </div>
             </Overlay>
         </>
@@ -248,7 +278,7 @@ function Overlay({ open, children, onClose }) {
                 <motion.div key="payroll-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
                     style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
                     <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
-                        style={{ width: '100%', maxWidth: '480px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                        style={{ width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0' }}>
                         {children}
                     </motion.div>
                 </motion.div>
@@ -260,7 +290,7 @@ function Overlay({ open, children, onClose }) {
 
 function ModalHeader({ icon, title, subtitle, onClose, accent = '#7c3aed' }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px', borderBottom: '1px solid #f1f5f9' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px', borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, background: '#fff', zIndex: 2, borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</div>
                 <div>
@@ -320,11 +350,11 @@ function Toggle({ checked, onChange, label, desc }) {
     );
 }
 
-function LonartField({ label, value, onChange }) {
+function LonartField({ label, value, onChange, placeholder = 'f.eks. 1000' }) {
     return (
         <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>{label}</span>
-            <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="f.eks. 1000"
+            <input value={value} inputMode="numeric" onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
                 style={{ ...fieldStyle, padding: '10px 12px', fontSize: '0.9rem' }} />
         </label>
     );

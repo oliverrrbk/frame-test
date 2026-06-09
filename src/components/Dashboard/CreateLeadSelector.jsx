@@ -80,11 +80,11 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom }) => {
                         <Mic size={40} color="#10b981" />
                     </div>
                     <div>
-                        <h3 style={{ fontSize: '1.4rem', color: '#1e293b', marginBottom: '8px' }}>Skræddersyet & AI</h3>
+                        <h3 style={{ fontSize: '1.4rem', color: '#1e293b', marginBottom: '8px' }}>Opret tilbud fra bunden</h3>
                         <p style={{ color: '#64748b', lineHeight: '1.5' }}>Opret en specialopgave fra bunden. Indtal dine mål og noter med stemmen, og sammensæt selv materialelisten.</p>
                     </div>
                     <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontWeight: 'bold' }}>
-                        Opret skræddersyet <ChevronRight size={18} />
+                        Opret fra bunden <ChevronRight size={18} />
                     </div>
                 </div>
             </div>

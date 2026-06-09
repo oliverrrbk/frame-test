@@ -35,6 +35,7 @@ import CreateLeadSelector from './CreateLeadSelector';
 import CustomProjectCreator from './CustomProjectCreator';
 import DrawingsGallery from '../Drawings/DrawingsGallery';
 import CalendarView from './CalendarView';
+import PwaOnboarding from './PwaOnboarding';
 
 // Konfiguration til det nye Google Map
 const MAP_LIBRARIES = ['places'];
@@ -6105,12 +6106,15 @@ const Dashboard = () => {
             {/* Create Lead Modal */}
             {isCreateLeadModalOpen && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => {
-                    if (createLeadMode === 'custom' || createLeadMode === 'classic') {
+                    if (createLeadMode === 'classic') {
                         setShowCreateLeadCancelConfirm(true);
                         return;
                     }
                     setIsCreateLeadModalOpen(false); 
                     setCreateLeadMode(null); 
+                    if (createLeadMode === 'custom') {
+                        toast.success('Din kladde er gemt sikkert.');
+                    }
                 }}>
                     <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => {
@@ -6152,7 +6156,11 @@ const Dashboard = () => {
                             {createLeadMode === 'custom' && (
                                 <CustomProjectCreator 
                                     carpenter={carpenterProfile}
-                                    onCancel={() => setShowCreateLeadCancelConfirm(true)}
+                                    onCancel={() => {
+                                        setIsCreateLeadModalOpen(false);
+                                        setCreateLeadMode(null);
+                                        toast.success('Din kladde er gemt sikkert.');
+                                    }}
                                     onComplete={async () => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
@@ -6368,6 +6376,8 @@ const Dashboard = () => {
                 </div>,
                 document.body
             )}
+
+            <PwaOnboarding />
         </div>
     );
 };
