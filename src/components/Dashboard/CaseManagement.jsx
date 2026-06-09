@@ -1369,31 +1369,41 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const materialProgress = totalMaterials > 0 ? Math.round((orderedMaterials / totalMaterials) * 100) : 0;
 
     const handleAddDeliveryToCalendar = async (e) => {
-        const dateString = e.target.value;
-        if (!dateString) return;
-        
         try {
+            const dateString = e?.target?.value || e;
+            if (!dateString || typeof dateString !== 'string') return;
+            
             const newEvent = {
                 id: Date.now().toString(),
-                title: 'Levering af materialer - Sag ' + (selectedCase?.case_number || selectedCase?.id?.substring(0,4)),
+                title: 'Levering af materialer - Sag ' + (selectedCase?.case_number || (selectedCase?.id ? String(selectedCase.id).substring(0,4) : 'Ny')),
                 type: 'Materialelevering',
                 date: dateString,
                 participants: ['all'],
                 description: 'Automatisk oprettet fra materialeliste.'
             };
             
-            const updatedEvents = [...(carpenterProfile?.raw_data?.calendar_events || []), newEvent];
-            const updatedRawData = { ...carpenterProfile?.raw_data, calendar_events: updatedEvents };
+            const existingEvents = Array.isArray(carpenterProfile?.raw_data?.calendar_events) 
+                ? carpenterProfile.raw_data.calendar_events 
+                : [];
+                
+            const updatedEvents = [...existingEvents, newEvent];
+            const updatedRawData = { ...(carpenterProfile?.raw_data || {}), calendar_events: updatedEvents };
             
-            await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
+            const { error: dbError } = await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
+            if (dbError) throw new Error(dbError.message);
+            
             if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: updatedRawData });
             
-            const [y, m, d] = dateString.split('-');
-            toast.success(`Levering d. ${d}/${m}/${y} er tilføjet kalenderen!`);
-            setInfoSheetType(null);
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                toast.success(`Levering d. ${parts[2]}/${parts[1]}/${parts[0]} er tilføjet kalenderen!`);
+            } else {
+                toast.success(`Levering er tilføjet kalenderen!`);
+            }
+            if (typeof setInfoSheetType === 'function') setInfoSheetType(null);
         } catch (error) {
-            console.error(error);
-            toast.error('Kunne ikke tilføje til kalender');
+            console.error('Calendar add error:', error);
+            toast.error('Kunne ikke tilføje til kalender: ' + (error.message || 'Ukendt fejl'));
         }
     };
 

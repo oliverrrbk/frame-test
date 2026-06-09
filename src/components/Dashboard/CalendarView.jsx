@@ -58,6 +58,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [view, setView] = useState('month');
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [selectedMobileDate, setSelectedMobileDate] = useState(new Date());
+    const [showMobileFilter, setShowMobileFilter] = useState(false);
     
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -389,6 +390,17 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     <div style={{ display: 'flex', gap: '16px' }}>
                         {/* Søg (fiktiv knap pt.) */}
                         <button style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}><Search size={22} color="#0f172a" /></button>
+                        
+                        {/* Mobil Medarbejder Filter */}
+                        {isManager && (
+                            <button onClick={() => setShowMobileFilter(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', position: 'relative' }}>
+                                <Users size={22} color="#0f172a" />
+                                {selectedEmployeeIds.length > 0 && !selectedEmployeeIds.includes('all') && (
+                                    <div style={{ position: 'absolute', top: '-2px', right: '-4px', background: '#3b82f6', width: '10px', height: '10px', borderRadius: '50%', border: '2px solid #fff' }} />
+                                )}
+                            </button>
+                        )}
+                        
                         {/* Tilføj aftale */}
                         {isManager && (
                             <button onClick={() => openModalForDate(selectedMobileDate)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
@@ -512,6 +524,71 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         );
                     })()}
                 </div>
+
+
+                {/* MOBILE FILTER MODAL (Bottom Sheet) */}
+                <AnimatePresence>
+                    {showMobileFilter && (
+                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                            <motion.div 
+                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                onClick={() => setShowMobileFilter(false)}
+                                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
+                            />
+                            <motion.div 
+                                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                                style={{ backgroundColor: '#fff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px 20px 40px', position: 'relative', zIndex: 1, boxShadow: '0 -10px 40px rgba(0,0,0,0.1)' }}
+                            >
+                                <div style={{ width: '40px', height: '5px', backgroundColor: '#e2e8f0', borderRadius: '10px', margin: '0 auto 20px' }} />
+                                
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                    <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Users size={24} color="#2563eb" /> Vælg Kalender
+                                    </h2>
+                                    <button onClick={() => setShowMobileFilter(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                        <X size={20} color="#64748b" />
+                                    </button>
+                                </div>
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '50vh', overflowY: 'auto' }} className="custom-scroll">
+                                    <div 
+                                        onClick={() => { setSelectedEmployeeIds(['all']); setShowMobileFilter(false); }}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '16px', background: selectedEmployeeIds.includes('all') ? '#eff6ff' : '#f8fafc', border: selectedEmployeeIds.includes('all') ? '2px solid #3b82f6' : '1px solid #e2e8f0', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    >
+                                        <span style={{ fontSize: '1.05rem', fontWeight: '700', color: selectedEmployeeIds.includes('all') ? '#1d4ed8' : '#334155' }}>Firmaet (Alle)</span>
+                                        {selectedEmployeeIds.includes('all') && <CheckCircle size={22} color="#3b82f6" />}
+                                    </div>
+
+                                    {[
+                                        { id: String(myProfile?.id), name: myProfile?.owner_name || myProfile?.company_name || 'Mig', isMe: true },
+                                        ...teamMembers.filter(m => String(m.id) !== String(myProfile?.id)).map(m => ({
+                                            id: String(m.id),
+                                            name: m.owner_name || m.company_name || 'Ukendt',
+                                            isMe: false
+                                        }))
+                                    ].map(emp => {
+                                        const isSelected = selectedEmployeeIds.includes(emp.id) && !selectedEmployeeIds.includes('all');
+                                        return (
+                                            <div 
+                                                key={emp.id}
+                                                onClick={() => { setSelectedEmployeeIds([emp.id]); setShowMobileFilter(false); }}
+                                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '16px', background: isSelected ? '#eff6ff' : '#fff', border: isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0', cursor: 'pointer', transition: 'all 0.2s' }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: emp.isMe ? '#dbeafe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: emp.isMe ? '#1d4ed8' : '#64748b', fontWeight: 'bold' }}>
+                                                        {emp.name.charAt(0)}
+                                                    </div>
+                                                    <span style={{ fontSize: '1.05rem', fontWeight: isSelected ? '700' : '600', color: isSelected ? '#1d4ed8' : '#0f172a' }}>{emp.name}</span>
+                                                </div>
+                                                {isSelected && <CheckCircle size={22} color="#3b82f6" />}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
             </div>
         );
     };
