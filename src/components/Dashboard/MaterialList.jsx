@@ -6,11 +6,17 @@ import { generateMaterialList } from '../../utils/materialGenerator';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
-const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryToCalendar }) => {
+const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryToCalendar, existingDeliveryDate }) => {
     const [materials, setMaterials] = useState([]);
     const [materialListsMeta, setMaterialListsMeta] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [openLists, setOpenLists] = useState({});
+    
+    const [localDeliveryDate, setLocalDeliveryDate] = useState(existingDeliveryDate || '');
+    
+    useEffect(() => {
+        if (existingDeliveryDate) setLocalDeliveryDate(existingDeliveryDate);
+    }, [existingDeliveryDate]);
 
     const [deliveryInfo, setDeliveryInfo] = useState({
         address: lead.customer_address || '',
@@ -960,35 +966,40 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                         </div>
                         <div>
                             <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', fontWeight: 'bold' }}>
-                                Tilføj levering til kalender
+                                Leveringsdato
                             </h3>
-                            <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                                Opret en aftale for hele holdet
-                            </p>
                         </div>
                     </div>
                     
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input 
-                            type="date" 
-                            id="calendar-delivery-date-input"
-                            style={{ 
-                                padding: '8px 12px', 
-                                border: '1px solid #cbd5e1', 
-                                borderRadius: '8px', 
-                                backgroundColor: '#f8fafc',
-                                color: '#0f172a',
-                                outline: 'none',
-                                fontWeight: '600',
-                                width: '130px'
-                            }}
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <input 
+                                type="date" 
+                                id="calendar-delivery-date-input"
+                                value={localDeliveryDate}
+                                onChange={(e) => setLocalDeliveryDate(e.target.value)}
+                                style={{ 
+                                    padding: '8px 12px', 
+                                    border: '1px solid #cbd5e1', 
+                                    borderRadius: '8px', 
+                                    backgroundColor: '#f8fafc',
+                                    color: '#0f172a',
+                                    outline: 'none',
+                                    fontWeight: '600',
+                                    width: '130px',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                            {!localDeliveryDate && (
+                                <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', display: 'flex', alignItems: 'center', paddingLeft: '12px', backgroundColor: '#f8fafc', color: '#64748b', fontWeight: '500', fontSize: '0.9rem', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}>
+                                    Vælg dato
+                                </div>
+                            )}
+                        </div>
                         <button 
                             onClick={() => {
-                                const input = document.getElementById('calendar-delivery-date-input');
-                                if (input && input.value) {
-                                    onAddDeliveryToCalendar(input.value);
-                                    input.value = ''; // clear after adding
+                                if (localDeliveryDate) {
+                                    onAddDeliveryToCalendar(localDeliveryDate);
                                 } else {
                                     toast.error('Vælg venligst en dato først');
                                 }

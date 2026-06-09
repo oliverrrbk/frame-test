@@ -1367,26 +1367,46 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const deliveredMaterials = materialListForOverview.filter(m => m.status === 'Leveret').length;
     const notOrderedMaterials = totalMaterials - orderedMaterials;
     const materialProgress = totalMaterials > 0 ? Math.round((orderedMaterials / totalMaterials) * 100) : 0;
+    const existingDeliveryEvent = Array.isArray(carpenterProfile?.raw_data?.calendar_events)
+        ? carpenterProfile.raw_data.calendar_events.find(ev => ev.type === 'Materialelevering' && String(ev.relatedLeadId) === String(selectedCase?.id))
+        : null;
+    const existingDeliveryDate = existingDeliveryEvent ? existingDeliveryEvent.date : '';
 
     const handleAddDeliveryToCalendar = async (e) => {
         try {
             const dateString = e?.target?.value || e;
             if (!dateString || typeof dateString !== 'string') return;
             
-            const newEvent = {
-                id: Date.now().toString(),
-                title: 'Levering af materialer - Sag ' + (selectedCase?.case_number || (selectedCase?.id ? String(selectedCase.id).substring(0,4) : 'Ny')),
-                type: 'Materialelevering',
-                date: dateString,
-                participants: ['all'],
-                description: 'Automatisk oprettet fra materialeliste.'
-            };
-            
             const existingEvents = Array.isArray(carpenterProfile?.raw_data?.calendar_events) 
                 ? carpenterProfile.raw_data.calendar_events 
                 : [];
                 
-            const updatedEvents = [...existingEvents, newEvent];
+            const existingEventIndex = existingEvents.findIndex(ev => ev.type === 'Materialelevering' && String(ev.relatedLeadId) === String(selectedCase?.id));
+
+            let updatedEvents = [...existingEvents];
+            let actionText = 'tilføjet';
+            
+            if (existingEventIndex >= 0) {
+                updatedEvents[existingEventIndex] = {
+                    ...updatedEvents[existingEventIndex],
+                    date: dateString
+                };
+                actionText = 'opdateret i';
+            } else {
+                const newEvent = {
+                    id: Date.now().toString(),
+                    title: 'Levering af materialer - Sag ' + (selectedCase?.case_number || (selectedCase?.id ? String(selectedCase.id).substring(0,4) : 'Ny')),
+                    type: 'Materialelevering',
+                    date: dateString,
+                    startTime: '08:00',
+                    endTime: '09:00',
+                    participants: ['all'],
+                    description: 'Automatisk oprettet fra materialeliste.',
+                    relatedLeadId: selectedCase?.id || null
+                };
+                updatedEvents.push(newEvent);
+            }
+            
             const updatedRawData = { ...(carpenterProfile?.raw_data || {}), calendar_events: updatedEvents };
             
             const { error: dbError } = await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
@@ -1396,9 +1416,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             
             const parts = dateString.split('-');
             if (parts.length === 3) {
-                toast.success(`Levering d. ${parts[2]}/${parts[1]}/${parts[0]} er tilføjet kalenderen!`);
+                toast.success(`Levering d. ${parts[2]}/${parts[1]}/${parts[0]} er ${actionText} kalenderen!`);
             } else {
-                toast.success(`Levering er tilføjet kalenderen!`);
+                toast.success(`Levering er ${actionText} kalenderen!`);
             }
             if (typeof setInfoSheetType === 'function') setInfoSheetType(null);
         } catch (error) {
@@ -1756,20 +1776,31 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 <button onClick={() => { setInfoSheetType(null); setActiveSubTab('materials'); }} style={{ marginTop: '24px', width: '100%', padding: '14px', background: '#2563eb', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Gå til materialeliste</button>
                                                 
                                                 <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                                                    <input 
-                                                        type="date" 
-                                                        id="case-delivery-date-input"
-                                                        style={{ 
-                                                            flex: 1,
-                                                            padding: '14px', 
-                                                            border: '1px solid #cbd5e1', 
-                                                            borderRadius: '12px', 
-                                                            backgroundColor: '#f8fafc',
-                                                            color: '#0f172a',
-                                                            outline: 'none',
-                                                            fontWeight: '600'
-                                                        }}
-                                                    />
+                                                    <div style={{ position: 'relative', flex: 1 }}>
+                                                        <input 
+                                                            type="date" 
+                                                            id="case-delivery-date-input"
+                                                            defaultValue={existingDeliveryDate}
+                                                            onChange={(e) => {
+                                                                const placeholder = document.getElementById('case-delivery-placeholder');
+                                                                if (placeholder) placeholder.style.display = e.target.value ? 'none' : 'flex';
+                                                            }}
+                                                            style={{ 
+                                                                width: '100%',
+                                                                padding: '14px', 
+                                                                border: '1px solid #cbd5e1', 
+                                                                borderRadius: '12px', 
+                                                                backgroundColor: '#f8fafc',
+                                                                color: '#0f172a',
+                                                                outline: 'none',
+                                                                fontWeight: '600',
+                                                                boxSizing: 'border-box'
+                                                            }}
+                                                        />
+                                                        <div id="case-delivery-placeholder" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', display: existingDeliveryDate ? 'none' : 'flex', alignItems: 'center', paddingLeft: '14px', backgroundColor: '#f8fafc', color: '#64748b', fontWeight: '500', fontSize: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}>
+                                                            Vælg dato
+                                                        </div>
+                                                    </div>
                                                     <button 
                                                         onClick={() => {
                                                             const input = document.getElementById('case-delivery-date-input');
@@ -3132,6 +3163,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 profile={profile} 
                                 onUpdate={onUpdateLead} 
                                 onAddDeliveryToCalendar={handleAddDeliveryToCalendar}
+                                existingDeliveryDate={existingDeliveryDate}
                             />
                         )}
 
