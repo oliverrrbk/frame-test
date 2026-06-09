@@ -77,6 +77,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [collisionWarning, setCollisionWarning] = useState(null); // { lead, day, daysDuration }
 
     const [eventFormData, setEventFormData] = useState({
+        id: '',
         title: '',
         type: 'Internt Møde', // 'Internt Møde', 'Kundemøde', 'Materialelevering'
         date: new Date().toISOString().substring(0,10),
@@ -90,22 +91,38 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [searchTerm, setSearchTerm] = useState('');
     const [hoverTooltip, setHoverTooltip] = useState(null); // { x, y, content }
 
-    const openModalForDate = (dateObj) => {
-        if (!isManager) return;
-        const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
+    const openModalForDate = (dateObj, eventToEdit = null) => {
+        if (!isManager && !eventToEdit) return; // Non-managers can't create, but maybe they can view? Let's just allow viewing if eventToEdit is passed.
         
-        setEventFormData({
-            title: '',
-            type: 'Internt Møde',
-            date: `${year}-${month}-${day}`,
-            startTime: '10:00',
-            endTime: '11:00',
-            participants: ['all'],
-            selectedLeadId: '',
-            notification_preference: 'day_before'
-        });
+        if (eventToEdit) {
+            setEventFormData({
+                id: eventToEdit.id || '',
+                title: eventToEdit.title || '',
+                type: eventToEdit.type || 'Internt Møde',
+                date: eventToEdit.date || new Date().toISOString().substring(0,10),
+                startTime: eventToEdit.startTime || '10:00',
+                endTime: eventToEdit.endTime || '11:00',
+                participants: eventToEdit.participants || ['all'],
+                selectedLeadId: eventToEdit.relatedLeadId || '',
+                notification_preference: eventToEdit.notification_preference || 'day_before'
+            });
+        } else if (dateObj) {
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            
+            setEventFormData({
+                id: '',
+                title: '',
+                type: 'Internt Møde',
+                date: `${year}-${month}-${day}`,
+                startTime: '10:00',
+                endTime: '11:00',
+                participants: ['all'],
+                selectedLeadId: '',
+                notification_preference: 'day_before'
+            });
+        }
         setShowEventModal(true);
     };
 
@@ -265,8 +282,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             }
         }
 
-        const newEvent = {
-            id: `evt-${Date.now()}`,
+        const newEventObj = {
+            id: eventFormData.id || `evt-${Date.now()}`,
             title: finalTitle,
             type: eventFormData.type,
             date: eventFormData.date,
@@ -276,16 +293,44 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             relatedLeadId: eventFormData.selectedLeadId || null,
             notification_preference: eventFormData.notification_preference || 'day_before'
         };
-        const updatedEvents = [...(carpenterProfile?.raw_data?.calendar_events || []), newEvent];
+        
+        let updatedEvents;
+        if (eventFormData.id) {
+            updatedEvents = (carpenterProfile?.raw_data?.calendar_events || []).map(ev => 
+                ev.id === eventFormData.id ? newEventObj : ev
+            );
+        } else {
+            updatedEvents = [...(carpenterProfile?.raw_data?.calendar_events || []), newEventObj];
+        }
+        
         const updatedRawData = { ...carpenterProfile.raw_data, calendar_events: updatedEvents };
         
         try {
             await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
             if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: updatedRawData });
-            toast.success('Aftale oprettet i kalenderen');
+            toast.success(eventFormData.id ? 'Aftale opdateret' : 'Aftale oprettet i kalenderen');
             setShowEventModal(false);
         } catch (error) {
-            toast.error('Fejl ved oprettelse');
+            toast.error('Fejl ved gemning af aftale');
+        }
+    };
+
+    const deleteEvent = async (e) => {
+        e.preventDefault();
+        if (!eventFormData.id) return;
+        
+        if (!window.confirm('Er du sikker på, at du vil slette denne aftale?')) return;
+        
+        const updatedEvents = (carpenterProfile?.raw_data?.calendar_events || []).filter(ev => ev.id !== eventFormData.id);
+        const updatedRawData = { ...carpenterProfile.raw_data, calendar_events: updatedEvents };
+        
+        try {
+            await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
+            if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: updatedRawData });
+            toast.success('Aftale slettet');
+            setShowEventModal(false);
+        } catch (error) {
+            toast.error('Fejl ved sletning');
         }
     };
 
@@ -495,7 +540,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     const style = getEventStyle(e.type);
                                     const Icon = style.icon;
                                     return (
-                                        <div key={e.id} style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                        <div key={e.id} onClick={() => openModalForDate(null, e)} style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
                                             <div style={{ background: 'white', padding: '6px', borderRadius: '50%', color: style.text, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}><Icon size={18}/></div>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -526,21 +571,14 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 </div>
 
 
-                {/* MOBILE FILTER MODAL (Bottom Sheet) */}
+                {/* MOBILE FILTER MODAL (Fullscreen Centered) */}
                 <AnimatePresence>
                     {showMobileFilter && (
-                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
                             <motion.div 
-                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                                onClick={() => setShowMobileFilter(false)}
-                                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
-                            />
-                            <motion.div 
-                                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                style={{ backgroundColor: '#fff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px 20px 40px', position: 'relative', zIndex: 1, boxShadow: '0 -10px 40px rgba(0,0,0,0.1)' }}
+                                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
+                                style={{ backgroundColor: '#fff', borderRadius: '24px', padding: '24px 20px', width: '100%', maxWidth: '400px', maxHeight: '90vh', position: 'relative', zIndex: 1, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}
                             >
-                                <div style={{ width: '40px', height: '5px', backgroundColor: '#e2e8f0', borderRadius: '10px', margin: '0 auto 20px' }} />
-                                
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                     <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <Users size={24} color="#2563eb" /> Vælg Kalender
@@ -649,16 +687,24 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }}>
                                     
                                     {/* MØDER & LEVERINGER */}
-                                    {events.map(e => {
-                                        const style = getEventStyle(e.type);
-                                        const Icon = style.icon;
+                                    {events.map(ev => {
+                                        const evStyle = getEventStyle(ev.type);
                                         return (
-                                            <div key={e.id} onClick={(evt) => evt.stopPropagation()} 
-                                                onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: `${e.type}: ${e.title} (${e.startTime})` }); }}
-                                                onMouseLeave={() => setHoverTooltip(null)}
-                                                style={{ background: style.bg, border: `1px solid ${style.border}`, borderRadius: '8px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: '700', color: style.text, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <Icon size={12}/>
-                                                {e.startTime} - {e.title}
+                                            <div 
+                                                key={ev.id} 
+                                                onClick={(e) => { e.stopPropagation(); openModalForDate(null, ev); }}
+                                                style={{ 
+                                                    background: evStyle.bg, color: evStyle.text, 
+                                                    fontSize: '0.75rem', padding: '4px 6px', 
+                                                    borderRadius: '4px', borderLeft: `3px solid ${evStyle.leftBorder}`,
+                                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                    display: 'flex', alignItems: 'center', gap: '4px',
+                                                    cursor: 'pointer'
+                                                }}
+                                                title={ev.title}
+                                            >
+                                                <evStyle.icon size={12}/>
+                                                {ev.startTime} - {ev.title}
                                             </div>
                                         )
                                     })}
@@ -767,7 +813,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 {events.map(e => {
                                     const style = getEventStyle(e.type);
                                     return (
-                                        <div key={e.id} onClick={(evt) => evt.stopPropagation()} style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, borderRadius: '0 8px 8px 0', padding: '8px', fontSize: '0.8rem' }}>
+                                        <div key={e.id} onClick={(evt) => { evt.stopPropagation(); openModalForDate(null, e); }} style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, borderRadius: '0 8px 8px 0', padding: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>
                                             <strong>{e.startTime}</strong><br/>{e.title}
                                         </div>
                                     )
@@ -960,7 +1006,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000 }}>
                     <div style={{ width: '100%', maxWidth: '500px', background: '#fff', borderRadius: '16px', padding: '32px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Opret Kalenderaftale</h3>
+                            <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{eventFormData.id ? 'Rediger Aftale' : 'Opret Kalenderaftale'}</h3>
                             <button onClick={() => setShowEventModal(false)} style={{ background:'none', border:'none', cursor:'pointer' }}><X/></button>
                         </div>
                         <form onSubmit={saveEvent} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1027,7 +1073,35 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 </div>
                             )}
 
-                            <button type="submit" style={{ padding: '14px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '8px' }}>Gem Aftale</button>
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                                {eventFormData.id && (
+                                    <button 
+                                        type="button" 
+                                        onClick={deleteEvent}
+                                        style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#fef2f2', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    >
+                                        <Trash2 size={18} /> Slet
+                                    </button>
+                                )}
+                                {eventFormData.id && eventFormData.selectedLeadId && typeof onCaseClick === 'function' && (
+                                    <button 
+                                        type="button" 
+                                        onClick={() => {
+                                            const lead = relevantLeads.find(l => String(l.id) === String(eventFormData.selectedLeadId));
+                                            if (lead) {
+                                                setShowEventModal(false);
+                                                onCaseClick(lead);
+                                            }
+                                        }}
+                                        style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#0f172a', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    >
+                                        Gå til sag
+                                    </button>
+                                )}
+                                <button type="submit" style={{ flex: eventFormData.id ? 2 : 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#1d4ed8', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
+                                    {eventFormData.id ? 'Gem ændringer' : 'Opret aftale'}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>,
