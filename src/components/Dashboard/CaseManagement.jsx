@@ -1484,16 +1484,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     {/* --- MOBIL APPLE-STYLE HEADER & WIDGETS --- */}
                     {isMobile && selectedCase && (
                         <div style={{ paddingBottom: '16px' }}>
-                            {/* Luksus Apple-style Header */}
-                            <div style={{ position: 'sticky', top: 0, backgroundColor: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', zIndex: 40, borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', margin: '0 -24px', minHeight: '60px' }}>
-                                <button onClick={() => setSelectedCaseIdState(null)} style={{ background: 'none', border: 'none', padding: '8px', margin: '-8px', color: '#007AFF', display: 'flex', alignItems: 'center', cursor: 'pointer', position: 'relative', zIndex: 2 }}>
+                            {/* Luksus Apple-style Floating Pill Header */}
+                            <div style={{ position: 'sticky', top: '12px', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(20px)', zIndex: 40, border: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px', margin: '0 12px 16px 12px', borderRadius: '32px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)', minHeight: '60px' }}>
+                                <button onClick={() => setSelectedCaseIdState(null)} style={{ background: 'none', border: 'none', padding: '4px', margin: '-4px', color: '#007AFF', display: 'flex', alignItems: 'center', cursor: 'pointer', position: 'relative', zIndex: 2 }}>
                                     <ArrowLeft size={28} strokeWidth={2.5} />
                                 </button>
                                 <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', pointerEvents: 'none', padding: '0 60px' }}>
                                     <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600', color: '#000000', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Sag {selectedCase.case_number || String(selectedCase.id).substring(0,6)}</h2>
                                     <span style={{ fontSize: '0.75rem', color: '#8E8E93', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{selectedCase.customer_name || 'Kunde'}</span>
                                 </div>
-                                <button onClick={() => setShowActionSheet(true)} style={{ background: 'none', border: 'none', padding: '8px', margin: '-8px', color: '#007AFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', zIndex: 2 }}>
+                                <button onClick={() => setShowActionSheet(true)} style={{ background: 'none', border: 'none', padding: '4px', margin: '-4px', color: '#007AFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', zIndex: 2 }}>
                                     <MoreHorizontal size={28} strokeWidth={2.5} />
                                 </button>
                             </div>
@@ -1661,9 +1661,29 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             })}
                                             
                                             {['admin', 'sales'].includes(profile?.role) && (
-                                                <button onClick={() => { setShowTeamSheet(false); /* The desktop manage team button handles this via state */ setIsSavingTeam(false); }} style={{ marginTop: '12px', width: '100%', padding: '14px', background: '#fff', border: '2px dashed #cbd5e1', borderRadius: '16px', color: '#64748b', fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                                    <Users size={18} /> Administrer Hold (Gå til desktop)
-                                                </button>
+                                                <div style={{ marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                                                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: '#0f172a' }}>Tilføj Medarbejdere</h4>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
+                                                        {team.filter(t => t.role === 'worker' || t.role === 'apprentice').map(worker => {
+                                                            const isAssigned = assignedWorkers.includes(worker.id);
+                                                            return (
+                                                                <div 
+                                                                    key={worker.id} 
+                                                                    onClick={() => handleWorkerToggle(worker.id)}
+                                                                    style={{ padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '12px', backgroundColor: isAssigned ? '#eff6ff' : '#f8fafc', border: isAssigned ? '1px solid #bfdbfe' : '1px solid #e2e8f0' }}
+                                                                >
+                                                                    <span style={{ fontSize: '0.95rem', color: isAssigned ? '#1d4ed8' : '#334155', fontWeight: isAssigned ? '600' : 'normal' }}>{worker.owner_name || worker.company_name || worker.email || 'Ukendt'}</span>
+                                                                    <div style={{ width: '22px', height: '22px', borderRadius: '6px', backgroundColor: isAssigned ? '#3b82f6' : '#fff', border: isAssigned ? 'none' : '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                        {isAssigned && <CheckSquare size={14} color="white" />}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    <button onClick={() => { handleSaveAssignments(); setShowTeamSheet(false); }} style={{ marginTop: '16px', width: '100%', padding: '14px', background: '#1e293b', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                                                        Gem Hold
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     </div>

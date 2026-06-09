@@ -37,8 +37,12 @@ const QuoteAcceptPage = () => {
                 setLead(data);
 
                 if (data && data.carpenter_id) {
-                    const { data: carpenterData } = await supabase
+                    let { data: carpenterData } = await supabase
                         .rpc('get_public_carpenter', { carpenter_id: data.carpenter_id });
+                    if (!carpenterData) {
+                        const fb = await supabase.from('carpenters').select('*').eq('id', data.carpenter_id).single();
+                        carpenterData = fb.data;
+                    }
                     setCarpenter(carpenterData);
                 }
 
@@ -138,8 +142,12 @@ const QuoteAcceptPage = () => {
             // Send bekræftelses-emails
             if (lead && lead.carpenter_id) {
                 // Hent tømrerens info for at få email og navn
-                const { data: carpenter } = await supabase
+                let { data: carpenter } = await supabase
                     .rpc('get_public_carpenter', { carpenter_id: lead.carpenter_id });
+                if (!carpenter) {
+                    const fb = await supabase.from('carpenters').select('*').eq('id', lead.carpenter_id).single();
+                    carpenter = fb.data;
+                }
 
                 if (carpenter) {
                     import('../../utils/sendEmail').then(({ sendEmail }) => {

@@ -63,8 +63,12 @@ const EstimateAcceptPage = () => {
                 setLead(data);
 
                 if (data && data.carpenter_id) {
-                    const { data: carpenterData } = await supabase
+                    let { data: carpenterData } = await supabase
                         .rpc('get_public_carpenter', { carpenter_id: data.carpenter_id });
+                    if (!carpenterData) {
+                        const fb = await supabase.from('carpenters').select('*').eq('id', data.carpenter_id).single();
+                        carpenterData = fb.data;
+                    }
                     setCarpenter(carpenterData);
                 }
 

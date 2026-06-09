@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate } from 'lucide-react';
 import { getElementBounds, getElementAtPosition, rotatePoint, findSnapPoint, getConnectedModule } from './engineUtils';
 import { getDrawingBounds, renderElementsToCanvas } from './renderUtils';
 
@@ -14,18 +14,47 @@ const SETTINGS_ELEMENT_ID = '__drawing_settings__';
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const SYMBOL_TOOL_PREFIX = 'symbol:';
+const TEMPLATE_TOOL_PREFIX = 'template:';
 const CARPENTER_SYMBOLS = [
     { id: 'door', icon: DoorOpen, title: 'Dør' },
     { id: 'window', icon: Columns3, title: 'Vindue' },
     { id: 'stairs', icon: Rows3, title: 'Trappe' },
     { id: 'post', icon: Square, title: 'Stolpe' },
-    { id: 'beam', icon: Hammer, title: 'Bjælke' }
+    { id: 'beam', icon: Hammer, title: 'Bjælke' },
+    { id: 'wall', icon: SlidersHorizontal, title: 'Væg' },
+    { id: 'roof', icon: House, title: 'Tagflade' },
+    { id: 'rafter', icon: Triangle, title: 'Spær' },
+    { id: 'opening', icon: Diamond, title: 'Åbning' },
+    { id: 'insulation', icon: Waves, title: 'Isolering' },
+    { id: 'fall', icon: ArrowDownWideNarrow, title: 'Faldpil' }
+];
+
+const CARPENTER_TEMPLATES = [
+    { id: 'facade', icon: House, title: 'Facade' },
+    { id: 'roofPlan', icon: Triangle, title: 'Tagplan' },
+    { id: 'deck', icon: Rows3, title: 'Terrasse' },
+    { id: 'stairsPlan', icon: Rows3, title: 'Trappeplan' },
+    { id: 'wallOpenings', icon: LayoutTemplate, title: 'Væg m. åbninger' }
 ];
 
 const createLineElement = ({ id, parentId, x, y, endX, endY, color, strokeWidth }) => ({
     id,
     parentId,
     type: 'line',
+    color,
+    strokeWidth,
+    rotation: 0,
+    x,
+    y,
+    endX,
+    endY,
+    text: ''
+});
+
+const createArrowElement = ({ id, parentId, x, y, endX, endY, color, strokeWidth }) => ({
+    id,
+    parentId,
+    type: 'arrow',
     color,
     strokeWidth,
     rotation: 0,
@@ -53,6 +82,7 @@ const createRectElement = ({ id, parentId, x, y, w, h, color, strokeWidth }) => 
 const createSymbolElements = (symbolId, origin, color, strokeWidth) => {
     const rootId = generateId();
     const line = (coords, parentId = rootId) => createLineElement({ id: generateId(), parentId, color, strokeWidth, ...coords });
+    const arrow = (coords, parentId = rootId) => createArrowElement({ id: generateId(), parentId, color, strokeWidth, ...coords });
     const rect = (coords, parentId = rootId) => createRectElement({ id: generateId(), parentId, color, strokeWidth, ...coords });
     const x = origin.x;
     const y = origin.y;
@@ -160,6 +190,281 @@ const createSymbolElements = (symbolId, origin, color, strokeWidth) => {
             line({ x: x - 52, y: y - 16, endX: x - 28, endY: y + 16 }),
             line({ x: x - 16, y: y - 16, endX: x + 8, endY: y + 16 }),
             line({ x: x + 20, y: y - 16, endX: x + 44, endY: y + 16 })
+        ];
+    }
+
+    if (symbolId === 'wall') {
+        const root = createRectElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 64,
+            y: y - 14,
+            w: 128,
+            h: 28,
+            text: ''
+        });
+        const hatch = [];
+        for (let i = -56; i <= 48; i += 16) {
+            hatch.push(line({ x: x + i, y: y + 14, endX: x + i + 16, endY: y - 14 }));
+        }
+        return [root, ...hatch];
+    }
+
+    if (symbolId === 'roof') {
+        const root = createLineElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 64,
+            y: y + 34,
+            endX: x,
+            endY: y - 38,
+            text: ''
+        });
+        return [
+            root,
+            line({ x, y: y - 38, endX: x + 64, endY: y + 34 }),
+            line({ x: x - 64, y: y + 34, endX: x + 64, endY: y + 34 }),
+            line({ x: x - 34, y: y + 34, endX: x, endY: y - 4 }),
+            line({ x, y: y - 4, endX: x + 34, endY: y + 34 })
+        ];
+    }
+
+    if (symbolId === 'rafter') {
+        const root = createLineElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 62,
+            y: y + 36,
+            endX: x,
+            endY: y - 36,
+            text: ''
+        });
+        return [
+            root,
+            line({ x, y: y - 36, endX: x + 62, endY: y + 36 }),
+            line({ x: x - 46, y: y + 18, endX: x + 46, endY: y + 18 }),
+            line({ x: x - 28, y: y - 2, endX: x + 28, endY: y - 2 }),
+            line({ x: x - 12, y: y - 20, endX: x + 12, endY: y - 20 })
+        ];
+    }
+
+    if (symbolId === 'opening') {
+        const root = createLineElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 58,
+            y: y - 28,
+            endX: x - 22,
+            endY: y - 28,
+            text: ''
+        });
+        return [
+            root,
+            line({ x: x + 22, y: y - 28, endX: x + 58, endY: y - 28 }),
+            line({ x: x - 58, y: y + 28, endX: x - 22, endY: y + 28 }),
+            line({ x: x + 22, y: y + 28, endX: x + 58, endY: y + 28 }),
+            line({ x: x - 22, y: y - 38, endX: x - 22, endY: y + 38 }),
+            line({ x: x + 22, y: y - 38, endX: x + 22, endY: y + 38 }),
+            line({ x: x - 14, y: y - 14, endX: x + 14, endY: y + 14 }),
+            line({ x: x + 14, y: y - 14, endX: x - 14, endY: y + 14 })
+        ];
+    }
+
+    if (symbolId === 'insulation') {
+        const root = createRectElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 64,
+            y: y - 28,
+            w: 128,
+            h: 56,
+            text: ''
+        });
+        const waves = [];
+        for (let row = -14; row <= 14; row += 14) {
+            for (let i = -52; i < 52; i += 26) {
+                waves.push(line({ x: x + i, y: y + row, endX: x + i + 13, endY: y + row - 8 }));
+                waves.push(line({ x: x + i + 13, y: y + row - 8, endX: x + i + 26, endY: y + row }));
+            }
+        }
+        return [root, ...waves];
+    }
+
+    if (symbolId === 'fall') {
+        const root = createArrowElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 54,
+            y: y - 28,
+            endX: x + 54,
+            endY: y + 28,
+            text: ''
+        });
+        return [
+            root,
+            line({ x: x - 40, y: y + 22, endX: x + 52, endY: y + 22 }),
+            line({ x: x - 26, y: y + 34, endX: x + 52, endY: y + 34 })
+        ];
+    }
+
+    return [];
+};
+
+const createTemplateElements = (templateId, origin, color, strokeWidth) => {
+    const rootId = generateId();
+    const line = (coords, parentId = rootId) => createLineElement({ id: generateId(), parentId, color, strokeWidth, ...coords });
+    const arrow = (coords, parentId = rootId) => createArrowElement({ id: generateId(), parentId, color, strokeWidth, ...coords });
+    const rect = (coords, parentId = rootId) => createRectElement({ id: generateId(), parentId, color, strokeWidth, ...coords });
+    const x = origin.x;
+    const y = origin.y;
+
+    if (templateId === 'facade') {
+        const root = createRectElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 120,
+            y: y - 20,
+            w: 240,
+            h: 130,
+            text: ''
+        });
+        return [
+            root,
+            line({ x: x - 150, y: y - 20, endX: x, endY: y - 120 }),
+            line({ x, y: y - 120, endX: x + 150, endY: y - 20 }),
+            line({ x: x - 150, y: y - 20, endX: x + 150, endY: y - 20 }),
+            rect({ x: x - 24, y: y + 42, w: 48, h: 68 }),
+            line({ x: x + 14, y: y + 76, endX: x + 18, endY: y + 76 }),
+            rect({ x: x - 92, y: y + 20, w: 44, h: 36 }),
+            line({ x: x - 70, y: y + 20, endX: x - 70, endY: y + 56 }),
+            line({ x: x - 92, y: y + 38, endX: x - 48, endY: y + 38 }),
+            rect({ x: x + 48, y: y + 20, w: 44, h: 36 }),
+            line({ x: x + 70, y: y + 20, endX: x + 70, endY: y + 56 }),
+            line({ x: x + 48, y: y + 38, endX: x + 92, endY: y + 38 })
+        ];
+    }
+
+    if (templateId === 'roofPlan') {
+        const root = createLineElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 150,
+            y,
+            endX: x + 150,
+            endY: y,
+            text: ''
+        });
+        const rafters = [];
+        for (let i = -120; i <= 120; i += 40) {
+            rafters.push(line({ x: x + i, y, endX: x + i - 26, endY: y - 82 }));
+            rafters.push(line({ x: x + i, y, endX: x + i + 26, endY: y + 82 }));
+        }
+        return [
+            root,
+            line({ x: x - 176, y: y - 82, endX: x + 124, endY: y - 82 }),
+            line({ x: x - 124, y: y + 82, endX: x + 176, endY: y + 82 }),
+            line({ x: x - 176, y: y - 82, endX: x - 150, endY: y }),
+            line({ x: x + 124, y: y - 82, endX: x + 150, endY: y }),
+            line({ x: x - 124, y: y + 82, endX: x - 150, endY: y }),
+            line({ x: x + 176, y: y + 82, endX: x + 150, endY: y }),
+            ...rafters
+        ];
+    }
+
+    if (templateId === 'deck') {
+        const root = createRectElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 150,
+            y: y - 80,
+            w: 300,
+            h: 160,
+            text: ''
+        });
+        const boards = [];
+        for (let i = -120; i <= 120; i += 30) {
+            boards.push(line({ x: x + i, y: y - 80, endX: x + i, endY: y + 80 }));
+        }
+        return [
+            root,
+            ...boards,
+            line({ x: x - 150, y: y - 26, endX: x + 150, endY: y - 26 }),
+            line({ x: x - 150, y: y + 26, endX: x + 150, endY: y + 26 }),
+            rect({ x: x - 166, y: y - 96, w: 24, h: 24 }),
+            rect({ x: x + 142, y: y - 96, w: 24, h: 24 }),
+            rect({ x: x - 166, y: y + 72, w: 24, h: 24 }),
+            rect({ x: x + 142, y: y + 72, w: 24, h: 24 })
+        ];
+    }
+
+    if (templateId === 'stairsPlan') {
+        const root = createRectElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 130,
+            y: y - 58,
+            w: 260,
+            h: 116,
+            text: ''
+        });
+        const steps = [];
+        for (let i = 1; i < 10; i++) {
+            const stepX = x - 130 + i * 26;
+            steps.push(line({ x: stepX, y: y - 58, endX: stepX, endY: y + 58 }));
+        }
+        return [
+            root,
+            ...steps,
+            arrow({ x: x - 106, y, endX: x + 106, endY: y }),
+            line({ x: x - 118, y: y - 70, endX: x - 118, endY: y - 58 }),
+            line({ x: x + 118, y: y + 58, endX: x + 118, endY: y + 70 })
+        ];
+    }
+
+    if (templateId === 'wallOpenings') {
+        const root = createRectElement({
+            id: rootId,
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: x - 170,
+            y: y - 22,
+            w: 340,
+            h: 44,
+            text: ''
+        });
+        const hatch = [];
+        for (let i = -154; i <= 138; i += 28) {
+            hatch.push(line({ x: x + i, y: y + 22, endX: x + i + 20, endY: y - 22 }));
+        }
+        return [
+            root,
+            ...hatch,
+            rect({ x: x - 112, y: y - 34, w: 54, h: 68 }),
+            line({ x: x - 85, y: y - 34, endX: x - 85, endY: y + 34 }),
+            line({ x: x - 112, y, endX: x - 58, endY: y }),
+            rect({ x: x + 36, y: y - 44, w: 72, h: 88 }),
+            line({ x: x + 36, y: y + 44, endX: x + 108, endY: y - 44 })
         ];
     }
 
@@ -371,6 +676,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const [showShapesMenu, setShowShapesMenu] = useState(false);
     const [showColorMenu, setShowColorMenu] = useState(false);
     const [showSymbolsMenu, setShowSymbolsMenu] = useState(false);
+    const [showTemplatesMenu, setShowTemplatesMenu] = useState(false);
 
     const getOverlayTransform = useCallback(() => {
         const zoom = activeZoomRef.current;
@@ -794,6 +1100,25 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             ...s,
             tool: 'select',
             selectedElementId: symbolElements[0].id,
+            selectedElementIds: [],
+            editingTextId: null,
+            dragging: false
+        }));
+    }, [appState.color, appState.strokeWidth, pushHistory]);
+
+    const insertTemplate = useCallback((templateId, pos) => {
+        const templateElements = createTemplateElements(templateId, pos, appState.color, appState.strokeWidth);
+        if (templateElements.length === 0) return;
+
+        pushHistory(activeElementsRef.current);
+        const updatedElements = [...activeElementsRef.current, ...templateElements];
+        activeElementsRef.current = updatedElements;
+        setElements(updatedElements);
+        setShowTemplatesMenu(false);
+        setAppState(s => ({
+            ...s,
+            tool: 'select',
+            selectedElementId: templateElements[0].id,
             selectedElementIds: [],
             editingTextId: null,
             dragging: false
@@ -1452,6 +1777,11 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
         if (appState.tool.startsWith(SYMBOL_TOOL_PREFIX)) {
             insertSymbol(appState.tool.replace(SYMBOL_TOOL_PREFIX, ''), pos);
+            return;
+        }
+
+        if (appState.tool.startsWith(TEMPLATE_TOOL_PREFIX)) {
+            insertTemplate(appState.tool.replace(TEMPLATE_TOOL_PREFIX, ''), pos);
             return;
         }
         
@@ -3107,7 +3437,10 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(16px)',
                 borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.03)',
                 display: 'flex', alignItems: 'center', padding: '6px', gap: '2px',
-                border: '1px solid rgba(226, 232, 240, 0.9)'
+                border: '1px solid rgba(226, 232, 240, 0.9)',
+                maxWidth: 'calc(100vw - 24px)',
+                overflowX: 'auto',
+                scrollbarWidth: 'none'
             }}>
                 {[
                     { id: 'select', icon: MousePointer2, title: 'Markør' },
@@ -3121,6 +3454,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                             setAppState(s => ({ ...s, tool: t.id, selectedElementId: null }));
                             setShowShapesMenu(false);
                             setShowSymbolsMenu(false);
+                            setShowTemplatesMenu(false);
                         }}
                         className={`p-2 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center
                             ${appState.tool === t.id 
@@ -3139,6 +3473,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         onClick={() => {
                             setShowShapesMenu(!showShapesMenu);
                             setShowSymbolsMenu(false);
+                            setShowTemplatesMenu(false);
                         }}
                         className={`p-2 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center
                             ${['rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(appState.tool) 
@@ -3169,6 +3504,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                                         setAppState(s => ({ ...s, tool: t.id, selectedElementId: null }));
                                         setShowShapesMenu(false);
                                         setShowSymbolsMenu(false);
+                                        setShowTemplatesMenu(false);
                                     }}
                                     className={`p-2 rounded-lg transition-all duration-200 active:scale-95 flex items-center justify-center
                                         ${appState.tool === t.id ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-100'}`}
@@ -3188,6 +3524,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         onClick={() => {
                             setShowSymbolsMenu(!showSymbolsMenu);
                             setShowShapesMenu(false);
+                            setShowTemplatesMenu(false);
                         }}
                         className={`p-2 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center
                             ${appState.tool.startsWith(SYMBOL_TOOL_PREFIX)
@@ -3210,9 +3547,52 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                                     onClick={() => {
                                         setAppState(s => ({ ...s, tool: `${SYMBOL_TOOL_PREFIX}${t.id}`, selectedElementId: null, selectedElementIds: [] }));
                                         setShowSymbolsMenu(false);
+                                        setShowTemplatesMenu(false);
                                     }}
                                     className={`p-2 rounded-lg transition-all duration-200 active:scale-95 flex items-center justify-center
                                         ${appState.tool === `${SYMBOL_TOOL_PREFIX}${t.id}` ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-100'}`}
+                                    style={{ width: '32px', height: '32px' }}
+                                    title={t.title}
+                                >
+                                    <t.icon size={16} strokeWidth={2} />
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Carpenter Templates Menu Toggle */}
+                <div style={{ position: 'relative' }}>
+                    <button
+                        onClick={() => {
+                            setShowTemplatesMenu(!showTemplatesMenu);
+                            setShowShapesMenu(false);
+                            setShowSymbolsMenu(false);
+                        }}
+                        className={`p-2 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center
+                            ${appState.tool.startsWith(TEMPLATE_TOOL_PREFIX)
+                                ? 'bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100'
+                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                        style={{ width: '36px', height: '36px' }}
+                        title="Skabeloner"
+                    >
+                        <LayoutTemplate size={18} strokeWidth={appState.tool.startsWith(TEMPLATE_TOOL_PREFIX) ? 2.5 : 2} />
+                    </button>
+                    {showTemplatesMenu && (
+                        <div style={{
+                            position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px',
+                            backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                            border: '1px solid rgba(226, 232, 240, 1)', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px'
+                        }}>
+                            {CARPENTER_TEMPLATES.map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => {
+                                        setAppState(s => ({ ...s, tool: `${TEMPLATE_TOOL_PREFIX}${t.id}`, selectedElementId: null, selectedElementIds: [] }));
+                                        setShowTemplatesMenu(false);
+                                    }}
+                                    className={`p-2 rounded-lg transition-all duration-200 active:scale-95 flex items-center justify-center
+                                        ${appState.tool === `${TEMPLATE_TOOL_PREFIX}${t.id}` ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-100'}`}
                                     style={{ width: '32px', height: '32px' }}
                                     title={t.title}
                                 >
@@ -3235,6 +3615,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                             setAppState(s => ({ ...s, tool: t.id, selectedElementId: null }));
                             setShowShapesMenu(false);
                             setShowSymbolsMenu(false);
+                            setShowTemplatesMenu(false);
                         }}
                         className={`p-2 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center
                             ${appState.tool === t.id 

@@ -71,7 +71,12 @@ const PublicWizardPage = () => {
   useEffect(() => {
     const fetchCarpenter = async () => {
       if (!slug) return;
-      const { data } = await supabase.rpc('get_public_carpenter_by_slug', { slug_val: slug });
+      let { data } = await supabase.rpc('get_public_carpenter_by_slug', { slug_val: slug });
+      if (!data) {
+        // Fallback hvis RPC ikke er oprettet endnu (sikrer at beregneren aldrig går ned)
+        const fb = await supabase.from('carpenters').select('*').eq('slug', slug).single();
+        data = fb.data;
+      }
       if (data) {
         if (data.is_active === false) {
            setIsError('suspended');
