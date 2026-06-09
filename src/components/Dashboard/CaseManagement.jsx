@@ -260,6 +260,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [deductPause, setDeductPause] = useState(true);
     const [editingTimeId, setEditingTimeId] = useState(null);
     const [deletingTimeEntryId, setDeletingTimeEntryId] = useState(null);
+    const [timeOverwriteWarning, setTimeOverwriteWarning] = useState(null);
     const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
 
     // States til Mesterens ugentlige medarbejder-tidsstyring
@@ -1067,6 +1068,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             employeeName = profile?.owner_name || profile?.company_name || 'Ukendt medarbejder';
         }
 
+        const existingEntry = timeEntries.find(t => t.employeeId === effectiveEmployeeId && t.date === newTime.date && t.id !== editingTimeId);
+
         // Beregn timer
         const start = new Date(`${newTime.date}T${newTime.startTime}`);
         const end = new Date(`${newTime.date}T${newTime.endTime}`);
@@ -1098,6 +1101,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             employeeName: employeeName
         };
 
+        if (existingEntry) {
+            setTimeOverwriteWarning({ existingEntry, fields, employeeName, editingTimeId });
+            return false; // Stop formen i at lukke modalen
+        }
+
         if (editingTimeId) {
             // Flet mod frisk liste: opdater kun den ene registrering (rør ikke andres)
             await mutateCaseField('time_entries', arr => arr.map(t => t.id === editingTimeId ? { ...t, ...fields } : t), setTimeEntries);
@@ -1111,6 +1119,28 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         }
 
         setNewTime({ startTime: '07:00', endTime: '15:00', date: new Date().toISOString().substring(0, 10), desc: '', employeeId: ['worker', 'apprentice', 'sales'].includes(simulatedRole || profile?.role) ? profile.id : '' });
+        return true;
+    };
+
+    const confirmTimeOverwrite = async () => {
+        if (!timeOverwriteWarning) return;
+        const { existingEntry, fields, editingTimeId } = timeOverwriteWarning;
+
+        await mutateCaseField('time_entries', arr => {
+            let newArr = [...arr];
+            // Hvis vi var i gang med at redigere et indlæg (som vi nu ændrede datoen på), skal vi slette det gamle id
+            if (editingTimeId && editingTimeId !== existingEntry.id) {
+                newArr = newArr.filter(t => t.id !== editingTimeId);
+            }
+            // Overskriv den eksisterende post med de nye data
+            return newArr.map(t => t.id === existingEntry.id ? { ...t, ...fields } : t);
+        }, setTimeEntries);
+
+        toast.success('Timeregistrering overskrevet!');
+        setEditingTimeId(null);
+        setNewTime({ startTime: '07:00', endTime: '15:00', date: new Date().toISOString().substring(0, 10), desc: '', employeeId: ['worker', 'apprentice', 'sales'].includes(simulatedRole || profile?.role) ? profile.id : '' });
+        setTimeOverwriteWarning(null);
+        setIsTimeModalOpen(false); // Luk modalen
     };
 
     const handleEditTime = (entry) => {
@@ -3377,7 +3407,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 </div>
                                             )}
                                             
-                                            <form onSubmit={(e) => { handleAddTimeEntry(e); setIsTimeModalOpen(false); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                            <form onSubmit={async (e) => { const success = await handleAddTimeEntry(e); if (success) setIsTimeModalOpen(false); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                                 {(!['worker', 'apprentice'].includes(simulatedRole || profile?.role)) && (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                         <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Medarbejder (Hvem)</label>
@@ -3697,6 +3727,35 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         )}
             
         {/* MODAL TIL SLETNING AF TIMER */}
+        {timeOverwriteWarning && createPortal(
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', zIndex: 1000000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', animation: 'fadeIn 0.3s ease-out' }}>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', textAlign: 'center' }}>
+                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fff1f2', color: '#e11d48', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px auto' }}>
+                        <AlertTriangle size={32} />
+                    </div>
+                    <h3 style={{ margin: '0 0 12px 0', fontSize: '1.4rem', color: '#0f172a', fontWeight: 800 }}>Overskriv timer?</h3>
+                    <p style={{ margin: '0 0 24px 0', fontSize: '1rem', color: '#475569', lineHeight: 1.5 }}>
+                        Der er allerede registreret timer for <strong>{timeOverwriteWarning.employeeName}</strong> på denne dato. Vil du overskrive disse data?
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                        <button 
+                            onClick={() => setTimeOverwriteWarning(null)}
+                            style={{ flex: 1, padding: '16px', borderRadius: '16px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer' }}
+                        >
+                            Annuller
+                        </button>
+                        <button 
+                            onClick={confirmTimeOverwrite}
+                            style={{ flex: 1, padding: '16px', borderRadius: '16px', border: 'none', background: '#e11d48', color: 'white', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(225, 29, 72, 0.2)' }}
+                        >
+                            Overskriv
+                        </button>
+                    </div>
+                </div>
+            </div>,
+            document.body
+        )}
+
         {deletingTimeEntryId && createPortal(
             <div className="dashboard-modal-overlay delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
                 <div className="dashboard-modal-panel" style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
