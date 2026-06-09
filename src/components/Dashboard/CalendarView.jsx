@@ -569,64 +569,61 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     })()}
                 </div>
 
-
                 {/* MOBILE FILTER MODAL (Fullscreen Centered) */}
-                <AnimatePresence>
-                    {showMobileFilter && createPortal(
-                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
-                            <motion.div 
-                                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
-                                style={{ backgroundColor: '#fff', borderRadius: '24px', padding: '24px 20px', width: '100%', maxWidth: '400px', maxHeight: '90vh', position: 'relative', zIndex: 1, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}
-                            >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                    <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Users size={24} color="#2563eb" /> Vælg Kalender
-                                    </h2>
-                                    <button onClick={() => setShowMobileFilter(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                        <X size={20} color="#64748b" />
-                                    </button>
+                {showMobileFilter && createPortal(
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
+                            style={{ backgroundColor: '#fff', borderRadius: '24px', padding: '24px 20px', width: '100%', maxWidth: '400px', maxHeight: '90vh', position: 'relative', zIndex: 1, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Users size={24} color="#2563eb" /> Vælg Kalender
+                                </h2>
+                                <button onClick={() => setShowMobileFilter(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                    <X size={20} color="#64748b" />
+                                </button>
+                            </div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '50vh', overflowY: 'auto' }} className="custom-scroll">
+                                <div 
+                                    onClick={() => { setSelectedEmployeeIds(['all']); setShowMobileFilter(false); }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '16px', background: selectedEmployeeIds.includes('all') ? '#eff6ff' : '#f8fafc', border: selectedEmployeeIds.includes('all') ? '2px solid #3b82f6' : '1px solid #e2e8f0', cursor: 'pointer', transition: 'all 0.2s' }}
+                                >
+                                    <span style={{ fontSize: '1.05rem', fontWeight: '700', color: selectedEmployeeIds.includes('all') ? '#1d4ed8' : '#334155' }}>Firmaet (Alle)</span>
+                                    {selectedEmployeeIds.includes('all') && <CheckCircle size={22} color="#3b82f6" />}
                                 </div>
-                                
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '50vh', overflowY: 'auto' }} className="custom-scroll">
-                                    <div 
-                                        onClick={() => { setSelectedEmployeeIds(['all']); setShowMobileFilter(false); }}
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '16px', background: selectedEmployeeIds.includes('all') ? '#eff6ff' : '#f8fafc', border: selectedEmployeeIds.includes('all') ? '2px solid #3b82f6' : '1px solid #e2e8f0', cursor: 'pointer', transition: 'all 0.2s' }}
-                                    >
-                                        <span style={{ fontSize: '1.05rem', fontWeight: '700', color: selectedEmployeeIds.includes('all') ? '#1d4ed8' : '#334155' }}>Firmaet (Alle)</span>
-                                        {selectedEmployeeIds.includes('all') && <CheckCircle size={22} color="#3b82f6" />}
-                                    </div>
 
-                                    {[
-                                        { id: String(myProfile?.id), name: myProfile?.owner_name || myProfile?.company_name || 'Mig', isMe: true },
-                                        ...teamMembers.filter(m => String(m.id) !== String(myProfile?.id)).map(m => ({
-                                            id: String(m.id),
-                                            name: m.owner_name || m.company_name || 'Ukendt',
-                                            isMe: false
-                                        }))
-                                    ].map(emp => {
-                                        const isSelected = selectedEmployeeIds.includes(emp.id) && !selectedEmployeeIds.includes('all');
-                                        return (
-                                            <div 
-                                                key={emp.id}
-                                                onClick={() => { setSelectedEmployeeIds([emp.id]); setShowMobileFilter(false); }}
-                                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '16px', background: isSelected ? '#eff6ff' : '#fff', border: isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0', cursor: 'pointer', transition: 'all 0.2s' }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: emp.isMe ? '#dbeafe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: emp.isMe ? '#1d4ed8' : '#64748b', fontWeight: 'bold' }}>
-                                                        {emp.name.charAt(0)}
-                                                    </div>
-                                                    <span style={{ fontSize: '1.05rem', fontWeight: isSelected ? '700' : '600', color: isSelected ? '#1d4ed8' : '#0f172a' }}>{emp.name}</span>
+                                {[
+                                    { id: String(myProfile?.id), name: myProfile?.owner_name || myProfile?.company_name || 'Mig', isMe: true },
+                                    ...teamMembers.filter(m => String(m.id) !== String(myProfile?.id)).map(m => ({
+                                        id: String(m.id),
+                                        name: m.owner_name || m.company_name || 'Ukendt',
+                                        isMe: false
+                                    }))
+                                ].map(emp => {
+                                    const isSelected = selectedEmployeeIds.includes(emp.id) && !selectedEmployeeIds.includes('all');
+                                    return (
+                                        <div 
+                                            key={emp.id}
+                                            onClick={() => { setSelectedEmployeeIds([emp.id]); setShowMobileFilter(false); }}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '16px', background: isSelected ? '#eff6ff' : '#fff', border: isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: emp.isMe ? '#dbeafe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: emp.isMe ? '#1d4ed8' : '#64748b', fontWeight: 'bold' }}>
+                                                    {emp.name.charAt(0).toUpperCase()}
                                                 </div>
-                                                {isSelected && <CheckCircle size={22} color="#3b82f6" />}
+                                                <span style={{ fontSize: '1.05rem', fontWeight: '600', color: isSelected ? '#1e293b' : '#475569' }}>{emp.name}</span>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            </motion.div>
-                        </div>,
-                        document.body
-                    )}
-                </AnimatePresence>
+                                            {isSelected && <CheckCircle size={22} color="#3b82f6" />}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </motion.div>
+                    </div>,
+                    document.body
+                )}
             </div>
         );
     };
