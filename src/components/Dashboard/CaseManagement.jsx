@@ -164,6 +164,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     // States til logs
     const [logsList, setLogsList] = useState([]);
     const [newLogText, setNewLogText] = useState('');
+    const [isLogModalOpen, setIsLogModalOpen] = useState(false);
     const [logStatus, setLogStatus] = useState('green'); // 'green', 'yellow', 'red'
     const [logPhotos, setLogPhotos] = useState([]); // Previews (blob URLs)
     const [logFiles, setLogFiles] = useState([]); // Actual File objects
@@ -873,6 +874,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         }
     };
 
+
+    const getInitials = (name) => {
+        if (!name) return '??';
+        const parts = name.trim().split(' ');
+        if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase();
+        return name.substring(0, 2).toUpperCase();
+    };
+
     // Logbog-håndtering
     const handleAddLog = async (e) => {
         e.preventDefault();
@@ -917,6 +926,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             status: logStatus,
             text: newLogText.trim(),
             author: currentAuthor,
+            authorRole: profile?.role || 'Uoplyst',
+            authorId: profile?.id,
             date: new Date().toISOString(),
             photos: uploadedPhotoUrls
         };
@@ -2756,149 +2767,196 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             />
                         )}
 
-                        {/* TAB 3: LIVE BYGGEPROCES */}
+                        {/* TAB 3: LIVE BYGGEPROCES (Apple-agtig Timeline) */}
                         {activeSubTab === 'logs' && (
-                            <div className="case-tab-content" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+                            <div className="case-tab-content" style={{ display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'stretch' }}>
                                 
                                 {/* TIMELINE LOG */}
-                                <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <h4 style={{ margin: 0, color: '#1a1a1a' }}>Projektets byggeproces</h4>
+                                <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <h4 style={{ margin: 0, color: '#1a1a1a', fontSize: '1.2rem' }}>Projektets byggeproces</h4>
+                                        {profile?.role !== 'apprentice' && (
+                                            <button 
+                                                onClick={() => setIsLogModalOpen(true)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                            >
+                                                <Plus size={18} /> Tilføj status
+                                            </button>
+                                        )}
+                                    </div>
                                     
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', borderLeft: '2px solid #e2e8f0', paddingLeft: '16px', marginLeft: '8px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                         {logsList.length === 0 ? (
-                                            <p style={{ color: '#6b7280', fontSize: '0.9rem', fontStyle: 'italic' }}>Ingen log-opdateringer endnu.</p>
+                                            <p style={{ color: '#6b7280', fontSize: '0.9rem', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>Ingen log-opdateringer endnu.</p>
                                         ) : (
-                                            logsList.map(log => (
-                                                <div key={log.id} className="log-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                    {/* Status farve boble */}
-                                                    <div style={{ position: 'absolute', left: '-23px', top: '2px', width: '12px', height: '12px', borderRadius: '50%', background: log.status === 'red' ? '#ef4444' : (log.status === 'yellow' ? '#f59e0b' : '#10b981'), border: '2px solid white', boxShadow: '0 0 4px rgba(0,0,0,0.1)' }} />
-                                                    
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <strong style={{ fontSize: '0.85rem', color: '#1a1a1a' }}>
-                                                            {log.author} <span style={{ fontWeight: 'normal', color: '#6b7280' }}>tilføjede {log.isChangeOrder ? 'en Aftaleseddel' : 'status'}</span>
-                                                        </strong>
-                                                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                                                            {new Date(log.date).toLocaleDateString('da-DK')} {new Date(log.date).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
+                                            logsList.map(log => {
+                                                const displayRole = log.authorRole === 'admin' ? 'Mester' : 
+                                                                  log.authorRole === 'lead' ? 'Projektleder' : 
+                                                                  log.authorRole === 'worker' ? 'Svend' : 
+                                                                  log.authorRole === 'apprentice' ? 'Lærling' : 
+                                                                  log.authorRole || 'System';
+                                                                  
+                                                return (
+                                                <div key={log.id} style={{ display: 'flex', gap: '16px' }}>
+                                                    {/* Avatar */}
+                                                    <div style={{ flexShrink: 0, width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 'bold', color: '#475569', border: '1px solid #e2e8f0', position: 'relative' }}>
+                                                        {getInitials(log.author)}
+                                                        <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '12px', height: '12px', borderRadius: '50%', background: log.status === 'red' ? '#ef4444' : (log.status === 'yellow' ? '#f59e0b' : '#10b981'), border: '2px solid white' }} />
                                                     </div>
-
-                                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#374151', lineHeight: '1.5', backgroundColor: log.isChangeOrder ? '#fef2f2' : '#fcfcfc', padding: '12px', borderRadius: '8px', border: log.isChangeOrder ? '1px solid #fca5a5' : '1px solid #f1f1ef' }}>
-                                                        {log.text}
-                                                    </p>
-
-                                                    {log.isChangeOrder && (
-                                                        <div style={{ display: 'flex', gap: '16px', padding: '10px 14px', backgroundColor: '#fff1f2', borderRadius: '8px', border: '1px solid #ffe4e6', color: '#be123c', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                                            <span>Ekstra timer: +{log.extraHours} t</span>
-                                                            <span>Ekstra materialer/omk: +{log.extraPrice} kr.</span>
+                                                    
+                                                    {/* Content */}
+                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                                                            <div>
+                                                                <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{log.author}</strong>
+                                                                <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{displayRole}</span>
+                                                            </div>
+                                                            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                                                {new Date(log.date).toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })} kl. {new Date(log.date).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
                                                         </div>
-                                                    )}
 
-                                                    {log.photos && log.photos.length > 0 && (
-                                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
-                                                            {log.photos.map((photo, pIdx) => (
-                                                                <a key={pIdx} href={photo} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                                                                    <img src={photo} alt="Fremdrift" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                                </a>
-                                                            ))}
+                                                        <div style={{ padding: '14px', backgroundColor: log.isChangeOrder ? '#fef2f2' : '#f8fafc', borderRadius: '0 16px 16px 16px', border: log.isChangeOrder ? '1px solid #fca5a5' : '1px solid #f1f5f9' }}>
+                                                            {log.isChangeOrder && (
+                                                                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#be123c', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                                    Aftaleseddel Tilføjet
+                                                                </div>
+                                                            )}
+                                                            <p style={{ margin: 0, fontSize: '0.95rem', color: '#334155', lineHeight: '1.5' }}>
+                                                                {log.text}
+                                                            </p>
+                                                            
+                                                            {log.isChangeOrder && (
+                                                                <div style={{ display: 'flex', gap: '16px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #ffe4e6', color: '#be123c', fontSize: '0.85rem', fontWeight: '600' }}>
+                                                                    <span>+{log.extraHours} timer</span>
+                                                                    <span>+{log.extraPrice} kr.</span>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
+
+                                                        {log.photos && log.photos.length > 0 && (
+                                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                                {log.photos.map((photo, pIdx) => (
+                                                                    <a key={pIdx} href={photo} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100px', height: '100px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                                                        <img src={photo} alt="Fremdrift" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                    </a>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            ))
+                                            )})
                                         )}
                                     </div>
                                 </div>
-
-                                {/* NYT LOGBOGS INDLÆG */}
-                                {profile?.role !== 'apprentice' && (
-                                <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '24px' }}>
-                                    <h4 style={{ margin: 0, color: '#1a1a1a' }}>Skriv status fra pladsen</h4>
-                                    
-                                    <form onSubmit={handleAddLog} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                        {/* Status farvevælger */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Drift-status</label>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                                                {[
-                                                    { id: 'green', label: 'OK', color: '#10b981' },
-                                                    { id: 'yellow', label: 'Info/Obs', color: '#f59e0b' },
-                                                    { id: 'red', label: 'Stop/Problem', color: '#ef4444' }
-                                                ].map(s => (
-                                                    <button
-                                                        key={s.id}
-                                                        type="button"
-                                                        className="hover-lift"
-                                                        onClick={() => setLogStatus(s.id)}
-                                                        style={{ padding: '8px', border: logStatus === s.id ? `2px solid ${s.color}` : '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', background: logStatus === s.id ? 'white' : '#fafafa', fontWeight: 'bold', color: '#1e293b' }}
-                                                    >
-                                                        {s.label}
-                                                    </button>
-                                                ))}
+                                
+                                {/* MODAL TIL AT SKRIVE LOG */}
+                                {isLogModalOpen && createPortal(
+                                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out' }}>
+                                        <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'fadeInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '90vh', overflowY: 'auto' }}>
+                                            
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                                <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a' }}>Skriv status fra pladsen</h3>
+                                                <button 
+                                                    onClick={() => setIsLogModalOpen(false)}
+                                                    style={{ background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}
+                                                >
+                                                    ✕
+                                                </button>
                                             </div>
-                                        </div>
 
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Beskrivelse</label>
-                                            <textarea 
-                                                rows={4}
-                                                value={newLogText}
-                                                onChange={(e) => setNewLogText(e.target.value)}
-                                                placeholder="Beskriv fremskridt eller eventuelle problemstillinger..."
-                                                style={{ border: '1px solid #e8e6e1', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', resize: 'none' }}
-                                            />
-                                        </div>
-
-
-                                        {/* Rigtigt Foto-upload */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Vedhæft byggeplads-foto (valgfrit)</label>
-                                            
-                                            <label className="hover-lift" style={{ padding: '10px 14px', border: '1px dashed #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', backgroundColor: '#ffffff', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '500' }}>
-                                                <Camera size={16} /> Upload foto fra kamera/telefon
-                                                <input 
-                                                    type="file" 
-                                                    multiple 
-                                                    accept="image/*" 
-                                                    style={{ display: 'none' }} 
-                                                    onChange={handleRealPhotoUpload}
-                                                />
-                                            </label>
-                                            
-                                            {logPhotos.length > 0 && (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                                                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>✓ {logPhotos.length} foto(s) klar til indsendelse</p>
-                                                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-                                                        {logPhotos.map((photo, idx) => (
-                                                            <div key={idx} style={{ position: 'relative', flexShrink: 0 }}>
-                                                                <img src={photo} alt="Upload preview" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removePhoto(idx)}
-                                                                    style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '10px', padding: 0 }}
-                                                                >
-                                                                    ✕
-                                                                </button>
-                                                            </div>
+                                            <form onSubmit={(e) => { handleAddLog(e); setIsLogModalOpen(false); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                                {/* Status farvevælger */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Drift-status</label>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                                                        {[
+                                                            { id: 'green', label: 'OK', color: '#10b981' },
+                                                            { id: 'yellow', label: 'Info/Obs', color: '#f59e0b' },
+                                                            { id: 'red', label: 'Stop/Problem', color: '#ef4444' }
+                                                        ].map(s => (
+                                                            <button
+                                                                key={s.id}
+                                                                type="button"
+                                                                className="hover-lift"
+                                                                onClick={() => setLogStatus(s.id)}
+                                                                style={{ padding: '12px', border: logStatus === s.id ? `2px solid ${s.color}` : '1px solid #e2e8f0', borderRadius: '12px', fontSize: '0.9rem', cursor: 'pointer', background: logStatus === s.id ? 'white' : '#f8fafc', fontWeight: 'bold', color: logStatus === s.id ? s.color : '#64748b', transition: 'all 0.2s' }}
+                                                            >
+                                                                {s.label}
+                                                            </button>
                                                         ))}
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
 
-                                        <button 
-                                            type="submit"
-                                            disabled={isUploadingLog}
-                                            className="hover-lift"
-                                            style={{ padding: '12px', backgroundColor: isUploadingLog ? '#94a3b8' : '#1e293b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem', cursor: isUploadingLog ? 'not-allowed' : 'pointer' }}
-                                        >
-                                            {isUploadingLog ? 'Gemmer dagens arbejde...' : 'Gem dagens arbejde'}
-                                        </button>
-                                    </form>
-                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Beskrivelse</label>
+                                                    <textarea 
+                                                        rows={5}
+                                                        value={newLogText}
+                                                        onChange={(e) => setNewLogText(e.target.value)}
+                                                        placeholder="Hvad er der lavet i dag? Er der opstået problemer?"
+                                                        style={{ border: '1px solid #e2e8f0', padding: '16px', borderRadius: '12px', fontSize: '0.95rem', resize: 'none', backgroundColor: '#f8fafc', color: '#0f172a', outline: 'none', transition: 'all 0.2s' }}
+                                                        onFocus={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)'; }}
+                                                        onBlur={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}
+                                                    />
+                                                </div>
+
+                                                {/* Rigtigt Foto-upload */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Vedhæft byggeplads-foto (valgfrit)</label>
+                                                    
+                                                    <label className="hover-lift" style={{ padding: '14px', border: '1px dashed #cbd5e1', borderRadius: '12px', fontSize: '0.9rem', cursor: 'pointer', backgroundColor: '#f8fafc', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', transition: 'all 0.2s' }}
+                                                           onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
+                                                           onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                                                    >
+                                                        <Camera size={18} /> Upload foto fra kamera/telefon
+                                                        <input 
+                                                            type="file" 
+                                                            multiple 
+                                                            accept="image/*" 
+                                                            style={{ display: 'none' }} 
+                                                            onChange={handleRealPhotoUpload}
+                                                        />
+                                                    </label>
+                                                    
+                                                    {logPhotos.length > 0 && (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#10b981', fontWeight: 'bold' }}>✓ {logPhotos.length} foto(s) klar til indsendelse</p>
+                                                            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                                                {logPhotos.map((photo, idx) => (
+                                                                    <div key={idx} style={{ position: 'relative', flexShrink: 0 }}>
+                                                                        <img src={photo} alt="Upload preview" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #e2e8f0' }} />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => removePhoto(idx)}
+                                                                            style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px', padding: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
+                                                                        >
+                                                                            ✕
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <button 
+                                                    type="submit"
+                                                    disabled={isUploadingLog}
+                                                    className="hover-lift"
+                                                    style={{ padding: '16px', backgroundColor: isUploadingLog ? '#94a3b8' : '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', cursor: isUploadingLog ? 'not-allowed' : 'pointer', marginTop: '12px', boxShadow: isUploadingLog ? 'none' : '0 4px 12px rgba(16,185,129,0.3)' }}
+                                                >
+                                                    {isUploadingLog ? 'Gemmer status...' : 'Gem dagens arbejde'}
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>,
+                                    document.body
                                 )}
                             </div>
                         )}
 
-                        {/* TAB 4: TIMEREGISTRERING */}
+{/* TAB 4: TIMEREGISTRERING */}
                         {activeSubTab === 'timesheet' && (
                             <div className="case-tab-content" style={{ display: 'grid', gridTemplateColumns: (!['worker', 'apprentice'].includes(profile?.role)) ? '1fr 340px' : '1fr', gap: '24px', alignItems: 'start', maxWidth: (!['worker', 'apprentice'].includes(profile?.role)) ? 'none' : '500px', margin: (!['worker', 'apprentice'].includes(profile?.role)) ? '0' : '0 auto' }}>
                                 

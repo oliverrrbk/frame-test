@@ -752,6 +752,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const [showColorMenu, setShowColorMenu] = useState(false);
     const [showSymbolsMenu, setShowSymbolsMenu] = useState(false);
     const [showTemplatesMenu, setShowTemplatesMenu] = useState(false);
+    const [templateSaveDraft, setTemplateSaveDraft] = useState(null);
     const [templateCategory, setTemplateCategory] = useState('standard');
     const [customTemplates, setCustomTemplates] = useState(() => {
         if (typeof window === 'undefined') return [];
@@ -1194,22 +1195,32 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         }
 
         const defaultName = `Skabelon ${customTemplates.length + 1}`;
-        const rawName = window.prompt('Navn på skabelon', defaultName);
-        const name = rawName?.trim();
+        setTemplateSaveDraft({
+            name: defaultName,
+            elementCount: selectedElements.length,
+            bounds,
+            elements: normalizeElementsForCustomTemplate(selectedElements, bounds)
+        });
+        setShowTemplatesMenu(false);
+    }, [customTemplates, getSelectionWithChildren]);
+
+    const confirmSaveTemplate = useCallback(() => {
+        const name = templateSaveDraft?.name?.trim();
         if (!name) return;
 
         const template = {
             id: generateId(),
             name: name.slice(0, 42),
             createdAt: new Date().toISOString(),
-            elementCount: selectedElements.length,
-            elements: normalizeElementsForCustomTemplate(selectedElements, bounds)
+            elementCount: templateSaveDraft.elementCount,
+            elements: templateSaveDraft.elements
         };
 
         persistCustomTemplates([template, ...customTemplates]);
+        setTemplateSaveDraft(null);
         setTemplateCategory('custom');
         toast.success('Skabelonen er gemt.');
-    }, [customTemplates, getSelectionWithChildren, persistCustomTemplates]);
+    }, [customTemplates, persistCustomTemplates, templateSaveDraft]);
 
     const deleteCustomTemplate = useCallback((templateId) => {
         const nextTemplates = customTemplates.filter(t => t.id !== templateId);
@@ -3170,6 +3181,122 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const canUngroupSelection = selectedLockableElements.some(el => el.parentId && selectedIdsForPanel.includes(el.parentId));
     const canAlignSelection = selectedLockableElements.length > 1;
     const canDistributeSelection = selectedLockableElements.length > 2;
+    const templateSaveModal = templateSaveDraft && (
+        <div
+            style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 20000,
+                background: 'rgba(15, 23, 42, 0.34)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 20
+            }}
+            onPointerDown={() => setTemplateSaveDraft(null)}
+        >
+            <div
+                style={{
+                    width: 'min(420px, calc(100vw - 32px))',
+                    background: 'rgba(255, 255, 255, 0.96)',
+                    border: '1px solid rgba(226, 232, 240, 0.95)',
+                    borderRadius: 16,
+                    boxShadow: '0 24px 70px rgba(15, 23, 42, 0.22), 0 4px 18px rgba(15, 23, 42, 0.08)',
+                    padding: 18,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 14
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 12,
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <LayoutTemplate size={20} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>Gem som skabelon</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginTop: 2 }}>
+                            {templateSaveDraft.elementCount} elementer gemmes til hurtig genbrug.
+                        </div>
+                    </div>
+                </div>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: '#475569' }}>Navn på skabelon</span>
+                    <input
+                        autoFocus
+                        value={templateSaveDraft.name}
+                        onChange={(e) => setTemplateSaveDraft(draft => ({ ...draft, name: e.target.value }))}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') confirmSaveTemplate();
+                            if (e.key === 'Escape') setTemplateSaveDraft(null);
+                        }}
+                        style={{
+                            height: 42,
+                            borderRadius: 10,
+                            border: '1px solid #bfdbfe',
+                            background: '#ffffff',
+                            color: '#0f172a',
+                            padding: '0 12px',
+                            outline: 'none',
+                            fontSize: 14,
+                            fontWeight: 800,
+                            boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.08)'
+                        }}
+                    />
+                </label>
+
+                <div style={{
+                    borderRadius: 12,
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    padding: '10px 12px',
+                    color: '#475569',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    lineHeight: 1.45
+                }}>
+                    Skabelonen bliver ikke downloadet. Den gemmes i denne browser under <strong>Skabeloner → Egne</strong>, hvor du kan indsætte den igen på andre skitser.
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button
+                        onClick={() => setTemplateSaveDraft(null)}
+                        className="rounded-lg text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
+                        style={{ height: 38, padding: '0 14px', fontSize: 13, fontWeight: 800 }}
+                    >
+                        Annuller
+                    </button>
+                    <button
+                        onClick={confirmSaveTemplate}
+                        disabled={!templateSaveDraft.name.trim()}
+                        className="rounded-lg text-white transition-all active:scale-95 disabled:opacity-40"
+                        style={{
+                            height: 38,
+                            padding: '0 16px',
+                            fontSize: 13,
+                            fontWeight: 800,
+                            background: '#0f172a',
+                            boxShadow: '0 8px 20px rgba(15, 23, 42, 0.18)'
+                        }}
+                    >
+                        Gem skabelon
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', width: '100vw', height: '100vh', overflow: 'hidden' }}>
@@ -3207,6 +3334,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     {textOverlay}
                 </div>
             </div>
+            {templateSaveModal}
 
             {/* 1. TOP BAR (Header) - ORIGINAL FLOATING STYLE */}
             <div style={{ 
