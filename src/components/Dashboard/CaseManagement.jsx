@@ -13,7 +13,9 @@ import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil }
 
 import toast from 'react-hot-toast';
 
-const CustomSelect = ({ value, onChange, options, placeholder }) => {
+// CustomSelect Component
+// Re-written slightly to avoid scope minification issues in old Safari
+const CustomSelect = function({ value, onChange, options, placeholder }) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -3238,46 +3240,46 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         
                                         return (
                                             <>
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: isWorker ? '1fr' : 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
                                                     
                                                     {!isWorker && (
-                                                    <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            <Users size={20} />
+                                                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <Users size={16} />
                                                         </div>
                                                         <div>
-                                                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Holdets forbrug</div>
-                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                                                                <span style={{ fontSize: '1.6rem', fontWeight: '800', color: totalActualHours > budgetedHours ? '#ef4444' : '#0f172a' }}>{totalActualHours}</span>
-                                                                <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: '600' }}>/ {budgetedHours} t</span>
+                                                            <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Forbrug</div>
+                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px', flexWrap: 'wrap' }}>
+                                                                <span style={{ fontSize: '1.2rem', fontWeight: '800', color: totalActualHours > budgetedHours ? '#ef4444' : '#0f172a' }}>{totalActualHours}</span>
+                                                                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', whiteSpace: 'nowrap' }}>/ {budgetedHours} t</span>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     )}
 
-                                                    <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f0fdf4', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            <User size={20} />
+                                                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#f0fdf4', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <User size={16} />
                                                         </div>
                                                         <div>
-                                                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dine timer</div>
-                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                                                                <span style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a' }}>{myTotalHours}</span>
-                                                                <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: '600' }}>t</span>
+                                                            <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Dine timer</div>
+                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                                                                <span style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>{myTotalHours}</span>
+                                                                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>t</span>
                                                             </div>
                                                         </div>
                                                     </div>
 
                                                     {!isWorker && (
-                                                    <div style={{ background: '#fefce8', padding: '20px', borderRadius: '24px', border: '1px solid #fef08a', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef08a', color: '#ca8a04', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            <DollarSign size={20} />
+                                                    <div style={{ background: '#fff1f2', padding: '12px', borderRadius: '16px', border: '1px solid #fecdd3', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#ffe4e6', color: '#e11d48', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <TrendingUp size={16} />
                                                         </div>
                                                         <div>
-                                                            <div style={{ fontSize: '0.8rem', color: '#a16207', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ekstraregning</div>
-                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                                                                <span style={{ fontSize: '1.6rem', fontWeight: '800', color: '#854d0e' }}>+{totalExtraPrice}</span>
-                                                                <span style={{ fontSize: '1rem', color: '#a16207', fontWeight: '600' }}>kr.</span>
+                                                            <div style={{ fontSize: '0.65rem', color: '#9f1239', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Overforbrug</div>
+                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                                                                <span style={{ fontSize: '1.2rem', fontWeight: '800', color: '#be123c' }}>+{Math.max(0, totalActualHours - budgetedHours).toFixed(1)}</span>
+                                                                <span style={{ fontSize: '0.75rem', color: '#9f1239', fontWeight: '600' }}>t</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -3391,7 +3393,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         <CustomSelect
                                                             value={newTime.employeeId}
                                                             onChange={(val) => setNewTime({ ...newTime, employeeId: val })}
-                                                            options={team.map(worker => ({ value: worker.id, label: worker.owner_name || worker.company_name || worker.email || 'Ukendt' }))}
+                                                            options={team.map(function(worker) { return { value: worker?.id, label: worker?.owner_name || worker?.company_name || worker?.email || 'Ukendt' }; })}
                                                             placeholder="-- Vælg medarbejder --"
                                                         />
                                                     </div>
