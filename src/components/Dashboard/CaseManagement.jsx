@@ -768,7 +768,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             contact_name: sc.contact_name || '',
             contact_phone: sc.contact_phone || '',
             contact_email: sc.contact_email || '',
-            workers: []
+            workers: sc.workers || [],
+            selected_workers: []
         }]);
     };
 
@@ -1718,24 +1719,61 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 <div>
                                                     <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', marginBottom: '8px', marginTop: (pmIds.length > 0 || assignedWorkers.length > 0) ? '8px' : '0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Underleverandører</div>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                        {assignedSubs.map(sub => (
-                                                            <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#f5f3ff', borderRadius: '20px', border: '1px solid #ddd6fe' }}>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                                    <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#8b5cf6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.3)' }}>
-                                                                        {(sub.company_name || '?').charAt(0).toUpperCase()}
-                                                                    </div>
-                                                                    <div>
-                                                                        <div style={{ fontWeight: '700', color: '#5b21b6', fontSize: '1.05rem' }}>{sub.company_name}</div>
-                                                                        <div style={{ fontSize: '0.8rem', color: '#8b5cf6', fontWeight: '600' }}>{sub.trade || 'Underleverandør'}</div>
+                                                        {assignedSubs.map(sub => {
+                                                            const selectedWorkers = (sub.workers || []).filter(w => (sub.selected_workers || []).includes(w.id));
+                                                            return (
+                                                            <div key={sub.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', background: '#f5f3ff', borderRadius: '20px', border: '1px solid #ddd6fe' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#8b5cf6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.3)' }}>
+                                                                            {(sub.company_name || '?').charAt(0).toUpperCase()}
+                                                                        </div>
+                                                                        <div>
+                                                                            <div style={{ fontWeight: '700', color: '#5b21b6', fontSize: '1.05rem' }}>{sub.company_name}</div>
+                                                                            <div style={{ fontSize: '0.8rem', color: '#8b5cf6', fontWeight: '600' }}>{sub.trade || 'Underleverandør'}</div>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                                {sub.contact_phone && (
-                                                                    <a href={`tel:${sub.contact_phone}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px', borderRadius: '50%', background: '#ffffff', color: '#8b5cf6', border: '1px solid #ddd6fe', boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)' }}>
-                                                                        <Phone size={18} />
-                                                                    </a>
+                                                                {/* Kontaktperson */}
+                                                                {sub.contact_name && (
+                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '16px', marginTop: '8px', borderLeft: '2px solid rgba(139, 92, 246, 0.2)' }}>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                                                {sub.contact_name.charAt(0).toUpperCase()}
+                                                                            </div>
+                                                                            <div>
+                                                                                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#4c1d95' }}>{sub.contact_name}</div>
+                                                                                <div style={{ fontSize: '0.75rem', color: '#8b5cf6' }}>Mester</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        {sub.contact_phone && (
+                                                                            <a href={`tel:${sub.contact_phone}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#ffffff', color: '#8b5cf6', borderRadius: '20px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #ddd6fe', boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)' }}>
+                                                                                <Phone size={12} /> Ring
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
                                                                 )}
+                                                                {/* Valgte svende */}
+                                                                {selectedWorkers.map(w => (
+                                                                    <div key={w.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '16px', marginTop: '4px', borderLeft: '2px solid rgba(139, 92, 246, 0.2)' }}>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                                                {w.name.charAt(0).toUpperCase()}
+                                                                            </div>
+                                                                            <div>
+                                                                                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#4c1d95' }}>{w.name}</div>
+                                                                                <div style={{ fontSize: '0.75rem', color: '#8b5cf6' }}>{w.role}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        {w.phone && (
+                                                                            <a href={`tel:${w.phone}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#ffffff', color: '#8b5cf6', borderRadius: '20px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #ddd6fe', boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)' }}>
+                                                                                <Phone size={12} /> Ring
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
                                                             </div>
-                                                        ))}
+                                                        );})}
                                                     </div>
                                                 </div>
                                             )}
@@ -2310,18 +2348,78 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#94a3b8', padding: '8px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Eksterne underleverandører</div>
                                                     {subcontractors.map(sc => {
                                                         const isAttached = assignedSubs.some(s => s.id === sc.id);
+                                                        const attachedSub = assignedSubs.find(s => s.id === sc.id);
+                                                        const hasWorkers = sc.workers && sc.workers.length > 0;
+                                                        const isExpanded = isAttached && hasWorkers;
+                                                        
+                                                        const toggleWorker = (e, workerId) => {
+                                                            e.stopPropagation();
+                                                            const updated = assignedSubs.map(s => {
+                                                                if (s.id === sc.id) {
+                                                                    const currentSelected = s.selected_workers || [];
+                                                                    const newSelected = currentSelected.includes(workerId)
+                                                                        ? currentSelected.filter(id => id !== workerId)
+                                                                        : [...currentSelected, workerId];
+                                                                    return { ...s, selected_workers: newSelected };
+                                                                }
+                                                                return s;
+                                                            });
+                                                            setAssignedSubs(updated);
+                                                        };
+
                                                         return (
-                                                            <div
-                                                                key={sc.id}
-                                                                onClick={() => attachSubcontractor(sc)}
-                                                                style={{ padding: '16px', margin: '4px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '12px', backgroundColor: isAttached ? '#f5f3ff' : '#f8fafc', border: isAttached ? '2px solid #8b5cf6' : '1px solid #e2e8f0', transition: 'all 0.1s' }}
-                                                            >
-                                                                <div style={{ width: '24px', height: '24px', borderRadius: '6px', border: isAttached ? 'none' : '1px solid #cbd5e1', backgroundColor: isAttached ? '#8b5cf6' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                    {isAttached && <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>✓</span>}
+                                                            <div key={sc.id} style={{ display: 'flex', flexDirection: 'column', margin: '4px 0', backgroundColor: isAttached ? '#f5f3ff' : '#f8fafc', borderRadius: '12px', border: isAttached ? '2px solid #8b5cf6' : '1px solid #e2e8f0', transition: 'all 0.1s', overflow: 'hidden' }}>
+                                                                <div
+                                                                    onClick={() => attachSubcontractor(sc)}
+                                                                    style={{ padding: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}
+                                                                >
+                                                                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', border: isAttached ? 'none' : '1px solid #cbd5e1', backgroundColor: isAttached ? '#8b5cf6' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                        {isAttached && <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>✓</span>}
+                                                                    </div>
+                                                                    <div style={{ flex: 1 }}>
+                                                                        <span style={{ fontSize: '1.05rem', color: isAttached ? '#6d28d9' : '#334155', fontWeight: isAttached ? 'bold' : '600' }}>
+                                                                            {sc.company_name}{sc.trade ? ` · ${sc.trade}` : ''}
+                                                                        </span>
+                                                                        {isAttached && <div style={{ fontSize: '0.75rem', color: '#8b5cf6', marginTop: '2px' }}>Mester / Kontaktperson er altid valgt</div>}
+                                                                    </div>
+                                                                    {hasWorkers && (
+                                                                        <div style={{ color: isAttached ? '#8b5cf6' : '#94a3b8', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                                <span style={{ fontSize: '1.05rem', color: isAttached ? '#6d28d9' : '#334155', fontWeight: isAttached ? 'bold' : '600' }}>
-                                                                    {sc.company_name}{sc.trade ? ` · ${sc.trade}` : ''}
-                                                                </span>
+                                                                
+                                                                <AnimatePresence>
+                                                                    {isExpanded && (
+                                                                        <motion.div 
+                                                                            initial={{ height: 0, opacity: 0 }}
+                                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                                            exit={{ height: 0, opacity: 0 }}
+                                                                            style={{ overflow: 'hidden', borderTop: '1px solid rgba(139, 92, 246, 0.2)', backgroundColor: 'rgba(255,255,255,0.5)' }}
+                                                                        >
+                                                                            <div style={{ padding: '12px 16px 16px 48px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Vælg specifikke svende</div>
+                                                                                {sc.workers.map(w => {
+                                                                                    const isSelected = (attachedSub.selected_workers || []).includes(w.id);
+                                                                                    return (
+                                                                                        <div 
+                                                                                            key={w.id} 
+                                                                                            onClick={(e) => toggleWorker(e, w.id)}
+                                                                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '8px 12px', borderRadius: '8px', backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.15)' : 'transparent', transition: 'background 0.1s' }}
+                                                                                        >
+                                                                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: isSelected ? 'none' : '1px solid #cbd5e1', backgroundColor: isSelected ? '#8b5cf6' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                                                {isSelected && <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>✓</span>}
+                                                                                            </div>
+                                                                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                                                                                <span style={{ fontSize: '0.95rem', color: isSelected ? '#5b21b6' : '#475569', fontWeight: isSelected ? 600 : 500 }}>{w.name} <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>({w.role})</span></span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </motion.div>
+                                                                    )}
+                                                                </AnimatePresence>
                                                             </div>
                                                         );
                                                     })}

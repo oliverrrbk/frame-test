@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SubcontractorManager } from './Subcontractors';
+import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
 import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
 
 const roles = [
@@ -268,10 +268,9 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
 
                             <div className="input-group">
                                 <label>Telefon</label>
-                                <input
-                                    type="tel"
+                                <BeautifulPhoneInput
                                     value={inviteData.phone}
-                                    onChange={(e) => setInviteData({...inviteData, phone: e.target.value})}
+                                    onChange={(val) => setInviteData({...inviteData, phone: val})}
                                     placeholder="12 34 56 78"
                                 />
                             </div>

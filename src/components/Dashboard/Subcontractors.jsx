@@ -19,7 +19,7 @@ const TRADES = ['Elektriker', 'VVS', 'Maler', 'Murer', 'Kloak / Anlæg', 'Gulv',
 // MODAL — opret eller redigér en underleverandør (firma + mester)
 // ---------------------------------------------------------------------------
 export function SubcontractorModal({ open, onClose, companyId, initial = null, onSaved }) {
-    const blank = { company_name: '', trade: '', contact_name: '', contact_phone: '', contact_email: '', cvr: '', address: '', notes: '' };
+    const blank = { company_name: '', trade: '', contact_name: '', contact_phone: '', contact_email: '', cvr: '', address: '', notes: '', workers: [] };
     const [form, setForm] = useState(blank);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -33,7 +33,7 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                 contact_email: initial.contact_email || '',
                 cvr: initial.cvr || '',
                 address: initial.address || '',
-                notes: initial.notes || ''
+                notes: initial.notes || '', workers: initial.workers || []
             } : blank);
         }
     }, [open, initial]);
@@ -141,7 +141,7 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                         </Field>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                             <Field label="Telefon">
-                                <input type="tel" value={form.contact_phone} onChange={(e) => set('contact_phone', e.target.value)} placeholder="12 34 56 78" style={inputStyle} />
+                                <BeautifulPhoneInput value={form.contact_phone} onChange={(val) => set('contact_phone', val)} />
                             </Field>
                             <Field label="E-mail">
                                 <input type="email" value={form.contact_email} onChange={(e) => set('contact_email', e.target.value)} placeholder="jens@firma.dk" style={inputStyle} />
@@ -169,6 +169,40 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                                 {initial?.id ? 'Gem ændringer' : 'Opret underleverandør'}
                             </button>
                         </div>
+                    
+                        <div style={{ height: '1px', background: '#f1f5f9', margin: '2px 0' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Medarbejdere (Svende & Lærlinge)</div>
+                            <button type="button" onClick={() => set('workers', [...(form.workers || []), { id: `sw-${Date.now()}`, name: '', phone: '', role: 'Svend' }])} style={{ background: '#f5f3ff', color: '#7c3aed', border: 'none', borderRadius: '8px', padding: '4px 10px', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', transition: 'all 0.2s' }}>
+                                <Plus size={14} /> Tilføj
+                            </button>
+                        </div>
+                        
+                        <AnimatePresence>
+                            {(form.workers || []).map((w, i) => (
+                                <motion.div 
+                                    key={w.id}
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}
+                                >
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <input value={w.name} onChange={(e) => { const nw = [...form.workers]; nw[i].name = e.target.value; set('workers', nw); }} placeholder="Navn (fx Lars Lærling)" style={inputStyle} />
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <BeautifulPhoneInput value={w.phone} onChange={(val) => { const nw = [...form.workers]; nw[i].phone = val; set('workers', nw); }} />
+                                            <select value={w.role} onChange={(e) => { const nw = [...form.workers]; nw[i].role = e.target.value; set('workers', nw); }} style={{...inputStyle, padding: '0 12px'}}>
+                                                <option value="Svend">Svend</option>
+                                                <option value="Lærling">Lærling</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button type="button" onClick={() => { const nw = form.workers.filter(x => x.id !== w.id); set('workers', nw); }} style={{ background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: '4px' }}>
+                                        <Trash2 size={16} />
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                     </form>
                 </motion.div>
             </motion.div>
@@ -451,3 +485,48 @@ const iconBtn = {
     cursor: 'pointer',
     transition: 'all 0.15s'
 };
+
+
+// Lækker custom telefon-input i Bison Frame 2026 stil
+export function BeautifulPhoneInput({ value, onChange, placeholder }) {
+    const [focused, setFocused] = useState(false);
+    return (
+        <div 
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                border: focused ? '1px solid #7c3aed' : '1px solid #e2e8f0',
+                borderRadius: '12px',
+                background: '#ffffff',
+                overflow: 'hidden',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                boxShadow: focused ? '0 0 0 3px rgba(124, 58, 237, 0.12)' : 'none',
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', background: '#f8fafc', borderRight: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600, fontSize: '0.9rem', height: '100%' }}>
+                <Phone size={14} style={{ marginRight: '6px' }} />
+                +45
+            </div>
+            <input 
+                type="tel"
+                value={value}
+                onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9\s]/g, '');
+                    onChange(val);
+                }}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                placeholder={placeholder || "12 34 56 78"}
+                style={{
+                    flex: 1,
+                    padding: '12px 14px',
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '0.95rem',
+                    color: '#0f172a',
+                    background: 'transparent'
+                }}
+            />
+        </div>
+    );
+}
