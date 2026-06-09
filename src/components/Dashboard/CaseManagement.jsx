@@ -1755,15 +1755,45 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 
                                                 <button onClick={() => { setInfoSheetType(null); setActiveSubTab('materials'); }} style={{ marginTop: '24px', width: '100%', padding: '14px', background: '#2563eb', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Gå til materialeliste</button>
                                                 
-                                                <div style={{ position: 'relative', marginTop: '12px' }}>
-                                                    <button style={{ width: '100%', padding: '14px', background: '#eff6ff', color: '#2563eb', borderRadius: '12px', fontWeight: 'bold', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
-                                                        <Calendar size={18} /> Tilføj leveringsdato til kalender
-                                                    </button>
+                                                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                                                     <input 
                                                         type="date" 
-                                                        onChange={handleAddDeliveryToCalendar}
-                                                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                                                        id="case-delivery-date-input"
+                                                        style={{ 
+                                                            flex: 1,
+                                                            padding: '14px', 
+                                                            border: '1px solid #cbd5e1', 
+                                                            borderRadius: '12px', 
+                                                            backgroundColor: '#f8fafc',
+                                                            color: '#0f172a',
+                                                            outline: 'none',
+                                                            fontWeight: '600'
+                                                        }}
                                                     />
+                                                    <button 
+                                                        onClick={() => {
+                                                            const input = document.getElementById('case-delivery-date-input');
+                                                            if (input && input.value) {
+                                                                handleAddDeliveryToCalendar(input.value);
+                                                                input.value = '';
+                                                            } else {
+                                                                toast.error('Vælg venligst en dato først');
+                                                            }
+                                                        }}
+                                                        style={{ 
+                                                            padding: '0 24px', 
+                                                            background: '#2563eb', 
+                                                            color: '#fff', 
+                                                            borderRadius: '12px', 
+                                                            fontWeight: 'bold', 
+                                                            border: 'none', 
+                                                            display: 'flex', 
+                                                            alignItems: 'center', 
+                                                            justifyContent: 'center', 
+                                                            cursor: 'pointer' 
+                                                        }}>
+                                                        Tilføj
+                                                    </button>
                                                 </div>
                                             </div>
                                         )}

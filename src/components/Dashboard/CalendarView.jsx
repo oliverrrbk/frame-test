@@ -73,6 +73,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     // Drag and Drop & Modals
     const [draggedLead, setDraggedLead] = useState(null);
     const [showEventModal, setShowEventModal] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [popoverLead, setPopoverLead] = useState(null);
     const [collisionWarning, setCollisionWarning] = useState(null); // { lead, day, daysDuration }
 
@@ -315,11 +316,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         }
     };
 
-    const deleteEvent = async (e) => {
-        e.preventDefault();
+    const confirmDeleteEvent = async () => {
         if (!eventFormData.id) return;
-        
-        if (!window.confirm('Er du sikker på, at du vil slette denne aftale?')) return;
         
         const updatedEvents = (carpenterProfile?.raw_data?.calendar_events || []).filter(ev => ev.id !== eventFormData.id);
         const updatedRawData = { ...carpenterProfile.raw_data, calendar_events: updatedEvents };
@@ -328,6 +326,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
             if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: updatedRawData });
             toast.success('Aftale slettet');
+            setShowDeleteConfirm(false);
             setShowEventModal(false);
         } catch (error) {
             toast.error('Fejl ved sletning');
@@ -1001,6 +1000,24 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 document.body
             )}
 
+            {/* MODAL: SLET AFTALE BEKRÆFTELSE */}
+            {showDeleteConfirm && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000000, padding: '20px' }}>
+                    <div style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '24px', padding: '32px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                            <Trash2 size={32} />
+                        </div>
+                        <h3 style={{ margin: '0 0 12px', fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>Slet aftale?</h3>
+                        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.95rem', lineHeight: '1.5' }}>Er du sikker på, at du vil slette denne aftale? Dette kan ikke fortrydes.</p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1, padding: '14px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}>Annuller</button>
+                            <button onClick={confirmDeleteEvent} style={{ flex: 1, padding: '14px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}>Ja, slet aftale</button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {/* MODAL: NY AFTALE */}
             {showEventModal && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000 }}>
@@ -1077,7 +1094,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 {eventFormData.id && (
                                     <button 
                                         type="button" 
-                                        onClick={deleteEvent}
+                                        onClick={() => setShowDeleteConfirm(true)}
                                         style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#fef2f2', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                     >
                                         <Trash2 size={18} /> Slet
