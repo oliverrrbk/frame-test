@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { format } from 'date-fns';
+import { da } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Clock, CheckCircle, MessageSquare, Plus, Users, X, Trash2, Truck, ChevronDown, Palmtree, Thermometer, Briefcase, Coffee, PartyPopper, Search, Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
