@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate, Trash2 } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate, Trash2, ClipboardList } from 'lucide-react';
 import { getElementBounds, getElementAtPosition, rotatePoint, findSnapPoint, getConnectedModule } from './engineUtils';
 import { getDrawingBounds, renderElementsToCanvas } from './renderUtils';
 
@@ -529,6 +529,14 @@ const formatLengthWithSettings = (drawingUnits, settings = null) => {
         : formatMeasurementNumber(drawingUnits);
 };
 
+const formatAreaWithSettings = (drawingArea, settings = null) => {
+    const scale = settings?.measurementScale?.metersPerUnit;
+    if (!Number.isFinite(scale) || scale <= 0) return `${formatMeasurementNumber(drawingArea)} enheder`;
+    const area = drawingArea * scale * scale;
+    if (area >= 1) return `${formatMeasurementNumber(area)} m2`;
+    return `${formatMeasurementNumber(area * 10000)} cm2`;
+};
+
 const getMeasurementLabel = (element, settings = null) => {
     const metrics = getLineMetrics(element);
     if (!metrics) return '';
@@ -675,6 +683,20 @@ const getTemplateSelectionRootId = (templateElements) => {
     return templateElements.find(el => !el.parentId || !insertedIds.has(el.parentId))?.id || templateElements[0]?.id || null;
 };
 
+const showChecklistToast = (variant, title, summary, items = [], duration = 6000) => {
+    const content = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, lineHeight: 1.25 }}>
+            <strong>{title}</strong>
+            {summary && <span style={{ opacity: 0.82 }}>{summary}</span>}
+            {items.map(item => (
+                <span key={item}>{item}</span>
+            ))}
+        </div>
+    );
+
+    toast[variant](content, { duration });
+};
+
 const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const canvasRef = useRef(null);
     const lastPointerRef = useRef({ x: 0, y: 0 });
@@ -713,7 +735,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         showGrid: false,
         snapEnabled: true,
         fontSize: 20,
-        snapPoint: null
+        snapPoint: null,
+        dragGuide: null
     });
     const activeZoomRef = useRef(1);
     const activePanRef = useRef({ x: 0, y: 0 });
@@ -1424,6 +1447,115 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         }));
         toast.success('A4 titelblok er indsat.');
     }, [drawingName, getViewportCenter, pushHistory]);
+
+    const insertMaterialNoteFromSelection = useCallback(() => {
+        const selectedIds = getSelectionWithChildren();
+        const selectedSet = new Set(selectedIds);
+        const selectedElements = activeElementsRef.current.filter(el => (
+            selectedSet.has(el.id) && el.type !== 'settings' && !el.printFrame && !el.materialNote
+        ));
+        const bounds = getDrawingBounds(selectedElements);
+
+        if (selectedElements.length === 0 || !bounds) {
+            toast.error('Vælg almindelige tegneelementer først.');
+            return;
+        }
+
+        const settings = getDrawingSettings(activeElementsRef.current);
+        const lineTypes = new Set(['line', 'arrow', 'dimension']);
+        const boxTypes = new Set(['rectangle', 'image', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram']);
+        const lineCount = selectedElements.filter(el => lineTypes.has(el.type)).length;
+        const shapeCount = selectedElements.filter(el => boxTypes.has(el.type)).length;
+        const textCount = selectedElements.filter(el => el.type === 'text').length;
+        const totalLineLength = selectedElements.reduce((sum, el) => {
+            const metrics = getLineMetrics(el);
+            return sum + (metrics?.length || 0);
+        }, 0);
+
+        const rootId = generateId();
+        const noteX = bounds.x + bounds.w + 46;
+        const noteY = bounds.y;
+        const noteW = 250;
+        const rowH = 22;
+        const lines = [
+            'Materialenote',
+            `Elementer: ${selectedElements.length}`,
+            `B: ${formatLengthWithSettings(bounds.w, settings)}  H: ${formatLengthWithSettings(bounds.h, settings)}`,
+            `Areal ca.: ${formatAreaWithSettings(bounds.w * bounds.h, settings)}`,
+            `Linjelængde: ${formatLengthWithSettings(totalLineLength, settings)}`,
+            `Figurer: ${shapeCount}  Linjer: ${lineCount}  Tekst: ${textCount}`
+        ];
+        const noteH = 24 + lines.length * rowH;
+        const color = '#0f172a';
+        const strokeWidth = 2;
+        const root = {
+            ...createRectElement({ id: rootId, color, strokeWidth, x: noteX, y: noteY, w: noteW, h: noteH }),
+            materialNote: true
+        };
+        const textElements = lines.map((line, index) => ({
+            id: generateId(),
+            parentId: rootId,
+            type: 'text',
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: noteX + 12,
+            y: noteY + 10 + index * rowH,
+            w: noteW - 24,
+            h: rowH,
+            text: line,
+            fontSize: index === 0 ? 16 : 13,
+            materialNote: true
+        }));
+
+        pushHistory(activeElementsRef.current);
+        const updatedElements = [...activeElementsRef.current, root, ...textElements];
+        activeElementsRef.current = updatedElements;
+        setElements(updatedElements);
+        setAppState(s => ({
+            ...s,
+            tool: 'select',
+            selectedElementId: rootId,
+            selectedElementIds: [],
+            editingTextId: null
+        }));
+        toast.success('Materialenote er indsat.');
+    }, [getSelectionWithChildren, pushHistory]);
+
+    const runDrawingPreflight = useCallback(() => {
+        const drawingElements = activeElementsRef.current.filter(el => el.type !== 'settings');
+        if (drawingElements.length === 0) {
+            toast.error('Tegningen er tom.');
+            return;
+        }
+
+        const settings = getDrawingSettings(activeElementsRef.current);
+        const dimensions = drawingElements.filter(el => el.type === 'dimension');
+        const emptyTextCount = drawingElements.filter(el => (
+            (el.type === 'text' || el.type === 'dimension') && !String(el.text || '').trim()
+        )).length;
+        const unlockedImageCount = drawingElements.filter(el => el.type === 'image' && !el.locked).length;
+        const hasTitleBlock = drawingElements.some(el => el.printFrame);
+        const hasMaterialNote = drawingElements.some(el => el.materialNote);
+        const issues = [];
+
+        if (!settings?.measurementScale?.metersPerUnit) issues.push('Målestok er ikke kalibreret.');
+        if (dimensions.length === 0) issues.push('Der er ingen mållinjer.');
+        if (emptyTextCount > 0) issues.push(`${emptyTextCount} tekst-/målfelt er tomt.`);
+        if (unlockedImageCount > 0) issues.push(`${unlockedImageCount} billede(r) er ikke låst.`);
+        if (!hasTitleBlock) issues.push('A4 titelblok mangler.');
+        if (!hasMaterialNote) issues.push('Materialenote mangler.');
+
+        const summary = `${drawingElements.length} elementer · ${dimensions.length} mål`;
+        if (issues.length === 0) {
+            showChecklistToast('success', 'Tegningskontrol OK', summary, [], 5000);
+            return;
+        }
+
+        const visibleIssues = issues.slice(0, 5);
+        if (issues.length > 5) visibleIssues.push(`+${issues.length - 5} mere`);
+        showChecklistToast('error', 'Tegningskontrol', summary, visibleIssues, 7000);
+    }, []);
 
     const updateSelectedShapeSize = useCallback((axis, rawValue) => {
         const shapeId = appState.selectedElementId;
@@ -2236,6 +2368,27 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 return el;
             });
 
+            if (appState.tool === 'select' && moduleIds?.length > 0) {
+                const movingSet = new Set(moduleIds);
+                const movingElements = activeElementsRef.current.filter(el => (
+                    movingSet.has(el.id) || (el.parentId && movingSet.has(el.parentId))
+                ));
+                const movingBounds = getDrawingBounds(movingElements);
+                const totalDx = pos.x - (appState.actionStartPoint?.x || pos.x);
+                const totalDy = pos.y - (appState.actionStartPoint?.y || pos.y);
+                if (movingBounds) {
+                    setAppState(s => ({
+                        ...s,
+                        dragGuide: {
+                            x: movingBounds.cx,
+                            y: movingBounds.y - 18,
+                            dx: totalDx,
+                            dy: totalDy
+                        }
+                    }));
+                }
+            }
+
             // Sync overlays directly via DOM during drag to avoid React render
             if (appState.selectedElementId && selectionOverlayRef.current) {
                     const el = activeElementsRef.current.find(e => e.id === appState.selectedElementId);
@@ -2275,7 +2428,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     };
 
     const handlePointerUp = () => {
-        setAppState(s => ({ ...s, snapPoint: null }));
+        setAppState(s => ({ ...s, snapPoint: null, dragGuide: null }));
         if (appState.panning) {
             setAppState(s => ({ ...s, panning: false, pan: { ...activePanRef.current } }));
         }
@@ -2848,6 +3001,38 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         );
     };
 
+    const renderDragGuide = () => {
+        if (!appState.dragGuide || appState.tool !== 'select') return null;
+        const zoom = activeZoomRef.current || 1;
+        const settings = getDrawingSettings(activeElementsRef.current);
+        const formatSigned = (value) => {
+            const prefix = value >= 0 ? '+' : '-';
+            return `${prefix}${formatLengthWithSettings(Math.abs(value), settings)}`;
+        };
+
+        return (
+            <div style={{
+                position: 'absolute',
+                left: appState.dragGuide.x,
+                top: appState.dragGuide.y,
+                transform: 'translate(-50%, -100%)',
+                padding: `${5 / zoom}px ${8 / zoom}px`,
+                borderRadius: 6 / zoom,
+                background: 'rgba(37, 99, 235, 0.95)',
+                color: '#ffffff',
+                fontSize: 11 / zoom,
+                fontWeight: 800,
+                letterSpacing: 0,
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                zIndex: 73,
+                boxShadow: '0 8px 20px rgba(37, 99, 235, 0.24)'
+            }}>
+                X {formatSigned(appState.dragGuide.dx)} · Y {formatSigned(appState.dragGuide.dy)}
+            </div>
+        );
+    };
+
     // Text Editor Overlay
     let textOverlay = null;
     if (appState.editingTextId) {
@@ -3018,6 +3203,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     {renderMarquee()}
                     {renderSnapMarker()}
                     {renderMeasurementBadge()}
+                    {renderDragGuide()}
                     {textOverlay}
                 </div>
             </div>
@@ -3603,6 +3789,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                             <LayoutTemplate size={18} />
                         </button>
                         <button
+                            onClick={insertMaterialNoteFromSelection}
+                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
+                            title="Indsæt materialenote"
+                        >
+                            <ClipboardList size={18} />
+                        </button>
+                        <button
                             onClick={duplicateSelectedElements}
                             className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
                             title="Dupliker"
@@ -3656,6 +3849,14 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     title="Indsæt A4 titelblok"
                 >
                     <FileImage size={18} />
+                </button>
+
+                <button
+                    onClick={runDrawingPreflight}
+                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
+                    title="Kontroller tegning"
+                >
+                    <AlertTriangle size={18} />
                 </button>
 
                 <button

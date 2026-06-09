@@ -159,18 +159,18 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
             return;
         }
 
-        let fileUrl = null;
+        let filePath = null;
         try {
             if (newSupplierInvoice.file) {
                 const f = newSupplierInvoice.file;
                 const ext = (f.name.split('.').pop() || 'pdf').toLowerCase();
                 const fileName = `bilag_${lead.id}_${Date.now()}.${ext}`;
+                // Privat bucket — bilag er finansielle dokumenter, ikke offentlige
                 const { error: uploadError } = await supabase.storage
-                    .from('uploads')
+                    .from('bilag')
                     .upload(fileName, f, { cacheControl: '3600', upsert: false });
                 if (uploadError) throw uploadError;
-                const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
-                fileUrl = publicUrl;
+                filePath = fileName; // gemmer stien, ikke en offentlig URL
             }
         } catch (err) {
             console.error("Fejl ved upload af bilagsfil:", err);
@@ -187,7 +187,7 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
             uploaded_by: profile?.owner_name || profile?.email || 'Ukendt',
             status: 'Godkendt',
             category: newSupplierInvoice.category || 'Materialer',
-            file_url: fileUrl,        // Storage-URL (nyt)
+            file_path: filePath,      // sti i privat 'bilag'-bucket (nyt)
             file_name: newSupplierInvoice.file_name
         };
 
@@ -385,18 +385,22 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
                             <div 
                                 key={inv.id} 
                                 className="log-card"
-                                onClick={() => {
-                                    const fileSrc = inv.file_url || inv.file_data;
-                                    if (fileSrc) {
-                                        window.open(fileSrc, '_blank', 'noopener,noreferrer');
+                                onClick={async () => {
+                                    if (inv.file_path) {
+                                        // Privat bucket — generér et tidsbegrænset signed URL
+                                        const { data, error } = await supabase.storage.from('bilag').createSignedUrl(inv.file_path, 3600);
+                                        if (error || !data?.signedUrl) { toast.error("Kunne ikke åbne bilaget."); return; }
+                                        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+                                    } else if (inv.file_url || inv.file_data) {
+                                        window.open(inv.file_url || inv.file_data, '_blank', 'noopener,noreferrer');
                                     } else {
                                         toast.error("Intet fysisk bilag vedhæftet.");
                                     }
                                 }}
-                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: (inv.file_url || inv.file_data) ? 'pointer' : 'default' }}
+                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: (inv.file_path || inv.file_url || inv.file_data) ? 'pointer' : 'default' }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flex: 1, minWidth: 0 }}>
-                                    <div style={{ color: (inv.file_url || inv.file_data) ? '#10b981' : '#cbd5e1', marginTop: '4px' }}>
+                                    <div style={{ color: (inv.file_path || inv.file_url || inv.file_data) ? '#10b981' : '#cbd5e1', marginTop: '4px' }}>
                                         <FileText size={24} />
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>

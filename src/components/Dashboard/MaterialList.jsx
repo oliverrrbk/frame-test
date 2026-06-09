@@ -408,6 +408,40 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-in' }}>
 
+            {/* COMPACT BUDGET DASHBOARD (APPLE-STYLE) */}
+            {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && !isLead) && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
+                    
+                    <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                        <h4 style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
+                            Budget
+                        </h4>
+                        <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                            {originalBudget.toLocaleString('da-DK')} <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                        </div>
+                    </div>
+
+                    <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                        <h4 style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
+                            Forbrug
+                        </h4>
+                        <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                            {totalSpent.toLocaleString('da-DK')} <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                        </div>
+                    </div>
+
+                    <div style={{ padding: '12px', backgroundColor: isOverBudget ? '#fef2f2' : '#f0fdf4', borderRadius: '16px', border: `1px solid ${isOverBudget ? '#fca5a5' : '#86efac'}`, boxShadow: '0 2px 8px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                        <h4 style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: isOverBudget ? '#991b1b' : '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
+                            Rest
+                        </h4>
+                        <div style={{ fontSize: '1rem', fontWeight: '800', color: isOverBudget ? '#dc2626' : '#10b981', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                            {budgetRemaining > 0 ? '+' : ''}{(budgetRemaining).toLocaleString('da-DK')} <span style={{ fontSize: '0.7rem', color: isOverBudget ? '#ef4444' : '#34d399', fontWeight: 'bold' }}>kr.</span>
+                        </div>
+                    </div>
+
+                </div>
+            )}
+
             {/* MATERIALELISTER (ACCORDIONS) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {materialListsMeta.map((list) => {
@@ -913,39 +947,6 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                 </div>
                 )}
             </div>
-            )}
-
-            {/* BUDGET DASHBOARD */}
-            {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && !isLead) && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
-                            Materialebudget <span style={{ textTransform: 'none', fontWeight: 'normal', opacity: 0.8, fontSize: '0.75rem' }}>(ekskl. moms)</span>
-                        </h4>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
-                            {originalBudget.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
-                        </div>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Accepteret iflg. tilbud</p>
-                    </div>
-
-                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Faktisk Forbrug</h4>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
-                            {totalSpent.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
-                        </div>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Sum af faktura-priser</p>
-                    </div>
-
-                    <div style={{ padding: '24px', backgroundColor: isOverBudget ? '#fef2f2' : '#f0fdf4', borderRadius: '16px', border: `1px solid ${isOverBudget ? '#fca5a5' : '#86efac'}`, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: isOverBudget ? '#991b1b' : '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>Restbudget</h4>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', color: isOverBudget ? '#dc2626' : '#10b981', letterSpacing: '-0.02em' }}>
-                            {budgetRemaining > 0 ? '+' : ''}{budgetRemaining.toLocaleString('da-DK')} <span style={{ fontSize: '1rem', color: isOverBudget ? '#ef4444' : '#34d399', fontWeight: 'bold' }}>kr.</span>
-                        </div>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: isOverBudget ? '#b91c1c' : '#15803d', fontWeight: '500' }}>
-                            {isOverBudget ? 'Overskredet budget!' : 'Penge tilbage til indkøb'}
-                        </p>
-                    </div>
-                </div>
             )}
 
             {/* GLOBAL GEM KNAP */}
