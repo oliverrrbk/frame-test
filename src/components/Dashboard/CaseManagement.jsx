@@ -1484,16 +1484,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     {/* --- MOBIL APPLE-STYLE HEADER & WIDGETS --- */}
                     {isMobile && selectedCase && (
                         <div style={{ paddingBottom: '16px' }}>
-                            {/* Native Header (ingen kant, ingen hardcodet baggrund) */}
-                            <div style={{ position: 'sticky', top: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(12px)', zIndex: 40, borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', margin: '0 -24px' }}>
-                                <button onClick={() => setSelectedCaseIdState(null)} style={{ background: 'none', border: 'none', padding: '4px', color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '1rem', cursor: 'pointer' }}>
+                            {/* Native Header (Centered perfectly) */}
+                            <div style={{ position: 'sticky', top: 0, backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(12px)', zIndex: 40, borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', margin: '0 -24px', minHeight: '60px' }}>
+                                <button onClick={() => setSelectedCaseIdState(null)} style={{ background: 'none', border: 'none', padding: '4px', color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '1rem', cursor: 'pointer', position: 'relative', zIndex: 2 }}>
                                     <ArrowLeft size={22} /> <span style={{ fontWeight: '600' }}>Sager</span>
                                 </button>
-                                <div style={{ textAlign: 'center', flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', padding: '0 12px' }}>
-                                    <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 'bold', color: '#0f172a' }}>Sag {selectedCase.case_number || String(selectedCase.id).substring(0,6)}</h2>
-                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{selectedCase.customer_name || 'Kunde'}</span>
+                                <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', pointerEvents: 'none', padding: '0 80px' }}>
+                                    <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 'bold', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Sag {selectedCase.case_number || String(selectedCase.id).substring(0,6)}</h2>
+                                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedCase.customer_name || 'Kunde'}</span>
                                 </div>
-                                <button onClick={() => setShowActionSheet(true)} style={{ background: 'none', border: 'none', padding: '4px', color: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                <button onClick={() => setShowActionSheet(true)} style={{ background: 'none', border: 'none', padding: '4px', color: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', zIndex: 2 }}>
                                     <MoreHorizontal size={24} />
                                 </button>
                             </div>
@@ -1671,6 +1671,60 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 document.body
                             )}
 
+                            {/* MOBILE DAILY MESSAGE PORTAL (For empty states and reading) */}
+                            {isDailyMessageOpen && isMobile && createPortal(
+                                <div onClick={() => setIsDailyMessageOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.4)', zIndex: 99999, backdropFilter: 'blur(2px)', animation: 'fadeIn 0.2s ease-out' }}>
+                                    <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 16px))', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                                        <div style={{ width: '40px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', margin: '0 auto 24px auto' }} />
+                                        <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', color: '#0f172a', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><MessageCircle color="#3b82f6" /> Dagens Besked</span>
+                                            <button onClick={() => setIsDailyMessageOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8' }}><X size={20}/></button>
+                                        </h3>
+                                        
+                                        {(() => {
+                                            const msg = selectedCase?.raw_data?.daily_message;
+                                            const isToday = msg?.date && new Date(msg.date).toDateString() === new Date().toDateString();
+                                            const canWrite = ['admin', 'accountant', 'boss', 'sales'].includes(profile?.role);
+                                            
+                                            return (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                    {isToday ? (
+                                                        <div style={{ padding: '16px', background: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
+                                                            <p style={{ margin: '0 0 8px 0', fontSize: '1rem', color: '#1e3a8a', lineHeight: '1.5' }}>{msg.text}</p>
+                                                            <div style={{ fontSize: '0.8rem', color: '#3b82f6' }}>Skrevet af: {msg.author}</div>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b' }}>
+                                                            Der er ikke skrevet nogen besked for i dag endnu.
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {canWrite && (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+                                                            <label style={{ fontSize: '0.9rem', fontWeight: '600', color: '#475569' }}>{isToday ? 'Overskriv besked' : 'Skriv ny besked for i dag'}</label>
+                                                            <textarea 
+                                                                value={newDailyMessage}
+                                                                onChange={(e) => setNewDailyMessage(e.target.value)}
+                                                                placeholder="F.eks. Husk fugepistol..."
+                                                                rows={3}
+                                                                style={{ padding: '12px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '1rem', resize: 'none' }}
+                                                            />
+                                                            <button 
+                                                                onClick={() => { handleSaveDailyMessage(); setIsDailyMessageOpen(false); }}
+                                                                style={{ padding: '14px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer' }}
+                                                            >
+                                                                Gem Besked
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>,
+                                document.body
+                            )}
+
                             {/* Apple style animations */}
                             <style>{`
                                 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -1772,7 +1826,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     );
                                 })()}
                                 
-                                {isDailyMessageOpen && (
+                                {isDailyMessageOpen && !isMobile && (
                                     <div style={{ 
                                         position: 'absolute', 
                                         top: '100%', 
@@ -2317,91 +2371,113 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
                     {/* CASE WORKSPACE TABS */}
                                         {/* MODERN HORIZONTAL TABS (2026 DESIGN) */}
-                    <div className="case-workspace-tabs modern-tab-scroll" style={{ 
-                        display: 'flex', 
-                        gap: isMobile ? '20px' : '10px', 
-                        flexWrap: isMobile ? 'nowrap' : 'wrap', 
-                        paddingTop: isMobile ? '12px' : '4px', 
-                        paddingBottom: isMobile ? 'max(12px, env(safe-area-inset-bottom))' : '8px', 
-                        WebkitOverflowScrolling: 'touch', 
-                        scrollbarWidth: 'none', 
-                        msOverflowStyle: 'none', 
-                        marginBottom: isMobile ? '0' : '16px', 
-                        marginTop: isMobile ? '0' : '24px',
-                        overflowX: 'auto',
+                    {(() => {
+                        const tabContent = (
+                            <div className="case-workspace-tabs modern-tab-scroll" style={{ 
+                                display: 'flex', 
+                                gap: isMobile ? '0px' : '10px', 
+                                flexWrap: isMobile ? 'nowrap' : 'wrap', 
+                                paddingTop: isMobile ? '12px' : '4px', 
+                                paddingBottom: isMobile ? 'calc(12px + env(safe-area-inset-bottom))' : '8px', 
+                                WebkitOverflowScrolling: 'touch', 
+                                scrollbarWidth: 'none', 
+                                msOverflowStyle: 'none', 
+                                marginBottom: isMobile ? '0' : '16px', 
+                                marginTop: isMobile ? '0' : '24px',
+                                overflowX: 'auto',
+                                
+                                /* Instagram Bottom Tab Bar Styles */
+                                ...(isMobile ? {
+                                    position: 'fixed',
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                                    backdropFilter: 'blur(16px)',
+                                    borderTop: '1px solid #e2e8f0',
+                                    zIndex: 99999, /* Extremely high z-index and portal to escape parents */
+                                    paddingLeft: '0',
+                                    paddingRight: '0',
+                                    justifyContent: 'space-around', /* Distribute evenly */
+                                    alignItems: 'center',
+                                    height: 'calc(65px + env(safe-area-inset-bottom))'
+                                } : {})
+                            }}>
+                                <style>{`
+                                    .modern-tab-scroll::-webkit-scrollbar { display: none; }
+                                `}</style>
+                                {[
+                                    { id: 'todo', label: selectedCase.status === 'Afbrudt Sag' ? 'Bygge To-Do (Låst)' : 'Bygge To-Do (KS)', icon: <CheckSquare size={isMobile ? 24 : 18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: true },
+                                    { id: 'materials', label: 'Materialer & Indkøb', icon: <PackageCheck size={isMobile ? 24 : 18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: true },
+                                    { id: 'logs', label: 'Byggeproces', icon: <ClipboardList size={isMobile ? 24 : 18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
+                                    { id: 'timesheet', label: 'Timeregistrering', icon: <Clock size={isMobile ? 24 : 18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
+                                    { id: 'invoices', label: 'Bilag', icon: <Receipt size={isMobile ? 24 : 18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
+                                    { id: 'extra-work', label: selectedCase.status === 'Afbrudt Sag' ? 'Aftalesedler (Låst)' : 'Aftalesedler', icon: <PenTool size={isMobile ? 24 : 18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' },
+                                    { id: 'drawings', label: 'Tegninger', icon: <FileImage size={isMobile ? 24 : 18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: true }
+                                ].filter(tab => tab.show).map(tab => {
+                                    const isActive = activeSubTab === tab.id;
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveSubTab(tab.id)}
+                                            style={isMobile ? {
+                                                /* MOBILE TAB STYLES (No text, evenly spaced icons) */
+                                                display: 'flex', 
+                                                flexDirection: 'column', 
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                background: 'none', 
+                                                border: 'none', 
+                                                padding: '8px', 
+                                                cursor: 'pointer', 
+                                                transition: 'all 0.2s', 
+                                                flex: 1,
+                                                color: isActive ? tab.activeColor : '#94a3b8'
+                                            } : { 
+                                                /* DESKTOP TAB STYLES */
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                gap: '8px', 
+                                                padding: '10px 16px', 
+                                                border: isActive ? `1px solid ${tab.activeColor}` : '1px solid #e2e8f0', 
+                                                background: isActive ? tab.activeBg : '#ffffff', 
+                                                borderRadius: '30px',
+                                                fontSize: '0.85rem', 
+                                                fontWeight: '600', 
+                                                cursor: 'pointer', 
+                                                color: isActive ? tab.activeColor : '#64748b',
+                                                boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                whiteSpace: 'nowrap',
+                                                flex: '1 1 auto',
+                                                justifyContent: 'center'
+                                            }}
+                                            onMouseEnter={isMobile ? undefined : (e) => {
+                                                if (!isActive) {
+                                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)';
+                                                    e.currentTarget.style.borderColor = '#cbd5e1';
+                                                    e.currentTarget.style.transform = 'translateY(-1px)';
+                                                }
+                                            }}
+                                            onMouseLeave={isMobile ? undefined : (e) => {
+                                                if (!isActive) {
+                                                    e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.backdropFilter = 'none';
+                                                    e.currentTarget.style.borderColor = '#e2e8f0';
+                                                    e.currentTarget.style.transform = 'translateY(0)';
+                                                }
+                                            }}
+                                        >
+                                            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{tab.icon}</span>
+                                            {!isMobile && tab.label}
+                                            {isMobile && <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: tab.activeColor, marginTop: '4px', opacity: isActive ? 1 : 0, transition: 'opacity 0.2s' }} />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        );
                         
-                        /* Instagram Bottom Tab Bar Styles */
-                        ...(isMobile ? {
-                            position: 'fixed',
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                            backdropFilter: 'blur(16px)',
-                            borderTop: '1px solid #e2e8f0',
-                            zIndex: 9999, /* High z-index to stay above everything */
-                            paddingLeft: '0',
-                            paddingRight: '0',
-                            justifyContent: 'space-around', /* Distribute evenly */
-                            alignItems: 'center'
-                        } : {})
-                    }}>
-                        <style>{`
-                            .modern-tab-scroll::-webkit-scrollbar { display: none; }
-                        `}</style>
-                        {[
-                            { id: 'todo', label: selectedCase.status === 'Afbrudt Sag' ? 'Bygge To-Do (Låst)' : 'Bygge To-Do (KS)', icon: <CheckSquare size={18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: true },
-                            { id: 'materials', label: 'Materialer & Indkøb', icon: <PackageCheck size={18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: true },
-                            { id: 'logs', label: 'Byggeproces', icon: <ClipboardList size={18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
-                            { id: 'timesheet', label: 'Timeregistrering', icon: <Clock size={18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
-                            { id: 'invoices', label: 'Bilag', icon: <Receipt size={18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
-                            { id: 'extra-work', label: selectedCase.status === 'Afbrudt Sag' ? 'Aftalesedler (Låst)' : 'Aftalesedler', icon: <PenTool size={18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' },
-                            { id: 'drawings', label: 'Tegninger', icon: <FileImage size={18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: true }
-                        ].filter(tab => tab.show).map(tab => {
-                            const isActive = activeSubTab === tab.id;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveSubTab(tab.id)}
-                                    style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: '8px', 
-                                        padding: '10px 16px', 
-                                        border: isActive ? `1px solid ${tab.activeColor}` : '1px solid #e2e8f0', 
-                                        background: isActive ? tab.activeBg : '#ffffff', 
-                                        borderRadius: '30px',
-                                        fontSize: '0.85rem', 
-                                        fontWeight: '600', 
-                                        cursor: 'pointer', 
-                                        color: isActive ? tab.activeColor : '#64748b',
-                                        boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        whiteSpace: 'nowrap',
-                                        flex: '1 1 auto',
-                                        justifyContent: 'center'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isActive) {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)';
-                                            e.currentTarget.style.borderColor = '#cbd5e1';
-                                            e.currentTarget.style.transform = 'translateY(-1px)';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isActive) {
-                                            e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.backdropFilter = 'none';
-                                            e.currentTarget.style.borderColor = '#e2e8f0';
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                        }
-                                    }}
-                                >
-                                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{tab.icon}</span>
-                                    {tab.label}
-                                </button>
-                            );
-                        })}
-                    </div>
+                        return isMobile ? createPortal(tabContent, document.body) : tabContent;
+                    })()}
 
                     {/* CASE WORKSPACE TABS INDHOLD */}
                     <div style={{ padding: '8px 0' }}>
