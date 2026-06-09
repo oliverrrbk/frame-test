@@ -255,6 +255,12 @@ const parseLengthInputToDrawingUnits = (value, settings = null) => {
     return { value: numericValue };
 };
 
+const parseAngleInput = (value) => {
+    const numericValue = Number(String(value || '').trim().replace(',', '.').replace(/[^\d.-]/g, ''));
+    if (!Number.isFinite(numericValue)) return null;
+    return numericValue;
+};
+
 const transformBoxElement = (element, transformPoint, mode) => {
     const p1 = { x: element.x, y: element.y };
     const p2 = { x: element.x + element.w, y: element.y };
@@ -922,6 +928,53 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         activeElementsRef.current = updatedElements;
         setElements(updatedElements);
         setAppState(s => ({ ...s, tool: 'select', editingTextId: null }));
+    }, [appState.selectedElementId, pushHistory]);
+
+    const updateSelectedLineMetric = useCallback((metric, rawValue) => {
+        const lineId = appState.selectedElementId;
+        const lineElement = activeElementsRef.current.find(el => el.id === lineId);
+        const settings = getDrawingSettings(activeElementsRef.current);
+        const currentMetrics = getLineMetrics(lineElement);
+
+        if (!lineElement || !currentMetrics) return;
+        if (lineElement.locked) {
+            toast.error('Elementet er låst.');
+            return;
+        }
+
+        let nextLength = currentMetrics.length;
+        let nextAngle = currentMetrics.angle;
+
+        if (metric === 'length') {
+            const parsed = parseLengthInputToDrawingUnits(rawValue, settings);
+            if (!parsed || !parsed.value) return;
+            if (parsed.error) {
+                toast.error(parsed.error);
+                return;
+            }
+            nextLength = Math.max(1, parsed.value);
+        }
+
+        if (metric === 'angle') {
+            const parsedAngle = parseAngleInput(rawValue);
+            if (parsedAngle === null) return;
+            nextAngle = parsedAngle;
+        }
+
+        const angleRad = nextAngle * Math.PI / 180;
+        pushHistory(activeElementsRef.current);
+        const updatedElements = activeElementsRef.current.map(el => {
+            if (el.id !== lineId) return el;
+            return {
+                ...el,
+                endX: el.x + Math.cos(angleRad) * nextLength,
+                endY: el.y + Math.sin(angleRad) * nextLength
+            };
+        });
+
+        activeElementsRef.current = updatedElements;
+        setElements(updatedElements);
+        setAppState(s => ({ ...s, tool: 'select', editingTextId: null, snapPoint: null }));
     }, [appState.selectedElementId, pushHistory]);
 
     const toggleSelectedLock = useCallback(() => {
@@ -2664,6 +2717,48 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         >
                             <div>{selectedMetricLabel.split(' · ')[0]}</div>
                             <div>{selectedMetricLabel.split(' · ')[1]}</div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '18px 1fr', gap: 4, width: 86, alignItems: 'center' }}>
+                            {[
+                                {
+                                    metric: 'length',
+                                    label: 'L',
+                                    value: selectedPhysicalLength ? formatPhysicalLength(selectedPhysicalLength) : formatMeasurementNumber(selectedMetrics.length)
+                                },
+                                {
+                                    metric: 'angle',
+                                    label: '°',
+                                    value: `${Math.round(selectedMetrics.angle)}°`
+                                }
+                            ].map(item => (
+                                <React.Fragment key={item.metric}>
+                                    <span style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textAlign: 'center' }}>{item.label}</span>
+                                    <input
+                                        key={`${selectedElement.id}-${item.metric}-${item.value}`}
+                                        defaultValue={item.value}
+                                        disabled={selectedElement.locked}
+                                        onBlur={(e) => updateSelectedLineMetric(item.metric, e.target.value)}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') e.currentTarget.blur();
+                                            if (e.key === 'Escape') e.currentTarget.blur();
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            height: 25,
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: 7,
+                                            padding: '0 6px',
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            color: '#0f172a',
+                                            outline: 'none',
+                                            background: selectedElement.locked ? '#f1f5f9' : '#ffffff'
+                                        }}
+                                        title={item.metric === 'length' ? 'Præcis længde' : 'Præcis vinkel'}
+                                    />
+                                </React.Fragment>
+                            ))}
                         </div>
                         {metersPerUnit && (
                             <div

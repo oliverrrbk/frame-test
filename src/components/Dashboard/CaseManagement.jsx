@@ -380,11 +380,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                 }];
                 setTodoList(legacyNested);
             } else {
-                setTodoList(savedTodo);
+                setTodoList(savedTodo.map(t => ({...t, isExpanded: false})));
             }
         } else {
             const defaultTodo = getDefaultChecklist(selectedCase);
-            setTodoList(defaultTodo);
+            setTodoList(defaultTodo.map(t => ({...t, isExpanded: false})));
         }
 
         // 3. Indlæs Logbog
@@ -1484,17 +1484,17 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     {/* --- MOBIL APPLE-STYLE HEADER & WIDGETS --- */}
                     {isMobile && selectedCase && (
                         <div style={{ paddingBottom: '16px' }}>
-                            {/* Native Header (Centered perfectly) */}
-                            <div style={{ position: 'sticky', top: 0, backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(12px)', zIndex: 40, borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', margin: '0 -24px', minHeight: '60px' }}>
-                                <button onClick={() => setSelectedCaseIdState(null)} style={{ background: 'none', border: 'none', padding: '4px', color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '1rem', cursor: 'pointer', position: 'relative', zIndex: 2 }}>
-                                    <ArrowLeft size={22} /> <span style={{ fontWeight: '600' }}>Sager</span>
+                            {/* Luksus Apple-style Header */}
+                            <div style={{ position: 'sticky', top: 0, backgroundColor: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', zIndex: 40, borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', margin: '0 -24px', minHeight: '60px' }}>
+                                <button onClick={() => setSelectedCaseIdState(null)} style={{ background: 'none', border: 'none', padding: '8px', margin: '-8px', color: '#007AFF', display: 'flex', alignItems: 'center', cursor: 'pointer', position: 'relative', zIndex: 2 }}>
+                                    <ArrowLeft size={28} strokeWidth={2.5} />
                                 </button>
-                                <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', pointerEvents: 'none', padding: '0 80px' }}>
-                                    <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 'bold', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Sag {selectedCase.case_number || String(selectedCase.id).substring(0,6)}</h2>
-                                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedCase.customer_name || 'Kunde'}</span>
+                                <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', pointerEvents: 'none', padding: '0 60px' }}>
+                                    <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600', color: '#000000', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Sag {selectedCase.case_number || String(selectedCase.id).substring(0,6)}</h2>
+                                    <span style={{ fontSize: '0.75rem', color: '#8E8E93', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{selectedCase.customer_name || 'Kunde'}</span>
                                 </div>
-                                <button onClick={() => setShowActionSheet(true)} style={{ background: 'none', border: 'none', padding: '4px', color: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', zIndex: 2 }}>
-                                    <MoreHorizontal size={24} />
+                                <button onClick={() => setShowActionSheet(true)} style={{ background: 'none', border: 'none', padding: '8px', margin: '-8px', color: '#007AFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', zIndex: 2 }}>
+                                    <MoreHorizontal size={28} strokeWidth={2.5} />
                                 </button>
                             </div>
 
@@ -2377,8 +2377,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 display: 'flex', 
                                 gap: isMobile ? '0px' : '10px', 
                                 flexWrap: isMobile ? 'nowrap' : 'wrap', 
-                                paddingTop: isMobile ? '12px' : '4px', 
-                                paddingBottom: isMobile ? 'calc(12px + env(safe-area-inset-bottom))' : '8px', 
+                                paddingTop: isMobile ? '4px' : '4px', 
+                                paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : '8px', 
                                 WebkitOverflowScrolling: 'touch', 
                                 scrollbarWidth: 'none', 
                                 msOverflowStyle: 'none', 
@@ -2485,12 +2485,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         {/* TAB 1: TO-DO / CHECKLIST */}
                         {activeSubTab === 'todo' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', pointerEvents: selectedCase.status === 'Afbrudt Sag' ? 'none' : 'auto', opacity: selectedCase.status === 'Afbrudt Sag' ? 0.7 : 1, backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e8e6e1' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <h4 style={{ margin: 0, color: '#1a1a1a' }}>Udførelsesmetode & Bygge-anvisninger</h4>
-                                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                                        Checklister sikrer overensstemmelse med Byg Garanti og mindsker fejl.
-                                    </span>
-                                </div>
+                                {!isMobile && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <h4 style={{ margin: 0, color: '#1a1a1a' }}>Udførelsesmetode & Bygge-anvisninger</h4>
+                                        <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                                            Checklister sikrer overensstemmelse med Byg Garanti og mindsker fejl.
+                                        </span>
+                                    </div>
+                                )}
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     {todoList.map((step, idx) => {

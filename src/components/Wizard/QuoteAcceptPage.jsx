@@ -38,10 +38,7 @@ const QuoteAcceptPage = () => {
 
                 if (data && data.carpenter_id) {
                     const { data: carpenterData } = await supabase
-                        .from('carpenters')
-                        .select('*')
-                        .eq('id', data.carpenter_id)
-                        .single();
+                        .rpc('get_public_carpenter', { carpenter_id: data.carpenter_id });
                     setCarpenter(carpenterData);
                 }
 
@@ -142,11 +139,8 @@ const QuoteAcceptPage = () => {
             if (lead && lead.carpenter_id) {
                 // Hent tømrerens info for at få email og navn
                 const { data: carpenter } = await supabase
-                    .from('carpenters')
-                    .select('*')
-                    .eq('id', lead.carpenter_id)
-                    .single();
-                
+                    .rpc('get_public_carpenter', { carpenter_id: lead.carpenter_id });
+
                 if (carpenter) {
                     import('../../utils/sendEmail').then(({ sendEmail }) => {
                         import('../../utils/emailTemplates').then(({ getCustomerOfferAcceptedTemplate, getCarpenterOfferAcceptedTemplate, getCarpenterSenderName }) => {
