@@ -172,6 +172,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
     const [logStatus, setLogStatus] = useState('green'); // 'green', 'yellow', 'red'
     const [logPhotos, setLogPhotos] = useState([]); // Previews (blob URLs)
+    const [editingLogId, setEditingLogId] = useState(null);
+    const [existingPhotos, setExistingPhotos] = useState([]);
     const [logFiles, setLogFiles] = useState([]); // Actual File objects
     const [isUploadingLog, setIsUploadingLog] = useState(false);
 
@@ -890,6 +892,13 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     // Logbog-håndtering
+    
+    const deleteLog = async (logId) => {
+        if (!confirm('Er du sikker på, at du vil slette denne statusopdatering?')) return;
+        await mutateCaseField('logs', arr => arr.filter(l => l.id !== logId), setLogsList);
+        toast.success('Status slettet');
+    };
+
     const handleAddLog = async (e) => {
         e.preventDefault();
         if (!newLogText.trim()) return;
@@ -928,24 +937,36 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             return;
         }
 
-        const newLog = {
-            id: `log-${Date.now()}`,
-            status: logStatus,
-            text: newLogText.trim(),
-            author: currentAuthor,
-            authorRole: profile?.role || 'Uoplyst',
-            authorId: profile?.id,
-            date: new Date().toISOString(),
-            photos: uploadedPhotoUrls
-        };
-
-        // Tilføj til frisk liste, så samtidige logposter fra andre på sagen bevares
-        await mutateCaseField('logs', arr => [newLog, ...arr], setLogsList);
+        if (editingLogId) {
+            const finalPhotos = [...existingPhotos, ...uploadedPhotoUrls];
+            await mutateCaseField('logs', arr => arr.map(l => l.id === editingLogId ? {
+                ...l,
+                status: logStatus,
+                text: newLogText.trim(),
+                photos: finalPhotos
+            } : l), setLogsList);
+            toast.success('Loggen blev opdateret!');
+            setEditingLogId(null);
+            setIsLogModalOpen(false);
+        } else {
+            const newLog = {
+                id: `log-${Date.now()}`,
+                status: logStatus,
+                text: newLogText.trim(),
+                author: currentAuthor,
+                authorRole: profile?.role || 'Uoplyst',
+                authorId: profile?.id,
+                date: new Date().toISOString(),
+                photos: uploadedPhotoUrls
+            };
+            await mutateCaseField('logs', arr => [newLog, ...arr], setLogsList);
+            toast.success('Dagens arbejde gemt!');
+        }
         setNewLogText('');
         setLogPhotos([]);
         setLogFiles([]);
+        setExistingPhotos([]);
         setIsUploadingLog(false);
-        toast.success('Dagens arbejde gemt!');
     };
 
     const handleRealPhotoUpload = (e) => {
@@ -1724,7 +1745,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                             const selectedWorkers = (sub.workers || []).filter(w => (sub.selected_workers || []).includes(w.id));
                                                             return (
                                                             <div key={sub.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', background: '#f5f3ff', borderRadius: '20px', border: '1px solid #ddd6fe' }}>
-                                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                <div onClick={() => setProfilePerson({ name: sub.company_name, role: sub.trade || 'Underleverandør', phone: sub.contact_phone, email: sub.contact_email })} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                                                         <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#8b5cf6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.3)' }}>
                                                                             {(sub.company_name || '?').charAt(0).toUpperCase()}
@@ -1738,7 +1759,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                                 {/* Kontaktperson */}
                                                                 {sub.contact_name && (
                                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '16px', marginTop: '8px', borderLeft: '2px solid rgba(139, 92, 246, 0.2)' }}>
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                        <div onClick={() => setProfilePerson({ name: sub.contact_name, role: 'Mester (' + sub.company_name + ')', phone: sub.contact_phone, email: sub.contact_email })} style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
                                                                             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                                                 {sub.contact_name.charAt(0).toUpperCase()}
                                                                             </div>
@@ -1748,7 +1769,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                                             </div>
                                                                         </div>
                                                                         {sub.contact_phone && (
-                                                                            <a href={`tel:${sub.contact_phone}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#ffffff', color: '#8b5cf6', borderRadius: '20px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #ddd6fe', boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)' }}>
+                                                                            <a href={`tel:${sub.contact_phone}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#ffffff', color: '#8b5cf6', borderRadius: '20px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #ddd6fe', boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)' }}>
                                                                                 <Phone size={12} /> Ring
                                                                             </a>
                                                                         )}
@@ -1757,7 +1778,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                                 {/* Valgte svende */}
                                                                 {selectedWorkers.map(w => (
                                                                     <div key={w.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '16px', marginTop: '4px', borderLeft: '2px solid rgba(139, 92, 246, 0.2)' }}>
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                        <div onClick={() => setProfilePerson({ name: w.name, role: w.role + ' (' + sub.company_name + ')', phone: w.phone, email: w.email })} style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
                                                                             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                                                 {w.name.charAt(0).toUpperCase()}
                                                                             </div>
@@ -1767,7 +1788,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                                             </div>
                                                                         </div>
                                                                         {w.phone && (
-                                                                            <a href={`tel:${w.phone}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#ffffff', color: '#8b5cf6', borderRadius: '20px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #ddd6fe', boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)' }}>
+                                                                            <a href={`tel:${w.phone}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#ffffff', color: '#8b5cf6', borderRadius: '20px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #ddd6fe', boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)' }}>
                                                                                 <Phone size={12} /> Ring
                                                                             </a>
                                                                         )}
@@ -2972,7 +2993,15 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         <h4 style={{ margin: 0, color: '#1a1a1a', fontSize: '1.2rem' }}>Projektets byggeproces</h4>
                                         {profile?.role !== 'apprentice' && (
                                             <button 
-                                                onClick={() => setIsLogModalOpen(true)}
+                                                onClick={() => {
+                                                setEditingLogId(null);
+                                                setLogStatus('green');
+                                                setNewLogText('');
+                                                setLogPhotos([]);
+                                                setLogFiles([]);
+                                                setExistingPhotos([]);
+                                                setIsLogModalOpen(true);
+                                            }}
                                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                             >
                                                 <Plus size={18} /> Tilføj status
@@ -3006,9 +3035,29 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                                 <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{log.author}</strong>
                                                                 <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{displayRole}</span>
                                                             </div>
-                                                            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                                                                {new Date(log.date).toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })} kl. {new Date(log.date).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                                                    {new Date(log.date).toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })} kl. {new Date(log.date).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                                {(profile?.id === log.authorId || profile?.role === 'admin') && (
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '4px' }}>
+                                                                        <button onClick={() => {
+                                                                            setEditingLogId(log.id);
+                                                                            setLogStatus(log.status || 'green');
+                                                                            setNewLogText(log.text || '');
+                                                                            setExistingPhotos(log.photos || []);
+                                                                            setLogPhotos([]);
+                                                                            setLogFiles([]);
+                                                                            setIsLogModalOpen(true);
+                                                                        }} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'} onMouseLeave={(e) => e.currentTarget.style.color = '#cbd5e1'} title="Rediger">
+                                                                            <Edit2 size={12} />
+                                                                        </button>
+                                                                        <button onClick={() => deleteLog(log.id)} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'} onMouseLeave={(e) => e.currentTarget.style.color = '#cbd5e1'} title="Slet">
+                                                                            <Trash2 size={12} />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
 
                                                         <div style={{ padding: '14px', backgroundColor: log.isChangeOrder ? '#fef2f2' : '#f8fafc', borderRadius: '0 16px 16px 16px', border: log.isChangeOrder ? '1px solid #fca5a5' : '1px solid #f1f5f9' }}>
@@ -3114,20 +3163,20 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         />
                                                     </label>
                                                     
-                                                    {logPhotos.length > 0 && (
+                                                    {(logPhotos.length > 0 || existingPhotos.length > 0) && (
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#10b981', fontWeight: 'bold' }}>✓ {logPhotos.length} foto(s) klar til indsendelse</p>
+                                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#10b981', fontWeight: 'bold' }}>✓ {logPhotos.length + existingPhotos.length} foto(s) valgt</p>
                                                             <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                                                {existingPhotos.map((photo, idx) => (
+                                                                    <div key={`ext-${idx}`} style={{ position: 'relative', flexShrink: 0 }}>
+                                                                        <img src={photo} alt="Existing" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #e2e8f0' }} />
+                                                                        <button type="button" onClick={() => setExistingPhotos(existingPhotos.filter((_, i) => i !== idx))} style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px', padding: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>✕</button>
+                                                                    </div>
+                                                                ))}
                                                                 {logPhotos.map((photo, idx) => (
-                                                                    <div key={idx} style={{ position: 'relative', flexShrink: 0 }}>
+                                                                    <div key={`new-${idx}`} style={{ position: 'relative', flexShrink: 0 }}>
                                                                         <img src={photo} alt="Upload preview" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #e2e8f0' }} />
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => removePhoto(idx)}
-                                                                            style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px', padding: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
-                                                                        >
-                                                                            ✕
-                                                                        </button>
+                                                                        <button type="button" onClick={() => removePhoto(idx)} style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px', padding: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>✕</button>
                                                                     </div>
                                                                 ))}
                                                             </div>

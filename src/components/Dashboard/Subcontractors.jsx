@@ -88,16 +88,51 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={onClose}
-                style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0px' }}
+                className="subcontractor-modal-overlay"
             >
+                <style>{`
+                    .subcontractor-modal-container {
+                        width: 100%;
+                        max-width: 520px;
+                        max-height: 90vh;
+                        overflow-y: auto;
+                        background: #ffffff;
+                        border-radius: 24px;
+                        box-shadow: 0 24px 48px -12px rgba(0,0,0,0.25);
+                        border: 1px solid #e2e8f0;
+                        margin: 20px;
+                    }
+                    @media (max-width: 768px) {
+                        .subcontractor-modal-overlay {
+                            align-items: flex-end !important;
+                        }
+                        .subcontractor-modal-container {
+                            margin: 0 !important;
+                            max-height: 90vh !important;
+                            border-radius: 32px 32px 0 0 !important;
+                            border: none !important;
+                            padding-bottom: env(safe-area-inset-bottom, 20px) !important;
+                        }
+                    }
+                `}</style>
                 <motion.div
-                    initial={{ opacity: 0, y: 20, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 20, scale: 0.97 }}
-                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 50 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                     onClick={(e) => e.stopPropagation()}
-                    style={{ width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0' }}
+                    className="subcontractor-modal-container"
                 >
+                    {/* Mobile grabber */}
+                    <div style={{ display: 'none' }} className="mobile-grabber-container">
+                        <div style={{ width: '40px', height: '5px', borderRadius: '3px', background: '#cbd5e1', margin: '16px auto 0 auto' }} />
+                    </div>
+                    <style>{`
+                        @media (max-width: 768px) {
+                            .mobile-grabber-container { display: block !important; }
+                        }
+                    `}</style>
                     {/* Header */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px', borderBottom: '1px solid #f1f5f9' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
