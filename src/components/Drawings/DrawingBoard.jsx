@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate, Trash2 } from 'lucide-react';
 import { getElementBounds, getElementAtPosition, rotatePoint, findSnapPoint, getConnectedModule } from './engineUtils';
 import { getDrawingBounds, renderElementsToCanvas } from './renderUtils';
 
@@ -10,11 +10,13 @@ const EXTENDED_COLORS = ['#0f172a', '#475569', '#ef4444', '#f97316', '#eab308', 
 const MEASURABLE_TYPES = ['line', 'arrow', 'dimension'];
 const SHAPE_DIMENSION_TYPES = ['rectangle', 'image', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'];
 const SETTINGS_ELEMENT_ID = '__drawing_settings__';
+const CUSTOM_TEMPLATE_STORAGE_KEY = 'bison_frame_custom_drawing_templates_v1';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const SYMBOL_TOOL_PREFIX = 'symbol:';
 const TEMPLATE_TOOL_PREFIX = 'template:';
+const CUSTOM_TEMPLATE_PREFIX = 'custom:';
 const CARPENTER_SYMBOLS = [
     { id: 'door', icon: DoorOpen, title: 'Dør' },
     { id: 'window', icon: Columns3, title: 'Vindue' },
@@ -623,6 +625,56 @@ const translateElement = (element, dx, dy) => {
     return element;
 };
 
+const normalizeElementsForCustomTemplate = (selectedElements, bounds) => {
+    if (!bounds) return [];
+    return selectedElements
+        .filter(el => el.type !== 'settings')
+        .map(el => {
+            const clone = JSON.parse(JSON.stringify(el));
+            delete clone.locked;
+
+            if (clone.type === 'pen' || clone.type === 'freehand') {
+                clone.points = (clone.points || []).map(p => ({ x: p.x - bounds.cx, y: p.y - bounds.cy }));
+            } else if (clone.type === 'line' || clone.type === 'arrow' || clone.type === 'dimension') {
+                clone.x -= bounds.cx;
+                clone.y -= bounds.cy;
+                clone.endX -= bounds.cx;
+                clone.endY -= bounds.cy;
+            } else if (['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(clone.type)) {
+                clone.x -= bounds.cx;
+                clone.y -= bounds.cy;
+            }
+
+            return clone;
+        });
+};
+
+const createCustomTemplateElements = (template, origin) => {
+    if (!template?.elements?.length) return [];
+
+    const idMap = new Map(template.elements.map(el => [el.id, generateId()]));
+    return template.elements.map(el => {
+        const clone = JSON.parse(JSON.stringify(el));
+        const originalId = clone.id;
+        const originalParentId = clone.parentId;
+        clone.id = idMap.get(originalId);
+        clone.locked = false;
+
+        if (originalParentId && idMap.has(originalParentId)) {
+            clone.parentId = idMap.get(originalParentId);
+        } else {
+            delete clone.parentId;
+        }
+
+        return translateElement(clone, origin.x, origin.y);
+    });
+};
+
+const getTemplateSelectionRootId = (templateElements) => {
+    const insertedIds = new Set(templateElements.map(el => el.id));
+    return templateElements.find(el => !el.parentId || !insertedIds.has(el.parentId))?.id || templateElements[0]?.id || null;
+};
+
 const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const canvasRef = useRef(null);
     const lastPointerRef = useRef({ x: 0, y: 0 });
@@ -677,6 +729,16 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const [showColorMenu, setShowColorMenu] = useState(false);
     const [showSymbolsMenu, setShowSymbolsMenu] = useState(false);
     const [showTemplatesMenu, setShowTemplatesMenu] = useState(false);
+    const [templateCategory, setTemplateCategory] = useState('standard');
+    const [customTemplates, setCustomTemplates] = useState(() => {
+        if (typeof window === 'undefined') return [];
+        try {
+            const saved = JSON.parse(localStorage.getItem(CUSTOM_TEMPLATE_STORAGE_KEY) || '[]');
+            return Array.isArray(saved) ? saved.filter(t => t?.id && t?.name && Array.isArray(t.elements)) : [];
+        } catch (err) {
+            return [];
+        }
+    });
 
     const getOverlayTransform = useCallback(() => {
         const zoom = activeZoomRef.current;
@@ -1087,6 +1149,56 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         setAppState(s => ({ ...s, tool: 'select', editingTextId: null }));
     }, [getSelectionWithChildren, pushHistory]);
 
+    const persistCustomTemplates = useCallback((nextTemplates) => {
+        const safeTemplates = nextTemplates.slice(0, 30);
+        setCustomTemplates(safeTemplates);
+        try {
+            localStorage.setItem(CUSTOM_TEMPLATE_STORAGE_KEY, JSON.stringify(safeTemplates));
+        } catch (err) {
+            toast.error('Kunne ikke gemme skabelonen lokalt.');
+        }
+    }, []);
+
+    const saveSelectionAsTemplate = useCallback(() => {
+        const selectedIds = getSelectionWithChildren();
+        const selectedSet = new Set(selectedIds);
+        const selectedElements = activeElementsRef.current.filter(el => selectedSet.has(el.id) && el.type !== 'settings');
+        const bounds = getDrawingBounds(selectedElements);
+
+        if (selectedElements.length === 0 || !bounds) {
+            toast.error('Vælg noget på tegningen først.');
+            return;
+        }
+
+        const defaultName = `Skabelon ${customTemplates.length + 1}`;
+        const rawName = window.prompt('Navn på skabelon', defaultName);
+        const name = rawName?.trim();
+        if (!name) return;
+
+        const template = {
+            id: generateId(),
+            name: name.slice(0, 42),
+            createdAt: new Date().toISOString(),
+            elementCount: selectedElements.length,
+            elements: normalizeElementsForCustomTemplate(selectedElements, bounds)
+        };
+
+        persistCustomTemplates([template, ...customTemplates]);
+        setTemplateCategory('custom');
+        toast.success('Skabelonen er gemt.');
+    }, [customTemplates, getSelectionWithChildren, persistCustomTemplates]);
+
+    const deleteCustomTemplate = useCallback((templateId) => {
+        const nextTemplates = customTemplates.filter(t => t.id !== templateId);
+        persistCustomTemplates(nextTemplates);
+        setAppState(s => (
+            s.tool === `${TEMPLATE_TOOL_PREFIX}${CUSTOM_TEMPLATE_PREFIX}${templateId}`
+                ? { ...s, tool: 'select' }
+                : s
+        ));
+        toast.success('Skabelonen er slettet.');
+    }, [customTemplates, persistCustomTemplates]);
+
     const insertSymbol = useCallback((symbolId, pos) => {
         const symbolElements = createSymbolElements(symbolId, pos, appState.color, appState.strokeWidth);
         if (symbolElements.length === 0) return;
@@ -1107,7 +1219,15 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     }, [appState.color, appState.strokeWidth, pushHistory]);
 
     const insertTemplate = useCallback((templateId, pos) => {
-        const templateElements = createTemplateElements(templateId, pos, appState.color, appState.strokeWidth);
+        const customTemplateId = templateId.startsWith(CUSTOM_TEMPLATE_PREFIX)
+            ? templateId.replace(CUSTOM_TEMPLATE_PREFIX, '')
+            : null;
+        const customTemplate = customTemplateId
+            ? customTemplates.find(t => t.id === customTemplateId)
+            : null;
+        const templateElements = customTemplate
+            ? createCustomTemplateElements(customTemplate, pos)
+            : createTemplateElements(templateId, pos, appState.color, appState.strokeWidth);
         if (templateElements.length === 0) return;
 
         pushHistory(activeElementsRef.current);
@@ -1118,12 +1238,12 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         setAppState(s => ({
             ...s,
             tool: 'select',
-            selectedElementId: templateElements[0].id,
+            selectedElementId: getTemplateSelectionRootId(templateElements),
             selectedElementIds: [],
             editingTextId: null,
             dragging: false
         }));
-    }, [appState.color, appState.strokeWidth, pushHistory]);
+    }, [appState.color, appState.strokeWidth, customTemplates, pushHistory]);
 
     const updateSelectedDimensionText = useCallback((text) => {
         const dimensionId = appState.selectedElementId;
@@ -1176,47 +1296,134 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         toast.success(`Målestok sat: ${formatPhysicalLength(metersPerUnit)} pr. tegneenhed`);
     }, [appState.selectedElementId, pushHistory]);
 
-    const addDimensionForSelectedShape = useCallback((axis) => {
-        const shapeId = appState.selectedElementId;
-        const shapeElement = activeElementsRef.current.find(el => el.id === shapeId);
+    const addDimensionForSelectedShape = useCallback((axisInput) => {
+        const axes = Array.isArray(axisInput) ? axisInput : [axisInput];
+        const selectedIds = getSelectionWithChildren();
+        const selectedSet = new Set(selectedIds);
+        const selectedElements = activeElementsRef.current.filter(el => selectedSet.has(el.id) && el.type !== 'settings');
         const settings = getDrawingSettings(activeElementsRef.current);
-        const shapeMetrics = getShapeMetrics(shapeElement, settings);
+        const bounds = getDrawingBounds(selectedElements);
 
-        if (!shapeElement || !shapeMetrics) {
-            toast.error('Vælg en figur først.');
+        if (selectedElements.length === 0 || !bounds) {
+            toast.error('Vælg noget at målsætte først.');
             return;
         }
 
-        const { bounds } = shapeMetrics;
+        const parentCandidates = selectedElements.filter(el => !el.parentId || !selectedSet.has(el.parentId));
+        const parentId = parentCandidates.length === 1 ? parentCandidates[0].id : null;
+        const firstElement = parentCandidates[0] || selectedElements[0];
         const offset = 28;
-        const isHorizontal = axis === 'width';
-        const dimension = {
-            id: generateId(),
-            type: 'dimension',
-            parentId: shapeElement.id,
-            color: shapeElement.color || appState.color,
-            strokeWidth: shapeElement.strokeWidth || appState.strokeWidth,
-            rotation: 0,
-            x: isHorizontal ? bounds.x : bounds.x + bounds.w + offset,
-            y: isHorizontal ? bounds.y + bounds.h + offset : bounds.y,
-            endX: isHorizontal ? bounds.x + bounds.w : bounds.x + bounds.w + offset,
-            endY: isHorizontal ? bounds.y + bounds.h + offset : bounds.y + bounds.h,
-            text: isHorizontal ? shapeMetrics.widthLabel : shapeMetrics.heightLabel,
-            fontSize: appState.fontSize || 16
-        };
+        const dimensions = axes.map(axis => {
+            const isHorizontal = axis === 'width';
+            return {
+                id: generateId(),
+                type: 'dimension',
+                ...(parentId ? { parentId } : {}),
+                color: firstElement.color || appState.color,
+                strokeWidth: firstElement.strokeWidth || appState.strokeWidth,
+                rotation: 0,
+                x: isHorizontal ? bounds.x : bounds.x + bounds.w + offset,
+                y: isHorizontal ? bounds.y + bounds.h + offset : bounds.y,
+                endX: isHorizontal ? bounds.x + bounds.w : bounds.x + bounds.w + offset,
+                endY: isHorizontal ? bounds.y + bounds.h + offset : bounds.y + bounds.h,
+                text: isHorizontal
+                    ? formatLengthWithSettings(bounds.w, settings)
+                    : formatLengthWithSettings(bounds.h, settings),
+                fontSize: appState.fontSize || 16
+            };
+        });
 
         pushHistory(activeElementsRef.current);
-        const updatedElements = [...activeElementsRef.current, dimension];
+        const updatedElements = [...activeElementsRef.current, ...dimensions];
         activeElementsRef.current = updatedElements;
         setElements(updatedElements);
         setAppState(s => ({
             ...s,
             tool: 'select',
-            selectedElementId: dimension.id,
+            selectedElementId: dimensions.length === 1 ? dimensions[0].id : null,
+            selectedElementIds: dimensions.length > 1 ? dimensions.map(d => d.id) : [],
+            editingTextId: null
+        }));
+    }, [appState.color, appState.fontSize, appState.strokeWidth, getSelectionWithChildren, pushHistory]);
+
+    const insertPrintTitleBlock = useCallback(() => {
+        const contentElements = activeElementsRef.current.filter(el => el.type !== 'settings' && !el.printFrame);
+        const contentBounds = getDrawingBounds(contentElements);
+        const center = contentBounds ? { x: contentBounds.cx, y: contentBounds.cy } : getViewportCenter();
+        const contentW = Math.max(contentBounds?.w || 520, 520);
+        const contentH = Math.max(contentBounds?.h || 280, 280);
+        const margin = 70;
+        const titleBlockH = 70;
+        const aspect = 297 / 210;
+        let frameW = Math.max(760, contentW + margin * 2);
+        let frameH = Math.max(540, contentH + margin * 2 + titleBlockH);
+
+        if (frameW / frameH < aspect) {
+            frameW = frameH * aspect;
+        } else {
+            frameH = frameW / aspect;
+        }
+
+        const rootId = generateId();
+        const x = center.x - frameW / 2;
+        const y = center.y - frameH / 2;
+        const titleY = y + frameH - titleBlockH;
+        const color = '#0f172a';
+        const strokeWidth = 2;
+        const line = (coords, parentId = rootId) => ({
+            ...createLineElement({ id: generateId(), parentId, color, strokeWidth, ...coords }),
+            printFrame: true
+        });
+        const text = ({ x: textX, y: textY, w, h, value, fontSize = 14, parentId = rootId }) => ({
+            id: generateId(),
+            parentId,
+            type: 'text',
+            color,
+            strokeWidth,
+            rotation: 0,
+            x: textX,
+            y: textY,
+            w,
+            h,
+            text: value,
+            fontSize,
+            printFrame: true
+        });
+
+        const root = {
+            ...createRectElement({ id: rootId, color, strokeWidth, x, y, w: frameW, h: frameH }),
+            printFrame: true
+        };
+        const dateText = new Date().toLocaleDateString('da-DK');
+        const titleBlockElements = [
+            root,
+            line({ x, y: titleY, endX: x + frameW, endY: titleY }),
+            line({ x: x + frameW * 0.48, y: titleY, endX: x + frameW * 0.48, endY: y + frameH }),
+            line({ x: x + frameW * 0.68, y: titleY, endX: x + frameW * 0.68, endY: y + frameH }),
+            line({ x: x + frameW * 0.84, y: titleY, endX: x + frameW * 0.84, endY: y + frameH }),
+            line({ x: x + frameW * 0.68, y: titleY + titleBlockH / 2, endX: x + frameW, endY: titleY + titleBlockH / 2 }),
+            text({ x: x + 18, y: titleY + 14, w: frameW * 0.45, h: 26, value: drawingName || 'Ny skitse', fontSize: 20 }),
+            text({ x: x + frameW * 0.49, y: titleY + 12, w: frameW * 0.17, h: 20, value: 'Sag / kunde', fontSize: 13 }),
+            text({ x: x + frameW * 0.49, y: titleY + 40, w: frameW * 0.17, h: 20, value: 'Bison Frame', fontSize: 13 }),
+            text({ x: x + frameW * 0.69, y: titleY + 12, w: frameW * 0.13, h: 20, value: `Dato ${dateText}`, fontSize: 13 }),
+            text({ x: x + frameW * 0.69, y: titleY + 40, w: frameW * 0.13, h: 20, value: 'Målestok', fontSize: 13 }),
+            text({ x: x + frameW * 0.85, y: titleY + 12, w: frameW * 0.12, h: 20, value: 'Rev.', fontSize: 13 }),
+            text({ x: x + frameW * 0.85, y: titleY + 40, w: frameW * 0.12, h: 20, value: 'Side 1/1', fontSize: 13 })
+        ];
+
+        pushHistory(activeElementsRef.current);
+        const updatedElements = [...activeElementsRef.current, ...titleBlockElements];
+        activeElementsRef.current = updatedElements;
+        setElements(updatedElements);
+        setAppState(s => ({
+            ...s,
+            tool: 'select',
+            selectedElementId: rootId,
             selectedElementIds: [],
             editingTextId: null
         }));
-    }, [appState.color, appState.fontSize, appState.selectedElementId, appState.strokeWidth, pushHistory]);
+        toast.success('A4 titelblok er indsat.');
+    }, [drawingName, getViewportCenter, pushHistory]);
 
     const updateSelectedShapeSize = useCallback((axis, rawValue) => {
         const shapeId = appState.selectedElementId;
@@ -3166,7 +3373,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                                 </React.Fragment>
                             ))}
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, width: 78 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: 86 }}>
                             <button
                                 onClick={() => addDimensionForSelectedShape('width')}
                                 className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
@@ -3182,6 +3389,14 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                                 title="Tilføj højde-mål"
                             >
                                 H mål
+                            </button>
+                            <button
+                                onClick={() => addDimensionForSelectedShape(['width', 'height'])}
+                                className="rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition-all active:scale-95"
+                                style={{ height: 26, fontSize: 11, fontWeight: 800 }}
+                                title="Tilføj bredde og højde"
+                            >
+                                B/H
                             </button>
                         </div>
                         <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
@@ -3282,6 +3497,37 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
                 {hasSelection && (
                     <>
+                        {!selectedShapeMetrics && !selectedMetrics && (
+                            <>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: 86 }}>
+                                    <button
+                                        onClick={() => addDimensionForSelectedShape('width')}
+                                        className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
+                                        style={{ height: 26, fontSize: 11, fontWeight: 800 }}
+                                        title="Målsæt markeringens bredde"
+                                    >
+                                        B
+                                    </button>
+                                    <button
+                                        onClick={() => addDimensionForSelectedShape('height')}
+                                        className="rounded-md text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
+                                        style={{ height: 26, fontSize: 11, fontWeight: 800 }}
+                                        title="Målsæt markeringens højde"
+                                    >
+                                        H
+                                    </button>
+                                    <button
+                                        onClick={() => addDimensionForSelectedShape(['width', 'height'])}
+                                        className="rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition-all active:scale-95"
+                                        style={{ height: 26, fontSize: 11, fontWeight: 800 }}
+                                        title="Målsæt bredde og højde"
+                                    >
+                                        B/H
+                                    </button>
+                                </div>
+                                <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
+                            </>
+                        )}
                         {canAlignSelection && (
                             <>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: 78 }}>
@@ -3350,6 +3596,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         </button>
                         <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
                         <button
+                            onClick={saveSelectionAsTemplate}
+                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
+                            title="Gem valgte som skabelon"
+                        >
+                            <LayoutTemplate size={18} />
+                        </button>
+                        <button
                             onClick={duplicateSelectedElements}
                             className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
                             title="Dupliker"
@@ -3396,6 +3649,14 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         <div style={{ width: 16, height: 1, backgroundColor: '#e2e8f0' }} />
                     </>
                 )}
+
+                <button
+                    onClick={insertPrintTitleBlock}
+                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-all active:scale-95"
+                    title="Indsæt A4 titelblok"
+                >
+                    <FileImage size={18} />
+                </button>
 
                 <button
                     onClick={() => fitDrawingToView()}
@@ -3582,23 +3843,126 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         <div style={{
                             position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px',
                             backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                            border: '1px solid rgba(226, 232, 240, 1)', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px'
+                            border: '1px solid rgba(226, 232, 240, 1)', width: 244, display: 'flex', flexDirection: 'column', gap: '8px'
                         }}>
-                            {CARPENTER_TEMPLATES.map(t => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => {
-                                        setAppState(s => ({ ...s, tool: `${TEMPLATE_TOOL_PREFIX}${t.id}`, selectedElementId: null, selectedElementIds: [] }));
-                                        setShowTemplatesMenu(false);
-                                    }}
-                                    className={`p-2 rounded-lg transition-all duration-200 active:scale-95 flex items-center justify-center
-                                        ${appState.tool === `${TEMPLATE_TOOL_PREFIX}${t.id}` ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-100'}`}
-                                    style={{ width: '32px', height: '32px' }}
-                                    title={t.title}
-                                >
-                                    <t.icon size={16} strokeWidth={2} />
-                                </button>
-                            ))}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(2, 1fr)',
+                                gap: 4,
+                                background: '#f8fafc',
+                                borderRadius: 9,
+                                padding: 3
+                            }}>
+                                {[
+                                    { id: 'standard', label: 'Standard' },
+                                    { id: 'custom', label: 'Egne' }
+                                ].map(category => (
+                                    <button
+                                        key={category.id}
+                                        onClick={() => setTemplateCategory(category.id)}
+                                        className={`rounded-md transition-all active:scale-95 ${templateCategory === category.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                                        style={{ height: 28, fontSize: 12, fontWeight: 800 }}
+                                    >
+                                        {category.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {templateCategory === 'standard' && (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
+                                    {CARPENTER_TEMPLATES.map(t => (
+                                        <button
+                                            key={t.id}
+                                            onClick={() => {
+                                                setAppState(s => ({ ...s, tool: `${TEMPLATE_TOOL_PREFIX}${t.id}`, selectedElementId: null, selectedElementIds: [] }));
+                                                setShowTemplatesMenu(false);
+                                            }}
+                                            className={`p-2 rounded-lg transition-all duration-200 active:scale-95 flex items-center justify-center
+                                                ${appState.tool === `${TEMPLATE_TOOL_PREFIX}${t.id}` ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-100'}`}
+                                            style={{ width: '32px', height: '32px' }}
+                                            title={t.title}
+                                        >
+                                            <t.icon size={16} strokeWidth={2} />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {templateCategory === 'custom' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <button
+                                        onClick={saveSelectionAsTemplate}
+                                        disabled={!hasSelection}
+                                        className="rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-40 disabled:hover:bg-blue-50 transition-all active:scale-95"
+                                        style={{ height: 30, fontSize: 12, fontWeight: 800 }}
+                                        title="Gem valgte som skabelon"
+                                    >
+                                        Gem markerede
+                                    </button>
+
+                                    {customTemplates.length === 0 ? (
+                                        <div style={{
+                                            minHeight: 44,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#94a3b8',
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            border: '1px dashed #cbd5e1',
+                                            borderRadius: 9
+                                        }}>
+                                            Ingen egne endnu
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 180, overflowY: 'auto' }}>
+                                            {customTemplates.map(t => (
+                                                <div
+                                                    key={t.id}
+                                                    style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '1fr 30px',
+                                                        gap: 4,
+                                                        alignItems: 'center'
+                                                    }}
+                                                >
+                                                    <button
+                                                        onClick={() => {
+                                                            setAppState(s => ({ ...s, tool: `${TEMPLATE_TOOL_PREFIX}${CUSTOM_TEMPLATE_PREFIX}${t.id}`, selectedElementId: null, selectedElementIds: [] }));
+                                                            setShowTemplatesMenu(false);
+                                                        }}
+                                                        className={`rounded-lg transition-all active:scale-95 text-left
+                                                            ${appState.tool === `${TEMPLATE_TOOL_PREFIX}${CUSTOM_TEMPLATE_PREFIX}${t.id}` ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-100'}`}
+                                                        style={{
+                                                            height: 30,
+                                                            padding: '0 9px',
+                                                            fontSize: 12,
+                                                            fontWeight: 800,
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}
+                                                        title={t.name}
+                                                    >
+                                                        {t.name}
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            deleteCustomTemplate(t.id);
+                                                        }}
+                                                        className="rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all active:scale-95 flex items-center justify-center"
+                                                        style={{ height: 30 }}
+                                                        title="Slet skabelon"
+                                                    >
+                                                        <Trash2 size={15} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

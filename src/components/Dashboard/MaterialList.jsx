@@ -426,6 +426,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                             {/* ACCORDION HEADER */}
                             <div 
                                 onClick={() => toggleList(list.id)}
+                                className="material-list-header"
                                 style={{ 
                                     padding: '20px 24px', 
                                     backgroundColor: isOpen ? '#f8fafc' : '#ffffff', 
@@ -434,7 +435,9 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                     alignItems: 'center',
                                     cursor: 'pointer',
                                     borderBottom: isOpen ? '1px solid #e2e8f0' : 'none',
-                                    transition: 'background-color 0.2s'
+                                    transition: 'background-color 0.2s',
+                                    flexWrap: 'wrap',
+                                    gap: '12px'
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
@@ -449,7 +452,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                     }}>
                                         <Package size={20} />
                                     </div>
-                                    <div style={{ flex: 1, minWidth: '10px' }}>
+                                    <div style={{ flex: 1, minWidth: '200px' }}>
                                         {isLead ? (
                                             <div style={{ 
                                                 fontSize: '1.15rem', 
@@ -501,52 +504,6 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                         {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                     </div>
 
-                                    {/* Faktura pris input i overskriften */}
-                                    {(!isLead && profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                                        <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            {/* Status Badge */}
-                                            {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret') ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#dcfce7', color: '#166534', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>
-                                                    <Check size={14} strokeWidth={3} /> BESTILT
-                                                </div>
-                                            ) : (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fef3c7', color: '#92400e', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>
-                                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#d97706' }}></div> AFVENTER
-                                                </div>
-                                            )}
-
-                                            {/* Fakturapris input */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '6px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
-                                                <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>Fakturapris:</span>
-                                                <input 
-                                                    type="text"
-                                                    placeholder="Indtast pris..."
-                                                    value={formatPrice(list.price)}
-                                                    onChange={(e) => handleUpdateListMeta(list.id, 'price', parsePrice(e.target.value))}
-                                                    onBlur={(e) => {
-                                                        const newVal = parsePrice(e.target.value);
-                                                        const newMeta = materialListsMeta.map(l => l.id === list.id ? { ...l, price: newVal } : l);
-                                                        handleSaveList(materials, newMeta);
-                                                    }}
-                                                    style={{ width: '100px', border: '1px solid transparent', background: '#f8fafc', fontSize: '0.95rem', fontWeight: 'bold', color: '#0f172a', outline: 'none', textAlign: 'right', padding: '4px 8px', borderRadius: '8px', transition: 'all 0.2s' }}
-                                                    onFocus={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
-                                                />
-                                                <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
-                                            </div>
-                                            
-                                    {list.id !== 'default' && profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
-                                        <button 
-                                            onClick={(e) => handleDeleteListClick(e, list.id)}
-                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginLeft: '8px' }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.transform = 'scale(1.05)'; }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; e.currentTarget.style.transform = 'scale(1)'; }}
-                                            title="Slet Ekstra Liste"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    )}
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 
@@ -554,6 +511,56 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                             {isOpen && (
                                 <div style={{ padding: '24px', backgroundColor: '#ffffff', animation: 'fadeInDown 0.3s ease-out' }}>
                                     
+
+                                    {/* LIST METADATA (Moved from header) */}
+                                    {(!isLead && profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '20px', flexWrap: 'wrap', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                                            
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                                {/* Status Badge */}
+                                                {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret') ? (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#dcfce7', color: '#166534', padding: '8px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+                                                        <Check size={16} strokeWidth={3} /> BESTILT
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fef3c7', color: '#92400e', padding: '8px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+                                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#d97706' }}></div> AFVENTER
+                                                    </div>
+                                                )}
+
+                                                {/* Fakturapris input */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '8px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
+                                                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>Fakturapris:</span>
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Indtast pris..."
+                                                        value={formatPrice(list.price)}
+                                                        onChange={(e) => handleUpdateListMeta(list.id, 'price', parsePrice(e.target.value))}
+                                                        onBlur={(e) => {
+                                                            const newVal = parsePrice(e.target.value);
+                                                            const newMeta = materialListsMeta.map(l => l.id === list.id ? { ...l, price: newVal } : l);
+                                                            handleSaveList(materials, newMeta);
+                                                        }}
+                                                        style={{ width: '120px', border: '1px solid transparent', background: '#f8fafc', fontSize: '1rem', fontWeight: 'bold', color: '#0f172a', outline: 'none', textAlign: 'right', padding: '6px 10px', borderRadius: '8px', transition: 'all 0.2s' }}
+                                                        onFocus={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                                                    />
+                                                    <span style={{ fontSize: '0.95rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                                                </div>
+                                            </div>
+                                            
+                                            {list.id !== 'default' && (
+                                                <button 
+                                                    onClick={() => handleDeleteListClick({ stopPropagation: () => {} }, list.id)}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '10px', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fee2e2', cursor: 'pointer', transition: 'all 0.2s', fontWeight: '600', fontSize: '0.9rem' }}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                                                    title="Slet Ekstra Liste"
+                                                >
+                                                    <Trash2 size={18} /> Slet liste
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                     {/* ACTIONS FOR THIS LIST */}
                                     {profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
                                         <div style={{ 
