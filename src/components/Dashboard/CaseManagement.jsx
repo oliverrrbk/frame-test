@@ -1631,73 +1631,135 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 document.body
                             )}
 
-                            {/* Team Sheet Overlay PORTAL */}
+                            {/* Team Sheet Overlay PORTAL (Beautiful Mobile Telephone Book) */}
                             {showTeamSheet && createPortal(
-                                <div onClick={() => setShowTeamSheet(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.4)', zIndex: 99999, backdropFilter: 'blur(2px)', animation: 'fadeIn 0.2s ease-out' }}>
-                                    <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 16px))', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '80vh', overflowY: 'auto' }}>
-                                        <div style={{ width: '40px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', margin: '0 auto 24px auto' }} />
-                                        <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', color: '#0f172a', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
-                                            Holdet på sagen
-                                            <button onClick={() => setShowTeamSheet(false)} style={{ background: 'none', border: 'none', color: '#94a3b8' }}><X size={20}/></button>
-                                        </h3>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            {(Array.isArray(selectedCase.raw_data?.assigned_pm) ? selectedCase.raw_data.assigned_pm : [selectedCase.raw_data?.assigned_pm]).filter(Boolean).map(pmId => {
-                                                const m = team.find(t => t.id === pmId);
-                                                if (!m) return null;
-                                                return (
-                                                    <div key={pmId} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#eff6ff', borderRadius: '16px', border: '1px solid #bfdbfe' }}>
-                                                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#bfdbfe', color: '#1e3a8a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                                            {(m.owner_name || m.company_name || '?').charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <div>
-                                                            <div style={{ fontWeight: '600', color: '#1e3a8a', fontSize: '0.95rem' }}>{m.owner_name || m.company_name || 'Ukendt'}</div>
-                                                            <div style={{ fontSize: '0.75rem', color: '#3b82f6' }}>Projektleder</div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                            {(selectedCase.raw_data?.assigned_workers || []).map(wId => {
-                                                const m = team.find(t => t.id === wId);
-                                                if (!m) return null;
-                                                return (
-                                                    <div key={wId} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                                                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e2e8f0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                                            {(m.owner_name || m.company_name || '?').charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <div>
-                                                            <div style={{ fontWeight: '600', color: '#334155', fontSize: '0.95rem' }}>{m.owner_name || m.company_name || 'Ukendt'}</div>
-                                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Håndværker</div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                                <div onClick={() => setShowTeamSheet(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', zIndex: 99999, backdropFilter: 'blur(4px)', animation: 'fadeIn 0.2s ease-out' }}>
+                                    <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTopLeftRadius: '32px', borderTopRightRadius: '32px', padding: '24px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 16px))', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+                                        
+                                        <div style={{ width: '48px', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', margin: '0 auto 24px auto' }} />
+                                        
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                            <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a', fontWeight: '800' }}>Holdet på sagen</h3>
+                                            <button onClick={() => setShowTeamSheet(false)} style={{ background: '#f1f5f9', border: 'none', color: '#64748b', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <X size={18}/>
+                                            </button>
+                                        </div>
+                                        
+                                        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                             
-                                            {['admin', 'sales'].includes(profile?.role) && (
-                                                <div style={{ marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-                                                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: '#0f172a' }}>Tilføj Medarbejdere</h4>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
-                                                        {team.filter(t => t.role === 'worker' || t.role === 'apprentice').map(worker => {
-                                                            const isAssigned = assignedWorkers.includes(worker.id);
+                                            {/* PROJEKTLEDERE */}
+                                            {pmIds.length > 0 && (
+                                                <div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Projektledere</div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        {pmIds.map(pmId => {
+                                                            const m = team.find(t => t.id === pmId);
+                                                            if (!m) return null;
                                                             return (
-                                                                <div 
-                                                                    key={worker.id} 
-                                                                    onClick={() => handleWorkerToggle(worker.id)}
-                                                                    style={{ padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '12px', backgroundColor: isAssigned ? '#eff6ff' : '#f8fafc', border: isAssigned ? '1px solid #bfdbfe' : '1px solid #e2e8f0' }}
-                                                                >
-                                                                    <span style={{ fontSize: '0.95rem', color: isAssigned ? '#1d4ed8' : '#334155', fontWeight: isAssigned ? '600' : 'normal' }}>{worker.owner_name || worker.company_name || worker.email || 'Ukendt'}</span>
-                                                                    <div style={{ width: '22px', height: '22px', borderRadius: '6px', backgroundColor: isAssigned ? '#3b82f6' : '#fff', border: isAssigned ? 'none' : '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                        {isAssigned && <CheckSquare size={14} color="white" />}
+                                                                <div key={pmId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#eff6ff', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.3)' }}>
+                                                                            {(m.owner_name || m.company_name || '?').charAt(0).toUpperCase()}
+                                                                        </div>
+                                                                        <div>
+                                                                            <div style={{ fontWeight: '700', color: '#1e3a8a', fontSize: '1.05rem' }}>{m.owner_name || m.company_name || 'Ukendt'}</div>
+                                                                            <div style={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: '600' }}>Projektleder</div>
+                                                                        </div>
                                                                     </div>
+                                                                    {m.phone && (
+                                                                        <a href={`tel:${m.phone}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px', borderRadius: '50%', background: '#ffffff', color: '#3b82f6', border: '1px solid #bfdbfe', boxShadow: '0 2px 4px rgba(59, 130, 246, 0.1)' }}>
+                                                                            <Phone size={18} />
+                                                                        </a>
+                                                                    )}
                                                                 </div>
                                                             );
                                                         })}
                                                     </div>
-                                                    <button onClick={() => { handleSaveAssignments(); setShowTeamSheet(false); }} style={{ marginTop: '16px', width: '100%', padding: '14px', background: '#1e293b', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                                                        Gem Hold
-                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* HÅNDVÆRKERE */}
+                                            {assignedWorkers.length > 0 && (
+                                                <div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', marginBottom: '8px', marginTop: pmIds.length > 0 ? '8px' : '0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Byggehold (Svende & Lærlinge)</div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        {assignedWorkers.map(wId => {
+                                                            const m = team.find(t => t.id === wId);
+                                                            if (!m) return null;
+                                                            return (
+                                                                <div key={wId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e2e8f0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                                                                            {(m.owner_name || m.company_name || '?').charAt(0).toUpperCase()}
+                                                                        </div>
+                                                                        <div>
+                                                                            <div style={{ fontWeight: '700', color: '#334155', fontSize: '1.05rem' }}>{m.owner_name || m.company_name || 'Ukendt'}</div>
+                                                                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>Håndværker</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    {m.phone && (
+                                                                        <a href={`tel:${m.phone}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px', borderRadius: '50%', background: '#ffffff', color: '#64748b', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                                                            <Phone size={18} />
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* UNDERLEVERANDØRER */}
+                                            {assignedSubs.length > 0 && (
+                                                <div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', marginBottom: '8px', marginTop: (pmIds.length > 0 || assignedWorkers.length > 0) ? '8px' : '0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Underleverandører</div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        {assignedSubs.map(sub => (
+                                                            <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#f5f3ff', borderRadius: '20px', border: '1px solid #ddd6fe' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                                    <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#8b5cf6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.3)' }}>
+                                                                        {(sub.company_name || '?').charAt(0).toUpperCase()}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div style={{ fontWeight: '700', color: '#5b21b6', fontSize: '1.05rem' }}>{sub.company_name}</div>
+                                                                        <div style={{ fontSize: '0.8rem', color: '#8b5cf6', fontWeight: '600' }}>{sub.trade || 'Underleverandør'}</div>
+                                                                    </div>
+                                                                </div>
+                                                                {sub.contact_phone && (
+                                                                    <a href={`tel:${sub.contact_phone}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px', borderRadius: '50%', background: '#ffffff', color: '#8b5cf6', border: '1px solid #ddd6fe', boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)' }}>
+                                                                        <Phone size={18} />
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {pmIds.length === 0 && assignedWorkers.length === 0 && assignedSubs.length === 0 && (
+                                                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                                                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+                                                        <Users size={32} color="#94a3b8" />
+                                                    </div>
+                                                    <p style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#475569' }}>Ingen tilføjet til sagen endnu</p>
+                                                    <p style={{ margin: '8px 0 0 0', fontSize: '0.9rem' }}>Tilføj medarbejdere og underleverandører for at give dem adgang.</p>
                                                 </div>
                                             )}
                                         </div>
+                                        
+                                        {/* REDIGER HOLD KNAP (Kun for PM/Admin) */}
+                                        {(!['worker', 'apprentice'].includes(profile?.role)) && (
+                                            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                                                <button 
+                                                    onClick={() => { setShowTeamSheet(false); setWorkerDropdownOpen(true); }}
+                                                    style={{ width: '100%', padding: '16px', background: '#1a1a1a', color: 'white', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                                                >
+                                                    <Users size={20} />
+                                                    Rediger Holdet
+                                                </button>
+                                            </div>
+                                        )}
+                                        
                                     </div>
                                 </div>,
                                 document.body
