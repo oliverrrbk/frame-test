@@ -128,6 +128,26 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
                     })}
                 </div>
             )}
+
+            {/* SLET LOG MODAL (Bison Frame Design) */}
+            {logToDelete && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out', padding: '20px' }}>
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', textAlign: 'center' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px auto' }}>
+                            <AlertTriangle size={32} />
+                        </div>
+                        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.4rem', color: '#0f172a', fontWeight: '800' }}>Slet status?</h3>
+                        <p style={{ margin: '0 0 32px 0', color: '#64748b', fontSize: '1rem', lineHeight: '1.5' }}>
+                            Er du sikker på, at du vil slette denne statusopdatering? Handlingen kan ikke fortrydes.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={() => setLogToDelete(null)} style={{ flex: 1, padding: '14px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#ffffff', color: '#475569', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>Annuller</button>
+                            <button onClick={confirmDeleteLog} style={{ flex: 1, padding: '14px', borderRadius: '16px', border: 'none', background: '#ef4444', color: '#ffffff', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}>Slet</button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };
@@ -173,6 +193,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [logStatus, setLogStatus] = useState('green'); // 'green', 'yellow', 'red'
     const [logPhotos, setLogPhotos] = useState([]); // Previews (blob URLs)
     const [editingLogId, setEditingLogId] = useState(null);
+    const [logToDelete, setLogToDelete] = useState(null);
     const [existingPhotos, setExistingPhotos] = useState([]);
     const [logFiles, setLogFiles] = useState([]); // Actual File objects
     const [isUploadingLog, setIsUploadingLog] = useState(false);
@@ -893,9 +914,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     // Logbog-håndtering
     
-    const deleteLog = async (logId) => {
-        if (!confirm('Er du sikker på, at du vil slette denne statusopdatering?')) return;
-        await mutateCaseField('logs', arr => arr.filter(l => l.id !== logId), setLogsList);
+    const deleteLog = (logId) => {
+        setLogToDelete(logId);
+    };
+
+    const confirmDeleteLog = async () => {
+        if (!logToDelete) return;
+        await mutateCaseField('logs', arr => arr.filter(l => l.id !== logToDelete), setLogsList);
+        setLogToDelete(null);
         toast.success('Status slettet');
     };
 
@@ -3212,53 +3238,61 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         
                                         return (
                                             <>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                                                    <div>
-                                                        <h4 style={{ margin: 0, color: '#1a1a1a', fontSize: '1.2rem', marginBottom: '8px' }}>
-                                                            {isWorker ? 'Dine registrerede timer på sagen' : 'Registrerede arbejdstimer på sagen'}
-                                                        </h4>
-                                                        
-                                                        {isWorker ? (
-                                                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#3b82f6' }}>
-                                                                {myTotalHours} t
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                                                    
+                                                    {!isWorker && (
+                                                    <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <Users size={20} />
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Holdets forbrug</div>
+                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                                                <span style={{ fontSize: '1.6rem', fontWeight: '800', color: totalActualHours > budgetedHours ? '#ef4444' : '#0f172a' }}>{totalActualHours}</span>
+                                                                <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: '600' }}>/ {budgetedHours} t</span>
                                                             </div>
-                                                        ) : (
-                                                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                                                                <div style={{ fontSize: '0.95rem', color: '#475569' }}>
-                                                                    Holdets forbrug: <strong style={{ color: totalActualHours > budgetedHours ? '#ef4444' : '#10b981' }}>{totalActualHours} t</strong> / {budgetedHours} t
-                                                                </div>
-                                                                <div style={{ fontSize: '0.95rem', color: '#475569', paddingLeft: '16px', borderLeft: '2px solid #e2e8f0' }}>
-                                                                    Dine egne timer: <strong style={{ color: '#3b82f6' }}>{myTotalHours} t</strong>
-                                                                </div>
+                                                        </div>
+                                                    </div>
+                                                    )}
+
+                                                    <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f0fdf4', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <User size={20} />
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dine timer</div>
+                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                                                <span style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a' }}>{myTotalHours}</span>
+                                                                <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: '600' }}>t</span>
                                                             </div>
-                                                        )}
+                                                        </div>
                                                     </div>
 
-                                                    <button 
-                                                        onClick={() => setIsTimeModalOpen(true)}
-                                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                                    >
-                                                        <Plus size={18} /> Tilføj timer
-                                                    </button>
+                                                    {!isWorker && (
+                                                    <div style={{ background: '#fefce8', padding: '20px', borderRadius: '24px', border: '1px solid #fef08a', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef08a', color: '#ca8a04', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <DollarSign size={20} />
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontSize: '0.8rem', color: '#a16207', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ekstraregning</div>
+                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                                                <span style={{ fontSize: '1.6rem', fontWeight: '800', color: '#854d0e' }}>+{totalExtraPrice}</span>
+                                                                <span style={{ fontSize: '1rem', color: '#a16207', fontWeight: '600' }}>kr.</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    )}
                                                 </div>
+
+                                                <button 
+                                                    onClick={() => setIsTimeModalOpen(true)}
+                                                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '16px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '20px', fontSize: '1.05rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                                >
+                                                    <Plus size={20} /> Tilføj timer
+                                                </button>
                                             </>
                                         );
                                     })()}
-
-                                    {/* BOGHOLDER / ØKONOMI OVERBLIK (Simpel Version UDEN Export) */}
-                                    {(!['worker', 'apprentice'].includes(profile?.role)) && (
-                                        <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                            <div>
-                                                <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em' }}>Samlet Tidsforbrug</div>
-                                                <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>{totalActualHours} t</div>
-                                            </div>
-                                            <div style={{ width: '1px', height: '30px', backgroundColor: '#e2e8f0' }}></div>
-                                            <div>
-                                                <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em' }}>Total Ekstraregning</div>
-                                                <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#10b981' }}>+ {totalExtraPrice} kr.</div>
-                                            </div>
-                                        </div>
-                                    )}
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         {timeEntries.length === 0 ? (
@@ -3737,6 +3771,26 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             </div>,
             document.body
         )}
+
+            {/* SLET LOG MODAL (Bison Frame Design) */}
+            {logToDelete && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out', padding: '20px' }}>
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', textAlign: 'center' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px auto' }}>
+                            <AlertTriangle size={32} />
+                        </div>
+                        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.4rem', color: '#0f172a', fontWeight: '800' }}>Slet status?</h3>
+                        <p style={{ margin: '0 0 32px 0', color: '#64748b', fontSize: '1rem', lineHeight: '1.5' }}>
+                            Er du sikker på, at du vil slette denne statusopdatering? Handlingen kan ikke fortrydes.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={() => setLogToDelete(null)} style={{ flex: 1, padding: '14px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#ffffff', color: '#475569', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>Annuller</button>
+                            <button onClick={confirmDeleteLog} style={{ flex: 1, padding: '14px', borderRadius: '16px', border: 'none', background: '#ef4444', color: '#ffffff', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}>Slet</button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };
