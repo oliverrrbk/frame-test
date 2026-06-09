@@ -473,6 +473,51 @@ const Dashboard = () => {
 
 
     useEffect(() => {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        const handleTouchStart = (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        };
+
+        const handleTouchMove = (e) => {
+            if (!touchStartX || !touchStartY) return;
+            
+            const touchEndX = e.touches[0].clientX;
+            const touchEndY = e.touches[0].clientY;
+
+            const diffX = touchEndX - touchStartX;
+            const diffY = Math.abs(touchEndY - touchStartY);
+
+            // Tjek om vi swiper fra den absolutte venstre kant (inden for 30 pixels)
+            if (touchStartX < 30) {
+                // Hvis swipe går mod højre, er længere end 50px og er primært vandret
+                if (diffX > 50 && diffX > diffY * 1.5) {
+                    setIsMobileMenuOpen(true);
+                    touchStartX = 0; // forhindrer dobbelt-trigger
+                    touchStartY = 0;
+                }
+            }
+        };
+
+        const handleTouchEnd = () => {
+            touchStartX = 0;
+            touchStartY = 0;
+        };
+
+        document.addEventListener('touchstart', handleTouchStart, { passive: true });
+        document.addEventListener('touchmove', handleTouchMove, { passive: true });
+        document.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+        return () => {
+            document.removeEventListener('touchstart', handleTouchStart);
+            document.removeEventListener('touchmove', handleTouchMove);
+            document.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, []);
+
+    useEffect(() => {
         if (selectedLead) {
             document.body.style.overflow = 'hidden';
         } else {
