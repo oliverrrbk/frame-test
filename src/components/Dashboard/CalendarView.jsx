@@ -737,7 +737,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     };
 
     return (
-        <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '24px', height: 'calc(100vh - 80px)', fontFamily: "'Inter', sans-serif" }}>
+        <>
+            {isMobile ? renderMobileMonthView() : (
+                <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '24px', height: 'calc(100vh - 80px)', fontFamily: "'Inter', sans-serif" }}>
             
             {/* Kalender Main Area */}
             <div style={{ flex: 1, background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(16px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.8)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)', padding: '32px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -987,7 +989,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 </div>,
                 document.body
             )}
-        </div>
+        </>
     );
 };
 
