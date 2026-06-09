@@ -59,6 +59,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [selectedMobileDate, setSelectedMobileDate] = useState(new Date());
     const [showMobileFilter, setShowMobileFilter] = useState(false);
+    const [showMobileSearch, setShowMobileSearch] = useState(false);
     
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -211,14 +212,20 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const startingEmptyCells = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Mandag er 0
 
     const prevPeriod = () => {
-        if (view === 'month') setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-        if (view === 'week') setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7));
-        if (view === 'year') setCurrentDate(new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), 1));
+        let newDate;
+        if (view === 'month') newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+        if (view === 'week') newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7);
+        if (view === 'year') newDate = new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), 1);
+        setCurrentDate(newDate);
+        if (isMobile) setSelectedMobileDate(newDate);
     };
     const nextPeriod = () => {
-        if (view === 'month') setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-        if (view === 'week') setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7));
-        if (view === 'year') setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), 1));
+        let newDate;
+        if (view === 'month') newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+        if (view === 'week') newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7);
+        if (view === 'year') newDate = new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), 1);
+        setCurrentDate(newDate);
+        if (isMobile) setSelectedMobileDate(newDate);
     };
 
     const monthNames = ['Januar', 'Februar', 'Marts', 'April', 'Maj', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'December'];
@@ -420,20 +427,35 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 
                 {/* Mobile Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: '#fff', position: 'sticky', top: 0, zIndex: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                         <button onClick={prevPeriod} style={{ background: 'none', border: 'none', padding: '4px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                             <ChevronLeft size={24} color="#0f172a" />
                         </button>
-                        <h2 style={{ fontSize: '1.8rem', fontWeight: '800', margin: 0, color: '#0f172a', textTransform: 'capitalize' }}>
-                            {format(currentDate, 'MMMM yyyy', { locale: da })}
-                        </h2>
+                        
+                        {showMobileSearch ? (
+                            <input 
+                                autoFocus
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Søg..."
+                                style={{ flex: 1, border: 'none', outline: 'none', background: '#f1f5f9', padding: '8px 12px', borderRadius: '8px', fontSize: '1rem', width: '100%' }}
+                            />
+                        ) : (
+                            <h2 style={{ fontSize: '1.4rem', fontWeight: '800', margin: 0, color: '#0f172a', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                                {format(currentDate, 'MMMM yyyy', { locale: da })}
+                            </h2>
+                        )}
+                        
                         <button onClick={nextPeriod} style={{ background: 'none', border: 'none', padding: '4px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                             <ChevronRight size={24} color="#0f172a" />
                         </button>
                     </div>
-                    <div style={{ display: 'flex', gap: '16px' }}>
-                        {/* Søg (fiktiv knap pt.) */}
-                        <button style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}><Search size={22} color="#0f172a" /></button>
+                    <div style={{ display: 'flex', gap: '16px', marginLeft: '12px' }}>
+                        {/* Søg */}
+                        <button onClick={() => { setShowMobileSearch(!showMobileSearch); if(showMobileSearch) setSearchTerm(''); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                            {showMobileSearch ? <X size={22} color="#0f172a" /> : <Search size={22} color="#0f172a" />}
+                        </button>
                         
                         {/* Mobil Medarbejder Filter */}
                         {isManager && (
@@ -454,120 +476,164 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     </div>
                 </div>
 
-                {/* Mobile Grid */}
-                <div style={{ padding: '0 16px' }}>
-                    {/* Ugedage */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '8px' }}>
-                        {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((day, idx) => (
-                            <div key={idx} style={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#94a3b8' }}>{day}</div>
-                        ))}
-                    </div>
-
-                    {/* Dage */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
-                        {Array.from({ length: startingEmptyCells }).map((_, idx) => (
-                            <div key={`empty-${idx}`} style={{ aspectRatio: '1' }} />
-                        ))}
-                        
-                        {Array.from({ length: daysInMonth }).map((_, idx) => {
-                            const day = idx + 1;
-                            const checkDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-                            const isToday = new Date().getDate() === day && new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
-                            const isSelected = selectedMobileDate.getDate() === day && selectedMobileDate.getMonth() === currentDate.getMonth() && selectedMobileDate.getFullYear() === currentDate.getFullYear();
-                            const { isHoliday, leads, absences, events } = getItemsForDay(checkDate);
-
-                            let hasDot = leads.length > 0 || absences.length > 0 || events.length > 0;
-                            let dotColor = '#94a3b8';
-                            if (leads.length > 0) dotColor = '#10b981';
-                            if (absences.length > 0) dotColor = '#f59e0b';
-                            if (events.length > 0 && leads.length === 0 && absences.length === 0) dotColor = '#3b82f6';
-                            if (isHoliday) dotColor = '#ef4444';
+                {/* Mobile Content Area */}
+                {(showMobileSearch && searchTerm.trim() !== '') ? (
+                    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', color: '#0f172a' }}>Søgeresultater</h3>
+                        {(() => {
+                            const term = searchTerm.toLowerCase();
+                            const matchedLeads = relevantLeads.filter(l => (l.case_number?.toLowerCase().includes(term) || l.project_category?.toLowerCase().includes(term) || l.raw_data?.project_title?.toLowerCase().includes(term)));
+                            const matchedAbsences = allAbsences.filter(a => a.employeeName?.toLowerCase().includes(term) || a.absenceType?.toLowerCase().includes(term));
+                            const matchedEvents = calendarEvents.filter(e => e.title?.toLowerCase().includes(term) || e.type?.toLowerCase().includes(term));
+                            
+                            if (matchedLeads.length === 0 && matchedAbsences.length === 0 && matchedEvents.length === 0) {
+                                return <p style={{ color: '#64748b', textAlign: 'center', marginTop: '20px' }}>Ingen resultater for "{searchTerm}"</p>;
+                            }
 
                             return (
-                                <div key={day} onClick={() => setSelectedMobileDate(checkDate)} style={{ aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '8px', cursor: 'pointer', position: 'relative' }}>
-                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSelected ? '#2563eb' : (isToday ? '#eff6ff' : 'transparent'), color: isSelected ? '#fff' : (isToday ? '#2563eb' : (isHoliday ? '#ef4444' : '#0f172a')), fontWeight: isSelected || isToday ? '800' : '600', fontSize: '1rem', transition: 'all 0.2s' }}>
-                                        {day}
-                                    </div>
-                                    {(hasDot || isHoliday) && (
-                                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: isSelected ? '#bfdbfe' : dotColor, position: 'absolute', bottom: '6px' }} />
-                                    )}
-                                </div>
+                                <>
+                                    {matchedEvents.map(e => (
+                                        <div key={e.id} onClick={() => openModalForEvent(e)} style={{ padding: '16px', background: '#ecfdf5', borderLeft: '4px solid #10b981', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                                            <div>
+                                                <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#065f46' }}>{e.title}</h4>
+                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#059669' }}>{format(new Date(e.date), 'd. MMM yyyy', { locale: da })} - {e.type}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {matchedAbsences.map((a, i) => (
+                                        <div key={`abs-${i}`} style={{ padding: '16px', background: '#fef3c7', borderLeft: '4px solid #f59e0b', borderRadius: '12px' }}>
+                                            <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#92400e' }}>{a.employeeName} ({a.absenceType})</h4>
+                                            <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#b45309' }}>{format(new Date(a.date), 'd. MMM yyyy', { locale: da })}</p>
+                                        </div>
+                                    ))}
+                                    {matchedLeads.map(l => (
+                                        <div key={l.id} style={{ padding: '16px', background: '#f8fafc', borderLeft: '4px solid #3b82f6', borderRadius: '12px' }}>
+                                            <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#1e293b' }}>{l.project_category} (Sag {l.case_number || l.id})</h4>
+                                            <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#475569' }}>Start: {format(new Date(l.raw_data?.start_date), 'd. MMM yyyy', { locale: da })}</p>
+                                        </div>
+                                    ))}
+                                </>
                             );
-                        })}
+                        })()}
                     </div>
-                </div>
-
-                <div style={{ height: '1px', background: '#e2e8f0', margin: '16px 0' }} />
-
-                {/* Mobile Agenda List */}
-                <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', textTransform: 'capitalize' }}>
-                            {format(selectedMobileDate, 'EEEE d. MMM', { locale: da })}
-                        </h3>
-                    </div>
-
-                    {(() => {
-                        const { events, absences, leads, isHoliday } = getItemsForDay(selectedMobileDate);
-                        const hasAny = events.length > 0 || absences.length > 0 || leads.length > 0 || isHoliday;
-                        
-                        return (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {!hasAny && (
-                                    <div style={{ padding: '24px 0', textAlign: 'center' }}>
-                                        <p style={{ margin: 0, color: '#94a3b8', fontSize: '1rem' }}>Ingen planlagte aktiviteter</p>
-                                    </div>
-                                )}
-                                
-                                {isHoliday && (
-                                    <div style={{ background: '#f1f5f9', borderLeft: '4px solid #94a3b8', padding: '12px 16px', borderRadius: '12px', fontWeight: 'bold', color: '#475569' }}>
-                                        Helligdag
-                                    </div>
-                                )}
-
-                                {absences.map((a, i) => (
-                                    <div key={`abs-${i}`} style={{ background: a.absenceType === 'Sygdom' ? '#fef2f2' : '#fff7ed', borderLeft: `4px solid ${a.absenceType === 'Sygdom' ? '#ef4444' : '#f97316'}`, padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        {a.absenceType === 'Sygdom' ? <Thermometer size={20} color="#ef4444"/> : <Palmtree size={20} color="#f97316"/>}
-                                        <div>
-                                            <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem' }}>{a.absenceType}</div>
-                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{a.employeeName}</div>
-                                        </div>
-                                    </div>
+                ) : (
+                    <>
+                        {/* Mobile Grid */}
+                        <div style={{ padding: '0 16px' }}>
+                            {/* Ugedage */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '8px' }}>
+                                {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((day, idx) => (
+                                    <div key={idx} style={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#94a3b8' }}>{day}</div>
                                 ))}
+                            </div>
 
-                                {events.map(e => {
-                                    const style = getEventStyle(e.type);
-                                    const Icon = style.icon;
-                                    return (
-                                        <div key={e.id} onClick={() => openModalForDate(null, e)} style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
-                                            <div style={{ background: 'white', padding: '6px', borderRadius: '50%', color: style.text, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}><Icon size={18}/></div>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <div style={{ fontWeight: 'bold', color: style.text, fontSize: '0.95rem' }}>{e.type}</div>
-                                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b' }}>{e.startTime}</div>
-                                                </div>
-                                                <div style={{ fontWeight: 600, color: '#0f172a', marginTop: '2px', fontSize: '0.95rem' }}>{e.title}</div>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
+                            {/* Dage */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+                                {Array.from({ length: startingEmptyCells }).map((_, idx) => (
+                                    <div key={`empty-${idx}`} style={{ aspectRatio: '1' }} />
+                                ))}
+                                
+                                {Array.from({ length: daysInMonth }).map((_, idx) => {
+                                    const day = idx + 1;
+                                    const checkDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                                    const isToday = new Date().getDate() === day && new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
+                                    const isSelected = selectedMobileDate.getDate() === day && selectedMobileDate.getMonth() === currentDate.getMonth() && selectedMobileDate.getFullYear() === currentDate.getFullYear();
+                                    const { isHoliday, leads, absences, events } = getItemsForDay(checkDate);
 
-                                {leads.map(lead => {
-                                    const colors = getStatusColor(lead.status);
+                                    let hasDot = leads.length > 0 || absences.length > 0 || events.length > 0;
+                                    let dotColor = '#94a3b8';
+                                    if (leads.length > 0) dotColor = '#10b981';
+                                    if (absences.length > 0) dotColor = '#f59e0b';
+                                    if (events.length > 0 && leads.length === 0 && absences.length === 0) dotColor = '#3b82f6';
+                                    if (isHoliday) dotColor = '#ef4444';
+
                                     return (
-                                        <div key={lead.id} onClick={() => onCaseClick(lead)} style={{ background: '#fff', border: `1px solid ${colors.border}`, borderLeft: `4px solid ${colors.bg}`, padding: '12px 16px', borderRadius: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '6px', cursor: 'pointer' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '6px' }}>Sag: {lead.case_number || String(lead.id).substring(0,6)}</span>
-                                                <span style={{ fontSize: '0.8rem', color: colors.text, fontWeight: 600 }}>{lead.status}</span>
+                                        <div key={day} onClick={() => setSelectedMobileDate(checkDate)} style={{ aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '8px', cursor: 'pointer', position: 'relative' }}>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSelected ? '#2563eb' : (isToday ? '#eff6ff' : 'transparent'), color: isSelected ? '#fff' : (isToday ? '#2563eb' : (isHoliday ? '#ef4444' : '#0f172a')), fontWeight: isSelected || isToday ? '800' : '600', fontSize: '1rem', transition: 'all 0.2s' }}>
+                                                {day}
                                             </div>
-                                            <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem' }}>{lead.raw_data.project_title || lead.project_category}</div>
+                                            {(hasDot || isHoliday) && (
+                                                <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: isSelected ? '#bfdbfe' : dotColor, position: 'absolute', bottom: '6px' }} />
+                                            )}
                                         </div>
-                                    )
+                                    );
                                 })}
                             </div>
-                        );
-                    })()}
-                </div>
+                        </div>
+
+                        <div style={{ height: '1px', background: '#e2e8f0', margin: '16px 0' }} />
+
+                        {/* Mobile Agenda List */}
+                        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', textTransform: 'capitalize' }}>
+                                    {format(selectedMobileDate, 'EEEE d. MMM', { locale: da })}
+                                </h3>
+                            </div>
+
+                            {(() => {
+                                const { events, absences, leads, isHoliday } = getItemsForDay(selectedMobileDate);
+                                const hasAny = events.length > 0 || absences.length > 0 || leads.length > 0 || isHoliday;
+                                
+                                return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        {!hasAny && (
+                                            <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                                                <p style={{ margin: 0, color: '#94a3b8', fontSize: '1rem' }}>Ingen planlagte aktiviteter</p>
+                                            </div>
+                                        )}
+                                        
+                                        {isHoliday && (
+                                            <div style={{ background: '#f1f5f9', borderLeft: '4px solid #94a3b8', padding: '12px 16px', borderRadius: '12px', fontWeight: 'bold', color: '#475569' }}>
+                                                Helligdag
+                                            </div>
+                                        )}
+
+                                        {absences.map((a, i) => (
+                                            <div key={`abs-${i}`} style={{ background: a.absenceType === 'Sygdom' ? '#fef2f2' : '#fff7ed', borderLeft: `4px solid ${a.absenceType === 'Sygdom' ? '#ef4444' : '#f97316'}`, padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                {a.absenceType === 'Sygdom' ? <Thermometer size={20} color="#ef4444"/> : <Palmtree size={20} color="#f97316"/>}
+                                                <div>
+                                                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem' }}>{a.absenceType}</div>
+                                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{a.employeeName}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {events.map(e => {
+                                            const style = getEventStyle(e.type);
+                                            const Icon = style.icon;
+                                            return (
+                                                <div key={e.id} onClick={() => openModalForDate(null, e)} style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                                                    <div style={{ background: 'white', padding: '6px', borderRadius: '50%', color: style.text, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}><Icon size={18}/></div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <div style={{ fontWeight: 'bold', color: style.text, fontSize: '0.95rem' }}>{e.type}</div>
+                                                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b' }}>{e.startTime}</div>
+                                                        </div>
+                                                        <div style={{ fontWeight: 600, color: '#0f172a', marginTop: '2px', fontSize: '0.95rem' }}>{e.title}</div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+
+                                        {leads.map(lead => {
+                                            const colors = getStatusColor(lead.status);
+                                            return (
+                                                <div key={lead.id} onClick={() => onCaseClick(lead)} style={{ background: '#fff', border: `1px solid ${colors.border}`, borderLeft: `4px solid ${colors.bg}`, padding: '12px 16px', borderRadius: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '6px', cursor: 'pointer' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '6px' }}>Sag: {lead.case_number || String(lead.id).substring(0,6)}</span>
+                                                        <span style={{ fontSize: '0.8rem', color: colors.text, fontWeight: 600 }}>{lead.status}</span>
+                                                    </div>
+                                                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem' }}>{lead.raw_data.project_title || lead.project_category}</div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </>
+                )}
 
                 {/* MOBILE FILTER MODAL (Fullscreen Centered) */}
                 {showMobileFilter && createPortal(
