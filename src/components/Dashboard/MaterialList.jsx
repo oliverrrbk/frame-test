@@ -968,34 +968,45 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                         </div>
                     </div>
                     
-                    <div style={{ position: 'relative' }}>
-                        <button style={{ 
-                            padding: '8px 16px', 
-                            backgroundColor: '#f8fafc', 
-                            color: '#0f172a', 
-                            border: '1px solid #cbd5e1', 
-                            borderRadius: '8px', 
-                            fontWeight: 'bold', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '6px', 
-                            cursor: 'pointer' 
-                        }}>
-                            Vælg dato
-                        </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input 
                             type="date" 
-                            onChange={onAddDeliveryToCalendar}
+                            id="calendar-delivery-date-input"
                             style={{ 
-                                position: 'absolute', 
-                                top: 0, 
-                                left: 0, 
-                                width: '100%', 
-                                height: '100%', 
-                                opacity: 0, 
-                                cursor: 'pointer' 
+                                padding: '8px 12px', 
+                                border: '1px solid #cbd5e1', 
+                                borderRadius: '8px', 
+                                backgroundColor: '#f8fafc',
+                                color: '#0f172a',
+                                outline: 'none',
+                                fontWeight: '600',
+                                width: '130px'
                             }}
                         />
+                        <button 
+                            onClick={() => {
+                                const input = document.getElementById('calendar-delivery-date-input');
+                                if (input && input.value) {
+                                    onAddDeliveryToCalendar(input.value);
+                                    input.value = ''; // clear after adding
+                                } else {
+                                    toast.error('Vælg venligst en dato først');
+                                }
+                            }}
+                            style={{ 
+                                padding: '8px 16px', 
+                                backgroundColor: '#3b82f6', 
+                                color: 'white', 
+                                border: 'none', 
+                                borderRadius: '8px', 
+                                fontWeight: 'bold', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '6px', 
+                                cursor: 'pointer' 
+                            }}>
+                            Tilføj
+                        </button>
                     </div>
                 </div>
             </div>
