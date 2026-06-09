@@ -784,6 +784,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         resizing: false, // false or 'nw', 'ne', 'sw', 'se'
         actionStartPoint: null, 
         initialRotation: 0,
+        rotationStartAngle: 0,
         zoom: 1,
         selectedElementIds: [],
         marqueeStartPoint: null,
@@ -843,6 +844,17 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             x: (width / 2 - activePanRef.current.x) / activeZoomRef.current,
             y: (height / 2 - activePanRef.current.y) / activeZoomRef.current
         };
+    }, []);
+
+    const syncSelectionOverlayBox = useCallback((el) => {
+        if (!selectionOverlayRef.current || !el) return;
+        const bounds = getElementBounds(el);
+        selectionOverlayRef.current.style.left = `${bounds.x}px`;
+        selectionOverlayRef.current.style.top = `${bounds.y}px`;
+        selectionOverlayRef.current.style.width = `${bounds.w}px`;
+        selectionOverlayRef.current.style.height = `${bounds.h}px`;
+        selectionOverlayRef.current.style.transform = `rotate(${el.rotation || 0}rad)`;
+        selectionOverlayRef.current.style.transformOrigin = 'center center';
     }, []);
 
     // Save to history before modifying
@@ -2371,10 +2383,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 if (el) {
                     const bounds = getElementBounds(el);
                     const endpointHandleSize = 10 / (activeZoomRef.current || 1);
-                    selectionOverlayRef.current.style.left = `${bounds.x}px`;
-                    selectionOverlayRef.current.style.top = `${bounds.y}px`;
-                    selectionOverlayRef.current.style.width = `${bounds.w}px`;
-                    selectionOverlayRef.current.style.height = `${bounds.h}px`;
+                    syncSelectionOverlayBox(el);
                     
                     if (startHandleRef.current) {
                         startHandleRef.current.style.left = `${el.x - bounds.x - endpointHandleSize / 2}px`;
@@ -2395,9 +2404,10 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             if (!el) return;
             const bounds = getElementBounds(el);
             const angle = Math.atan2(pos.y - bounds.cy, pos.x - bounds.cx);
-            const rotation = angle + Math.PI / 2;
+            const rotation = (appState.initialRotation || 0) + (angle - (appState.rotationStartAngle || 0));
             
             activeElementsRef.current = activeElementsRef.current.map(e => e.id === appState.selectedElementId ? { ...e, rotation } : e);
+            syncSelectionOverlayBox({ ...el, rotation });
             redraw();
             return;
         }
@@ -2480,10 +2490,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 if (el) {
                     const bounds = getElementBounds(el);
                     const endpointHandleSize = 10 / (activeZoomRef.current || 1);
-                    selectionOverlayRef.current.style.left = `${bounds.x}px`;
-                    selectionOverlayRef.current.style.top = `${bounds.y}px`;
-                    selectionOverlayRef.current.style.width = `${bounds.w}px`;
-                    selectionOverlayRef.current.style.height = `${bounds.h}px`;
+                    syncSelectionOverlayBox(el);
                     
                     if (startHandleRef.current) {
                         startHandleRef.current.style.left = `${el.x - bounds.x - endpointHandleSize / 2}px`;
@@ -2551,7 +2558,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         }
 
         if (appState.dragging || appState.rotating || appState.resizing) {
-            setAppState(s => ({ ...s, dragging: false, rotating: false, resizing: false }));
+            setAppState(s => ({ ...s, dragging: false, rotating: false, resizing: false, rotationStartAngle: 0 }));
             
             // SYNCHRONIZE BYPASS TO REACT STATE
             setElements(activeElementsRef.current);
@@ -2821,6 +2828,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     border: `${selectionBorderWidth}px solid #2563eb`, // Thinner, sharper blue like tldraw
                     pointerEvents: 'none',
                     zIndex: 50,
+                    transform: `rotate(${selectedElement.rotation || 0}rad)`,
+                    transformOrigin: 'center center',
                 }}
             >
                 {!selectedElement.locked && (
@@ -2836,7 +2845,17 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                             onPointerDown={(e) => {
                                 e.stopPropagation();
                                 pushHistory(activeElementsRef.current);
-                                setAppState(s => ({ ...s, rotating: true, resizing: false, actionStartPoint: getPointerPos(e) }));
+                                const pointer = getPointerPos(e);
+                                const startAngle = Math.atan2(pointer.y - bounds.cy, pointer.x - bounds.cx);
+                                setAppState(s => ({
+                                    ...s,
+                                    rotating: true,
+                                    resizing: false,
+                                    dragging: false,
+                                    actionStartPoint: pointer,
+                                    initialRotation: selectedElement.rotation || 0,
+                                    rotationStartAngle: startAngle
+                                }));
                             }}
                         />
                         

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Phone, Mail, Pencil, Trash2, Plus, X, Loader2, Wrench, HardHat, ChevronDown } from 'lucide-react';
+import { Building2, Phone, Mail, Pencil, Trash2, Plus, X, Loader2, Wrench, HardHat, ChevronDown, MapPin } from 'lucide-react';
 
 /*
  * Underleverandører = eksterne partnere/kontakter UDEN login.
@@ -19,7 +19,7 @@ const TRADES = ['Elektriker', 'VVS', 'Maler', 'Murer', 'Kloak / Anlæg', 'Gulv',
 // MODAL — opret eller redigér en underleverandør (firma + mester)
 // ---------------------------------------------------------------------------
 export function SubcontractorModal({ open, onClose, companyId, initial = null, onSaved }) {
-    const blank = { company_name: '', trade: '', contact_name: '', contact_phone: '', contact_email: '', cvr: '', notes: '' };
+    const blank = { company_name: '', trade: '', contact_name: '', contact_phone: '', contact_email: '', cvr: '', address: '', notes: '' };
     const [form, setForm] = useState(blank);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -32,6 +32,7 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                 contact_phone: initial.contact_phone || '',
                 contact_email: initial.contact_email || '',
                 cvr: initial.cvr || '',
+                address: initial.address || '',
                 notes: initial.notes || ''
             } : blank);
         }
@@ -146,6 +147,10 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                                 <input type="email" value={form.contact_email} onChange={(e) => set('contact_email', e.target.value)} placeholder="jens@firma.dk" style={inputStyle} />
                             </Field>
                         </div>
+
+                        <Field label="Firmaadresse">
+                            <input value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="F.eks. Industrivej 4, 8000 Aarhus" style={inputStyle} />
+                        </Field>
 
                         <Field label="Noter (valgfrit)">
                             <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="F.eks. fast samarbejdspartner på tagprojekter" rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
@@ -388,7 +393,7 @@ export function SubcontractorManager({ profile }) {
                                     </div>
                                 </div>
 
-                                {(sc.contact_name || sc.contact_phone || sc.contact_email) && (
+                                {(sc.contact_name || sc.contact_phone || sc.contact_email || sc.address) && (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '10px', borderTop: '1px solid var(--border-light)' }}>
                                         {sc.contact_name && (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -408,6 +413,11 @@ export function SubcontractorManager({ profile }) {
                                                 onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}>
                                                 <Mail size={14} style={{ color: '#94a3b8' }} /> {sc.contact_email}
                                             </a>
+                                        )}
+                                        {sc.address && (
+                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                <MapPin size={14} style={{ color: '#94a3b8', flexShrink: 0, marginTop: '2px' }} /> {sc.address}
+                                            </div>
                                         )}
                                     </div>
                                 )}

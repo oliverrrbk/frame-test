@@ -14,7 +14,12 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
     const [formData, setFormData] = useState({
         owner_name: myProfile?.owner_name || '',
         phone: myProfile?.phone || '',
-        newPassword: ''
+        newPassword: '',
+        // Private oplysninger (gemmes i raw_data — kun synligt for medarbejderen selv + mester)
+        home_address: myProfile?.raw_data?.home_address || '',
+        home_zip: myProfile?.raw_data?.home_zip || '',
+        home_city: myProfile?.raw_data?.home_city || '',
+        next_of_kin: myProfile?.raw_data?.next_of_kin || ''
     });
     
     const fileInputRef = useRef(null);
@@ -69,15 +74,25 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
         setMessage('');
         
         try {
+            // Flet private felter ind i raw_data (overskriver ikke andet)
+            const mergedRawData = {
+                ...(myProfile?.raw_data || {}),
+                home_address: formData.home_address,
+                home_zip: formData.home_zip,
+                home_city: formData.home_city,
+                next_of_kin: formData.next_of_kin
+            };
+
             // Opdater navn og telefon i carpenters tabellen
             const { error: dbError } = await supabase
                 .from('carpenters')
-                .update({ 
+                .update({
                     owner_name: formData.owner_name,
-                    phone: formData.phone
+                    phone: formData.phone,
+                    raw_data: mergedRawData
                 })
                 .eq('id', myProfile.id);
-                
+
             if (dbError) throw dbError;
             
             // Opdater password hvis angivet
@@ -91,10 +106,11 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                 setFormData(prev => ({ ...prev, newPassword: '' }));
             }
             
-            setMyProfile(prev => ({ 
-                ...prev, 
+            setMyProfile(prev => ({
+                ...prev,
                 owner_name: formData.owner_name,
-                phone: formData.phone
+                phone: formData.phone,
+                raw_data: mergedRawData
             }));
             
             setMessage('Din profil blev opdateret!');
@@ -173,6 +189,33 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} 
                                 placeholder="+45 12 34 56 78" 
                             />
+                        </div>
+                        <div style={{ paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>Private oplysninger</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: '#7c3aed', background: '#f5f3ff', padding: '2px 8px', borderRadius: '999px' }}>
+                                    <Lock size={11} /> Kun synligt for din mester
+                                </span>
+                            </div>
+                            <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '0 0 16px' }}>Så slipper mesteren for selv at taste dine oplysninger ind. Vises aldrig på dit profil-kort ude på sagerne.</p>
+                        </div>
+                        <div className="input-group">
+                            <label>Adresse</label>
+                            <input type="text" value={formData.home_address} onChange={(e) => setFormData(prev => ({ ...prev, home_address: e.target.value }))} placeholder="F.eks. Bygmestervej 12" />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
+                            <div className="input-group">
+                                <label>Postnummer</label>
+                                <input type="text" inputMode="numeric" value={formData.home_zip} onChange={(e) => setFormData(prev => ({ ...prev, home_zip: e.target.value }))} placeholder="8000" />
+                            </div>
+                            <div className="input-group">
+                                <label>By</label>
+                                <input type="text" value={formData.home_city} onChange={(e) => setFormData(prev => ({ ...prev, home_city: e.target.value }))} placeholder="Aarhus" />
+                            </div>
+                        </div>
+                        <div className="input-group">
+                            <label>Nærmeste pårørende (navn + telefon)</label>
+                            <input type="text" value={formData.next_of_kin} onChange={(e) => setFormData(prev => ({ ...prev, next_of_kin: e.target.value }))} placeholder="F.eks. Anna Hansen, 12 34 56 78" />
                         </div>
                         <div className="input-group">
                             <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

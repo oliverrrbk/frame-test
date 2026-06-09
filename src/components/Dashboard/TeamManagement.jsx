@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
-import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat } from 'lucide-react';
+import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SubcontractorManager } from './Subcontractors';
 import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
@@ -653,6 +653,25 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                             />
                                                                         </div>
                                                                     </div>
+
+                                                                    {/* Private oplysninger — selv-indtastet af medarbejderen under "Min Profil" */}
+                                                                    {(member.raw_data?.home_address || member.raw_data?.home_zip || member.raw_data?.home_city || member.raw_data?.next_of_kin) ? (
+                                                                        <div style={{ marginTop: '16px', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)', background: 'rgba(255,255,255,0.5)' }}>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                                                                <MapPin size={15} style={{ color: '#7c3aed' }} />
+                                                                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Private oplysninger</span>
+                                                                            </div>
+                                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                                                {member.raw_data?.home_address && <div><span style={{ color: 'var(--text-muted)' }}>Adresse:</span> {member.raw_data.home_address}</div>}
+                                                                                {(member.raw_data?.home_zip || member.raw_data?.home_city) && <div><span style={{ color: 'var(--text-muted)' }}>By:</span> {[member.raw_data?.home_zip, member.raw_data?.home_city].filter(Boolean).join(' ')}</div>}
+                                                                                {member.raw_data?.next_of_kin && <div style={{ gridColumn: '1 / -1' }}><span style={{ color: 'var(--text-muted)' }}>Nærmeste pårørende:</span> {member.raw_data.next_of_kin}</div>}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div style={{ marginTop: '16px', padding: '12px 16px', borderRadius: '12px', border: '1px dashed var(--border-light)', fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                                                            Medarbejderen har endnu ikke udfyldt sine private oplysninger (adresse, pårørende) under "Min Profil".
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
 

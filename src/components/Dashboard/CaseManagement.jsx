@@ -7,6 +7,7 @@ import AftalesedlerTab from './AftalesedlerTab';
 import CaseDrawingsTab from './CaseDrawingsTab';
 import BilagManager from './BilagManager';
 import { SubcontractorModal } from './Subcontractors';
+import ProfileCard from './ProfileCard';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
 
 import toast from 'react-hot-toast';
@@ -151,6 +152,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [payrollSettings, setPayrollSettings] = useState(null);
     const lockedUntil = getEffectiveLockedUntil(payrollSettings);
     const isTimeLocked = (dateVal) => isDateLocked(dateVal, lockedUntil);
+
+    // Profil-kort (kun arbejdsinfo) når man klikker på en person på holdet
+    const [profilePerson, setProfilePerson] = useState(null);
 
     // Underleverandører på sagen (per sag — svende kan variere fra sag til sag)
     const [assignedSubs, setAssignedSubs] = useState([]);
@@ -1657,7 +1661,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                             if (!m) return null;
                                                             return (
                                                                 <div key={pmId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#eff6ff', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                                    <div onClick={() => setProfilePerson({ name: m.owner_name || m.company_name || 'Ukendt', role: 'Projektleder', phone: m.phone, email: m.email })} style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', flex: 1, minWidth: 0 }}>
                                                                         <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.3)' }}>
                                                                             {(m.owner_name || m.company_name || '?').charAt(0).toUpperCase()}
                                                                         </div>
@@ -1688,7 +1692,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                             if (!m) return null;
                                                             return (
                                                                 <div key={wId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                                    <div onClick={() => setProfilePerson({ name: m.owner_name || m.company_name || 'Ukendt', role: m.role === 'apprentice' ? 'Tømrerlærling' : 'Tømrersvend', phone: m.phone, email: m.email })} style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', flex: 1, minWidth: 0 }}>
                                                                         <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e2e8f0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>
                                                                             {(m.owner_name || m.company_name || '?').charAt(0).toUpperCase()}
                                                                         </div>
@@ -2204,7 +2208,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 const initials = displayName.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
 
                                 return (
-                                    <div key={memberId} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', position: 'relative' }}>
+                                    <div key={memberId}
+                                        onClick={() => setProfilePerson({ name: displayName, role: roleInfo.label, phone: w.phone, email: w.email })}
+                                        title="Se kontaktkort"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', position: 'relative', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.transform = 'none'; }}>
                                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: roleInfo.bg, color: roleInfo.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.9rem', border: `1px solid ${roleInfo.border}` }}>
                                             {initials}
                                         </div>
@@ -2365,7 +2374,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 {/* Header: firma + mester */}
                                                 <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div
+                                                            onClick={() => setProfilePerson({ name: sub.contact_name || sub.company_name, role: `Underleverandør${sub.trade ? ` · ${sub.trade}` : ''}`, phone: sub.contact_phone, email: sub.contact_email })}
+                                                            title="Se kontaktkort"
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flex: 1, minWidth: 0 }}>
                                                             <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#f5f3ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                                                 <Store size={19} />
                                                             </div>
@@ -2478,6 +2490,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         companyId={profile.company_id || profile.id}
                         onSaved={handleSubcontractorCreated}
                     />
+
+                    {/* Profil-kort (kun arbejdsinfo) */}
+                    <ProfileCard open={!!profilePerson} onClose={() => setProfilePerson(null)} person={profilePerson} />
 
                                         </div> {/* END DESKTOP HEADER & DASHBOARD */}
 
