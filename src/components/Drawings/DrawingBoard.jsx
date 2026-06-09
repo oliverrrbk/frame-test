@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate, Trash2, ClipboardList } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, CircleDashed, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate, Trash2, ClipboardList } from 'lucide-react';
 import { getElementBounds, getElementAtPosition, rotatePoint, findSnapPoint, getConnectedModule } from './engineUtils';
 import { getDrawingBounds, renderElementsToCanvas } from './renderUtils';
 
 const COLORS = ['#0f172a', '#ef4444', '#3b82f6', '#22c55e', '#eab308'];
 const EXTENDED_COLORS = ['#0f172a', '#475569', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#6366f1', '#a855f7', '#ec4899', '#ffffff'];
 const MEASURABLE_TYPES = ['line', 'arrow', 'dimension'];
-const SHAPE_DIMENSION_TYPES = ['rectangle', 'image', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'];
+const SHAPE_DIMENSION_TYPES = ['rectangle', 'image', 'circle', 'semicircle', 'triangle', 'polygon', 'rhombus', 'parallelogram', 'trapezoid'];
+const DRAWING_SHAPE_TOOLS = ['rectangle', 'circle', 'semicircle', 'triangle', 'polygon', 'rhombus', 'parallelogram', 'trapezoid'];
 const SETTINGS_ELEMENT_ID = '__drawing_settings__';
 const CUSTOM_TEMPLATE_STORAGE_KEY = 'bison_frame_custom_drawing_templates_v1';
 
@@ -682,7 +683,7 @@ const translateElement = (element, dx, dy) => {
         };
     }
 
-    if (['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(element.type)) {
+    if (['rectangle', 'image', 'text', ...DRAWING_SHAPE_TOOLS.filter(type => type !== 'rectangle')].includes(element.type)) {
         return { ...element, x: element.x + dx, y: element.y + dy };
     }
 
@@ -704,7 +705,7 @@ const normalizeElementsForCustomTemplate = (selectedElements, bounds) => {
                 clone.y -= bounds.cy;
                 clone.endX -= bounds.cx;
                 clone.endY -= bounds.cy;
-            } else if (['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(clone.type)) {
+            } else if (['rectangle', 'image', 'text', ...DRAWING_SHAPE_TOOLS.filter(type => type !== 'rectangle')].includes(clone.type)) {
                 clone.x -= bounds.cx;
                 clone.y -= bounds.cy;
             }
@@ -1219,7 +1220,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 };
             }
 
-            if (['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(el.type)) {
+            if (['rectangle', 'image', 'text', ...DRAWING_SHAPE_TOOLS.filter(type => type !== 'rectangle')].includes(el.type)) {
                 return transformBoxElement(el, transformPoint, mode);
             }
 
@@ -1532,7 +1533,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
         const settings = getDrawingSettings(activeElementsRef.current);
         const lineTypes = new Set(['line', 'arrow', 'dimension']);
-        const boxTypes = new Set(['rectangle', 'image', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram']);
+        const boxTypes = new Set(['image', ...DRAWING_SHAPE_TOOLS]);
         const lineCount = selectedElements.filter(el => lineTypes.has(el.type)).length;
         const shapeCount = selectedElements.filter(el => boxTypes.has(el.type)).length;
         const textCount = selectedElements.filter(el => el.type === 'text').length;
@@ -1898,6 +1899,12 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 ctx.beginPath();
                 ctx.ellipse(el.x + el.w/2, el.y + el.h/2, Math.abs(el.w)/2, Math.abs(el.h)/2, 0, 0, Math.PI * 2);
                 ctx.stroke();
+            } else if (el.type === 'semicircle') {
+                ctx.beginPath();
+                ctx.moveTo(bounds.x, bounds.y + bounds.h);
+                ctx.ellipse(bounds.cx, bounds.y + bounds.h, bounds.w / 2, bounds.h, 0, Math.PI, Math.PI * 2);
+                ctx.lineTo(bounds.x, bounds.y + bounds.h);
+                ctx.stroke();
             } else if (el.type === 'triangle') {
                 ctx.beginPath();
                 ctx.moveTo(el.x + el.w/2, el.y);
@@ -1930,6 +1937,15 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 ctx.lineTo(el.x + el.w, el.y);
                 ctx.lineTo(el.x + el.w - skew, el.y + el.h);
                 ctx.lineTo(el.x, el.y + el.h);
+                ctx.closePath();
+                ctx.stroke();
+            } else if (el.type === 'trapezoid') {
+                const inset = bounds.w * 0.2;
+                ctx.beginPath();
+                ctx.moveTo(bounds.x + inset, bounds.y);
+                ctx.lineTo(bounds.x + bounds.w - inset, bounds.y);
+                ctx.lineTo(bounds.x + bounds.w, bounds.y + bounds.h);
+                ctx.lineTo(bounds.x, bounds.y + bounds.h);
                 ctx.closePath();
                 ctx.stroke();
             } else if (el.type === 'line') {
@@ -2247,7 +2263,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
             if (appState.tool === 'pen') {
                 newElement.points = [pos];
-            } else if (['rectangle', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(appState.tool)) {
+            } else if (['text', ...DRAWING_SHAPE_TOOLS].includes(appState.tool)) {
                 newElement.x = pos.x;
                 newElement.y = pos.y;
                 newElement.w = appState.tool === 'text' ? 100 : 100;
@@ -2318,7 +2334,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 let localPos = pos;
                 if (el.rotation) localPos = rotatePoint(pos, {x: bounds.cx, y: bounds.cy}, -el.rotation);
 
-                if (el.type === 'rectangle' || el.type === 'image' || el.type === 'text' || el.type === 'circle' || el.type === 'triangle' || el.type === 'polygon' || el.type === 'rhombus' || el.type === 'parallelogram') {
+                if (el.type === 'image' || el.type === 'text' || DRAWING_SHAPE_TOOLS.includes(el.type)) {
                     let { x, y, w, h } = el;
                     if (appState.resizing.includes('w')) { w += x - localPos.x; x = localPos.x; }
                     if (appState.resizing.includes('e')) { w = localPos.x - x; }
@@ -2414,7 +2430,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 else if (appState.tool === 'pen') {
                     return { ...el, points: [...el.points, pos] };
                 }
-                else if (['rectangle', 'circle', 'image', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(appState.tool)) {
+                else if (['image', ...DRAWING_SHAPE_TOOLS].includes(appState.tool)) {
                     const snap = appState.snapEnabled && !e.altKey ? findSnapPoint(pos, activeElementsRef.current, el.id) : null;
                     setAppState(s => ({ ...s, snapPoint: snap }));
                     const endPos = snap || pos;
@@ -2543,7 +2559,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             const activeEl = activeElementsRef.current.find(e => e.id === appState.selectedElementId);
             if (activeEl && appState.tool !== 'select') {
                 // If drawing a rect/arrow that is tiny, remove it
-                if (['rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(activeEl.type) && Math.abs(activeEl.w) < 5 && Math.abs(activeEl.h) < 5) {
+                if (DRAWING_SHAPE_TOOLS.includes(activeEl.type) && Math.abs(activeEl.w) < 5 && Math.abs(activeEl.h) < 5) {
                     const filtered = activeElementsRef.current.filter(e => e.id !== activeEl.id);
                     activeElementsRef.current = filtered;
                     setElements(filtered);
@@ -2833,7 +2849,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 )}
 
                 {/* Resize Handles (for all shapes, image, text) */}
-                {!selectedElement.locked && ['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(selectedElement.type) && ['nw', 'ne', 'sw', 'se'].map(corner => (
+                {!selectedElement.locked && ['image', 'text', ...DRAWING_SHAPE_TOOLS].includes(selectedElement.type) && ['nw', 'ne', 'sw', 'se'].map(corner => (
                     <div key={corner}
                         style={{
                             position: 'absolute', width: shapeHandleSize, height: shapeHandleSize, backgroundColor: '#ffffff', border: `${selectionBorderWidth}px solid #2563eb`,
@@ -3194,7 +3210,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 setAppState(s => ({ ...s, editingTextId: clickedElement.id }));
                 return;
             }
-            if (['line', 'arrow', 'dimension', 'rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(clickedElement.type)) {
+            if (['line', 'arrow', 'dimension', ...DRAWING_SHAPE_TOOLS].includes(clickedElement.type)) {
                 const textId = generateId();
                 pushHistory(elements);
                 
@@ -4181,13 +4197,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
             {/* 3. BOTTOM TOOLBAR (Drawing Tools) - TLDRAW CLONE */}
             <div style={{
-                position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 10000,
+                position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 16000,
                 backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(16px)',
                 borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.03)',
                 display: 'flex', alignItems: 'center', padding: '6px', gap: '2px',
                 border: '1px solid rgba(226, 232, 240, 0.9)',
                 maxWidth: 'calc(100vw - 24px)',
-                overflowX: 'auto',
+                overflow: 'visible',
                 scrollbarWidth: 'none'
             }}>
                 {[
@@ -4224,27 +4240,30 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                             setShowTemplatesMenu(false);
                         }}
                         className={`p-2 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center
-                            ${['rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(appState.tool) 
+                            ${DRAWING_SHAPE_TOOLS.includes(appState.tool) 
                                 ? 'bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100' 
                                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
                         style={{ width: '36px', height: '36px' }}
                         title="Figurer"
                     >
-                        <Shapes size={18} strokeWidth={['rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(appState.tool) ? 2.5 : 2} />
+                        <Shapes size={18} strokeWidth={DRAWING_SHAPE_TOOLS.includes(appState.tool) ? 2.5 : 2} />
                     </button>
                     {showShapesMenu && (
                         <div style={{
                             position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px',
                             backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                            border: '1px solid rgba(226, 232, 240, 1)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px'
+                            border: '1px solid rgba(226, 232, 240, 1)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px',
+                            zIndex: 17000
                         }}>
                             {[
                                 { id: 'rectangle', icon: Square, title: 'Firkant' },
                                 { id: 'circle', icon: Circle, title: 'Cirkel' },
+                                { id: 'semicircle', icon: CircleDashed, title: 'Halvcirkel / bue' },
                                 { id: 'triangle', icon: Triangle, title: 'Trekant' },
                                 { id: 'polygon', icon: Hexagon, title: 'Polygon' },
                                 { id: 'rhombus', icon: Diamond, title: 'Rombe' },
-                                { id: 'parallelogram', icon: Square, title: 'Parallelogram' }
+                                { id: 'parallelogram', icon: Square, title: 'Parallelogram' },
+                                { id: 'trapezoid', icon: Square, title: 'Trapez' }
                             ].map(t => (
                                 <button
                                     key={t.id}
@@ -4259,7 +4278,19 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                                     style={{ width: '32px', height: '32px' }}
                                     title={t.title}
                                 >
-                                    <t.icon size={16} strokeWidth={2} style={t.id === 'parallelogram' ? { transform: 'skewX(-20deg)' } : {}} />
+                                    <t.icon
+                                        size={16}
+                                        strokeWidth={2}
+                                        style={
+                                            t.id === 'parallelogram'
+                                                ? { transform: 'skewX(-20deg)' }
+                                                : t.id === 'semicircle'
+                                                    ? { clipPath: 'inset(0 0 45% 0)' }
+                                                    : t.id === 'trapezoid'
+                                                        ? { transform: 'perspective(18px) rotateX(12deg)' }
+                                                        : {}
+                                        }
+                                    />
                                 </button>
                             ))}
                         </div>
@@ -4287,7 +4318,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         <div style={{
                             position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px',
                             backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                            border: '1px solid rgba(226, 232, 240, 1)', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px'
+                            border: '1px solid rgba(226, 232, 240, 1)', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px',
+                            zIndex: 17000
                         }}>
                             {CARPENTER_SYMBOLS.map(t => (
                                 <button
@@ -4330,7 +4362,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         <div style={{
                             position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px',
                             backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                            border: '1px solid rgba(226, 232, 240, 1)', width: 244, display: 'flex', flexDirection: 'column', gap: '8px'
+                            border: '1px solid rgba(226, 232, 240, 1)', width: 244, display: 'flex', flexDirection: 'column', gap: '8px',
+                            zIndex: 17000
                         }}>
                             <div style={{
                                 display: 'grid',

@@ -45,7 +45,7 @@ export const pointToLineDistance = (p, p1, p2) => {
     return Math.sqrt(dx * dx + dy * dy);
 };
 
-const SHAPE_TYPES = ['rectangle', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'];
+const SHAPE_TYPES = ['rectangle', 'circle', 'semicircle', 'triangle', 'polygon', 'rhombus', 'parallelogram', 'trapezoid'];
 const LINE_TYPES = ['arrow', 'dimension', 'line'];
 const PRIORITY_TYPES = ['text', 'arrow', 'dimension', 'line', 'pen', 'freehand'];
 
@@ -70,7 +70,7 @@ export const getElementBounds = (element) => {
         };
     }
     
-    if (['rectangle', 'image', 'text', 'circle', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(element.type)) {
+    if (['rectangle', 'image', 'text', 'circle', 'semicircle', 'triangle', 'polygon', 'rhombus', 'parallelogram', 'trapezoid'].includes(element.type)) {
         const { x, y, w, h } = element;
         return {
             x: Math.min(x, x + w),
@@ -228,6 +228,33 @@ export const getShapeSegments = (element) => {
         return points.map((p, i) => [p, points[(i + 1) % points.length]]);
     }
 
+    if (element.type === 'trapezoid') {
+        const bounds = getElementBounds(element);
+        const inset = bounds.w * 0.2;
+        const points = [
+            { x: bounds.x + inset, y: bounds.y },
+            { x: bounds.x + bounds.w - inset, y: bounds.y },
+            { x: bounds.x + bounds.w, y: bounds.y + bounds.h },
+            { x: bounds.x, y: bounds.y + bounds.h }
+        ];
+        return points.map((p, i) => [p, points[(i + 1) % points.length]]);
+    }
+
+    if (element.type === 'semicircle') {
+        const bounds = getElementBounds(element);
+        const baseY = bounds.y + bounds.h;
+        const points = [];
+        for (let i = 0; i <= 16; i++) {
+            const angle = Math.PI + (Math.PI * i) / 16;
+            points.push({
+                x: bounds.cx + (bounds.w / 2) * Math.cos(angle),
+                y: baseY + bounds.h * Math.sin(angle)
+            });
+        }
+        points.push({ x: bounds.x, y: baseY });
+        return points.map((p, i) => [p, points[(i + 1) % points.length]]);
+    }
+
     if (element.type === 'circle') {
         return [];
     }
@@ -273,6 +300,30 @@ export const getElementPoints = (el) => {
             {x: el.x, y: el.y, type: 'endpoint'},
             {x: el.endX, y: el.endY, type: 'endpoint'},
             {x: (el.x + el.endX) / 2, y: (el.y + el.endY) / 2, type: 'midpoint'}
+        ];
+    }
+    if (el.type === 'semicircle') {
+        const bounds = getElementBounds(el);
+        return [
+            { x: bounds.x, y: bounds.y + bounds.h, type: 'endpoint' },
+            { x: bounds.x + bounds.w, y: bounds.y + bounds.h, type: 'endpoint' },
+            { x: bounds.cx, y: bounds.y, type: 'midpoint' },
+            { x: bounds.cx, y: bounds.y + bounds.h, type: 'center' }
+        ];
+    }
+    if (el.type === 'trapezoid') {
+        const bounds = getElementBounds(el);
+        const inset = bounds.w * 0.2;
+        return [
+            { x: bounds.x + inset, y: bounds.y, type: 'corner' },
+            { x: bounds.x + bounds.w - inset, y: bounds.y, type: 'corner' },
+            { x: bounds.x + bounds.w, y: bounds.y + bounds.h, type: 'corner' },
+            { x: bounds.x, y: bounds.y + bounds.h, type: 'corner' },
+            { x: bounds.cx, y: bounds.y, type: 'midpoint' },
+            { x: bounds.x + bounds.w, y: bounds.cy, type: 'midpoint' },
+            { x: bounds.cx, y: bounds.y + bounds.h, type: 'midpoint' },
+            { x: bounds.x, y: bounds.cy, type: 'midpoint' },
+            { x: bounds.cx, y: bounds.cy, type: 'center' }
         ];
     }
     if (['rectangle', 'image', 'text', 'triangle', 'polygon', 'rhombus', 'parallelogram'].includes(el.type)) {

@@ -89,6 +89,12 @@ export const drawElement = async (ctx, el, options = {}) => {
         ctx.beginPath();
         ctx.ellipse(el.x + el.w / 2, el.y + el.h / 2, Math.abs(el.w) / 2, Math.abs(el.h) / 2, 0, 0, Math.PI * 2);
         ctx.stroke();
+    } else if (el.type === 'semicircle') {
+        ctx.beginPath();
+        ctx.moveTo(bounds.x, bounds.y + bounds.h);
+        ctx.ellipse(bounds.cx, bounds.y + bounds.h, bounds.w / 2, bounds.h, 0, Math.PI, Math.PI * 2);
+        ctx.lineTo(bounds.x, bounds.y + bounds.h);
+        ctx.stroke();
     } else if (el.type === 'triangle') {
         ctx.beginPath();
         ctx.moveTo(el.x + el.w / 2, el.y);
@@ -124,6 +130,15 @@ export const drawElement = async (ctx, el, options = {}) => {
         ctx.lineTo(el.x + el.w, el.y);
         ctx.lineTo(el.x + el.w - skew, el.y + el.h);
         ctx.lineTo(el.x, el.y + el.h);
+        ctx.closePath();
+        ctx.stroke();
+    } else if (el.type === 'trapezoid') {
+        const inset = bounds.w * 0.2;
+        ctx.beginPath();
+        ctx.moveTo(bounds.x + inset, bounds.y);
+        ctx.lineTo(bounds.x + bounds.w - inset, bounds.y);
+        ctx.lineTo(bounds.x + bounds.w, bounds.y + bounds.h);
+        ctx.lineTo(bounds.x, bounds.y + bounds.h);
         ctx.closePath();
         ctx.stroke();
     } else if (el.type === 'line') {

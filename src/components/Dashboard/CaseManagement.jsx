@@ -2244,81 +2244,99 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         Tilføj til holdet
                                     </button>
 
-                                    {workerDropdownOpen && (
-                                        <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', width: '280px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '300px', overflowY: 'auto', padding: '8px' }}>
-                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Projektledere</div>
-                                            {team.filter(t => t.role === 'sales' || t.role === 'admin').map(pm => {
-                                                const isSelected = pmIds.includes(pm.id);
-                                                return (
-                                                    <div 
-                                                        key={pm.id} 
-                                                        onClick={() => {
-                                                            if (isSelected) setPmIds(pmIds.filter(id => id !== pm.id));
-                                                            else setPmIds([...pmIds, pm.id]);
-                                                        }}
-                                                        style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px', backgroundColor: isSelected ? '#eff6ff' : 'transparent', transition: 'all 0.1s' }}
-                                                        onMouseEnter={(e) => !isSelected && (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                                                        onMouseLeave={(e) => !isSelected && (e.currentTarget.style.backgroundColor = 'transparent')}
+                                    {workerDropdownOpen && createPortal(
+                                        <div onClick={() => setWorkerDropdownOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out', padding: '16px' }}>
+                                            <div onClick={(e) => e.stopPropagation()} style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'fadeInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                                                
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                                    <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a' }}>Tilføj Medarbejdere</h3>
+                                                    <button 
+                                                        onClick={() => setWorkerDropdownOpen(false)}
+                                                        style={{ background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}
                                                     >
-                                                        <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: isSelected ? 'none' : '1px solid #cbd5e1', backgroundColor: isSelected ? '#3b82f6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            {isSelected && <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>✓</span>}
-                                                        </div>
-                                                        <span style={{ fontSize: '0.9rem', color: isSelected ? '#1d4ed8' : '#334155', fontWeight: isSelected ? '600' : 'normal' }}>{pm.owner_name || pm.company_name || pm.email || 'Ukendt'}</span>
-                                                    </div>
-                                                );
-                                            })}
-                                            
-                                            <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '8px 0' }}></div>
-                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Byggehold (Svende & Lærlinge)</div>
-                                            {team.filter(t => t.role === 'worker' || t.role === 'apprentice').map(worker => {
-                                                const isAssigned = assignedWorkers.includes(worker.id);
-                                                return (
-                                                    <div 
-                                                        key={worker.id} 
-                                                        onClick={() => handleWorkerToggle(worker.id)}
-                                                        style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px', backgroundColor: isAssigned ? '#eff6ff' : 'transparent', transition: 'all 0.1s' }}
-                                                        onMouseEnter={(e) => !isAssigned && (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                                                        onMouseLeave={(e) => !isAssigned && (e.currentTarget.style.backgroundColor = 'transparent')}
-                                                    >
-                                                        <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: isAssigned ? 'none' : '1px solid #cbd5e1', backgroundColor: isAssigned ? '#3b82f6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            {isAssigned && <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>✓</span>}
-                                                        </div>
-                                                        <span style={{ fontSize: '0.9rem', color: isAssigned ? '#1d4ed8' : '#334155', fontWeight: isAssigned ? '600' : 'normal' }}>{worker.owner_name || worker.company_name || worker.email || 'Ukendt'}</span>
-                                                    </div>
-                                                );
-                                            })}
+                                                        ✕
+                                                    </button>
+                                                </div>
 
-                                            {/* Eksterne underleverandører */}
-                                            <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '8px 0' }}></div>
-                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Eksterne underleverandører</div>
-                                            {subcontractors.map(sc => {
-                                                const isAttached = assignedSubs.some(s => s.id === sc.id);
-                                                return (
+                                                <div style={{ overflowY: 'auto', paddingRight: '8px', flex: 1 }}>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#94a3b8', padding: '8px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Projektledere</div>
+                                                    {team.filter(t => t.role === 'sales' || t.role === 'admin').map(pm => {
+                                                        const isSelected = pmIds.includes(pm.id);
+                                                        return (
+                                                            <div 
+                                                                key={pm.id} 
+                                                                onClick={() => {
+                                                                    if (isSelected) setPmIds(pmIds.filter(id => id !== pm.id));
+                                                                    else setPmIds([...pmIds, pm.id]);
+                                                                }}
+                                                                style={{ padding: '16px', margin: '4px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '12px', backgroundColor: isSelected ? '#eff6ff' : '#f8fafc', border: isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0', transition: 'all 0.1s' }}
+                                                            >
+                                                                <div style={{ width: '24px', height: '24px', borderRadius: '6px', border: isSelected ? 'none' : '1px solid #cbd5e1', backgroundColor: isSelected ? '#3b82f6' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    {isSelected && <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>✓</span>}
+                                                                </div>
+                                                                <span style={{ fontSize: '1.05rem', color: isSelected ? '#1d4ed8' : '#334155', fontWeight: isSelected ? 'bold' : '600' }}>{pm.owner_name || pm.company_name || pm.email || 'Ukendt'}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    
+                                                    <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '16px 0' }}></div>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#94a3b8', padding: '8px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Byggehold (Svende & Lærlinge)</div>
+                                                    {team.filter(t => t.role === 'worker' || t.role === 'apprentice').map(worker => {
+                                                        const isAssigned = assignedWorkers.includes(worker.id);
+                                                        return (
+                                                            <div 
+                                                                key={worker.id} 
+                                                                onClick={() => handleWorkerToggle(worker.id)}
+                                                                style={{ padding: '16px', margin: '4px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '12px', backgroundColor: isAssigned ? '#eff6ff' : '#f8fafc', border: isAssigned ? '2px solid #3b82f6' : '1px solid #e2e8f0', transition: 'all 0.1s' }}
+                                                            >
+                                                                <div style={{ width: '24px', height: '24px', borderRadius: '6px', border: isAssigned ? 'none' : '1px solid #cbd5e1', backgroundColor: isAssigned ? '#3b82f6' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    {isAssigned && <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>✓</span>}
+                                                                </div>
+                                                                <span style={{ fontSize: '1.05rem', color: isAssigned ? '#1d4ed8' : '#334155', fontWeight: isAssigned ? 'bold' : '600' }}>{worker.owner_name || worker.company_name || worker.email || 'Ukendt'}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                    <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '16px 0' }}></div>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#94a3b8', padding: '8px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Eksterne underleverandører</div>
+                                                    {subcontractors.map(sc => {
+                                                        const isAttached = assignedSubs.some(s => s.id === sc.id);
+                                                        return (
+                                                            <div
+                                                                key={sc.id}
+                                                                onClick={() => attachSubcontractor(sc)}
+                                                                style={{ padding: '16px', margin: '4px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '12px', backgroundColor: isAttached ? '#f5f3ff' : '#f8fafc', border: isAttached ? '2px solid #8b5cf6' : '1px solid #e2e8f0', transition: 'all 0.1s' }}
+                                                            >
+                                                                <div style={{ width: '24px', height: '24px', borderRadius: '6px', border: isAttached ? 'none' : '1px solid #cbd5e1', backgroundColor: isAttached ? '#8b5cf6' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    {isAttached && <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>✓</span>}
+                                                                </div>
+                                                                <span style={{ fontSize: '1.05rem', color: isAttached ? '#6d28d9' : '#334155', fontWeight: isAttached ? 'bold' : '600' }}>
+                                                                    {sc.company_name}{sc.trade ? ` · ${sc.trade}` : ''}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
                                                     <div
-                                                        key={sc.id}
-                                                        onClick={() => attachSubcontractor(sc)}
-                                                        style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px', backgroundColor: isAttached ? '#f5f3ff' : 'transparent', transition: 'all 0.1s' }}
-                                                        onMouseEnter={(e) => !isAttached && (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                                                        onMouseLeave={(e) => !isAttached && (e.currentTarget.style.backgroundColor = 'transparent')}
+                                                        onClick={() => { setWorkerDropdownOpen(false); setShowInviteSubcontractorModal(true); }}
+                                                        style={{ padding: '16px', margin: '4px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '12px', backgroundColor: '#ffffff', border: '1px dashed #cbd5e1', color: '#7c3aed', fontWeight: 600, fontSize: '1rem', transition: 'all 0.1s' }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f3ff'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                                     >
-                                                        <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: isAttached ? 'none' : '1px solid #cbd5e1', backgroundColor: isAttached ? '#7c3aed' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            {isAttached && <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>✓</span>}
-                                                        </div>
-                                                        <span style={{ fontSize: '0.9rem', color: isAttached ? '#6d28d9' : '#334155', fontWeight: isAttached ? '600' : 'normal' }}>
-                                                            {sc.company_name}{sc.trade ? ` · ${sc.trade}` : ''}
-                                                        </span>
+                                                        <Plus size={18} /> Opret ny underleverandør
                                                     </div>
-                                                );
-                                            })}
-                                            <div
-                                                onClick={() => { setWorkerDropdownOpen(false); setShowInviteSubcontractorModal(true); }}
-                                                style={{ padding: '10px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px', color: '#7c3aed', fontWeight: 600, fontSize: '0.9rem', transition: 'all 0.1s' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f3ff'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                            >
-                                                <Plus size={16} /> Opret ny underleverandør
+                                                </div>
+
+                                                <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                                                    <button 
+                                                        onClick={() => { setWorkerDropdownOpen(false); handleSaveAssignments(); }}
+                                                        style={{ width: '100%', padding: '16px', borderRadius: '16px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }}
+                                                    >
+                                                        Gem hold
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
+                                        </div>,
+                                        document.body
                                     )}
                                 </div>
                             )}
