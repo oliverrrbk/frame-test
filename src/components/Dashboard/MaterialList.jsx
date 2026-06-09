@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { jsPDF } from 'jspdf';
-import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck, Upload, FileText, ExternalLink, Calculator, Send, AlertTriangle, CheckCircle, Package, ArrowRight, Printer, Info, CreditCard, Minus, MapPin } from 'lucide-react';
+import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck, Upload, FileText, ExternalLink, Calculator, Send, AlertTriangle, CheckCircle, Package, ArrowRight, Printer, Info, CreditCard, Minus, MapPin, Wallet, ShoppingCart, TrendingDown, TrendingUp } from 'lucide-react';
 import { generateMaterialList } from '../../utils/materialGenerator';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -408,37 +408,42 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-in' }}>
 
-            {/* COMPACT BUDGET DASHBOARD (APPLE-STYLE) */}
+            {/* MINIMALIST BUDGET DASHBOARD (INLINE) */}
             {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && !isLead) && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
-                    
-                    <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                        <h4 style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
-                            Budget
-                        </h4>
-                        <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-                            {originalBudget.toLocaleString('da-DK')} <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Wallet size={14} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Budget</span>
+                            <span>{originalBudget.toLocaleString('da-DK')} kr.</span>
                         </div>
                     </div>
 
-                    <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                        <h4 style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
-                            Forbrug
-                        </h4>
-                        <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-                            {totalSpent.toLocaleString('da-DK')} <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                    <div style={{ height: '24px', width: '1px', backgroundColor: '#e2e8f0' }}></div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ShoppingCart size={14} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Forbrug</span>
+                            <span>{totalSpent.toLocaleString('da-DK')} kr.</span>
                         </div>
                     </div>
 
-                    <div style={{ padding: '12px', backgroundColor: isOverBudget ? '#fef2f2' : '#f0fdf4', borderRadius: '16px', border: `1px solid ${isOverBudget ? '#fca5a5' : '#86efac'}`, boxShadow: '0 2px 8px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                        <h4 style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: isOverBudget ? '#991b1b' : '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
-                            Rest
-                        </h4>
-                        <div style={{ fontSize: '1rem', fontWeight: '800', color: isOverBudget ? '#dc2626' : '#10b981', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-                            {budgetRemaining > 0 ? '+' : ''}{(budgetRemaining).toLocaleString('da-DK')} <span style={{ fontSize: '0.7rem', color: isOverBudget ? '#ef4444' : '#34d399', fontWeight: 'bold' }}>kr.</span>
+                    <div style={{ height: '24px', width: '1px', backgroundColor: '#e2e8f0' }}></div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', color: isOverBudget ? '#dc2626' : '#10b981', fontWeight: '600' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: isOverBudget ? '#fee2e2' : '#dcfce7', color: isOverBudget ? '#ef4444' : '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {isOverBudget ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.65rem', color: isOverBudget ? '#991b1b' : '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Rest</span>
+                            <span>{budgetRemaining > 0 ? '+' : ''}{(budgetRemaining).toLocaleString('da-DK')} kr.</span>
                         </div>
                     </div>
-
                 </div>
             )}
 
@@ -546,92 +551,70 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
                                 <div style={{ padding: '24px', backgroundColor: '#ffffff', animation: 'fadeInDown 0.3s ease-out' }}>
                                     
 
-                                    {/* LIST METADATA (Moved from header) */}
+                                    {/* ACTIONS TOOLBAR (KOMPAKT HORISONTAL VÆRKTØJSLINJE) */}
                                     {(!isLead && profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '20px', flexWrap: 'wrap', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', flexWrap: 'wrap', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                                             
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                                                {/* Status Badge */}
-                                                {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret') ? (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#dcfce7', color: '#166534', padding: '8px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>
-                                                        <Check size={16} strokeWidth={3} /> BESTILT
-                                                    </div>
-                                                ) : (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fef3c7', color: '#92400e', padding: '8px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>
-                                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#d97706' }}></div> AFVENTER
-                                                    </div>
-                                                )}
-
-                                                {/* Fakturapris input */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '8px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
-                                                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>Fakturapris:</span>
-                                                    <input 
-                                                        type="text"
-                                                        placeholder="Indtast pris..."
-                                                        value={formatPrice(list.price)}
-                                                        onChange={(e) => handleUpdateListMeta(list.id, 'price', parsePrice(e.target.value))}
-                                                        onBlur={(e) => {
-                                                            const newVal = parsePrice(e.target.value);
-                                                            const newMeta = materialListsMeta.map(l => l.id === list.id ? { ...l, price: newVal } : l);
-                                                            handleSaveList(materials, newMeta);
-                                                        }}
-                                                        style={{ width: '120px', border: '1px solid transparent', background: '#f8fafc', fontSize: '1rem', fontWeight: 'bold', color: '#0f172a', outline: 'none', textAlign: 'right', padding: '6px 10px', borderRadius: '8px', transition: 'all 0.2s' }}
-                                                        onFocus={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
-                                                    />
-                                                    <span style={{ fontSize: '0.95rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
-                                                </div>
+                                            {/* Fakturapris */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#ffffff', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', flex: '1 1 auto', minWidth: '130px', transition: 'all 0.2s' }}>
+                                                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pris:</span>
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Indtast..."
+                                                    value={formatPrice(list.price)}
+                                                    onChange={(e) => handleUpdateListMeta(list.id, 'price', parsePrice(e.target.value))}
+                                                    onBlur={(e) => {
+                                                        const newVal = parsePrice(e.target.value);
+                                                        const newMeta = materialListsMeta.map(l => l.id === list.id ? { ...l, price: newVal } : l);
+                                                        handleSaveList(materials, newMeta);
+                                                        e.currentTarget.parentElement.style.borderColor = '#e2e8f0';
+                                                    }}
+                                                    onFocus={(e) => { e.currentTarget.parentElement.style.borderColor = '#3b82f6'; }}
+                                                    style={{ width: '100%', border: 'none', background: 'transparent', fontSize: '0.9rem', fontWeight: 'bold', color: '#0f172a', outline: 'none', textAlign: 'right' }}
+                                                />
+                                                <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
                                             </div>
-                                            
+
+                                            {/* Bestilt Knap */}
+                                            <button 
+                                                onClick={() => handleToggleListOrdered(list.id)}
+                                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '6px', borderRadius: '8px', border: 'none', cursor: 'pointer', flex: '1 1 auto', minWidth: '60px', backgroundColor: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#fee2e2' : '#eff6ff', color: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#dc2626' : '#2563eb', transition: 'all 0.2s' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(0.95)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
+                                            >
+                                                {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret') ? <><Trash2 size={16} /> <span style={{fontSize: '0.65rem', fontWeight: 'bold'}}>Fortryd</span></> : <><Check size={16} /> <span style={{fontSize: '0.65rem', fontWeight: 'bold'}}>Bestilt</span></>}
+                                            </button>
+
+                                            {/* Leveret Knap */}
+                                            <button 
+                                                onClick={() => handleMarkListDelivered(list.id)}
+                                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '6px', borderRadius: '8px', border: 'none', cursor: 'pointer', flex: '1 1 auto', minWidth: '60px', backgroundColor: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret')) ? '#f0fdf4' : '#10b981', color: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret')) ? '#166534' : '#ffffff', transition: 'all 0.2s' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(0.95)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
+                                            >
+                                                {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret') ? <><Trash2 size={16} /> <span style={{fontSize: '0.65rem', fontWeight: 'bold'}}>Fortryd</span></> : <><Truck size={16} /> <span style={{fontSize: '0.65rem', fontWeight: 'bold'}}>Leveret</span></>}
+                                            </button>
+
+                                            {/* PDF Knap */}
+                                            <button 
+                                                onClick={() => handleDownloadPdf(list.id, list.name)}
+                                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '6px', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', flex: '1 1 auto', minWidth: '60px', backgroundColor: '#ffffff', color: '#475569', transition: 'all 0.2s' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
+                                            >
+                                                <Download size={16} /> <span style={{fontSize: '0.65rem', fontWeight: 'bold'}}>PDF</span>
+                                            </button>
+
+                                            {/* Slet Liste Knap */}
                                             {list.id !== 'default' && (
                                                 <button 
                                                     onClick={() => handleDeleteListClick({ stopPropagation: () => {} }, list.id)}
-                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '10px', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fee2e2', cursor: 'pointer', transition: 'all 0.2s', fontWeight: '600', fontSize: '0.9rem' }}
-                                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; }}
-                                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
-                                                    title="Slet Ekstra Liste"
+                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '8px', border: 'none', cursor: 'pointer', flex: '0 0 auto', backgroundColor: '#fef2f2', color: '#ef4444', transition: 'all 0.2s' }}
+                                                    title="Slet Liste"
                                                 >
-                                                    <Trash2 size={18} /> Slet liste
+                                                    <Trash2 size={16} />
                                                 </button>
                                             )}
-                                        </div>
-                                    )}
-                                    {/* ACTIONS FOR THIS LIST */}
-                                    {profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
-                                        <div style={{ 
-                                            display: 'flex', 
-                                            gap: '8px', 
-                                            marginBottom: '24px', 
-                                            flexWrap: 'wrap',
-                                            backgroundColor: '#f8fafc',
-                                            padding: '8px',
-                                            borderRadius: '16px',
-                                            border: '1px solid #f1f5f9'
-                                        }}>
-                                            {!isLead && (<button 
-                                                onClick={() => handleToggleListOrdered(list.id)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#fee2e2' : '#eff6ff', color: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret')) ? '#dc2626' : '#2563eb', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-                                            >
-                                                {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret') ? <><Trash2 size={16} /> Fortryd Bestilling</> : <><Check size={16} /> Markér bestilt</>}
-                                            </button>)}
-                                            {!isLead && (<button 
-                                                onClick={() => handleMarkListDelivered(list.id)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret')) ? '#f0fdf4' : '#10b981', color: (listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret')) ? '#166534' : '#ffffff', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-                                            >
-                                                {listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret') ? <><Trash2 size={16} /> Fortryd Levering</> : <><Truck size={16} /> Markér alle leveret</>}
-                                            </button>)}
-                                            <div style={{ flex: 1 }} />
-                                            <button 
-                                                onClick={() => handleDownloadPdf(list.id, list.name)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', color: '#475569', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#0f172a'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#475569'; }}
-                                            >
-                                                <Download size={16} /> Download PDF
-                                            </button>
                                         </div>
                                     )}
 
@@ -906,42 +889,42 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
 
                 {/* ACCORDION BODY */}
                 {isDeliveryOpen && (
-                <div style={{ padding: '24px', backgroundColor: '#ffffff', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                    <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Leveringsadresse</label>
+                <div style={{ padding: '20px', backgroundColor: '#ffffff', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leveringsadresse</label>
                         <input 
                             type="text" 
                             value={deliveryInfo.address}
                             onChange={(e) => setDeliveryInfo({ ...deliveryInfo, address: e.target.value })}
                             placeholder="Vejnavn 42, 8000 Aarhus"
-                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none' }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
+                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '10px', fontSize: '0.9rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none' }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
                         />
                     </div>
                     
-                    <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Ønsket leveringsdato</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ønsket leveringsdato</label>
                         <input 
                             type="date"
                             value={deliveryInfo.date}
                             onChange={(e) => setDeliveryInfo({ ...deliveryInfo, date: e.target.value })}
-                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none' }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
+                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '10px', fontSize: '0.9rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none' }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
                         />
                     </div>
 
-                    <div className="input-group" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>Bemærkninger til fragtmanden</label>
+                    <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bemærkninger til fragtmanden</label>
                         <textarea 
                             rows={2}
                             value={deliveryInfo.notes}
                             onChange={(e) => setDeliveryInfo({ ...deliveryInfo, notes: e.target.value })}
                             placeholder="Skriv eventuelle anvisninger til lastbilen..."
-                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', resize: 'vertical' }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
+                            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '10px', fontSize: '0.9rem', color: '#0f172a', transition: 'all 0.2s', outline: 'none', resize: 'vertical' }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; handleSaveList(); }}
                         />
                     </div>
                 </div>
@@ -950,12 +933,14 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false }) => {
             )}
 
             {/* GLOBAL GEM KNAP */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', paddingBottom: '24px', zIndex: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px', paddingBottom: '24px', zIndex: 10 }}>
                 <button 
                     onClick={() => handleSaveList()}
                     disabled={isSaving}
                     className="btn-primary"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 24px', borderRadius: '12px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', backgroundColor: '#10b981', color: 'white', border: 'none', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)' }}
+                    style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '16px 24px', borderRadius: '16px', fontSize: '1.05rem', fontWeight: 'bold', cursor: 'pointer', backgroundColor: '#10b981', color: 'white', border: 'none', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)', width: '100%', maxWidth: '500px', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#059669'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 30px -5px rgba(16, 185, 129, 0.5)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#10b981'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(16, 185, 129, 0.4)'; }}
                 >
                     {isSaving ? <><Loader2 size={18} className="animate-spin" /> Gemmer...</> : <><Save size={18} /> GEM ALLE LISTER PÅ SAGEN</>}
                 </button>
