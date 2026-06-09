@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
 import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
 
@@ -43,6 +45,70 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
     const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
     const [hoveredRole, setHoveredRole] = useState(null);
     const dropdownRef = useRef(null);
+
+    // Medarbejder-administration (kun Mester/admin)
+    const isAdmin = profile.role === 'admin' || profile.id === (profile.company_id || profile.id);
+    const [roleMenuFor, setRoleMenuFor] = useState(null);   // hvilken medarbejders rolle-menu er åben
+    const [pendingPromo, setPendingPromo] = useState(null); // { member, role } — afventer admin-bekræftelse
+    const [removeTarget, setRemoveTarget] = useState(null); // medarbejder der skal fjernes
+    const [actionBusy, setActionBusy] = useState(false);
+
+    // Kald det sikre backend-endpoint (auth-header + service-role server-side)
+    const callManage = async (action, payload) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('/api/manage-employee', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+            },
+            body: JSON.stringify({ action, ...payload })
+        });
+        const result = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(result.error || 'Handlingen mislykkedes.');
+        return result;
+    };
+
+    const doRoleChange = async (member, newRole) => {
+        if (newRole === member.role) { setRoleMenuFor(null); return; }
+        setActionBusy(true);
+        try {
+            await callManage('set_role', { employeeId: member.id, role: newRole });
+            setTeam(prev => prev.map(m => m.id === member.id ? { ...m, role: newRole } : m));
+            toast.success(`Rolle ændret til ${getRoleLabel(newRole)}.`);
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setActionBusy(false);
+            setRoleMenuFor(null);
+            setPendingPromo(null);
+        }
+    };
+
+    const handleRoleSelect = (member, newRole) => {
+        setRoleMenuFor(null);
+        if (newRole === member.role) return;
+        if (newRole === 'admin') {
+            setPendingPromo({ member, role: newRole }); // kræver ekstra bekræftelse
+        } else {
+            doRoleChange(member, newRole);
+        }
+    };
+
+    const doRemove = async (mode) => {
+        if (!removeTarget) return;
+        setActionBusy(true);
+        try {
+            await callManage(mode === 'delete' ? 'delete' : 'deactivate', { employeeId: removeTarget.id });
+            setTeam(prev => prev.filter(m => m.id !== removeTarget.id));
+            toast.success(mode === 'delete' ? 'Medarbejderen er slettet.' : 'Medarbejderen er deaktiveret.');
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setActionBusy(false);
+            setRemoveTarget(null);
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -87,14 +153,12 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
         // Optimistic UI update
         setTeam(team.map(m => m.id === employeeId ? { ...m, permissions: updatedPermissions } : m));
 
-        // DB update
-        const { error } = await supabase
-            .from('carpenters')
-            .update({ permissions: updatedPermissions })
-            .eq('id', employeeId);
-            
-        if (error) {
-            console.error("Kunne ikke opdatere rettighed:", error);
+        // Gem via sikker endpoint (klient-side skrivning blokeres af beskyttelses-triggeren)
+        try {
+            await callManage('set_permissions', { employeeId, permissions: updatedPermissions });
+        } catch (err) {
+            console.error("Kunne ikke opdatere rettighed:", err);
+            toast.error(err.message);
             fetchTeam();
         }
     };
@@ -200,21 +264,6 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             setErrorMsg('Der skete en netværksfejl.');
         } finally {
             setIsInviting(false);
-        }
-    };
-
-    const handleRemove = async (employeeId) => {
-        if (!window.confirm("Er du sikker på, at du vil fjerne denne medarbejder? De mister adgang til systemet.")) return;
-        
-        // I en rigtig app bør vi også slette dem fra Auth (kræver backend Service Role), 
-        // men som minimum kan vi slette profilen eller fjerne deres company_id
-        const { error } = await supabase
-            .from('carpenters')
-            .delete()
-            .eq('id', employeeId);
-            
-        if (!error) {
-            fetchTeam();
         }
     };
 
@@ -474,14 +523,16 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                         </div>
                                                         
                                                         <div className="flex items-center gap-2">
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); handleRemove(member.id); }}
-                                                                style={{ padding: '8px', borderRadius: '8px', color: '#ef4444', transition: 'background 0.2s' }}
-                                                                className="hover:bg-red-50"
-                                                                title="Fjern medarbejder"
-                                                            >
-                                                                <Trash2 size={20} />
-                                                            </button>
+                                                            {isAdmin && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); setRemoveTarget(member); }}
+                                                                    style={{ padding: '8px', borderRadius: '8px', color: '#ef4444', transition: 'background 0.2s' }}
+                                                                    className="hover:bg-red-50"
+                                                                    title="Fjern medarbejder"
+                                                                >
+                                                                    <Trash2 size={20} />
+                                                                </button>
+                                                            )}
                                                             <div style={{ padding: '8px', color: 'var(--text-muted)' }}>
                                                                 {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                                             </div>
@@ -538,6 +589,49 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                     <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>{activeLeads.length} afventende</p>
                                                                 </div>
                                                             </div>
+
+                                                            {/* ROLLE (kun admin/Mester kan ændre) */}
+                                                            {isAdmin && (
+                                                                <div className="px-6 pb-2">
+                                                                    <div className="glass-panel" style={{ padding: '24px' }}>
+                                                                        <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
+                                                                            <Shield size={18} color="#7c3aed" />
+                                                                            <h5 style={{ fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Rolle</h5>
+                                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>Bestemmer personens adgang i systemet</span>
+                                                                        </div>
+                                                                        <div style={{ position: 'relative', maxWidth: '380px' }}>
+                                                                            <div onClick={() => setRoleMenuFor(roleMenuFor === member.id ? null : member.id)}
+                                                                                style={{ padding: '12px 16px', border: '1px solid var(--border)', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.7)', transition: 'all 0.2s' }}>
+                                                                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                                    {member.role === 'admin' && <Shield size={15} color="#7c3aed" />}{getRoleLabel(member.role)}
+                                                                                </span>
+                                                                                <ChevronDown size={18} style={{ transform: roleMenuFor === member.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--text-secondary)' }} />
+                                                                            </div>
+                                                                            <AnimatePresence>
+                                                                                {roleMenuFor === member.id && (
+                                                                                    <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.15 }}
+                                                                                        style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, background: '#ffffff', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)', zIndex: 40, overflow: 'hidden', padding: '8px' }}>
+                                                                                        {roles.map(r => {
+                                                                                            const selected = member.role === r.value;
+                                                                                            return (
+                                                                                                <div key={r.value} onClick={() => handleRoleSelect(member, r.value)}
+                                                                                                    style={{ padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', background: selected ? '#f5f3ff' : 'transparent', display: 'flex', flexDirection: 'column', gap: '2px', transition: 'background 0.12s' }}
+                                                                                                    onMouseEnter={(e) => { if (!selected) e.currentTarget.style.background = '#f8fafc'; }}
+                                                                                                    onMouseLeave={(e) => { if (!selected) e.currentTarget.style.background = 'transparent'; }}>
+                                                                                                    <span style={{ fontWeight: selected ? 700 : 600, color: selected ? '#6d28d9' : 'var(--text-primary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                                        {r.value === 'admin' && <Shield size={13} />}{r.label}{selected && ' ✓'}
+                                                                                                    </span>
+                                                                                                    <span style={{ fontSize: '0.75rem', color: selected ? 'rgba(109,40,217,0.8)' : 'var(--text-secondary)' }}>{r.desc}</span>
+                                                                                                </div>
+                                                                                            );
+                                                                                        })}
+                                                                                    </motion.div>
+                                                                                )}
+                                                                            </AnimatePresence>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
 
                                                             {/* INDIVIDUELLE RETTIGHEDER */}
                                                             <div className="px-6 pb-6">
@@ -689,6 +783,72 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
 
             {/* Underleverandører (eksterne partnere uden login) */}
             <SubcontractorManager profile={profile} />
+
+            {/* ---- BEKRÆFT ADMIN-FORFREMMELSE ---- */}
+            <AnimatePresence>
+                {pendingPromo && createPortal(
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPendingPromo(null)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                        <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
+                            style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+                            <div style={{ padding: '28px', textAlign: 'center' }}>
+                                <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+                                    <Shield size={30} />
+                                </div>
+                                <h3 style={{ margin: '0 0 10px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Gør til Mester (Admin)?</h3>
+                                <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                                    <strong>{pendingPromo.member.owner_name || 'Medarbejderen'}</strong> får <strong>fuld adgang</strong> til priser, økonomi, systemindstillinger og kan selv administrere andre medarbejdere. Er du sikker?
+                                </p>
+                                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                                    <button onClick={() => setPendingPromo(null)} disabled={actionBusy}
+                                        style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
+                                    <button onClick={() => doRoleChange(pendingPromo.member, pendingPromo.role)} disabled={actionBusy}
+                                        style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', fontWeight: 700, cursor: actionBusy ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        {actionBusy ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />} Ja, gør til Mester
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>, document.body
+                )}
+            </AnimatePresence>
+
+            {/* ---- FJERN MEDARBEJDER (deaktivér / slet) ---- */}
+            <AnimatePresence>
+                {removeTarget && createPortal(
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !actionBusy && setRemoveTarget(null)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                        <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
+                            style={{ width: '100%', maxWidth: '460px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+                            <div style={{ padding: '28px' }}>
+                                <h3 style={{ margin: '0 0 8px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Fjern {removeTarget.owner_name || 'medarbejder'}?</h3>
+                                <p style={{ margin: '0 0 20px', color: '#475569', fontSize: '0.92rem', lineHeight: 1.5 }}>Vælg hvordan medarbejderen skal fjernes:</p>
+
+                                <button onClick={() => doRemove('deactivate')} disabled={actionBusy}
+                                    style={{ width: '100%', textAlign: 'left', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: actionBusy ? 'wait' : 'pointer', marginBottom: '12px', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => { if (!actionBusy) { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; } }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}>
+                                    <div style={{ fontWeight: 700, color: '#0f172a' }}>Deaktivér (anbefalet)</div>
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Fjerner login-adgang, men beholder profil og historik til genansættelse.</div>
+                                </button>
+
+                                <button onClick={() => doRemove('delete')} disabled={actionBusy}
+                                    style={{ width: '100%', textAlign: 'left', padding: '16px', borderRadius: '14px', border: '1px solid #fee2e2', background: '#fff', cursor: actionBusy ? 'wait' : 'pointer', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => { if (!actionBusy) { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.background = '#fef2f2'; } }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#fee2e2'; e.currentTarget.style.background = '#fff'; }}>
+                                    <div style={{ fontWeight: 700, color: '#b91c1c' }}>Slet helt (GDPR)</div>
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Sletter login og persondata (adresse, pårørende). Løn-/timehistorik bevares lovpligtigt.</div>
+                                </button>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+                                    <button onClick={() => setRemoveTarget(null)} disabled={actionBusy}
+                                        style={{ padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>, document.body
+                )}
+            </AnimatePresence>
         </div>
     );
 };

@@ -2505,12 +2505,13 @@ const Dashboard = () => {
                                     onClick={() => setIsProfileMenuOpen(false)}
                                 ></div>
                                 <div 
-                                    className="glass-panel"
                                     style={{ 
-                                        position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 50,
+                                        position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 9999,
                                         width: '240px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px',
-                                        boxShadow: '0 10px 40px -10px rgba(0,0,0,0.15)',
-                                        background: 'var(--bg-primary)'
+                                        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+                                        background: '#ffffff',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '16px'
                                     }}
                                 >
                                     <button 

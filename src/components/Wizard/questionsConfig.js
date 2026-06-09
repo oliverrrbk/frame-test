@@ -1,6 +1,6 @@
 export const initialCategories = [
     { id: 'windows', label: 'Vinduer', desc: 'Udskiftning eller nye', img: '/images/windows_ai.png' },
-    { id: 'doors', label: 'Døre', desc: 'Yderdøre, terrassedøre', img: 'https://images.unsplash.com/photo-1503898362-59e068e7f9d8?w=400&q=80' },
+    { id: 'doors', label: 'Døre', desc: 'Yderdøre, terrassedøre', img: '/images/door_front_new.png' },
     { id: 'floor', label: 'Nyt Gulv', desc: 'Træ, laminat, parket', img: '/images/floor.png' },
     { id: 'terrace', label: 'Træterrasse', desc: 'Lille, stor, overdækket', img: '/images/terrace.png' },
     { id: 'roof', label: 'Tagprojekt', desc: 'Nyt tag eller renovering', img: 'https://images.unsplash.com/photo-1518736346281-76873166a64a?w=400&q=80' },
@@ -171,11 +171,11 @@ export const QUESTIONS = {
             type: 'visual_select', 
             label: 'Hvilket materiale skal de nye vinduer primært være i?', 
             options: [
-                { label: 'Træ/alu (kombination)', img: '/images/window_wood_alu_1776261163640.png' },
+                { label: 'Træ/alu (kombination)', img: '/images/window_wood_alu_new.png' },
                 { label: 'Massivt træ', img: '/images/window_wood_1776261054616.png' },
-                { label: 'PVC / plast', img: '/images/window_pvc_1776261086057.png' },
-                { label: 'Aluminium', img: '/images/window_aluminum_1776261099669.png' },
-                { label: 'Stål', img: '/images/window_steel_1776261189808.png' }
+                { label: 'PVC / plast', img: '/images/window_pvc_new.png' },
+                { label: 'Aluminium', img: '/images/window_aluminum_new.png' },
+                { label: 'Stål', img: '/images/window_steel_new.png' }
             ] 
         },
         {
@@ -220,7 +220,7 @@ export const QUESTIONS = {
             ] 
         },
         { id: 'amount', type: 'number', label: 'Hvor mange m2 omhandler opgaven (cirka mål)?', tooltip: 'Giv dit eget kvalificerede bud. Det præcise areal måles op senere af os.' },
-        { id: 'disposal', type: 'select', label: 'Skal det gamle gulv afmonteres og fjernes?', options: ['Ja, vi skal afmontere OG bortskaffe det', 'Ja, vi skal kun afmontere (vi kører det selv væk)', 'Nej, vi har selv afmonteret det / der er tomt'] },
+        { id: 'disposal', type: 'select', label: 'Skal det gamle gulv afmonteres og fjernes?', options: ['Ja, vi skal afmontere og bortskaffe det', 'Ja, vi skal kun afmontere (vi kører det selv væk)', 'Nej, vi har selv afmonteret det / der er tomt'] },
         { 
             id: 'oldFloorType', 
             type: 'visual_select', 
@@ -284,8 +284,8 @@ export const QUESTIONS = {
             tooltip: 'Vælg om der er tale om indvendige døre eller udvendige døre (terrasse/hoveddør). Bemærk at dette udelukkende er vejledende for at give et estimat - det endelige design og de præcise mål aftales ved besigtigelsen.',
             options: [
                 { label: 'Indvendig dør', img: '/images/door_interior_standard.png' },
-                { label: 'Terrassedør', img: '/images/door_terrace_wood.png' },
-                { label: 'Hoveddør (Udvendig)', img: '/images/door_solid_wood.png' }
+                { label: 'Terrassedør', img: '/images/door_terrace_new.png' },
+                { label: 'Hoveddør (Udvendig)', img: '/images/door_front_new.png' }
             ]
         },
         { 
@@ -300,7 +300,7 @@ export const QUESTIONS = {
             type: 'select', 
             label: 'Skal de nuværende døre afmonteres og afskaffes?', 
             options: [
-                'Ja, vi skal afmontere OG bortskaffe dem', 
+                'Ja, vi skal afmontere og bortskaffe dem', 
                 'Ja, vi skal kun afmontere (vi kører dem selv væk)', 
                 'Nej, vi har selv afmonteret'
             ] 
@@ -362,6 +362,7 @@ export const QUESTIONS = {
         {
             id: 'electricLock',
             type: 'select',
+            condition: (d) => d.doorStyle !== 'Indvendig dør',
             label: 'Ønskes der levering og montering af en elektronisk smart-lås?',
             tooltip: 'En elektronisk smart-lås giver øget sikkerhed og nem, nøglefri adgang (f.eks. via kode, brik eller app). Vi monterer låseenheden komplet inkl. eventuel tilpasning af dør og karm.',
             options: [
@@ -372,6 +373,7 @@ export const QUESTIONS = {
         { 
             id: 'doorHinge', 
             type: 'visual_select', 
+            condition: (d) => d.doorStyle !== 'Indvendig dør',
             label: 'Hvordan skal døren hængsles og åbne?', 
             tooltip: 'Hængslingen bestemmes ved at se døren fra den side, hvor hængslerne er synlige. Højrehængt betyder at hængslerne sidder i højre side, og døren svinger til højre.',
             options: [
@@ -395,7 +397,7 @@ export const QUESTIONS = {
                 { label: 'Tagterrasse', img: '/images/terrace_roof.png' }
             ] 
         },
-        { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja, vi skal afmontere OG bortskaffe den', 'Ja, vi skal kun afmontere (vi kører det selv væk)', 'Nej'] },
+        { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja, vi skal afmontere og bortskaffe den', 'Ja, vi skal kun afmontere (vi kører det selv væk)', 'Nej'] },
         { id: 'roofTerraceFeet', type: 'select', label: 'Tagterrasse underlag: Skal terrassen opklodses på justerbare terrassefødder (skåner tagpappet)?', condition: { field: 'elevation', value: 'Tagterrasse' }, options: ['Ja, den skal klodses op på plastfødder', 'Nej'] },
         { 
             id: 'material', 
@@ -595,7 +597,7 @@ export const QUESTIONS = {
             type: 'select', 
             label: 'Skal der rives et eksisterende skur/anneks ned?', 
             condition: (d) => d.annexType === 'Uisoleret skur til opbevaring' && (!d.amount || parseFloat(d.amount) <= 12),
-            options: ['Nej, der er frit', 'Ja, vi skal rive ned OG bortskaffe det', 'Ja, vi skal kun rive ned (vi kører det selv væk)'] 
+            options: ['Nej, der er frit', 'Ja, vi skal rive ned og bortskaffe det', 'Ja, vi skal kun rive ned (vi kører det selv væk)'] 
         },
         { 
             id: 'oldMaterial', 
@@ -698,7 +700,7 @@ export const QUESTIONS = {
             ] 
         },
         { id: 'amount', type: 'number', label: 'Hvor mange løbende meter hegn skal der sættes op (cirka mål)?' },
-        { id: 'disposal', type: 'select', label: 'Skal et eksisterende hegn, hæk eller buske fjernes?', options: ['Nej, der er frit', 'Ja, vi skal fjerne det OG bortskaffe det', 'Ja, vi skal kun fjerne det (vi kører det selv væk)'] },
+        { id: 'disposal', type: 'select', label: 'Skal et eksisterende hegn, hæk eller buske fjernes?', options: ['Nej, der er frit', 'Ja, vi skal fjerne det og bortskaffe det', 'Ja, vi skal kun fjerne det (vi kører det selv væk)'] },
         { 
             id: 'oldMaterial', 
             type: 'visual_select', 
