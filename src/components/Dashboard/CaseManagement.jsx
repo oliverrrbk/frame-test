@@ -237,6 +237,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     const [showActionSheet, setShowActionSheet] = useState(false);
     const [showTeamSheet, setShowTeamSheet] = useState(false);
+    const [infoSheetType, setInfoSheetType] = useState(null);
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -1482,70 +1483,63 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
                     {/* --- MOBIL APPLE-STYLE HEADER & WIDGETS --- */}
                     {isMobile && selectedCase && (
-                        <div style={{ margin: '-24px -24px 20px -24px', background: '#f8fafc', paddingBottom: '20px' }}>
-                            {/* Header */}
-                            <div style={{ position: 'sticky', top: 0, backgroundColor: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(12px)', zIndex: 40, borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
-                                <button onClick={() => setSelectedCaseIdState(null)} style={{ background: 'none', border: 'none', padding: '8px', color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '1rem', cursor: 'pointer' }}>
-                                    <ArrowLeft size={20} /> <span style={{ fontWeight: '500' }}>Sager</span>
+                        <div style={{ paddingBottom: '16px' }}>
+                            {/* Native Header (ingen kant, ingen hardcodet baggrund) */}
+                            <div style={{ position: 'sticky', top: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(12px)', zIndex: 40, borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', margin: '0 -24px' }}>
+                                <button onClick={() => setSelectedCaseIdState(null)} style={{ background: 'none', border: 'none', padding: '4px', color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '1rem', cursor: 'pointer' }}>
+                                    <ArrowLeft size={22} /> <span style={{ fontWeight: '600' }}>Sager</span>
                                 </button>
                                 <div style={{ textAlign: 'center', flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', padding: '0 12px' }}>
                                     <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 'bold', color: '#0f172a' }}>Sag {selectedCase.case_number || String(selectedCase.id).substring(0,6)}</h2>
                                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{selectedCase.customer_name || 'Kunde'}</span>
                                 </div>
-                                <button onClick={() => setShowActionSheet(true)} style={{ background: '#f1f5f9', border: 'none', padding: '8px', borderRadius: '50%', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <MoreHorizontal size={20} />
+                                <button onClick={() => setShowActionSheet(true)} style={{ background: 'none', border: 'none', padding: '4px', color: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                    <MoreHorizontal size={24} />
                                 </button>
                             </div>
 
-                            {/* Dashboard Widgets (Apple Grid) */}
-                            <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                {/* Time Widget */}
-                                <div onClick={() => setActiveSubTab('timesheet')} style={{ background: '#fff', borderRadius: '20px', padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fffbeb', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                                        <Clock size={18} />
+                            {/* Dashboard Widgets (Små Bobler Række) */}
+                            <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-start', padding: '20px 0', margin: '0 -16px' }}>
+                                {/* Time Bubble */}
+                                <div onClick={() => setInfoSheetType('time')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fffbeb', border: '1px solid #fde68a', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                        <Clock size={20} />
                                     </div>
-                                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>
-                                        {totalActualHours}
-                                        {!['worker', 'apprentice'].includes(profile?.role) && <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '500' }}>/{(parseFloat(selectedCase.raw_data?.calc_data?.laborHours) || 40)}</span>}
-                                    </h3>
-                                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Timer</span>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569' }}>{totalActualHours} t.</span>
                                 </div>
 
-                                {/* Material Widget */}
+                                {/* Material Bubble */}
                                 {!['worker', 'apprentice'].includes(profile?.role) && (
-                                    <div onClick={() => setActiveSubTab('materials')} style={{ background: '#fff', borderRadius: '20px', padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column' }}>
-                                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                                            <PackageCheck size={18} />
+                                    <div onClick={() => setInfoSheetType('materials')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                            <PackageCheck size={20} />
                                         </div>
-                                        <h3 style={{ margin: '0 0 4px 0', fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>{orderedMaterials}<span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '500' }}>/{totalMaterials}</span></h3>
-                                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Indkøb</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569' }}>{orderedMaterials}/{totalMaterials}</span>
                                     </div>
                                 )}
 
-                                {/* Team Widget */}
-                                <div onClick={() => setShowTeamSheet(true)} style={{ background: '#fff', borderRadius: '20px', padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f5f3ff', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                                        <Users size={18} />
+                                {/* Team Bubble */}
+                                <div onClick={() => setShowTeamSheet(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                        <Users size={20} />
                                     </div>
-                                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>{(selectedCase.raw_data?.assigned_workers?.length || 0) + (selectedCase.raw_data?.assigned_pm ? 1 : 0)}<span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '500' }}> mand</span></h3>
-                                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Holdet</span>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569' }}>{(selectedCase.raw_data?.assigned_workers?.length || 0) + (selectedCase.raw_data?.assigned_pm ? 1 : 0)} mand</span>
                                 </div>
 
-                                {/* Finance Widget */}
+                                {/* Finance Bubble */}
                                 {!['worker', 'apprentice'].includes(profile?.role) && (
-                                    <div onClick={() => setActiveSubTab('invoices')} style={{ background: '#fff', borderRadius: '20px', padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column' }}>
-                                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                                            <Receipt size={18} />
+                                    <div onClick={() => setInfoSheetType('finance')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                            <DollarSign size={20} />
                                         </div>
-                                        <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>{(originalBudget/1000).toFixed(0)}k<span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '500' }}> bud.</span></h3>
-                                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Økonomi</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569' }}>{(originalBudget/1000).toFixed(0)}k</span>
                                     </div>
                                 )}
                             </div>
 
                             {/* Dagens Besked Vist Fast Hvis Der er en Ulæst */}
                             {selectedCase?.raw_data?.daily_message && new Date(selectedCase.raw_data.daily_message.date).toDateString() === new Date().toDateString() && (
-                                <div style={{ padding: '0 16px', marginBottom: '16px' }}>
+                                <div style={{ marginBottom: '16px' }}>
                                     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '16px', padding: '16px', display: 'flex', gap: '12px' }}>
                                         <MessageCircle size={24} color="#2563eb" style={{ flexShrink: 0 }} />
                                         <div>
@@ -1556,9 +1550,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 </div>
                             )}
 
-                            {/* Action Sheet Overlay */}
-                            {showActionSheet && (
-                                <div onClick={() => setShowActionSheet(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', zIndex: 100, backdropFilter: 'blur(4px)', animation: 'fadeIn 0.2s ease-out' }}>
+                            {/* PORTALS FOR OVERLAYS SO THEY ESCAPE ANY CONTAINER BOUNDS */}
+                            {showActionSheet && createPortal(
+                                <div onClick={() => setShowActionSheet(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.4)', zIndex: 99999, backdropFilter: 'blur(2px)', animation: 'fadeIn 0.2s ease-out' }}>
                                     <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 16px))', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                                         <div style={{ width: '40px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', margin: '0 auto 24px auto' }} />
                                         <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#64748b', fontWeight: '600' }}>Handlinger</h3>
@@ -1583,12 +1577,51 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             )}
                                         </div>
                                     </div>
-                                </div>
+                                </div>,
+                                document.body
                             )}
 
-                            {/* Team Sheet Overlay */}
-                            {showTeamSheet && (
-                                <div onClick={() => setShowTeamSheet(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', zIndex: 100, backdropFilter: 'blur(4px)', animation: 'fadeIn 0.2s ease-out' }}>
+                            {/* INFO SHEETS PORTAL (Timer, Indkøb, Økonomi) */}
+                            {infoSheetType && createPortal(
+                                <div onClick={() => setInfoSheetType(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.4)', zIndex: 99999, backdropFilter: 'blur(2px)', animation: 'fadeIn 0.2s ease-out' }}>
+                                    <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 16px))', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                                        <div style={{ width: '40px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', margin: '0 auto 24px auto' }} />
+                                        <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', color: '#0f172a', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            {infoSheetType === 'time' && <><span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Clock color="#d97706" /> Timer</span></>}
+                                            {infoSheetType === 'materials' && <><span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><PackageCheck color="#2563eb" /> Materialer & Indkøb</span></>}
+                                            {infoSheetType === 'finance' && <><span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><DollarSign color="#059669" /> Økonomi & Budget</span></>}
+                                            <button onClick={() => setInfoSheetType(null)} style={{ background: 'none', border: 'none', color: '#94a3b8' }}><X size={20}/></button>
+                                        </h3>
+                                        
+                                        {infoSheetType === 'time' && (
+                                            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center' }}>
+                                                <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{totalActualHours} <span style={{ fontSize: '1rem', color: '#94a3b8' }}>/ {parseFloat(selectedCase.raw_data?.calc_data?.laborHours) || 40} t.</span></h1>
+                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Registrerede timer af holdet</p>
+                                                <button onClick={() => { setInfoSheetType(null); setActiveSubTab('timesheet'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#d97706', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Timeregistrering</button>
+                                            </div>
+                                        )}
+                                        {infoSheetType === 'materials' && (
+                                            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center' }}>
+                                                <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{orderedMaterials} <span style={{ fontSize: '1rem', color: '#94a3b8' }}>/ {totalMaterials}</span></h1>
+                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Ordrer er bestilt eller leveret</p>
+                                                <button onClick={() => { setInfoSheetType(null); setActiveSubTab('materials'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#2563eb', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Indkøb</button>
+                                            </div>
+                                        )}
+                                        {infoSheetType === 'finance' && (
+                                            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center' }}>
+                                                <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{(originalBudget/1000).toFixed(0)}k <span style={{ fontSize: '1rem', color: '#94a3b8' }}>DKK</span></h1>
+                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Estimeret sagsbudget</p>
+                                                <button onClick={() => { setInfoSheetType(null); setActiveSubTab('invoices'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#059669', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Økonomi</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>,
+                                document.body
+                            )}
+
+                            {/* Team Sheet Overlay PORTAL */}
+                            {showTeamSheet && createPortal(
+                                <div onClick={() => setShowTeamSheet(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.4)', zIndex: 99999, backdropFilter: 'blur(2px)', animation: 'fadeIn 0.2s ease-out' }}>
                                     <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 16px))', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '80vh', overflowY: 'auto' }}>
                                         <div style={{ width: '40px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', margin: '0 auto 24px auto' }} />
                                         <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', color: '#0f172a', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
@@ -1634,7 +1667,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             )}
                                         </div>
                                     </div>
-                                </div>
+                                </div>,
+                                document.body
                             )}
 
                             {/* Apple style animations */}
@@ -2296,18 +2330,20 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         marginTop: isMobile ? '0' : '24px',
                         overflowX: 'auto',
                         
-                        /* Apple Bottom Tab Bar Styles */
+                        /* Instagram Bottom Tab Bar Styles */
                         ...(isMobile ? {
                             position: 'fixed',
                             bottom: 0,
                             left: 0,
                             right: 0,
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.98)',
                             backdropFilter: 'blur(16px)',
                             borderTop: '1px solid #e2e8f0',
-                            zIndex: 50,
-                            paddingLeft: '16px',
-                            paddingRight: '16px'
+                            zIndex: 9999, /* High z-index to stay above everything */
+                            paddingLeft: '0',
+                            paddingRight: '0',
+                            justifyContent: 'space-around', /* Distribute evenly */
+                            alignItems: 'center'
                         } : {})
                     }}>
                         <style>{`
