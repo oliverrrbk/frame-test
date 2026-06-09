@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { PlusSquare, PenTool, Trash2, Calendar, FileText, X, FolderOutput, FileDown, Search, Check } from 'lucide-react';
+import { PlusSquare, PenTool, Trash2, Calendar, FileText, X, FolderOutput, FileDown, Search, Check, ArrowLeft, Folder, Tag } from 'lucide-react';
+import GorgeousSingleSelect from '../Dashboard/GorgeousSingleSelect';
 import DrawingBoard from './DrawingBoard';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
@@ -18,6 +19,30 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
     const [allLeads, setAllLeads] = useState([]);
     const [assigningDrawingId, setAssigningDrawingId] = useState(null);
     const [leadSearch, setLeadSearch] = useState('');
+    const [selectedFolderLeadId, setSelectedFolderLeadId] = useState(null);
+
+    const handleTagChange = async (drawingId, newTag) => {
+        try {
+            const drawing = drawings.find(d => d.id === drawingId);
+            if (!drawing) return;
+            const currentData = drawing.document_data || {};
+            const newData = { ...currentData, tag: newTag };
+            const { error } = await supabase.from('drawings').update({ document_data: newData }).eq('id', drawingId);
+            if (error) throw error;
+            setDrawings(prev => prev.map(d => d.id === drawingId ? { ...d, document_data: newData } : d));
+            toast.success("Etiket opdateret");
+        } catch (err) {
+            console.error("Fejl:", err);
+            toast.error("Kunne ikke gemme etiket.");
+        }
+    };
+
+    const tagOptions = [
+        { id: 'Standardtegning', name: 'Standardtegning' },
+        { id: 'Inspiration', name: 'Inspiration' },
+        { id: 'Hurtigt overslag', name: 'Hurtigt overslag' },
+        { id: 'Privat/Sjov', name: 'Privat/Sjov' }
+    ];
 
     const fetchDrawings = async () => {
         setIsLoading(true);
@@ -227,95 +252,9 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
         }
     };
 
-    if (isBoardOpen) {
-        return createPortal(
-            <DrawingBoard drawingId={activeDrawingId} leadId={leadId} onClose={handleBoardClose} />,
-            document.body
-        );
-    }
 
-    return (
-        <div style={{ padding: '32px 24px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', padding: '24px', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
-                <div>
-                    <h2 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '12px', letterSpacing: '-0.02em' }}>
-                        <div style={{ padding: '10px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderRadius: '12px', display: 'flex', color: '#2563eb' }}>
-                            <PenTool size={24} strokeWidth={2.5} />
-                        </div>
-                        {leadId ? 'Skitser & Tegninger (Sagsmappe)' : 'Mit Skitse-bibliotek'}
-                    </h2>
-                    <p style={{ color: '#64748b', marginTop: '8px', fontSize: '1.05rem', lineHeight: 1.5, maxWidth: '600px' }}>
-                        {leadId 
-                            ? 'Her kan du tegne skitser, notere opmålinger og udarbejde plantegninger specifikt til denne sag.' 
-                            : 'Få det fulde overblik over alle dine byggetegninger. Tegn frit, og kobl dem senere på dine opgaver.'}
-                    </p>
-                </div>
-                
-                <button 
-                    onClick={handleNewDrawing}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white',
-                        padding: '12px 24px', borderRadius: '10px',
-                        fontWeight: 600, fontSize: '1.05rem', border: 'none', cursor: 'pointer',
-                        boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.3), 0 4px 6px -2px rgba(37, 99, 235, 0.15)',
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                    onMouseOver={e => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(37, 99, 235, 0.4), 0 10px 10px -5px rgba(37, 99, 235, 0.2)';
-                    }}
-                    onMouseOut={e => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(37, 99, 235, 0.3), 0 4px 6px -2px rgba(37, 99, 235, 0.15)';
-                    }}
-                >
-                    <PlusSquare size={22} />
-                    Opret Ny Skitse
-                </button>
-            </div>
-
-            {isLoading ? (
-                <div style={{ textAlign: 'center', padding: '100px', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                    <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>Henter dine skitser...</span>
-                    <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
-                </div>
-            ) : drawings.length === 0 ? (
-                <div style={{ 
-                    textAlign: 'center', padding: '100px 20px', 
-                    background: 'linear-gradient(to bottom, rgba(248, 250, 252, 0.5), rgba(241, 245, 249, 0.8))', 
-                    border: '2px dashed #cbd5e1', 
-                    borderRadius: '20px', marginTop: '20px',
-                    boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.01)'
-                }}>
-                    <div style={{ width: '80px', height: '80px', background: 'white', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                        <PenTool size={40} style={{ color: '#3b82f6', opacity: 0.8 }} />
-                    </div>
-                    <h3 style={{ color: '#1e293b', fontSize: '1.4rem', fontWeight: 700, marginBottom: '12px' }}>Klar til at tegne?</h3>
-                    <p style={{ color: '#64748b', maxWidth: '450px', margin: '0 auto 30px', fontSize: '1.05rem', lineHeight: 1.6 }}>
-                        Start med et blankt lærred. Perfekt til opmålinger, bygningsdetaljer eller til at visualisere dine tanker.
-                    </p>
-                    <button 
-                        onClick={handleNewDrawing}
-                        style={{
-                            backgroundColor: 'white', color: '#2563eb', border: '1px solid #bfdbfe',
-                            padding: '12px 24px', borderRadius: '10px', fontWeight: 600, cursor: 'pointer',
-                            fontSize: '1.05rem', display: 'inline-flex', alignItems: 'center', gap: '8px',
-                            boxShadow: '0 2px 5px rgba(0,0,0,0.02)',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseOver={e => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#93c5fd'; }}
-                        onMouseOut={e => { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.borderColor = '#bfdbfe'; }}
-                    >
-                        <PlusSquare size={20} />
-                        Åbn tegneprogrammet
-                    </button>
-                </div>
-            ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
-                    {drawings.map(drawing => (
-                        <div 
+    const renderDrawingCard = (drawing) => (
+        <div 
                             key={drawing.id}
                             onClick={() => handleOpenDrawing(drawing.id)}
                             style={{
@@ -420,6 +359,24 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
                                     </div>
                                 )}
 
+                                
+                                {/* Etiketter (Tags) */}
+                                {!drawing.lead_id && (
+                                    <div style={{ marginTop: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }} onClick={e => e.stopPropagation()}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
+                                            <Tag size={14} /> Etiket
+                                        </div>
+                                        <GorgeousSingleSelect 
+                                            options={tagOptions}
+                                            selectedId={drawing.document_data?.tag || ''}
+                                            onChange={(val) => handleTagChange(drawing.id, val)}
+                                            placeholder="Vælg etiket..."
+                                            icon={Tag}
+                                            colorTheme="#f59e0b"
+                                        />
+                                    </div>
+                                )}
+    
                                 {/* Actions Bar - Gorgeous 2026 Style */}
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }} onClick={e => e.stopPropagation()}>
                                     <button 
@@ -604,10 +561,184 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
                                 )}
                             </div>
                         </div>
-                    ))}
+    );
+    
+    if (isBoardOpen) {
+        return createPortal(
+            <DrawingBoard drawingId={activeDrawingId} leadId={leadId} onClose={handleBoardClose} />,
+            document.body
+        );
+    }
+
+    return (
+        <div style={{ padding: '32px 24px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', padding: '24px', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+                <div>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '12px', letterSpacing: '-0.02em' }}>
+                        <div style={{ padding: '10px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderRadius: '12px', display: 'flex', color: '#2563eb' }}>
+                            <PenTool size={24} strokeWidth={2.5} />
+                        </div>
+                        {leadId ? 'Skitser & Tegninger (Sagsmappe)' : 'Mit Skitse-bibliotek'}
+                    </h2>
+                    <p style={{ color: '#64748b', marginTop: '8px', fontSize: '1.05rem', lineHeight: 1.5, maxWidth: '600px' }}>
+                        {leadId 
+                            ? 'Her kan du tegne skitser, notere opmålinger og udarbejde plantegninger specifikt til denne sag.' 
+                            : 'Få det fulde overblik over alle dine byggetegninger. Tegn frit, og kobl dem senere på dine opgaver.'}
+                    </p>
+                </div>
+                
+                <button 
+                    onClick={handleNewDrawing}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white',
+                        padding: '12px 24px', borderRadius: '10px',
+                        fontWeight: 600, fontSize: '1.05rem', border: 'none', cursor: 'pointer',
+                        boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.3), 0 4px 6px -2px rgba(37, 99, 235, 0.15)',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                    onMouseOver={e => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(37, 99, 235, 0.4), 0 10px 10px -5px rgba(37, 99, 235, 0.2)';
+                    }}
+                    onMouseOut={e => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(37, 99, 235, 0.3), 0 4px 6px -2px rgba(37, 99, 235, 0.15)';
+                    }}
+                >
+                    <PlusSquare size={22} />
+                    Opret Ny Skitse
+                </button>
+            </div>
+
+            {isLoading ? (
+                <div style={{ textAlign: 'center', padding: '100px', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>Henter dine skitser...</span>
+                    <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+                </div>
+            ) : drawings.length === 0 ? (
+                <div style={{ 
+                    textAlign: 'center', padding: '100px 20px', 
+                    background: 'linear-gradient(to bottom, rgba(248, 250, 252, 0.5), rgba(241, 245, 249, 0.8))', 
+                    border: '2px dashed #cbd5e1', 
+                    borderRadius: '20px', marginTop: '20px',
+                    boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.01)'
+                }}>
+                    <div style={{ width: '80px', height: '80px', background: 'white', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                        <PenTool size={40} style={{ color: '#3b82f6', opacity: 0.8 }} />
+                    </div>
+                    <h3 style={{ color: '#1e293b', fontSize: '1.4rem', fontWeight: 700, marginBottom: '12px' }}>Klar til at tegne?</h3>
+                    <p style={{ color: '#64748b', maxWidth: '450px', margin: '0 auto 30px', fontSize: '1.05rem', lineHeight: 1.6 }}>
+                        Start med et blankt lærred. Perfekt til opmålinger, bygningsdetaljer eller til at visualisere dine tanker.
+                    </p>
+                    <button 
+                        onClick={handleNewDrawing}
+                        style={{
+                            backgroundColor: 'white', color: '#2563eb', border: '1px solid #bfdbfe',
+                            padding: '12px 24px', borderRadius: '10px', fontWeight: 600, cursor: 'pointer',
+                            fontSize: '1.05rem', display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.02)',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseOver={e => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#93c5fd'; }}
+                        onMouseOut={e => { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.borderColor = '#bfdbfe'; }}
+                    >
+                        <PlusSquare size={20} />
+                        Åbn tegneprogrammet
+                    </button>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+                    
+                    {/* HVIS VI ER INDE I EN SAG ELLER HAR VALGT EN MAPPE */}
+                    {(leadId || selectedFolderLeadId) ? (
+                        <div>
+                            {!leadId && (
+                                <button 
+                                    onClick={() => setSelectedFolderLeadId(null)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 600, padding: 0 }}
+                                >
+                                    <ArrowLeft size={20} /> Tilbage til Sagsmapper
+                                </button>
+                            )}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+                                {drawings.filter(d => d.lead_id === (leadId || selectedFolderLeadId)).map(drawing => renderDrawingCard(drawing))}
+                            </div>
+                        </div>
+                    ) : (
+                        /* HVIS VI ER I DET GENERELLE BIBLIOTEK (Mit Skitse-bibliotek) */
+                        <>
+                            {/* SEKTION 1: SAGSMAPPER */}
+                            <div>
+                                <h3 style={{ margin: '0 0 16px 0', fontSize: '1.3rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Folder color="#2563eb" /> Tilknyttede Sager
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+                                    {Object.entries(drawings.reduce((acc, d) => {
+                                        if (d.lead_id) {
+                                            if (!acc[d.lead_id]) acc[d.lead_id] = { leadId: d.lead_id, count: 0, lead: allLeads.find(l => l.id === d.lead_id) || d.leads, latestDate: d.created_at };
+                                            acc[d.lead_id].count++;
+                                        }
+                                        return acc;
+                                    }, {})).map(([fId, folder]) => (
+                                        <div 
+                                            key={fId}
+                                            onClick={() => setSelectedFolderLeadId(fId)}
+                                            style={{
+                                                backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '16px',
+                                                cursor: 'pointer', padding: '24px',
+                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)',
+                                                display: 'flex', flexDirection: 'column', gap: '12px'
+                                            }}
+                                            onMouseOver={e => {
+                                                e.currentTarget.style.transform = 'translateY(-4px)';
+                                                e.currentTarget.style.boxShadow = '0 12px 20px -5px rgba(0,0,0,0.08)';
+                                                e.currentTarget.style.borderColor = '#cbd5e1';
+                                            }}
+                                            onMouseOut={e => {
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.03)';
+                                                e.currentTarget.style.borderColor = '#e2e8f0';
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <div style={{ padding: '12px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderRadius: '12px', color: '#2563eb' }}>
+                                                    <Folder size={32} />
+                                                </div>
+                                                <span style={{ padding: '4px 10px', backgroundColor: '#f1f5f9', color: '#475569', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                                    {folder.count} tegning{folder.count !== 1 ? 'er' : ''}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '1.15rem', fontWeight: 700 }}>
+                                                    Sag: {String(folder.leadId).substring(0,8)}
+                                                </h4>
+                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
+                                                    Sidste tegning: {format(new Date(folder.latestDate), 'd. MMM yyyy', { locale: da })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <hr style={{ border: 'none', borderTop: '1px dashed #cbd5e1', margin: '10px 0' }} />
+
+                            {/* SEKTION 2: LØSE KLADDER */}
+                            <div>
+                                <h3 style={{ margin: '0 0 16px 0', fontSize: '1.3rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <PenTool color="#d97706" /> Skrivebordet (Løse Kladder)
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+                                    {drawings.filter(d => !d.lead_id).map(drawing => renderDrawingCard(drawing))}
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
-            
             {drawingToDelete && createPortal(
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 999999,

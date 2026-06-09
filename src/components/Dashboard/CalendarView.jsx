@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Clock, CheckCircle, MessageSquare, Plus, Users, X, Trash2, Truck, ChevronDown, Palmtree, Thermometer, Briefcase, Coffee, PartyPopper, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Clock, CheckCircle, MessageSquare, Plus, Users, X, Trash2, Truck, ChevronDown, Palmtree, Thermometer, Briefcase, Coffee, PartyPopper, Search, Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -37,6 +37,13 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         { id: 'Andet', name: 'Andet', icon: Coffee }
     ];
 
+    const NOTIFICATION_PREFERENCES = [
+        { id: 'none', name: 'Ingen påmindelse', icon: BellOff },
+        { id: '1_hour', name: '1 time før', icon: Clock },
+        { id: 'day_before', name: 'Dagen før', icon: CalendarIcon },
+        { id: 'both', name: 'Begge dele', icon: Bell }
+    ];
+
     const getEventStyle = (type) => {
         if (type === 'Materialelevering') return { bg: '#fff7ed', border: '#fdba74', text: '#c2410c', leftBorder: '#f97316', icon: Truck };
         if (type === 'Kundemøde') return { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', leftBorder: '#0284c7', icon: Briefcase };
@@ -65,7 +72,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         startTime: '10:00',
         endTime: '11:00',
         participants: ['all'],
-        selectedLeadId: '' // For Materialelevering
+        selectedLeadId: '', // For Materialelevering
+        notification_preference: 'day_before'
     });
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -84,7 +92,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             startTime: '10:00',
             endTime: '11:00',
             participants: ['all'],
-            selectedLeadId: ''
+            selectedLeadId: '',
+            notification_preference: 'day_before'
         });
         setShowEventModal(true);
     };
@@ -253,7 +262,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             startTime: eventFormData.startTime,
             endTime: eventFormData.endTime,
             participants: finalParticipants,
-            relatedLeadId: eventFormData.selectedLeadId || null
+            relatedLeadId: eventFormData.selectedLeadId || null,
+            notification_preference: eventFormData.notification_preference || 'day_before'
         };
         const updatedEvents = [...(carpenterProfile?.raw_data?.calendar_events || []), newEvent];
         const updatedRawData = { ...carpenterProfile.raw_data, calendar_events: updatedEvents };
@@ -728,6 +738,15 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <input type="date" required value={eventFormData.date} onChange={e=>setEventFormData({...eventFormData, date: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
                                 <input type="time" required value={eventFormData.startTime} onChange={e=>setEventFormData({...eventFormData, startTime: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100px' }} />
+                            </div>
+                            
+                            <div style={{ zIndex: 1900, position: 'relative' }}>
+                                <GorgeousSingleSelect
+                                    options={NOTIFICATION_PREFERENCES}
+                                    selectedId={eventFormData.notification_preference}
+                                    onChange={(newPref) => setEventFormData({...eventFormData, notification_preference: newPref})}
+                                    placeholder="Påmindelse"
+                                />
                             </div>
 
                             {eventFormData.type === 'Materialelevering' ? (

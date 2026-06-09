@@ -68,43 +68,70 @@ serve(async (req) => {
 
         // --- 2. KALENDER MØDER ---
         if (type === 'calendar' || type === 'all') {
-            // Find morgendagens events
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-            const { data: events } = await supabaseClient
-                .from('calendar_events')
-                .select('*')
-                .eq('date', tomorrowStr);
+            // Hent alle brugere der har calendar_events
+            const { data: carpenters } = await supabaseClient
+                .from('carpenters')
+                .select('id, raw_data');
 
-            if (events && events.length > 0) {
-                // For hvert event
-                for (const event of events) {
-                    // Hvis deltagerne er specificeret (participants-array)
-                    if (event.participants && Array.isArray(event.participants)) {
-                        for (const userId of event.participants) {
-                            if (userId === 'all') continue; // Ignorer 'all' for push for ikke at spamme alle (eller send til alle?)
-                            
-                            const { data: subs } = await supabaseClient
-                                .from('push_subscriptions')
-                                .select('subscription_data')
-                                .eq('user_id', userId);
+            if (carpenters && carpenters.length > 0) {
+                for (const carpenter of carpenters) {
+                    const events = carpenter.raw_data?.calendar_events || [];
+                    
+                    for (const event of events) {
+                        const pref = event.notification_preference || 'day_before';
+                        if (pref === 'none') continue;
+
+                        let shouldSend = false;
+                        let pushTitle = 'Kalender Påmindelse';
+                        let pushBody = `${event.title} kl. ${event.startTime}`;
+
+                        // Dagen Før tjek
+                        if (event.date === tomorrowStr && (pref === 'day_before' || pref === 'both')) {
+                            shouldSend = true;
+                            pushTitle = 'Aftale i morgen';
+                        }
+                        
+                        // 1 time før tjek
+                        if (event.date === todayStr && (pref === '1_hour' || pref === 'both')) {
+                            const [eventHour] = event.startTime.split(':').map(Number);
+                            const currentHour = now.getHours();
+                            if (eventHour - currentHour === 1) {
+                                shouldSend = true;
+                                pushTitle = 'Aftale om 1 time';
+                            }
+                        }
+
+                        if (shouldSend && event.participants && Array.isArray(event.participants)) {
+                            for (const userId of event.participants) {
+                                if (userId === 'all') continue;
                                 
-                            if (subs && subs.length > 0) {
-                                for (const sub of subs) {
-                                    const payload = JSON.stringify({
-                                        title: 'Aftale i morgen',
-                                        body: `${event.title} kl. ${event.startTime}`,
-                                        url: '/dashboard'
-                                    });
-                                    try {
-                                        if (privateVapidKey) {
-                                            await webPush.sendNotification(sub.subscription_data, payload);
-                                            sentCount++;
+                                const { data: subs } = await supabaseClient
+                                    .from('push_subscriptions')
+                                    .select('subscription_data')
+                                    .eq('user_id', userId);
+                                    
+                                if (subs && subs.length > 0) {
+                                    for (const sub of subs) {
+                                        const payload = JSON.stringify({
+                                            title: pushTitle,
+                                            body: pushBody,
+                                            url: '/dashboard'
+                                        });
+                                        try {
+                                            if (privateVapidKey) {
+                                                await webPush.sendNotification(sub.subscription_data, payload);
+                                                sentCount++;
+                                            }
+                                        } catch(err) {
+                                            console.error('Push failed', err);
                                         }
-                                    } catch(err) {
-                                        console.error('Push failed', err);
                                     }
                                 }
                             }
