@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { createPortal } from 'react-dom';
-import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle, MessageSquare, Users, Download, Search, Bell, LogOut, Link2, Filter, Image as ImageIcon, Video, Mail, UploadCloud, Link as LinkIcon, ExternalLink, Settings, MoreHorizontal, Pause } from 'lucide-react';
+import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle, MessageSquare, Users, Download, Search, Bell, LogOut, Link2, Filter, Image as ImageIcon, Video, Mail, UploadCloud, Link as LinkIcon, ExternalLink, Settings, MoreHorizontal, Pause, RotateCcw } from 'lucide-react';
 import MaterialList from './MaterialList';
 import AftalesedlerTab from './AftalesedlerTab';
 import CaseDrawingsTab from './CaseDrawingsTab';
