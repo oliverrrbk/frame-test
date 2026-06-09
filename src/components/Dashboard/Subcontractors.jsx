@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Phone, Mail, Pencil, Trash2, Plus, X, Loader2, Wrench, HardHat, ChevronDown, MapPin } from 'lucide-react';
+import { Building2, Phone, Mail, Pencil, Trash2, Plus, X, Loader2, Wrench, HardHat, ChevronDown, MapPin, CheckCircle } from 'lucide-react';
 
 /*
  * Underleverandører = eksterne partnere/kontakter UDEN login.
@@ -156,6 +156,39 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                             <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="F.eks. fast samarbejdspartner på tagprojekter" rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
                         </Field>
 
+                        <div style={{ height: '1px', background: '#f1f5f9', margin: '16px 0 8px 0' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Medarbejdere (Svende & Lærlinge)</div>
+                            <button type="button" onClick={() => set('workers', [...(form.workers || []), { id: `sw-${Date.now()}`, name: '', phone: '', role: 'Svend' }])} style={{ background: '#f5f3ff', color: '#7c3aed', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>
+                                <Plus size={14} /> Tilføj
+                            </button>
+                        </div>
+                        
+                        <AnimatePresence>
+                            {(form.workers || []).map((w, i) => (
+                                <motion.div 
+                                    key={w.id}
+                                    initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                                    animate={{ opacity: 1, height: 'auto', marginTop: 8 }}
+                                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                                    style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#ffffff', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'visible', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                                >
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <input value={w.name} onChange={(e) => { const nw = [...form.workers]; nw[i].name = e.target.value; set('workers', nw); }} placeholder="Navn (fx Lars Lærling)" style={inputStyle} />
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <BeautifulPhoneInput value={w.phone} onChange={(val) => { const nw = [...form.workers]; nw[i].phone = val; set('workers', nw); }} />
+                                            <CustomRoleSelect value={w.role} onChange={(val) => { const nw = [...form.workers]; nw[i].role = val; set('workers', nw); }} />
+                                        </div>
+                                    </div>
+                                    <button type="button" onClick={() => { const nw = form.workers.filter(x => x.id !== w.id); set('workers', nw); }} style={{ background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: '4px' }}>
+                                        <Trash2 size={16} />
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+
+                        <div style={{ height: '1px', background: '#f1f5f9', margin: '24px 0 16px 0' }} />
+
                         <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
                             <button type="button" onClick={onClose} style={{ flex: '0 0 auto', padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#ffffff', color: '#475569', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
                                 onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
@@ -170,39 +203,7 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                             </button>
                         </div>
                     
-                        <div style={{ height: '1px', background: '#f1f5f9', margin: '2px 0' }} />
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Medarbejdere (Svende & Lærlinge)</div>
-                            <button type="button" onClick={() => set('workers', [...(form.workers || []), { id: `sw-${Date.now()}`, name: '', phone: '', role: 'Svend' }])} style={{ background: '#f5f3ff', color: '#7c3aed', border: 'none', borderRadius: '8px', padding: '4px 10px', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', transition: 'all 0.2s' }}>
-                                <Plus size={14} /> Tilføj
-                            </button>
-                        </div>
-                        
-                        <AnimatePresence>
-                            {(form.workers || []).map((w, i) => (
-                                <motion.div 
-                                    key={w.id}
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}
-                                >
-                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                        <input value={w.name} onChange={(e) => { const nw = [...form.workers]; nw[i].name = e.target.value; set('workers', nw); }} placeholder="Navn (fx Lars Lærling)" style={inputStyle} />
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                            <BeautifulPhoneInput value={w.phone} onChange={(val) => { const nw = [...form.workers]; nw[i].phone = val; set('workers', nw); }} />
-                                            <select value={w.role} onChange={(e) => { const nw = [...form.workers]; nw[i].role = e.target.value; set('workers', nw); }} style={{...inputStyle, padding: '0 12px'}}>
-                                                <option value="Svend">Svend</option>
-                                                <option value="Lærling">Lærling</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <button type="button" onClick={() => { const nw = form.workers.filter(x => x.id !== w.id); set('workers', nw); }} style={{ background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: '4px' }}>
-                                        <Trash2 size={16} />
-                                    </button>
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
+
                     </form>
                 </motion.div>
             </motion.div>
@@ -487,7 +488,6 @@ const iconBtn = {
 };
 
 
-// Lækker custom telefon-input i Bison Frame 2026 stil
 export function BeautifulPhoneInput({ value, onChange, placeholder }) {
     const [focused, setFocused] = useState(false);
     return (
@@ -495,38 +495,126 @@ export function BeautifulPhoneInput({ value, onChange, placeholder }) {
             style={{
                 display: 'flex',
                 alignItems: 'center',
-                border: focused ? '1px solid #7c3aed' : '1px solid #e2e8f0',
+                border: focused ? '1px solid #3b82f6' : '1px solid #e2e8f0',
                 borderRadius: '12px',
                 background: '#ffffff',
-                overflow: 'hidden',
-                transition: 'border-color 0.2s, box-shadow 0.2s',
-                boxShadow: focused ? '0 0 0 3px rgba(124, 58, 237, 0.12)' : 'none',
+                boxShadow: focused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+                transition: 'all 0.2s',
+                overflow: 'hidden'
             }}
         >
-            <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', background: '#f8fafc', borderRight: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600, fontSize: '0.9rem', height: '100%' }}>
-                <Phone size={14} style={{ marginRight: '6px' }} />
-                +45
+            <div style={{ padding: '0 12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', borderRight: '1px solid #e2e8f0', background: '#f8fafc', height: '100%' }}>
+                <Phone size={14} />
+                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>+45</span>
             </div>
             <input 
-                type="tel"
-                value={value}
+                value={value} 
                 onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9\s]/g, '');
+                    const val = e.target.value.replace(/[^0-9 ]/g, '');
                     onChange(val);
-                }}
+                }} 
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
-                placeholder={placeholder || "12 34 56 78"}
+                placeholder={placeholder || '12 34 56 78'} 
                 style={{
                     flex: 1,
-                    padding: '12px 14px',
                     border: 'none',
-                    outline: 'none',
+                    padding: '12px 14px',
                     fontSize: '0.95rem',
                     color: '#0f172a',
-                    background: 'transparent'
-                }}
+                    outline: 'none',
+                    background: 'transparent',
+                    width: '100%'
+                }} 
             />
+        </div>
+    );
+}
+
+function CustomRoleSelect({ value, onChange }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    background: '#ffffff',
+                    border: isOpen ? '1px solid #3b82f6' : '1px solid #e2e8f0',
+                    boxShadow: isOpen ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+                    transition: 'all 0.2s'
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle size={16} style={{ color: value === 'Svend' ? '#10b981' : '#3b82f6' }} />
+                    <span style={{ fontWeight: 600, color: '#334155' }}>{value}</span>
+                </div>
+                <ChevronDown size={16} style={{ color: '#94a3b8', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+            </div>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                        transition={{ duration: 0.1 }}
+                        style={{
+                            position: 'absolute',
+                            top: 'calc(100% + 4px)',
+                            left: 0,
+                            right: 0,
+                            background: '#1e293b',
+                            borderRadius: '12px',
+                            padding: '6px',
+                            zIndex: 50,
+                            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                            border: '1px solid #334155'
+                        }}
+                    >
+                        {['Svend', 'Lærling'].map(role => (
+                            <div
+                                key={role}
+                                onClick={() => { onChange(role); setIsOpen(false); }}
+                                style={{
+                                    padding: '10px 12px',
+                                    borderRadius: '8px',
+                                    color: value === role ? '#ffffff' : '#cbd5e1',
+                                    background: value === role ? '#3b82f6' : 'transparent',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    fontWeight: value === role ? 600 : 500,
+                                    transition: 'all 0.15s'
+                                }}
+                                onMouseEnter={(e) => { if (value !== role) e.currentTarget.style.background = '#334155'; }}
+                                onMouseLeave={(e) => { if (value !== role) e.currentTarget.style.background = 'transparent'; }}
+                            >
+                                {value === role && <CheckCircle size={14} />}
+                                {role}
+                            </div>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
