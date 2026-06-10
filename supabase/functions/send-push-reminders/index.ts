@@ -92,14 +92,16 @@ serve(async (req) => {
                         let pushTitle = 'Kalender Påmindelse';
                         let pushBody = `${event.title} kl. ${event.startTime}`;
 
+                        const eventDate = event.startDate || event.date;
+
                         // Dagen Før tjek
-                        if (event.date === tomorrowStr && (pref === 'day_before' || pref === 'both')) {
+                        if (eventDate === tomorrowStr && (pref === 'day_before' || pref === 'both')) {
                             shouldSend = true;
                             pushTitle = 'Aftale i morgen';
                         }
                         
                         // 1 time før tjek
-                        if (event.date === todayStr && (pref === '1_hour' || pref === 'both')) {
+                        if (eventDate === todayStr && (pref === '1_hour' || pref === 'both')) {
                             const [eventHour] = event.startTime.split(':').map(Number);
                             const currentHour = now.getHours();
                             if (eventHour - currentHour === 1) {

@@ -82,7 +82,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         id: '',
         title: '',
         type: 'Internt Møde', // 'Internt Møde', 'Kundemøde', 'Materialelevering'
-        date: new Date().toISOString().substring(0,10),
+        startDate: new Date().toISOString().substring(0,10),
+        endDate: new Date().toISOString().substring(0,10),
         startTime: '10:00',
         endTime: '11:00',
         participants: ['all'],
@@ -101,7 +102,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 id: eventToEdit.id || '',
                 title: eventToEdit.title || '',
                 type: eventToEdit.type || 'Internt Møde',
-                date: eventToEdit.date || new Date().toISOString().substring(0,10),
+                startDate: eventToEdit.startDate || eventToEdit.date || new Date().toISOString().substring(0,10),
+                endDate: eventToEdit.endDate || eventToEdit.date || new Date().toISOString().substring(0,10),
                 startTime: eventToEdit.startTime || '10:00',
                 endTime: eventToEdit.endTime || '11:00',
                 participants: eventToEdit.participants || ['all'],
@@ -112,12 +114,14 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             const year = dateObj.getFullYear();
             const month = String(dateObj.getMonth() + 1).padStart(2, '0');
             const day = String(dateObj.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
             
             setEventFormData({
                 id: '',
                 title: '',
                 type: 'Internt Møde',
-                date: `${year}-${month}-${day}`,
+                startDate: dateStr,
+                endDate: dateStr,
                 startTime: '10:00',
                 endTime: '11:00',
                 participants: ['all'],
@@ -254,8 +258,14 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         });
 
         let events = calendarEvents.filter(e => {
-            const d = new Date(e.date); d.setHours(0,0,0,0);
-            return d.getTime() === checkDate.getTime();
+            const startStr = e.startDate || e.date;
+            const endStr = e.endDate || e.date;
+            if (!startStr) return false;
+            
+            const start = new Date(startStr); start.setHours(0,0,0,0);
+            const end = new Date(endStr || startStr); end.setHours(23,59,59,999);
+            
+            return checkDate >= start && checkDate <= end;
         });
 
         if (searchTerm.trim() !== '') {
@@ -294,7 +304,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             id: eventFormData.id || `evt-${Date.now()}`,
             title: finalTitle,
             type: eventFormData.type,
-            date: eventFormData.date,
+            startDate: eventFormData.startDate,
+            endDate: eventFormData.endDate,
             startTime: eventFormData.startTime,
             endTime: eventFormData.endTime,
             participants: finalParticipants,
@@ -496,7 +507,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                         <div key={e.id} onClick={() => openModalForDate(null, e)} style={{ padding: '16px', background: '#ecfdf5', borderLeft: '4px solid #10b981', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                                             <div>
                                                 <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#065f46' }}>{e.title}</h4>
-                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#059669' }}>{format(new Date(e.date), 'd. MMM yyyy', { locale: da })} - {e.type}</p>
+                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#059669' }}>{format(new Date(e.startDate || e.date), 'd. MMM yyyy', { locale: da })} - {e.type}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -608,7 +619,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                                     <div style={{ flex: 1 }}>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                             <div style={{ fontWeight: 'bold', color: style.text, fontSize: '0.95rem' }}>{e.type}</div>
-                                                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b' }}>{e.startTime}</div>
+                                                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b' }}>{e.startTime} - {e.endTime}</div>
                                                         </div>
                                                         <div style={{ fontWeight: 600, color: '#0f172a', marginTop: '2px', fontSize: '0.95rem' }}>{e.title}</div>
                                                     </div>
@@ -877,7 +888,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     const style = getEventStyle(e.type);
                                     return (
                                         <div key={e.id} onClick={(evt) => { evt.stopPropagation(); openModalForDate(null, e); }} style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, borderRadius: '0 8px 8px 0', padding: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                                            <strong>{e.startTime}</strong><br/>{e.title}
+                                            <strong>{e.startTime} - {e.endTime}</strong><br/>{e.title}
                                         </div>
                                     )
                                 })}
@@ -1102,12 +1113,40 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 />
                             </div>
 
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <input type="date" required value={eventFormData.date} onChange={e=>setEventFormData({...eventFormData, date: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
-                                <input type="time" required value={eventFormData.startTime} onChange={e=>setEventFormData({...eventFormData, startTime: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100px' }} />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Start</label>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <input type="date" required value={eventFormData.startDate} onChange={e=> {
+                                            const newStart = e.target.value;
+                                            setEventFormData(prev => ({
+                                                ...prev, 
+                                                startDate: newStart,
+                                                endDate: prev.endDate < newStart ? newStart : prev.endDate
+                                            }))
+                                        }} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
+                                        <input type="time" required value={eventFormData.startTime} onChange={e=> {
+                                            const newTime = e.target.value;
+                                            setEventFormData(prev => {
+                                                if (prev.startDate === prev.endDate && prev.endTime < newTime) {
+                                                    return {...prev, startTime: newTime, endTime: newTime};
+                                                }
+                                                return {...prev, startTime: newTime};
+                                            })
+                                        }} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
+                                    </div>
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Slut</label>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <input type="date" required value={eventFormData.endDate} min={eventFormData.startDate} onChange={e=>setEventFormData({...eventFormData, endDate: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
+                                        <input type="time" required value={eventFormData.endTime} onChange={e=>setEventFormData({...eventFormData, endTime: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
+                                    </div>
+                                </div>
                             </div>
                             
                             <div style={{ zIndex: 1900, position: 'relative' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Påmindelse</label>
                                 <GorgeousSingleSelect
                                     options={NOTIFICATION_PREFERENCES}
                                     selectedId={eventFormData.notification_preference}

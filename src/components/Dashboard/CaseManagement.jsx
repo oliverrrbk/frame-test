@@ -3647,10 +3647,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 {/* TAB 5: LEVERANDØRBILAG */}
                         {activeSubTab === 'invoices' && (
                             <div className="case-tab-content">
-                                <BilagManager 
-                                    lead={selectedCase} 
-                                    profile={profile} 
-                                    onUpdateLead={onUpdateLead} 
+                                <BilagManager
+                                    lead={selectedCase}
+                                    profile={profile}
+                                    onUpdateLead={onUpdateLead}
+                                    isMobile={isMobile}
                                 />
                             </div>
                         )}
@@ -3658,10 +3659,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         {/* TAB 6: AFTALESEDLER (EKSTRAARBEJDE) */}
                         {activeSubTab === 'extra-work' && (
                             <div className="case-tab-content" style={{ pointerEvents: selectedCase.status === 'Afbrudt Sag' ? 'none' : 'auto', opacity: selectedCase.status === 'Afbrudt Sag' ? 0.7 : 1 }}>
-                                <AftalesedlerTab 
-                                    selectedCase={selectedCase} 
-                                    profile={profile} 
+                                <AftalesedlerTab
+                                    selectedCase={selectedCase}
+                                    profile={profile}
                                     onUpdateCase={onUpdateLead}
+                                    isMobile={isMobile}
                                 />
                             </div>
                         )}
@@ -3669,9 +3671,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         {/* TAB 7: TEGNINGER & SKITSER */}
                         {activeSubTab === 'drawings' && (
                             <div className="case-tab-content">
-                                <CaseDrawingsTab 
-                                    selectedCase={selectedCase} 
-                                    profile={profile} 
+                                <CaseDrawingsTab
+                                    selectedCase={selectedCase}
+                                    profile={profile}
+                                    isMobile={isMobile}
                                 />
                             </div>
                         )}

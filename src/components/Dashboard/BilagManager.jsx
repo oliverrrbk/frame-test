@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Upload, ChevronDown, CheckCircle2, FileText, Building2, Send, Loader2, Trash2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, ChevronDown, CheckCircle2, FileText, Building2, Send, Loader2, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
 
-const BilagManager = ({ lead, profile, onUpdateLead }) => {
+const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false }) => {
     const [showUploadForm, setShowUploadForm] = useState(false);
     const [newSupplierInvoice, setNewSupplierInvoice] = useState({ amount: '', description: '', category: 'Materialer', file: null, file_name: '' });
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
@@ -244,8 +246,8 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
     return (
         <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Building2 size={18} color="#d97706" /> Fakturaer & Udgifter (Bilag)
+                <h3 style={{ margin: 0, fontSize: isMobile ? '1.4rem' : '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Building2 size={isMobile ? 22 : 18} color="#d97706" /> Fakturaer & Udgifter (Bilag)
                 </h3>
                 <div style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                     {supplierInvoices.length} bilag
@@ -256,110 +258,130 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
             </p>
 
             <div style={{ marginBottom: '20px' }}>
-                {!showUploadForm ? (
-                    <button 
-                        onClick={() => setShowUploadForm(true)}
-                        className="hover-lift"
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#475569', padding: '12px', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}
-                    >
-                        <Upload size={16} /> Upload & Registrer Ny
-                    </button>
-                ) : (
-                    <form onSubmit={handleUploadSupplier} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '12px', animation: 'fadeIn 0.3s ease-out' }}>
-                        <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#0f172a' }}>Nyt Bilag</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            
-                            {/* Fil Upload Dropzone */}
-                            <div style={{ position: 'relative', width: '100%', height: '100px', border: '2px dashed #cbd5e1', borderRadius: '10px', background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden' }}>
-                                <input 
-                                    type="file" 
-                                    accept="image/*,application/pdf"
-                                    onChange={handleFileUpload}
-                                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}
-                                />
-                                {newSupplierInvoice.file ? (
-                                    <>
-                                        <div style={{ color: '#10b981', marginBottom: '4px' }}><CheckCircle2 size={24} /></div>
-                                        <div style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: 'bold' }}>{newSupplierInvoice.file_name}</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Tryk for at skifte fil</div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div style={{ color: '#94a3b8', marginBottom: '8px' }}><Upload size={24} /></div>
-                                        <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '500' }}>Vælg PDF eller Billede</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>(Valgfrit - men anbefales)</div>
-                                    </>
-                                )}
-                            </div>
-
-                            <input 
-                                type="text" 
-                                placeholder="Beskrivelse (fx Bygma Faktura 1234)"
-                                value={newSupplierInvoice.description}
-                                onChange={(e) => setNewSupplierInvoice({...newSupplierInvoice, description: e.target.value})}
-                                style={{ width: '100%', boxSizing: 'border-box', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
-                            />
-                            {/* Kategori Dropdown */}
-                            <div style={{ position: 'relative' }}>
-                                <div 
-                                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', backgroundColor: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#0f172a' }}
-                                >
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {newSupplierInvoice.category === 'Materialer' && <><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0ea5e9' }} /> Materialer (Bygma, Stark, etc.)</>}
-                                        {newSupplierInvoice.category === 'Underentreprenør' && <><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#9333ea' }} /> Underentreprenør (Elektriker, VVS, etc.)</>}
-                                        {newSupplierInvoice.category === 'Diverse' && <><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }} /> Diverse (Liftleje, Container, etc.)</>}
-                                        {!newSupplierInvoice.category && 'Vælg kategori...'}
-                                    </span>
-                                    <ChevronDown size={16} style={{ color: '#94a3b8', transform: isCategoryDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                                </div>
-                                
-                                {isCategoryDropdownOpen && (
-                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 10, overflow: 'hidden' }}>
-                                        {['Materialer', 'Underentreprenør', 'Diverse'].map(cat => (
-                                            <div 
-                                                key={cat}
-                                                onClick={() => {
-                                                    setNewSupplierInvoice({...newSupplierInvoice, category: cat});
-                                                    setIsCategoryDropdownOpen(false);
-                                                }}
-                                                style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#334155', borderBottom: '1px solid #f1f5f9' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                            >
-                                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: cat === 'Materialer' ? '#0ea5e9' : cat === 'Underentreprenør' ? '#9333ea' : '#f59e0b' }} />
-                                                {cat === 'Materialer' ? 'Materialer (Bygma, Stark, etc.)' : cat === 'Underentreprenør' ? 'Underentreprenør (Elektriker, VVS, etc.)' : 'Diverse (Liftleje, Container, etc.)'}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Beløb med Tusindtalsseparator */}
-                            <div style={{ position: 'relative' }}>
-                                <input 
-                                    type="text" 
-                                    placeholder="Beløb ekskl. moms"
-                                    value={newSupplierInvoice.amount}
-                                    onChange={(e) => {
-                                        let val = e.target.value.replace(/[^0-9,]/g, '');
-                                        let parts = val.split(',');
-                                        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                                        let formatted = parts.join(',');
-                                        setNewSupplierInvoice({...newSupplierInvoice, amount: formatted});
-                                    }}
-                                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', paddingRight: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
-                                />
-                                <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.85rem', fontWeight: '500' }}>kr.</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                <button type="button" onClick={() => setShowUploadForm(false)} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', cursor: 'pointer', fontWeight: 'bold' }}>Annuller</button>
-                                <button type="submit" style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>Gem Bilag</button>
-                            </div>
-                        </div>
-                    </form>
-                )}
+                <button
+                    onClick={() => setShowUploadForm(true)}
+                    className="hover-lift"
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#475569', padding: isMobile ? '18px' : '12px', borderRadius: isMobile ? '16px' : '10px', cursor: 'pointer', fontWeight: '600', fontSize: isMobile ? '1.05rem' : '0.95rem' }}
+                >
+                    <Upload size={isMobile ? 20 : 16} /> Upload & Registrer Ny
+                </button>
             </div>
+
+            {/* NYT BILAG — moderne glas-modal (fuldskærm på mobil, centreret på desktop) */}
+            {createPortal(
+                <AnimatePresence>
+                    {showUploadForm && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => { setShowUploadForm(false); setIsCategoryDropdownOpen(false); }}
+                            style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 100000, display: 'flex', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'center', padding: isMobile ? '0' : '20px' }}>
+                            <motion.div initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.97 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ width: '100%', maxWidth: isMobile ? '100%' : '520px', height: isMobile ? '100dvh' : 'auto', maxHeight: isMobile ? '100dvh' : '90vh', overflowY: 'auto', background: '#fff', borderRadius: isMobile ? '0' : '24px', boxShadow: '0 24px 48px -12px rgba(15,23,42,0.3)', border: '1px solid #eef2f7' }}>
+                                {/* Header */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', paddingTop: isMobile ? 'calc(env(safe-area-inset-top) + 16px)' : '20px', borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, background: '#fff', zIndex: 2 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={22} /></div>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a', fontWeight: 700 }}>Nyt bilag</h3>
+                                            <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>Faktura eller udgift på sagen</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" onClick={() => setShowUploadForm(false)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}><X size={18} /></button>
+                                </div>
+
+                                {/* Body */}
+                                <form onSubmit={handleUploadSupplier} style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    {/* Fil-dropzone */}
+                                    <div style={{ position: 'relative', width: '100%', height: isMobile ? '150px' : '130px', border: '2px dashed #cbd5e1', borderRadius: '16px', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', transition: 'border-color 0.2s, background 0.2s' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#f59e0b'; e.currentTarget.style.background = '#fffbeb'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}>
+                                        <input type="file" accept="image/*,application/pdf" onChange={handleFileUpload} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }} />
+                                        {newSupplierInvoice.file ? (
+                                            <>
+                                                <div style={{ color: '#10b981', marginBottom: '6px' }}><CheckCircle2 size={30} /></div>
+                                                <div style={{ fontSize: '0.95rem', color: '#0f172a', fontWeight: 'bold' }}>{newSupplierInvoice.file_name}</div>
+                                                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Tryk for at skifte fil</div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div style={{ color: '#94a3b8', marginBottom: '8px' }}><Upload size={30} /></div>
+                                                <div style={{ fontSize: '0.98rem', color: '#475569', fontWeight: '600' }}>Vælg PDF eller billede</div>
+                                                <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Valgfrit – men anbefales</div>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    <input
+                                        type="text"
+                                        placeholder="Beskrivelse (fx Bygma Faktura 1234)"
+                                        value={newSupplierInvoice.description}
+                                        onChange={(e) => setNewSupplierInvoice({...newSupplierInvoice, description: e.target.value})}
+                                        style={{ width: '100%', boxSizing: 'border-box', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px', outline: 'none' }}
+                                    />
+
+                                    {/* Kategori dropdown */}
+                                    <div style={{ position: 'relative' }}>
+                                        <div
+                                            onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                                            style={{ width: '100%', boxSizing: 'border-box', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px', backgroundColor: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#0f172a' }}
+                                        >
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {newSupplierInvoice.category === 'Materialer' && <><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0ea5e9' }} /> Materialer (Bygma, Stark, etc.)</>}
+                                                {newSupplierInvoice.category === 'Underentreprenør' && <><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#9333ea' }} /> Underentreprenør (Elektriker, VVS, etc.)</>}
+                                                {newSupplierInvoice.category === 'Diverse' && <><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }} /> Diverse (Liftleje, Container, etc.)</>}
+                                                {!newSupplierInvoice.category && 'Vælg kategori...'}
+                                            </span>
+                                            <ChevronDown size={18} style={{ color: '#94a3b8', transform: isCategoryDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                                        </div>
+
+                                        {isCategoryDropdownOpen && (
+                                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '6px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.12)', zIndex: 10, overflow: 'hidden', padding: '6px' }}>
+                                                {['Materialer', 'Underentreprenør', 'Diverse'].map(cat => (
+                                                    <div
+                                                        key={cat}
+                                                        onClick={() => { setNewSupplierInvoice({...newSupplierInvoice, category: cat}); setIsCategoryDropdownOpen(false); }}
+                                                        style={{ padding: '12px 14px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', color: '#334155' }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: cat === 'Materialer' ? '#0ea5e9' : cat === 'Underentreprenør' ? '#9333ea' : '#f59e0b' }} />
+                                                        {cat === 'Materialer' ? 'Materialer (Bygma, Stark, etc.)' : cat === 'Underentreprenør' ? 'Underentreprenør (Elektriker, VVS, etc.)' : 'Diverse (Liftleje, Container, etc.)'}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Beløb */}
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="Beløb ekskl. moms"
+                                            value={newSupplierInvoice.amount}
+                                            onChange={(e) => {
+                                                let val = e.target.value.replace(/[^0-9,]/g, '');
+                                                let parts = val.split(',');
+                                                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                                                let formatted = parts.join(',');
+                                                setNewSupplierInvoice({...newSupplierInvoice, amount: formatted});
+                                            }}
+                                            style={{ width: '100%', boxSizing: 'border-box', padding: '14px', paddingRight: '44px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px', outline: 'none' }}
+                                        />
+                                        <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.9rem', fontWeight: '500' }}>kr.</span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                                        <button type="button" onClick={() => setShowUploadForm(false)} style={{ flex: '0 0 auto', padding: '14px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', cursor: 'pointer', fontWeight: 600 }}>Annullér</button>
+                                        <button type="submit" style={{ flex: 1, padding: '14px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 16px rgba(16,185,129,0.25)' }}>Gem bilag</button>
+                                    </div>
+                                </form>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                 {supplierInvoices.length === 0 ? (
@@ -397,14 +419,14 @@ const BilagManager = ({ lead, profile, onUpdateLead }) => {
                                         toast.error("Intet fysisk bilag vedhæftet.");
                                     }
                                 }}
-                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: (inv.file_path || inv.file_url || inv.file_data) ? 'pointer' : 'default' }}
+                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: (inv.file_path || inv.file_url || inv.file_data) ? 'pointer' : 'default', ...(isMobile ? { padding: '16px', background: '#fff', border: '1px solid #eef2f7', borderRadius: '16px', boxShadow: '0 2px 8px rgba(15,23,42,0.04)' } : {}) }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flex: 1, minWidth: 0 }}>
                                     <div style={{ color: (inv.file_path || inv.file_url || inv.file_data) ? '#10b981' : '#cbd5e1', marginTop: '4px' }}>
-                                        <FileText size={24} />
+                                        <FileText size={isMobile ? 28 : 24} />
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
-                                        <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        <div style={{ fontWeight: '700', color: '#0f172a', fontSize: isMobile ? '1.15rem' : '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             {inv.description || inv.name}
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>

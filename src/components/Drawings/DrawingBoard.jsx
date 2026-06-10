@@ -813,6 +813,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const [templateSaveDraft, setTemplateSaveDraft] = useState(null);
     const [panelTooltip, setPanelTooltip] = useState(null);
     const [showAdvancedTools, setShowAdvancedTools] = useState(false);
+    const [showMobileRightPanel, setShowMobileRightPanel] = useState(false);
     const [templateCategory, setTemplateCategory] = useState('standard');
     const [customTemplates, setCustomTemplates] = useState(() => {
         if (typeof window === 'undefined') return [];
@@ -3494,7 +3495,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             {templateSaveModal}
 
             {/* 1. TOP BAR (Header) - ORIGINAL FLOATING STYLE */}
-            <div style={{ 
+            <div className="drawing-board-header" style={{ 
                 position: 'absolute',
                 top: '20px',
                 left: '50%',
@@ -3521,7 +3522,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
                     >
                         <ChevronLeft size={18} strokeWidth={2.5} />
-                        <span>Tilbage</span>
+                        <span className="drawing-desktop-text">Tilbage</span>
                     </button>
                     
                     <div style={{ width: '1px', height: '24px', backgroundColor: '#e2e8f0' }}></div>
@@ -3569,7 +3570,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         onMouseOut={(e) => { if (!isSaving) { e.currentTarget.style.background = 'white'; } }}
                     >
                         <FileImage size={18} />
-                        Gør Officiel
+                        <span className="drawing-desktop-text">Gør Officiel</span>
                     </button>
 
                     <button 
@@ -3595,13 +3596,28 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         onMouseOut={(e) => { if (!isSaving) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.2)'; } }}
                     >
                         <Save size={18} />
-                        {isSaving ? 'Gemmer...' : 'Gem Skitse'}
+                        <span className="drawing-desktop-text">{isSaving ? 'Gemmer...' : 'Gem Skitse'}</span>
                     </button>
                 </div>
             </div>
 
             {/* 2. RIGHT PANEL (Colors & Undo) - TLDRAW CLONE */}
-            <div style={{
+            {/* MOBILE TOGGLE BUTTON */}
+            <div className="drawing-mobile-toggle" style={{ position: 'absolute', top: 80, right: 16, zIndex: 10001 }}>
+                <button 
+                    onClick={() => setShowMobileRightPanel(!showMobileRightPanel)}
+                    style={{
+                        width: 40, height: 40, borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(16px)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(226, 232, 240, 0.9)',
+                        color: showMobileRightPanel ? '#2563eb' : '#64748b'
+                    }}
+                >
+                    <SlidersHorizontal size={20} />
+                </button>
+            </div>
+
+            <div className={`drawing-right-panel ${showMobileRightPanel ? 'open' : ''}`} style={{
                 position: 'absolute', top: 80, right: 16, zIndex: 10000,
                 backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(16px)',
                 borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
@@ -4215,7 +4231,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             {panelTooltipElement}
 
             {/* 3. BOTTOM TOOLBAR (Drawing Tools) - TLDRAW CLONE */}
-            <div style={{
+            <div className="drawing-bottom-panel" style={{
                 position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 16000,
                 backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(16px)',
                 borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.03)',

@@ -1,20 +1,20 @@
 import React from 'react';
 import { Calculator, Mic, Hammer, ChevronRight } from 'lucide-react';
 
-const CreateLeadSelector = ({ onSelectClassic, onSelectCustom }) => {
+const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, isMobile = false }) => {
     return (
-        <div style={{ padding: '20px' }}>
-            <h2 style={{ textAlign: 'center', marginBottom: '10px', fontSize: '2rem', color: '#0f172a' }}>Opret ny sag</h2>
-            <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '40px', fontSize: '1.1rem' }}>Vælg hvordan du vil oprette kunden og tilbuddet</p>
+        <div className="create-lead-selector" style={{ padding: isMobile ? '64px 16px 24px' : '20px' }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '10px', fontSize: isMobile ? '1.7rem' : '2rem', color: '#0f172a' }}>Opret ny sag</h2>
+            <p style={{ textAlign: 'center', color: '#64748b', marginBottom: isMobile ? '24px' : '40px', fontSize: isMobile ? '1rem' : '1.1rem' }}>Vælg hvordan du vil oprette</p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '24px', maxWidth: '800px', margin: '0 auto' }}>
                 {/* Klassisk Beregner */}
                 <div 
                     onClick={onSelectClassic}
                     style={{
                         backgroundColor: '#fff',
                         borderRadius: '20px',
-                        padding: '32px',
+                        padding: isMobile ? '24px' : '32px',
                         boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
                         border: '2px solid transparent',
                         cursor: 'pointer',
@@ -41,7 +41,7 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom }) => {
                     </div>
                     <div>
                         <h3 style={{ fontSize: '1.4rem', color: '#1e293b', marginBottom: '8px' }}>Brug Beregner</h3>
-                        <p style={{ color: '#64748b', lineHeight: '1.5' }}>Opret et tilbud via de standardiserede skabeloner for gulve, tage, vinduer osv. med foruddefinerede priser.</p>
+                        <p style={{ color: '#64748b', lineHeight: '1.5' }}>{isMobile ? 'Standard-skabeloner med faste priser.' : 'Opret et tilbud via de standardiserede skabeloner for gulve, tage, vinduer osv. med foruddefinerede priser.'}</p>
                     </div>
                     <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#3b82f6', fontWeight: 'bold' }}>
                         Start beregner <ChevronRight size={18} />
@@ -54,7 +54,7 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom }) => {
                     style={{
                         backgroundColor: '#fff',
                         borderRadius: '20px',
-                        padding: '32px',
+                        padding: isMobile ? '24px' : '32px',
                         boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
                         border: '2px solid transparent',
                         cursor: 'pointer',
@@ -81,7 +81,7 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom }) => {
                     </div>
                     <div>
                         <h3 style={{ fontSize: '1.4rem', color: '#1e293b', marginBottom: '8px' }}>Opret tilbud fra bunden</h3>
-                        <p style={{ color: '#64748b', lineHeight: '1.5' }}>Opret en specialopgave fra bunden. Indtal dine mål og noter med stemmen, og sammensæt selv materialelisten.</p>
+                        <p style={{ color: '#64748b', lineHeight: '1.5' }}>{isMobile ? 'Indtal noter med stemmen — AI bygger tilbuddet.' : 'Opret en specialopgave fra bunden. Indtal dine mål og noter med stemmen, og sammensæt selv materialelisten.'}</p>
                     </div>
                     <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontWeight: 'bold' }}>
                         Opret fra bunden <ChevronRight size={18} />

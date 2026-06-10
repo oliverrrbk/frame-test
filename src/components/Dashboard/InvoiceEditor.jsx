@@ -6,7 +6,7 @@ import { supabase } from '../../supabaseClient';
 import { jsPDF } from "jspdf";
 import BilagManager from './BilagManager';
 
-const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onOpenCase, onUpdateLead }) => {
+const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onOpenCase, onUpdateLead, isMobile = false }) => {
     const [invoiceType, setInvoiceType] = useState('full'); // 'full' or 'aconto'
     const [acontoAmountRaw, setAcontoAmountRaw] = useState('');
     const [supplierInvoices, setSupplierInvoices] = useState(lead.raw_data?.supplier_invoices || []);
@@ -157,13 +157,13 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
 
     return (
         <div className="dashboard-workspace invoice-editor-view" style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-in' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '14px' : '0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}>
+                    <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', flexShrink: 0, borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}>
                         <ArrowLeft size={20} color="#475569" />
                     </button>
                     <div>
-                        <h2 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h2 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: isMobile ? '1.2rem' : '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             Faktura-kladde: {lead.customer_name}
                         </h2>
                         <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
@@ -172,9 +172,9 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                     </div>
                 </div>
                 {onOpenCase && (
-                    <button 
+                    <button
                         onClick={() => onOpenCase(lead.id)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: isMobile ? '14px 20px' : '10px 20px', width: isMobile ? '100%' : 'auto', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.transform = 'translateY(0)'; }}
                     >
@@ -183,7 +183,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                 )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: '24px', alignItems: 'start' }}>
                 {/* VENSTRE: FAKTURA BYGGER */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     
@@ -215,7 +215,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                             {isEditingCustomer ? (
                                 <>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -406,8 +406,8 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button 
+                        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '12px' }}>
+                            <button
                                 onClick={() => setShowPreview(true)}
                                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1', padding: '16px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px -1px rgba(0,0,0,0.05)' }}
                                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e2e8f0'; }}
@@ -480,7 +480,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                     <div className="dashboard-modal-panel invoice-preview-panel" style={{ width: '95%', maxWidth: '1200px', height: '95vh', background: '#e2e8f0', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
                         
                         {/* FULL SCREEN HEADER */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', borderBottom: '1px solid #cbd5e1', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', zIndex: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: isMobile ? '16px' : '20px 40px', borderBottom: '1px solid #cbd5e1', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', zIndex: 10 }}>
                             <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <FileText size={24} color="#3b82f6" /> Godkend Faktura-design
                             </h2>
@@ -498,10 +498,10 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                         </div>
                     
                     {/* SCROLLABLE AREA WITH A4 PAPER */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '40px 20px', display: 'flex', justifyContent: 'center' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 8px' : '40px 20px', display: 'flex', justifyContent: 'center' }}>
                         
                         {/* A4 PAPER MOCKUP */}
-                        <div style={{ background: '#fff', width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '60px', borderRadius: '4px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ background: '#fff', width: '100%', maxWidth: '850px', minHeight: isMobile ? 'auto' : '1100px', padding: isMobile ? '24px' : '60px', borderRadius: '4px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
                             
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0f172a', paddingBottom: '32px', marginBottom: '40px' }}>
                                 <div>
@@ -619,7 +619,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                     </div>
                     
                         {/* FOOTER ACTION BAR */}
-                        <div style={{ padding: '20px 40px', background: '#fff', borderTop: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 -4px 6px -1px rgba(0,0,0,0.02)', zIndex: 10 }}>
+                        <div style={{ padding: isMobile ? '16px' : '20px 40px', background: '#fff', borderTop: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 -4px 6px -1px rgba(0,0,0,0.02)', zIndex: 10 }}>
                             <div style={{ color: '#64748b', fontSize: '0.95rem' }}>
                                 Tjek at beløb og moms stemmer overens med aftalen.
                             </div>

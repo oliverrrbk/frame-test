@@ -5,7 +5,7 @@ import { PenTool, CheckCircle, FileText, Download, X, Save, Plus, Loader2, Edit3
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
 
-export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase }) {
+export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, isMobile = false }) {
     const [agreements, setAgreements] = useState(selectedCase?.raw_data?.extra_agreements || []);
     const [showModal, setShowModal] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -260,15 +260,15 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase })
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '900px', margin: '0 auto', width: '100%', animation: 'fadeIn 0.3s ease-out' }}>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '16px' : '0' }}>
                 <div>
-                    <h2 style={{ fontSize: '1.8rem', margin: '0 0 8px 0', color: '#0f172a' }}>Aftalesedler (Ekstraarbejde)</h2>
+                    <h2 style={{ fontSize: isMobile ? '1.6rem' : '1.8rem', margin: '0 0 8px 0', color: '#0f172a' }}>Aftalesedler (Ekstraarbejde)</h2>
                     <p style={{ margin: 0, color: '#64748b' }}>Få kundens underskrift på ekstraarbejde direkte på pladsen.</p>
                 </div>
-                <button 
+                <button
                     onClick={() => setShowModal(true)}
                     className="hover-lift"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: '#8b5cf6', color: 'white', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', border: 'none', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(139, 92, 246, 0.3)' }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: isMobile ? '18px 24px' : '12px 24px', width: isMobile ? '100%' : 'auto', backgroundColor: '#8b5cf6', color: 'white', borderRadius: isMobile ? '16px' : '12px', fontWeight: 'bold', fontSize: isMobile ? '1.05rem' : '1rem', border: 'none', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(139, 92, 246, 0.3)' }}
                 >
                     <Plus size={20} /> Opret Ny Aftale
                 </button>
@@ -286,13 +286,13 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase })
                     </div>
                 ) : (
                     agreements.map((agr) => (
-                        <div key={agr.id} className="log-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <CheckCircle size={24} />
+                        <div key={agr.id} className="log-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: isMobile ? 'wrap' : 'nowrap', ...(isMobile ? { padding: '18px', background: '#fff', border: '1px solid #eef2f7', borderRadius: '18px', boxShadow: '0 2px 8px rgba(15,23,42,0.04)' } : {}) }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '14px' : '20px', minWidth: 0 }}>
+                                <div style={{ width: isMobile ? '52px' : '48px', height: isMobile ? '52px' : '48px', flexShrink: 0, borderRadius: '14px', backgroundColor: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <CheckCircle size={isMobile ? 28 : 24} />
                                 </div>
-                                <div>
-                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', color: '#0f172a' }}>{agr.title}</h4>
+                                <div style={{ minWidth: 0 }}>
+                                    <h4 style={{ margin: '0 0 4px 0', fontSize: isMobile ? '1.2rem' : '1.1rem', color: '#0f172a' }}>{agr.title}</h4>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem', color: '#64748b' }}>
                                         <span>{new Date(agr.date).toLocaleDateString('da-DK')}</span>
                                         <span>•</span>
@@ -308,9 +308,9 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase })
                                 href={agr.pdf_data} 
                                 download={`Aftaleseddel_${agr.title.replace(/\s+/g, '_')}.pdf`}
                                 className="hover-lift"
-                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#f1f5f9', color: '#3b82f6', borderRadius: '10px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9rem' }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: isMobile ? '14px 20px' : '10px 16px', width: isMobile ? '100%' : 'auto', backgroundColor: '#f1f5f9', color: '#3b82f6', borderRadius: isMobile ? '14px' : '10px', textDecoration: 'none', fontWeight: 'bold', fontSize: isMobile ? '1rem' : '0.9rem' }}
                             >
-                                <Download size={16} /> Hent PDF
+                                <Download size={isMobile ? 18 : 16} /> Hent PDF
                             </a>
                         </div>
                     ))

@@ -1122,6 +1122,92 @@ button:focus-visible {
     gap: 24px;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   DRAWING BOARD (MOBILE/IPAD) STYLING
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    /* Hide the text labels like STIL and OUTPUT to save space */
+    .drawing-panel-label, .drawing-desktop-text {
+        display: none !important;
+    }
+
+    /* Show the mobile toggle button for the right panel */
+    .drawing-mobile-toggle {
+        display: block !important;
+    }
+
+    /* Make the right panel significantly smaller, closer to the edge, and hide it unless open */
+    .drawing-right-panel {
+        transform: scale(0.85);
+        transform-origin: top right;
+        right: 8px !important;
+        top: 130px !important; /* Moved down to avoid overlapping the new toggle button */
+        padding: 6px !important;
+        gap: 6px !important;
+        display: none !important; /* Hidden by default on mobile */
+    }
+
+    .drawing-right-panel.open {
+        display: flex !important; /* Show when toggled */
+    }
+
+    /* Make the bottom toolbar horizontally scrollable, slightly smaller icons */
+    .drawing-bottom-panel {
+        bottom: 12px !important;
+        padding: 4px 6px !important;
+        gap: 2px !important;
+        max-width: calc(100vw - 16px) !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        white-space: nowrap !important;
+        -webkit-overflow-scrolling: touch;
+        justify-content: flex-start !important;
+        /* Remove transform center to allow left alignment when scrolling */
+        transform: none !important;
+        left: 8px !important;
+        right: 8px !important;
+        width: calc(100% - 16px) !important;
+    }
+
+    /* Ensure buttons inside don't shrink uncomfortably */
+    .drawing-bottom-panel button {
+        flex: 0 0 auto !important;
+        width: 32px !important;
+        height: 32px !important;
+        padding: 4px !important;
+    }
+
+    /* Make the top header slightly more compact */
+    .drawing-board-header {
+        padding: 8px 12px !important;
+        min-width: 0 !important;
+        max-width: calc(100vw - 16px) !important;
+        width: calc(100% - 16px) !important;
+        box-sizing: border-box;
+        border-radius: 12px !important;
+    }
+
+    /* Shrink the input box to ensure buttons fit */
+    .drawing-board-header input {
+        max-width: 120px !important;
+        font-size: 1rem !important;
+        padding: 6px 8px !important;
+    }
+
+    /* Make top bar buttons more compact */
+    .drawing-board-header button {
+        padding: 8px !important;
+        gap: 0 !important;
+    }
+}
+
+/* Hide the mobile toggle on desktop */
+@media (min-width: 769px) {
+    .drawing-mobile-toggle {
+        display: none !important;
+    }
+}
+
 .materials-header h2 {
     margin: 0 0 4px 0;
 }
@@ -2538,7 +2624,8 @@ button:focus-visible {
     .dashboard-layout.dashboard-tab-leads .dashboard-topbar .page-title-section,
     .dashboard-layout.dashboard-tab-settings .dashboard-topbar .page-title-section,
     .dashboard-layout.dashboard-tab-integrations .dashboard-topbar .page-title-section,
-    .dashboard-layout.dashboard-tab-team .dashboard-topbar .page-title-section {
+    .dashboard-layout.dashboard-tab-team .dashboard-topbar .page-title-section,
+    .dashboard-layout.dashboard-tab-drawings .dashboard-topbar .page-title-section {
         display: none !important;
     }
 
@@ -2683,6 +2770,39 @@ button:focus-visible {
         font-size: 0.78rem !important;
         line-height: 1.35 !important;
         overflow-wrap: anywhere;
+    }
+
+    /* Drawings / Skitser Mobile Styling */
+    .drawings-top-header {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin-bottom: 24px !important;
+    }
+    .drawings-top-header > div:first-child {
+        display: none !important;
+    }
+    .drawings-top-header > button {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 16px !important;
+        font-size: 1.05rem !important;
+        border-radius: 14px !important;
+    }
+    .drawings-card-actions {
+        gap: 8px !important;
+    }
+    .drawings-card-actions button {
+        padding: 12px !important;
+        border-radius: 12px !important;
+    }
+    .drawings-card-actions button span {
+        display: none !important;
+    }
+    .drawings-card-actions button svg {
+        width: 20px !important;
+        height: 20px !important;
     }
 
     .integrations-overview .card-header span {

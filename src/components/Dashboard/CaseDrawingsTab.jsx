@@ -7,7 +7,7 @@ import DrawingBoard from '../Drawings/DrawingBoard';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
 
-export default function CaseDrawingsTab({ selectedCase, profile }) {
+export default function CaseDrawingsTab({ selectedCase, profile, isMobile = false }) {
     const [drawings, setDrawings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
@@ -250,17 +250,17 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
 
     return (
         <div style={{ padding: '24px', backgroundColor: '#fafaf9' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '16px' : '0', marginBottom: '24px' }}>
                 <div>
-                    <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ margin: 0, fontSize: isMobile ? '1.6rem' : '1.4rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         Tegninger & Skitser
                     </h3>
                     <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.95rem' }}>
                         Tegn egne skitser direkte i appen, eller upload officielle arkitekttegninger (PDF/Billeder).
                     </p>
                 </div>
-                
-                <div style={{ display: 'flex', gap: '12px' }}>
+
+                <div style={{ display: 'flex', gap: '12px', flexDirection: isMobile ? 'column' : 'row' }}>
                     {/* Skjult file input */}
                     <input 
                         type="file" 
@@ -274,10 +274,10 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploading}
                         style={{
-                            display: 'flex', alignItems: 'center', gap: '8px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                             background: 'white', color: '#0f172a', border: '1px solid #cbd5e1',
-                            padding: '10px 16px', borderRadius: '8px',
-                            fontWeight: 600, fontSize: '0.95rem', cursor: isUploading ? 'wait' : 'pointer',
+                            padding: isMobile ? '16px' : '10px 16px', borderRadius: isMobile ? '14px' : '8px', width: isMobile ? '100%' : 'auto',
+                            fontWeight: 600, fontSize: isMobile ? '1.05rem' : '0.95rem', cursor: isUploading ? 'wait' : 'pointer',
                             boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s'
                         }}
                         onMouseOver={e => !isUploading && (e.currentTarget.style.backgroundColor = '#f8fafc')}
@@ -290,10 +290,10 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                     <button 
                         onClick={handleNewDrawing}
                         style={{
-                            display: 'flex', alignItems: 'center', gap: '8px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                             background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', color: 'white', border: 'none',
-                            padding: '10px 16px', borderRadius: '8px',
-                            fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer',
+                            padding: isMobile ? '16px' : '10px 16px', borderRadius: isMobile ? '14px' : '8px', width: isMobile ? '100%' : 'auto',
+                            fontWeight: 600, fontSize: isMobile ? '1.05rem' : '0.95rem', cursor: 'pointer',
                             boxShadow: '0 4px 6px rgba(2, 132, 199, 0.2)', transition: 'all 0.2s'
                         }}
                         onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(2, 132, 199, 0.3)'; }}
@@ -327,7 +327,7 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                                 <FileText size={18} style={{ color: '#0ea5e9' }} />
                                 Officielle Tegninger
                             </h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: isMobile ? '12px' : '20px' }}>
                                 {drawings.filter(d => d.type === 'upload').map(d => renderDrawingCard(d))}
                             </div>
                         </div>
@@ -340,7 +340,7 @@ export default function CaseDrawingsTab({ selectedCase, profile }) {
                             Værkstedet (Arbejds-skitser)
                         </h4>
                         {drawings.filter(d => d.type !== 'upload').length > 0 ? (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: isMobile ? '12px' : '20px' }}>
                                 {drawings.filter(d => d.type !== 'upload').map(d => renderDrawingCard(d))}
                             </div>
                         ) : (

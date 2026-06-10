@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
-import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin } from 'lucide-react';
+import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
@@ -52,6 +52,15 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
     const [pendingPromo, setPendingPromo] = useState(null); // { member, role } — afventer admin-bekræftelse
     const [removeTarget, setRemoveTarget] = useState(null); // medarbejder der skal fjernes
     const [actionBusy, setActionBusy] = useState(false);
+
+    // Mobil: invite-formularen vises som modal i stedet for inline
+    const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth <= 768);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
 
     // Kald det sikre backend-endpoint (auth-header + service-role server-side)
     const callManage = async (action, payload) => {
@@ -256,6 +265,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
 
                 setSuccessMsg(`Medarbejder oprettet med lønnummer ${autoLonnummer}! Der er automatisk sendt en velkomstmail med login-oplysninger.`);
                 setInviteData({ name: '', email: '', phone: '', role: 'sales' });
+                if (isMobile) { setIsInviteModalOpen(false); toast.success(`Medarbejder oprettet (lønnr. ${autoLonnummer})`); }
                 fetchTeam(); // Opdater listen
             } else {
                 setErrorMsg(result.error || 'Kunne ikke invitere medarbejder.');
@@ -270,14 +280,33 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
     return (
         <div className="team-management-workspace space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <div className="team-management-grid grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" style={{ position: 'relative', zIndex: 20 }}>
-                {/* Inviter Medarbejder Formular */}
-                <div className="team-invite-column lg:col-span-1" style={{ position: 'relative', zIndex: 30 }}>
-                    <div className="settings-card sticky top-6" style={{ overflow: 'visible' }}>
-                        <div className="card-header">
+                {/* Mobil: knap der åbner invite som modal */}
+                {isMobile && (
+                    <button onClick={() => { setIsInviteModalOpen(true); setSuccessMsg(''); setErrorMsg(''); }}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '18px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #1a1a1a, #0f172a)', color: '#fff', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(15,23,42,0.2)' }}>
+                        <UserPlus size={20} /> Tilføj medarbejder
+                    </button>
+                )}
+
+                {/* Inviter Medarbejder — inline på desktop, fuldskærms-modal (portal) på mobil */}
+                {(() => {
+                    const card = (
+                    <div
+                        className="settings-card sticky top-6"
+                        onClick={isMobile ? (e) => e.stopPropagation() : undefined}
+                        style={isMobile
+                            ? { overflow: 'auto', width: '100%', height: '100dvh', borderRadius: 0, margin: 0, top: 0, background: '#fff' }
+                            : { overflow: 'visible' }}>
+                        <div className="card-header" style={{ position: 'relative' }}>
                             <div className="icon-wrapper">
                                 <UserPlus size={24} />
                             </div>
                             <h3>Tilføj Medarbejder</h3>
+                            {isMobile && (
+                                <button onClick={() => setIsInviteModalOpen(false)} style={{ position: 'absolute', right: 0, top: 0, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}>
+                                    <X size={18} />
+                                </button>
+                            )}
                         </div>
                         <div className="card-body">
                         {successMsg && (
@@ -446,7 +475,19 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                         </form>
                     </div>
                 </div>
-                </div>
+                );
+
+                if (isMobile && !isInviteModalOpen) return null;
+                if (isMobile && isInviteModalOpen) {
+                    return createPortal(
+                        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)' }} onClick={() => setIsInviteModalOpen(false)}>
+                            {card}
+                        </div>,
+                        document.body
+                    );
+                }
+                return card;
+            })()}
 
                 {/* Team Liste */}
                 <div className="team-list-column lg:col-span-2">
@@ -782,7 +823,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             </div>
 
             {/* Underleverandører (eksterne partnere uden login) */}
-            <SubcontractorManager profile={profile} />
+            <SubcontractorManager profile={profile} isMobile={isMobile} />
 
             {/* ---- BEKRÆFT ADMIN-FORFREMMELSE ---- */}
             <AnimatePresence>

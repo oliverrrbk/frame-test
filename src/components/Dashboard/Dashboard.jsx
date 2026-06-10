@@ -464,6 +464,12 @@ const Dashboard = () => {
     const [isMaterialListOpen, setIsMaterialListOpen] = useState(false);
     const [isQuoteEditorOpen, setIsQuoteEditorOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth <= 768);
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
     const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
     const [isTestWizardOpen, setIsTestWizardOpen] = useState(false);
     
@@ -2954,9 +2960,10 @@ const Dashboard = () => {
                     )}
                     {activeTab === 'finance' && (
                         <div className="tab-pane active " style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
-                            <FinanceOverview 
+                            <FinanceOverview
                                 cases={leadsData.filter(l => ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(l.status))}
                                 carpenterProfile={carpenterProfile}
+                                isMobile={isMobile}
                                 onSendToAccounting={syncToAccounting}
                                 targetInvoiceCaseId={targetInvoiceCaseId}
                                 clearTargetInvoiceCase={() => setTargetInvoiceCaseId(null)}
@@ -6153,18 +6160,18 @@ const Dashboard = () => {
 
             {/* Create Lead Modal */}
             {isCreateLeadModalOpen && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => {
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'stretch' : 'center', zIndex: 100000, padding: isMobile ? '0' : '20px' }} onClick={() => {
                     if (createLeadMode === 'classic') {
                         setShowCreateLeadCancelConfirm(true);
                         return;
                     }
-                    setIsCreateLeadModalOpen(false); 
-                    setCreateLeadMode(null); 
+                    setIsCreateLeadModalOpen(false);
+                    setCreateLeadMode(null);
                     if (createLeadMode === 'custom') {
                         toast.success('Din kladde er gemt sikkert.');
                     }
                 }}>
-                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: isMobile ? '0' : '20px', width: '100%', maxWidth: isMobile ? '100%' : '1000px', height: isMobile ? '100dvh' : 'auto', maxHeight: isMobile ? '100dvh' : '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => {
                     if (createLeadMode === 'custom' || createLeadMode === 'classic') {
                         setShowCreateLeadCancelConfirm(true);
@@ -6172,10 +6179,11 @@ const Dashboard = () => {
                     }
                     setIsCreateLeadModalOpen(false); 
                     setCreateLeadMode(null); 
-                }} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f3f1ed', border: 'none', fontSize: '1.2rem', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>×</button>
+                }} style={{ position: isMobile ? 'fixed' : 'absolute', top: isMobile ? 'calc(env(safe-area-inset-top) + 12px)' : '20px', right: isMobile ? '16px' : '20px', background: '#f3f1ed', border: 'none', fontSize: isMobile ? '1.4rem' : '1.2rem', width: isMobile ? '42px' : '36px', height: isMobile ? '42px' : '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100001, boxShadow: isMobile ? '0 2px 8px rgba(0,0,0,0.15)' : 'none' }}>×</button>
                         <div style={{ padding: '0' }}>
                             {createLeadMode === null && (
-                                <CreateLeadSelector 
+                                <CreateLeadSelector
+                                    isMobile={isMobile}
                                     onSelectClassic={() => setCreateLeadMode('classic')}
                                     onSelectCustom={() => setCreateLeadMode('custom')}
                                 />
@@ -6202,8 +6210,9 @@ const Dashboard = () => {
                             )}
 
                             {createLeadMode === 'custom' && (
-                                <CustomProjectCreator 
+                                <CustomProjectCreator
                                     carpenter={carpenterProfile}
+                                    isMobile={isMobile}
                                     onCancel={() => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);

@@ -378,7 +378,7 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
                                 )}
     
                                 {/* Actions Bar - Gorgeous 2026 Style */}
-                                <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }} onClick={e => e.stopPropagation()}>
+                                <div className="drawings-card-actions" style={{ display: 'flex', gap: '10px', marginTop: '16px' }} onClick={e => e.stopPropagation()}>
                                     <button 
                                         onClick={(e) => handleAssignLeadClick(e, drawing.id)}
                                         style={{ 
@@ -403,7 +403,7 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
                                         }}
                                     >
                                         <FolderOutput size={16} />
-                                        Tilknyt Sag
+                                        <span>Tilknyt Sag</span>
                                     </button>
                                     
                                     <button 
@@ -430,7 +430,7 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
                                         }}
                                     >
                                         <FileDown size={16} />
-                                        Hent PDF
+                                        <span>Hent PDF</span>
                                     </button>
                                 </div>
 
@@ -572,7 +572,7 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
 
     return (
         <div style={{ padding: '32px 24px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', padding: '24px', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+            <div className="drawings-top-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', padding: '24px', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
                 <div>
                     <h2 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '12px', letterSpacing: '-0.02em' }}>
                         <div style={{ padding: '10px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderRadius: '12px', display: 'flex', color: '#2563eb' }}>

@@ -370,6 +370,14 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             numericAmount = numericAmount * 1.10; // Fladt tag / let hældning + udhæng = ca. +10% mere areal end grundplan
             bArr.push(`Areal: Omregnet grundplan til anslået faktisk tagareal (inkl. udhæng): ca. ${numericAmount.toFixed(1)} m2`);
         }
+    } else if (cat === 'facades') {
+        let heightFactor = 2.5; // Standard 1-plan facadehøjde
+        if (d.floors === '1½-plan / 2-plan / Mere') {
+            heightFactor = 4.5; // Flere etager + gavle giver et højere gennemsnit
+        }
+        let oldAmount = numericAmount;
+        numericAmount = numericAmount * heightFactor;
+        bArr.push(`Areal-omregning: ${oldAmount} løbende meter (anslået højde ${heightFactor}m) => ca. ${numericAmount.toFixed(1)} m2 faktisk areal`);
     }
     // Heuristik: omkreds af typisk parcelhus-grundplan (1.5:1 aspekt) ≈ 4.08 * √areal.
     // Halvdelen er gavle, halvdelen er langside (= tagrender). Til stern bruges hele omkredsen.
@@ -522,7 +530,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             laborHours += numericAmount * (formula.hoursPerUnit || 3.5);
             bArr.push(`Basis montering: ${numericAmount} facadevinduer vurderet til ca. ${laborHours.toFixed(1)} arbejdstimer`);
         }
-    } else {
+    } else if (!(cat === 'roof' && (d.roofTaskType === 'Loft-opgaver (Efterisolering & Gangbro)' || d.roofTaskType === 'Renovering (Maling, rens, algebehandling)')) && !(cat === 'facades' && d.facadeTaskType === 'Kun hulmursisolering (I eksisterende murstensvæg uden facadeændring)')) {
         // Brug materiale-specifik timer-sats hvis defineret (fx forskellig tid til paptag vs tegl, eller gips vs lydgips)
         let hpu = formula.hoursPerUnit;
         if (formula.hoursPerUnitByMaterial && formula.hoursPerUnitByMaterial[d.material]) {
@@ -743,7 +751,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
                 materialCost += ((roofA * roofCost) + (facadeA * facadeCost)) * dbSettings.material_markup;
                 bArr.push(`Hovedmateriale: Blanding af tag/facade. Tag: ${roofA} á ${roofCost} kr. Facade: ${facadeA} á ${facadeCost} kr. Samlet inkl. ${(dbSettings.material_markup * 100 - 100).toFixed(0)}% avance: ${(((roofA * roofCost) + (facadeA * facadeCost)) * dbSettings.material_markup).toLocaleString('da-DK', {maximumFractionDigits: 0})} kr.`);
-            } else {
+            } else if (!(cat === 'roof' && (d.roofTaskType === 'Loft-opgaver (Efterisolering & Gangbro)' || d.roofTaskType === 'Renovering (Maling, rens, algebehandling)')) && !(cat === 'facades' && d.facadeTaskType === 'Kun hulmursisolering (I eksisterende murstensvæg uden facadeændring)')) {
                 let matPriceDb = indexCat[d.material] || 500;
                 materialCost += (numericAmount * matPriceDb) * dbSettings.material_markup;
                 const matName = d.material || 'Standard materiale';
@@ -770,8 +778,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         let needsDisposalFee = false;
 
         if (cat === 'roof') {
-            needsDisposalLabor = true;
-            needsDisposalFee = true;
+            if (d.roofTaskType !== 'Loft-opgaver (Efterisolering & Gangbro)' && d.roofTaskType !== 'Renovering (Maling, rens, algebehandling)') {
+                needsDisposalLabor = true;
+                needsDisposalFee = true;
+            }
         } else if (d.disposal && d.disposal.startsWith('Ja')) {
             // SOP: Undgå dobbeltbetaling for nedrivning (container/timer), hvis kategorien selv håndterer den specifikke nedrivning komplet.
             let skipGenericDisposal = false;
@@ -851,9 +861,9 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (!userSuppliesMaterials) {
                 let matPriceDb = indexCat[d.material] || 400;
                 let baseFloorCost = (numericAmount * matPriceDb) * dbSettings.material_markup;
-                if (d.floorPattern === 'Ja, i mønster (fx Sildeben / Chevron)') {
-                    materialCost += baseFloorCost * 0.15; // 15% spild til sildeben
-                    bArr.push(`Tillæg: 15% materialespild (afskær) medregnet til specialmønster (Sildeben)`);
+                if (d.floorPattern && d.floorPattern !== 'Standard (Lige brædder)') {
+                    materialCost += baseFloorCost * 0.15; // 15% spild til mønster
+                    bArr.push(`Tillæg: 15% materialespild (afskær) medregnet til specialmønster (${d.floorPattern})`);
                 } else {
                     materialCost += baseFloorCost * 0.07; // 7% spild til standard
                     bArr.push(`Tillæg: 7% materialespild (afskær) medregnet til gulvbrædderne`);
@@ -894,7 +904,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             // Tilføj kun almindelig foam, hvis der slet ikke er gulvvarme. Både sporplader og støbt gulvvarme kræver eget/special underlag!
             const isWoodFoundation = d.floorFoundation === 'Strøer / Trækonstruktion' || d.floorFoundation === 'Ved ikke / Andet';
-            if (!(d.underfloorHeating && d.underfloorHeating.startsWith('Ja'))) {
+            if (d.underfloorHeating !== 'Ja') {
                 // Massivt træ lagt direkte på strøer svømmer ikke, og bruger derfor ikke et fuldt lag foam/pap, kun evt. strimler.
                 if (!(d.material === 'Massivt træ' && isWoodFoundation)) {
                     laborHours += numericAmount * (formula.underlayHours || 0.1);
@@ -905,11 +915,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             if (isWoodFoundation) {
                 const foundationText = d.floorFoundation === 'Ved ikke / Andet' ? 'Sikkerhedstillæg (Uvist underlag): ' : 'Tillæg: ';
-                // Undgå dobbeltkonfekt: Hvis de også får sporplader (gulvvarme), fungerer sporpladen som det bærende undergulv!
-                if (d.underfloorHeating && d.underfloorHeating.includes('sporplader')) {
+                // Undgå dobbeltkonfekt: Hvis de også får gulvvarme (som beregnes med sporplader), fungerer sporpladen som det bærende undergulv!
+                if (d.underfloorHeating === 'Ja') {
                     laborHours += numericAmount * 0.2; // Kun lidt ekstra tid til tilpasning af selve strøerne
                     bArr.push(`${foundationText}Tilpasning af strøer (bærende materialepris dækkes af sporpladerne)`);
-                } else if (d.material === 'Massivt træ' && d.floorPattern !== 'Ja, i mønster (fx Sildeben / Chevron)') {
+                } else if (d.material === 'Massivt træ' && (!d.floorPattern || d.floorPattern === 'Standard (Lige brædder)')) {
                     laborHours += numericAmount * 0.2; // Lidt tid til strø-tilpasning før plankerne lægges
                     bArr.push(`${foundationText}Montering af massive træplanker direkte på strøer (kræver ikke bærende spånplade-undergulv)`);
                 } else {
@@ -928,20 +938,17 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Fodlister (pr. m2 gulvareal proxy)'] || 50) * dbSettings.material_markup;
             bArr.push(`Standard: Levering og montering af nye fodlister langs alle vægge for komplet finish`);
             
-            if (d.floorPattern === 'Ja, i mønster (fx Sildeben / Chevron)') {
-                laborHours += initialInstallHours * 1.0; // Sildeben tager oftest dobbelt så lang tid pga. præcision, limning og mange skæringer
+            // Specialmønstre (Sildeben, Chevron etc.) koster næsten altid dobbelt tid og speciallim til undergulv
+            if (d.floorPattern && d.floorPattern !== 'Standard (Lige brædder)') {
+                laborHours += initialInstallHours * 1.0; // Mønster tager oftest dobbelt så lang tid pga. præcision, limning og mange skæringer
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Limning (Fuldlimning af mønstergulv)'] || 60) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Forøget tidsforbrug (+100%) samt dyr speciallim til fuldlimning af mønstergulv`);
+                bArr.push(`Tillæg: Forøget tidsforbrug (+100%) samt dyr speciallim til fuldlimning af mønstergulv (${d.floorPattern})`);
             }
 
-            if (d.underfloorHeating && d.underfloorHeating.includes('sporplader')) {
+            if (d.underfloorHeating === 'Ja') {
                 laborHours += initialInstallHours * 0.8;
                 if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Gulvvarme (Sporplader)'] || 450)) * dbSettings.material_markup; 
-                bArr.push(`Tillæg: Opbygning af nyt gulvvarme (sporplader/varmefordelingsplader)`);
-            } else if (d.underfloorHeating && d.underfloorHeating.includes('allerede støbt')) {
-                laborHours += initialInstallHours * 0.3;
-                if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Gulvvarme (Specialunderlag)'] || 80)) * dbSettings.material_markup; 
-                bArr.push(`Tillæg: Montering over eksisterende gulvvarme kræver forøget arbejdstid og specialunderlag`);
+                bArr.push(`Tillæg: Etablering eller hensyntagen til gulvvarme (Prissat ud fra fuld opbygning med sporplader/varmefordelingsplader)`);
             }
 
             // Faste forhindringer (køkkenø, søjler) tilføjelser
@@ -1012,6 +1019,28 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'terrace') {
+            if (d.disposal && d.disposal.startsWith('Ja')) {
+                let dispHours = numericAmount * (formula.disposalHours || 0.15);
+                laborHours += dispHours;
+                bArr.push(`Standard tillæg: Nedbrydning og demontering af eksisterende terrasse (+${dispHours.toFixed(1)} arbejdstimer)`);
+                
+                if (d.disposal === 'Ja, tømreren skal afmontere og bortskaffe den') {
+                    let threshold = formula.containerThreshold || 30;
+                    if (threshold > 0) {
+                        let containerCount = Math.max(1, Math.ceil(numericAmount / threshold));
+                        let containerPrice = containerCount * (dbSettings.containerDisposalFee || 2500);
+                        materialCost += containerPrice * (dbSettings.equipment_markup || 1.05);
+                        externalLeaseCost += containerPrice;
+                        bArr.push(`Bortskaffelse: Leje af ${containerCount} affaldscontainer(e) inkl. deponi til gammelt træ`);
+                    } else {
+                        let trailerPrice = (dbSettings.trailerDisposalFee || 800);
+                        materialCost += trailerPrice * (dbSettings.equipment_markup || 1.05);
+                        externalLeaseCost += trailerPrice;
+                        bArr.push(`Bortskaffelse: Kørsel til genbrugsstation (Trailer / Miljøgebyr)`);
+                    }
+                }
+            }
+
             if (!userSuppliesMaterials) {
                 // SOP #2: Spild (afskær). Træterrasser kræver altid ca. 10% ekstra materiale til afskær, uanset kompleksitet.
                 let baseMatPrice = indexCat[d.material] || 400;
@@ -1131,6 +1160,107 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
         
         if (cat === 'roof') {
+            if (d.roofTaskType === 'Loft-opgaver (Efterisolering & Gangbro)') {
+                // Detaljeret Loft-opgaver logik (Etape 1.5)
+                const isInsulation = d.atticSubTask && (d.atticSubTask.includes('Både efterisolering') || d.atticSubTask.includes('Kun efterisolering'));
+                const isWalkway = d.atticSubTask && (d.atticSubTask.includes('Både efterisolering') || d.atticSubTask.includes('Kun etablering af gangbro'));
+
+                // VIGTIGT: For loftopgaver bruger vi roofGrundplanM2 (rent bebygget areal uden taghældning/udhæng)
+                const floorArea = (typeof roofGrundplanM2 !== 'undefined' ? roofGrundplanM2 : numericAmount);
+
+                if (isInsulation && d.insulationAmount && !d.insulationAmount.includes('Ingen')) {
+                    let insulHours = formula.insulationHours || 0.2;
+                    let insulPrice = indexCat['Isolering (50-100mm)'] || 85;
+                    
+                    if (d.insulationAmount.includes('200')) {
+                        insulHours = 0.3;
+                        insulPrice = 170;
+                    } else if (d.insulationAmount.includes('300')) {
+                        insulHours = 0.4;
+                        insulPrice = 250;
+                    } else if (d.insulationAmount.includes('Ved ikke')) {
+                        insulHours = 0.3;
+                        insulPrice = 170; // Fallback til 200mm hvis tømreren skal vurdere det
+                    }
+
+                    laborHours += floorArea * insulHours;
+                    
+                    if (!userSuppliesMaterials) {
+                        materialCost += (floorArea * insulPrice) * dbSettings.material_markup;
+                    }
+                    bArr.push(`Efterisolering: Udlægning af ${d.insulationAmount} ekstra isolering på loftet (anvendt på grundplan: ${floorArea.toFixed(1)} m2)`);
+                }
+
+                if (isInsulation && d.ventilationPlates && d.ventilationPlates.includes('Ja')) {
+                    const perimeterMeters = Math.round(4.08 * Math.sqrt(Math.max(1, floorArea)));
+                    laborHours += perimeterMeters * (formula.ventilationPlatesHours || 0.4);
+                    if (!userSuppliesMaterials) {
+                        materialCost += perimeterMeters * (indexCat['Vindplader (pr m)'] || 65) * dbSettings.material_markup;
+                    }
+                    bArr.push(`Vindplader: Etablering af vindplader ved tagfoden for korrekt ventilation (${perimeterMeters} løbende meter)`);
+                }
+
+                if (isWalkway) {
+                    if (d.removeOldWalkway && d.removeOldWalkway.includes('Ja')) {
+                        laborHours += floorArea * (formula.disposalWalkwayHours || 0.15); // Gæt på timer pr m2 grundplan for at fjerne gangbro
+                        // Tilføjer et lille bortskaffelsesgebyr
+                        materialCost += 1500; 
+                        bArr.push(`Nedbrydning: Fjernelse og bortskaffelse af eksisterende gangbro/gulv inkluderet`);
+                    }
+
+                    const walkwayM2 = parseFloat(d.walkwayM2) || 0;
+                    if (walkwayM2 > 0) {
+                        laborHours += walkwayM2 * (formula.battenHours || 0.4) * 2; // Arbejdstid til opklodsning og gangbrædder
+                        if (!userSuppliesMaterials) {
+                            let walkwayPrice = indexCat['Forskalling'] ? (indexCat['Forskalling'] * 3) : 150; // Skønnet m2-pris for brædder/spånplader til gangbro
+                            materialCost += (walkwayM2 * walkwayPrice) * dbSettings.material_markup;
+                        }
+                        bArr.push(`Gangbro: Opbygning/hævning af ${walkwayM2} m2 ny gangbro på loftet`);
+                    }
+                }
+
+                if (d.newAtticHatch === 'Ja') {
+                    laborHours += 4.0; // Ca 4 timer til at skifte lem og tilpasse hul
+                    if (!userSuppliesMaterials) {
+                        materialCost += (indexCat['Isoleret loftlem (stk)'] || 3500) * dbSettings.material_markup;
+                    }
+                    bArr.push(`Loftlem: Levering og montering af ny, isoleret loftlem inkl. foldestige`);
+                }
+            } else if (d.roofTaskType === 'Renovering (Maling, rens, algebehandling)') {
+                // Special-spor for Tagrens og Maling (Fastpris M² model)
+                const roofArea = numericAmount; // Det angivne tagareal
+                
+                // Basispris for rens og maling (ca. 200 kr pr m2 totalt)
+                // Vi fordeler det som 0.15 timer (90 kr ved 600kr/t) og 110 kr materialer
+                laborHours += roofArea * 0.15;
+                if (!userSuppliesMaterials) {
+                    materialCost += (roofArea * 110) * dbSettings.material_markup;
+                }
+                bArr.push(`Tagrenovering: Professionel komplet rens, algebehandling og 2-lags maling af ${roofArea} m2 tag.`);
+                
+                // Asbest-tillæg
+                if (d.oldRoofType && d.oldRoofType.includes('asbest')) {
+                    if (!userSuppliesMaterials) {
+                        const asbestRensFee = roofArea * 150;
+                        materialCost += asbestRensFee * dbSettings.material_markup;
+                        externalLeaseCost += asbestRensFee;
+                    }
+                    bArr.push(`Miljøtillæg: Særligt udstyr til vandopsamling og spildevandsfiltrering påkrævet pga. asbestholdigt tag.`);
+                }
+                
+                // Lift / Stillads for huse over 1 etage
+                if (d.floors === '1½-plan / 2-plan / Mere') {
+                    if (!userSuppliesMaterials) {
+                        const liftPrice = 3500;
+                        materialCost += liftPrice * (dbSettings.equipment_markup || 1.05);
+                        externalLeaseCost += liftPrice;
+                    }
+                    bArr.push(`Stillads/Lift: Leje af lift/rullestillads til fleretagers bygning (modsat facadestillads).`);
+                }
+                
+                bArr.push(`OBS: Tagrens og maling udføres oftest af specialiserede underleverandører. Prisen er et overslag for en komplet professionel behandling.`);
+            } else {
+                // Almindelig Tag-udskiftning logik
             if (!userSuppliesMaterials) {
                 // SOP #2: Spild (afskær) og Montagematerialer (skruer, rygning)
                 let baseMatPrice = indexCat[d.material] || 200;
@@ -1331,6 +1461,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     bArr.push(`Tillæg: Nyetablering af ${skyNewAmount} ovenlysvindue(r) inkl. tømrer-spærudveksling (${newSkyHours} timer + ${skylightPrice} kr/stk)`);
                 }
             }
+            } // Afslutning på "Nyt tag" logikken
         }
 
         if (cat === 'ceilings') {
@@ -1339,9 +1470,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Forskalling'] || 50) * dbSettings.material_markup;
             bArr.push(`Standard: Forskalling (træskelet) til underlag for det nye loft`);
 
-            // Intelligent Dampspærre: Hvis det er koldt tagrum eller "ved ikke", medregner vi dampspærre
+            // Intelligent Dampspærre og Isolering: Hvis det er koldt tagrum ("Ikke beboeligt") eller "ved ikke", medregner vi dampspærre og isolering
             const needsVaporBarrier = d.vaporAndInsulation && (
                 d.vaporAndInsulation.includes('Koldt tagrum') || 
+                d.vaporAndInsulation.includes('Ikke beboeligt') || 
                 d.vaporAndInsulation.includes('Ved ikke') || 
                 d.vaporAndInsulation.includes('Uvist')
             );
@@ -1350,10 +1482,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Dampspærre inkl tape'] || 35) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Montering af plast-dampspærre mod koldt tagrum / uvist overlag (Sikkerhed mod fugtskader)`);
 
-                if (d.vaporAndInsulation.includes('Isolering')) {
+                // Nyt logik-krav: Både "Ikke beboeligt" og "Ved ikke" udløser automatisk isolering for at beskytte tømreren
+                if (d.vaporAndInsulation.includes('Isolering') || d.vaporAndInsulation.includes('Ikke beboeligt') || d.vaporAndInsulation.includes('Ved ikke') || d.vaporAndInsulation.includes('Uvist')) {
                     laborHours += numericAmount * (formula.insulationHours || 0.2);
                     if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Isolering (50-100mm)'] || 85) * dbSettings.material_markup;
-                    bArr.push(`Tillæg: Montering af ekstra isolering`);
+                    bArr.push(`Tillæg: Montering af ekstra isolering mod koldt loftrum`);
                 }
             }
 
@@ -1403,37 +1536,48 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'facades') {
-            // SOP: Obligatorisk underkonstruktion for træfacader
-            laborHours += numericAmount * (formula.windBarrierHours || 0.4);
-            if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Vindspærre og Klemlister'] || 150) * dbSettings.material_markup;
-            bArr.push(`Standard: Montering af ny underkonstruktion (vindspærre og klemlister/afsætning)`);
-
-            // SOP: Montering uden på eksisterende murværk kræver lidt ekstra tid til forboring/plugs
-            if (d.oldFacadeMaterial && d.oldFacadeMaterial.includes('Mursten')) {
-                laborHours += numericAmount * 0.15;
-                bArr.push(`Tillæg: Forøget tidsforbrug til forboring og fastgørelse af underkonstruktion i eksisterende murværk/puds`);
-            }
-
-            if (d.mountingStyle && d.mountingStyle.includes('Lodret')) {
-                laborHours += initialInstallHours * 0.4; // 40% ekstra af basis-montage tid
+            if (d.facadeTaskType === 'Kun hulmursisolering (I eksisterende murstensvæg uden facadeændring)') {
+                // SOP: Fastpris på hulmursisolering
+                const hulmurPrice = 110; // ca. 165 kr per m2 inkl standard avance
                 if (!userSuppliesMaterials) {
-                    materialCost += numericAmount * (indexCat['Krydsforskalling (tillæg til lodret)'] || 40) * dbSettings.material_markup;
+                    materialCost += numericAmount * hulmurPrice * dbSettings.material_markup;
                 }
-                bArr.push(`Tillæg: Lodret montering (listebeklædning/1-på-2) kræver krydsforskalling for ventilation samt øget præcision og mere tidsforbrug (+40% monteringstid)`);
-            }
+                bArr.push(`Hulmursisolering: Professionel indblæsning (EPS/Papiruld) i ${numericAmount.toFixed(1)} m2 murstensvæg`);
+                
+                if (d.floors === '1½-plan / 2-plan / Mere') {
+                    if (!userSuppliesMaterials) {
+                        const liftFee = 3500;
+                        externalLeaseCost += liftFee;
+                        materialCost += liftFee; // INGEN avance på leje
+                    }
+                    bArr.push(`Tillæg: Leje af bomlift pga. arbejdshøjde over stueplan (Ingen avance)`);
+                }
+            } else {
+                // SOP: Obligatorisk underkonstruktion for træfacader
+                laborHours += numericAmount * (formula.windBarrierHours || 0.4);
+                if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Vindspærre og Klemlister'] || 150) * dbSettings.material_markup;
+                bArr.push(`Standard: Montering af ny underkonstruktion (vindspærre og klemlister/afsætning)`);
 
-            if (d.insulation && d.insulation !== 'Nej tak (Behold nuværende isolering)') {
-                let thickness = '';
-                if (d.insulation.includes('150 mm')) thickness = '150mm';
-                else if (d.insulation.includes('100 mm')) thickness = '100mm';
-                else if (d.insulation.includes('50 mm')) thickness = '50mm';
+                // SOP: Montering uden på eksisterende murværk kræver lidt ekstra tid til forboring/plugs
+                if (d.oldFacadeMaterial && d.oldFacadeMaterial.includes('Mursten')) {
+                    laborHours += numericAmount * 0.15;
+                    bArr.push(`Tillæg: Forøget tidsforbrug til forboring og fastgørelse af underkonstruktion i eksisterende murværk/puds`);
+                }
 
-                if (thickness) {
-                    let key = `Efterisolering ${thickness}`;
-                    let isoPrice = indexCat[key] || (thickness === '50mm' ? 100 : thickness === '100mm' ? 150 : 220);
-                    let thicknessLabel = thickness === '50mm' ? '50 mm' : thickness === '100mm' ? '100 mm' : '150 mm';
+                if (d.mountingStyle && d.mountingStyle.includes('Lodret')) {
+                    laborHours += initialInstallHours * 0.4; // 40% ekstra af basis-montage tid
+                    if (!userSuppliesMaterials) {
+                        materialCost += numericAmount * (indexCat['Krydsforskalling (tillæg til lodret)'] || 40) * dbSettings.material_markup;
+                    }
+                    bArr.push(`Tillæg: Lodret montering (listebeklædning/1-på-2) kræver krydsforskalling for ventilation samt øget præcision og mere tidsforbrug (+40% monteringstid)`);
+                }
+
+                if (d.insulation && d.insulation.includes('Ja')) {
+                    // Vi regner standard 100mm isolering når kunden svarer "Ja"
+                    let thicknessLabel = '100 mm';
+                    let isoPrice = indexCat[`Efterisolering ${thicknessLabel}`] || 150;
+                    let isoHoursPerSqM = 0.3;
                     
-                    let isoHoursPerSqM = thickness === '50mm' ? 0.2 : thickness === '100mm' ? 0.3 : 0.4;
                     if (formula.insulationHoursByThickness && formula.insulationHoursByThickness[thicknessLabel]) {
                         isoHoursPerSqM = formula.insulationHoursByThickness[thicknessLabel];
                     }
@@ -1442,28 +1586,28 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     if (!userSuppliesMaterials) {
                         materialCost += numericAmount * isoPrice * dbSettings.material_markup;
                     }
-                    bArr.push(`Tillæg: Etablering af ${thicknessLabel} efterisolering inkl. isoleringsholdere, lægter og tætning (+${(numericAmount * isoHoursPerSqM).toFixed(1)} timer)`);
+                    bArr.push(`Tillæg: Etablering af 100 mm efterisolering inkl. isoleringsholdere, lægter og tætning (+${(numericAmount * isoHoursPerSqM).toFixed(1)} timer)`);
                 }
-            }
 
-            if (d.openings && parseInt(d.openings) > 0) {
-                let count = parseInt(d.openings);
-                laborHours += count * (formula.openingHours || 1.5);
-                if (!userSuppliesMaterials) materialCost += count * (indexCat['Inddækning/Lister (pr åbning)'] || 500) * dbSettings.material_markup;
-                bArr.push(`Tillæg: Udskæring og inddækning/lister omkring ${count} vinduer/døre`);
-            }
-            
-            if (d.floors === '1½-plan / 2-plan / Mere') {
-                if (!userSuppliesMaterials) {
-                    let facadeScaffold = indexCat['Tillæg: Facadestilladsleje (pr m2)'] || 150; // Omregnet til per m2 for at kunne skalere
-                    let scaffoldCost = facadeScaffold * numericAmount;
-                    if (scaffoldCost < 8000) scaffoldCost = 8000; // Minimumspris
-                    const scaffoldTotal = scaffoldCost * (dbSettings.equipment_markup || 1.05);
-                    materialCost += scaffoldTotal; // equipment markup
-                    externalLeaseCost += scaffoldCost;
+                if (d.openings && parseInt(d.openings) > 0) {
+                    let count = parseInt(d.openings);
+                    laborHours += count * (formula.openingHours || 1.5);
+                    if (!userSuppliesMaterials) materialCost += count * (indexCat['Inddækning/Lister (pr åbning)'] || 500) * dbSettings.material_markup;
+                    bArr.push(`Tillæg: Udskæring og inddækning/lister omkring ${count} vinduer/døre`);
                 }
-                laborHours += initialInstallHours * 0.25;
-                bArr.push(`Tillæg: Facadestilladsleje skaleret efter areal (Inkl. avance) samt forsinket arbejdsgang pga. husets højde (flere etager)`);
+                
+                if (d.floors === '1½-plan / 2-plan / Mere') {
+                    if (!userSuppliesMaterials) {
+                        let facadeScaffold = indexCat['Tillæg: Facadestilladsleje (pr m2)'] || 150; // Omregnet til per m2 for at kunne skalere
+                        let scaffoldCost = facadeScaffold * numericAmount;
+                        if (scaffoldCost < 8000) scaffoldCost = 8000; // Minimumspris
+                        const scaffoldTotal = scaffoldCost * (dbSettings.equipment_markup || 1.05);
+                        materialCost += scaffoldTotal; // equipment markup
+                        externalLeaseCost += scaffoldCost;
+                    }
+                    laborHours += initialInstallHours * 0.25;
+                    bArr.push(`Tillæg: Facadestilladsleje skaleret efter areal (Inkl. avance) samt forsinket arbejdsgang pga. husets højde (flere etager)`);
+                }
             }
         }
         

@@ -363,7 +363,7 @@ function TradeSelect({ value, onChange, options }) {
 // ---------------------------------------------------------------------------
 // MANAGER — fast administrationssektion (under Team)
 // ---------------------------------------------------------------------------
-export function SubcontractorManager({ profile }) {
+export function SubcontractorManager({ profile, isMobile = false }) {
     const companyId = profile.company_id || profile.id;
     const [list, setList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -399,16 +399,16 @@ export function SubcontractorManager({ profile }) {
 
     return (
         <div className="settings-card" style={{ marginTop: '32px' }}>
-            <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div className="icon-wrapper" style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
+            <div className="card-header" style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', gap: isMobile ? '14px' : '0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                    <div className="icon-wrapper" style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)', flexShrink: 0 }}>
                         <Building2 size={24} />
                     </div>
-                    <h3>Underleverandører ({list.length})</h3>
+                    <h3 style={{ whiteSpace: 'nowrap' }}>Underleverandører ({list.length})</h3>
                 </div>
                 <button
                     onClick={() => { setEditing(null); setModalOpen(true); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 6px 14px rgba(124, 58, 237, 0.22)', transition: 'transform 0.1s' }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: isMobile ? '16px' : '10px 16px', width: isMobile ? '100%' : 'auto', borderRadius: isMobile ? '14px' : '12px', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: 'white', fontWeight: 700, fontSize: isMobile ? '1rem' : '0.88rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 6px 14px rgba(124, 58, 237, 0.22)', transition: 'transform 0.1s' }}
                     onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
                     onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}>
                     <Plus size={18} /> Tilføj underleverandør
@@ -417,7 +417,7 @@ export function SubcontractorManager({ profile }) {
 
             <div className="card-body">
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 20px' }}>
-                    Eksterne partnere (elektriker, VVS, m.m.) uden login. Gemte underleverandører kan tilføjes direkte til en sag under "Holdet på sagen".
+                    {isMobile ? 'Eksterne partnere uden login.' : 'Eksterne partnere (elektriker, VVS, m.m.) uden login. Gemte underleverandører kan tilføjes direkte til en sag under "Holdet på sagen".'}
                 </p>
 
                 {isLoading ? (
