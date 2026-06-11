@@ -21,6 +21,14 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
     // Smart Notification State
     const [showDailyReminder, setShowDailyReminder] = useState(false);
 
+    // Kun til mobil-styling (ændrer ingen logik)
+    const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth <= 768);
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+
     // Saml alle tidsregistreringer (både sager og internt)
     const allEntries = useMemo(() => {
         let entries = [];
@@ -139,56 +147,57 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
     return (
         <div style={{ marginBottom: '24px' }}>
             {/* Visuel Advarsel for Manglende Timer (Seneste 5 hverdage) */}
-            <div className="glass-panel" style={{ padding: '20px', borderRadius: '16px', background: hasMissingPastDays ? 'linear-gradient(to right, #fff1f2, #ffffff)' : '#ffffff', border: hasMissingPastDays ? '1px solid #fecdd3' : '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="glass-panel" style={{ padding: isMobile ? '16px' : '20px', borderRadius: isMobile ? '20px' : '16px', background: hasMissingPastDays ? 'linear-gradient(to right, #fff1f2, #ffffff)' : '#ffffff', border: hasMissingPastDays ? '1px solid #fecdd3' : '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: isMobile ? '14px' : '16px' }}>
+                <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                         {hasMissingPastDays ? (
-                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fee2e2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '40px', height: '40px', flexShrink: 0, borderRadius: '12px', background: '#fee2e2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <AlertCircle size={24} />
                             </div>
                         ) : (
-                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '40px', height: '40px', flexShrink: 0, borderRadius: '12px', background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <CheckCircle2 size={24} />
                             </div>
                         )}
-                        <div>
-                            <h3 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: hasMissingPastDays ? '#9f1239' : '#065f46', fontWeight: 'bold' }}>
-                                {hasMissingPastDays ? 'Hov! Du mangler at registrere timer' : 'Timeregistrering i top!'}
+                        <div style={{ minWidth: 0 }}>
+                            <h3 style={{ margin: '0 0 4px', fontSize: isMobile ? '1.02rem' : '1.15rem', lineHeight: 1.25, color: hasMissingPastDays ? '#9f1239' : '#065f46', fontWeight: 'bold' }}>
+                                {hasMissingPastDays ? (isMobile ? 'Du mangler timer' : 'Hov! Du mangler at registrere timer') : 'Timeregistrering i top!'}
                             </h3>
-                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
-                                {hasMissingPastDays ? 'Sørg for at ugen er helt grøn for at holde regnskabet skarpt.' : 'Du har registreret timer for alle de seneste hverdage.'}
+                            <p style={{ margin: 0, color: '#64748b', fontSize: isMobile ? '0.82rem' : '0.9rem' }}>
+                                {hasMissingPastDays ? (isMobile ? 'Hold ugen grøn' : 'Sørg for at ugen er helt grøn for at holde regnskabet skarpt.') : (isMobile ? 'Ugen er grøn!' : 'Du har registreret timer for alle de seneste hverdage.')}
                             </p>
                         </div>
                     </div>
                     {hasMissingPastDays && (
-                        <button 
+                        <button
                             onClick={() => { if(setActiveTab) setActiveTab('worker_timesheet'); }}
-                            style={{ padding: '8px 16px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(239,68,68,0.2)' }}
+                            style={{ padding: isMobile ? '14px 16px' : '8px 16px', width: isMobile ? '100%' : 'auto', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: isMobile ? '12px' : '8px', fontSize: isMobile ? '0.95rem' : '0.9rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(239,68,68,0.2)' }}
                         >
-                            Gå til tidsregistrering
+                            {isMobile ? <><Clock size={18} /> Registrér timer</> : 'Gå til tidsregistrering'}
                         </button>
                     )}
                 </div>
 
                 {/* Grid med hverdage */}
-                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px', overflowX: isMobile ? 'visible' : 'auto', paddingBottom: isMobile ? 0 : '4px' }}>
                     {recentWorkDays.map((day, idx) => {
                         const isRed = !day.hasTime && !day.isToday;
                         const isGreen = day.hasTime;
                         const isNeutral = !day.hasTime && day.isToday;
+                        const dayLabel = (isMobile && !day.isToday) ? day.label.slice(0, 3) : day.label;
 
                         return (
-                            <div 
-                                key={idx} 
-                                style={{ 
-                                    flex: '1', 
-                                    minWidth: '80px', 
-                                    padding: '12px 8px', 
-                                    borderRadius: '12px', 
-                                    display: 'flex', 
-                                    flexDirection: 'column', 
-                                    alignItems: 'center', 
-                                    gap: '8px',
+                            <div
+                                key={idx}
+                                style={{
+                                    flex: '1',
+                                    minWidth: isMobile ? 0 : '80px',
+                                    padding: isMobile ? '10px 4px' : '12px 8px',
+                                    borderRadius: isMobile ? '14px' : '12px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: isMobile ? '6px' : '8px',
                                     background: isGreen ? '#ecfdf5' : isRed ? '#fef2f2' : '#f8fafc',
                                     border: `1px solid ${isGreen ? '#a7f3d0' : isRed ? '#fecaca' : '#e2e8f0'}`,
                                     cursor: isRed ? 'pointer' : 'default',
@@ -204,15 +213,15 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
                                 onMouseLeave={(e) => { if (isRed) e.currentTarget.style.transform = 'scale(1)' }}
                                 title={isRed ? "Klik for at melde fravær" : ""}
                             >
-                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', color: isGreen ? '#059669' : isRed ? '#dc2626' : '#64748b' }}>
-                                    {day.label}
+                                <span style={{ fontSize: isMobile ? '0.65rem' : '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: isMobile ? '0.02em' : 'normal', color: isGreen ? '#059669' : isRed ? '#dc2626' : '#64748b' }}>
+                                    {dayLabel}
                                 </span>
                                 {isGreen ? (
-                                    <CheckCircle2 size={24} color="#10b981" />
+                                    <CheckCircle2 size={isMobile ? 20 : 24} color="#10b981" />
                                 ) : isRed ? (
-                                    <AlertCircle size={24} color="#ef4444" />
+                                    <AlertCircle size={isMobile ? 20 : 24} color="#ef4444" />
                                 ) : (
-                                    <Clock size={24} color="#94a3b8" />
+                                    <Clock size={isMobile ? 20 : 24} color="#94a3b8" />
                                 )}
                             </div>
                         )
@@ -233,7 +242,7 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
                         </div>
                         
                         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.6rem', color: '#0f172a', fontWeight: '800' }}>
-                            Det er ved at være fyraften! 🛠️
+                            Det er ved at være fyraften!
                         </h2>
                         <p style={{ margin: '0 0 24px 0', color: '#475569', fontSize: '1.05rem', lineHeight: '1.5' }}>
                             Husk at registrere dine timer for i dag, inden du smækker døren og holder fri.

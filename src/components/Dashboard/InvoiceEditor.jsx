@@ -515,161 +515,236 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
             </div>
 
             {/* Faktura Preview Fullscreen Modal */}
+            {/* Faktura Preview Fullscreen Modal */}
             {showPreview && createPortal(
-                <div className="dashboard-modal-overlay invoice-preview-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
-                    <div className="dashboard-modal-panel invoice-preview-panel" style={{ width: '95%', maxWidth: '1200px', height: '95vh', background: '#e2e8f0', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+                <div className="dashboard-modal-overlay invoice-preview-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isMobile ? '#f8fafc' : 'rgba(15, 23, 42, 0.7)', backdropFilter: isMobile ? 'none' : 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: isMobile ? 0 : '20px', animation: 'fadeIn 0.2s ease-out' }}>
+                    <div className="dashboard-modal-panel invoice-preview-panel" style={{ width: isMobile ? '100%' : '95%', maxWidth: '1200px', height: isMobile ? '100%' : '95vh', background: '#e2e8f0', borderRadius: isMobile ? 0 : '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: isMobile ? 'none' : '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
                         
                         {/* FULL SCREEN HEADER */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: isMobile ? '16px' : '20px 40px', borderBottom: '1px solid #cbd5e1', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', zIndex: 10 }}>
-                            <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <FileText size={24} color="#3b82f6" /> Godkend Faktura-design
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: isMobile ? 'calc(max(env(safe-area-inset-top), 20px)) 20px 16px 20px' : '20px 40px', borderBottom: '1px solid #cbd5e1', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', zIndex: 10, flexShrink: 0 }}>
+                            <h2 style={{ margin: 0, fontSize: isMobile ? '1.2rem' : '1.4rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FileText size={20} color="#3b82f6" /> Godkend Faktura
                             </h2>
-                            <button onClick={() => setShowPreview(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            <button onClick={() => setShowPreview(false)} style={{ background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             </button>
                         </div>
                         
                         {/* DISCLAIMER BANNER */}
-                        <div style={{ padding: '16px 40px', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', color: '#1e3a8a', fontSize: '0.95rem', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'center', zIndex: 9 }}>
-                            <AlertCircle size={20} style={{ flexShrink: 0 }} />
-                            <div>
-                                <strong>Vigtig info:</strong> Dette er udelukkende en visuel kladde, så du kan kontrollere beløb og moms. Det endelige design genereres automatisk af dit regnskabsprogram.
-                            </div>
-                        </div>
-                    
-                    {/* SCROLLABLE AREA WITH A4 PAPER */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 8px' : '40px 20px', display: 'flex', justifyContent: 'center' }}>
-                        
-                        {/* A4 PAPER MOCKUP */}
-                        <div style={{ background: '#fff', width: '100%', maxWidth: '850px', minHeight: isMobile ? 'auto' : '1100px', padding: isMobile ? '24px' : '60px', borderRadius: '4px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
-                            
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0f172a', paddingBottom: '32px', marginBottom: '40px' }}>
+                        {!isMobile && (
+                            <div style={{ padding: '16px 40px', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', color: '#1e3a8a', fontSize: '0.95rem', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'center', zIndex: 9, flexShrink: 0 }}>
+                                <AlertCircle size={20} style={{ flexShrink: 0 }} />
                                 <div>
-                                    <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', color: '#0f172a', letterSpacing: '2px', textTransform: 'uppercase' }}>Faktura</h1>
-                                    <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '4px' }}>Fakturanr: <strong style={{ color: '#0f172a' }}>KLADDE</strong></div>
-                                    <div style={{ color: '#64748b', fontSize: '0.9rem' }}>Dato: {new Date().toLocaleDateString('da-DK')}</div>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.1rem', marginBottom: '4px' }}>{carpenterProfile?.company_name || 'Din Tømrervirksomhed ApS'}</div>
-                                    <div style={{ color: '#475569', fontSize: '0.9rem' }}>{carpenterProfile?.address || 'Håndværkervej 12, 8000 Aarhus C'}</div>
-                                    <div style={{ color: '#475569', fontSize: '0.9rem' }}>CVR: {carpenterProfile?.cvr || '12345678'}</div>
-                                    <div style={{ color: '#475569', fontSize: '0.9rem' }}>{carpenterProfile?.email || 'kontakt@firma.dk'}</div>
+                                    <strong>Vigtig info:</strong> Dette er udelukkende en visuel kladde, så du kan kontrollere beløb og moms. Det endelige design genereres automatisk af dit regnskabsprogram.
                                 </div>
                             </div>
-
-                            <div style={{ marginBottom: '50px', padding: '24px', background: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
-                                <div style={{ width: '400px' }}>
-                                    <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '4px' }}>FAKTURERES TIL:</div>
-                                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#0f172a' }}>{editableCustomer.fullName}</div>
-                                    <div style={{ fontSize: '0.9rem', color: '#475569' }}>
-                                        {editableCustomer.address}<br/>
-                                        {editableCustomer.zip} {editableCustomer.city}
+                        )}
+                    
+                        {/* SCROLLABLE AREA */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px' : '40px 20px', display: 'flex', justifyContent: 'center', background: isMobile ? '#f8fafc' : '#e2e8f0' }}>
+                            
+                            {isMobile ? (
+                                /* COMPACT MOBILE RECEIPT VIEW */
+                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '4px' }}>FAKTURERES TIL:</div>
+                                        <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#0f172a' }}>{editableCustomer.fullName}</div>
+                                        {isB2B && <div style={{ fontSize: '0.9rem', color: '#475569', marginTop: '2px' }}>CVR: {editableCustomer.cvr}</div>}
+                                        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0', fontSize: '0.9rem', color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ color: '#64748b' }}>Sagsnr:</span>
+                                            <strong>{lead.id}</strong>
+                                        </div>
                                     </div>
-                                    {isB2B && <div style={{ fontSize: '0.9rem', color: '#475569', marginTop: '4px' }}>CVR: {editableCustomer.cvr}</div>}
-                                </div>
-                                <div style={{ marginTop: '12px', fontSize: '0.9rem', color: '#0f172a' }}><strong>Sagsnr:</strong> {lead.id} - {lead.project_category}</div>
-                            </div>
 
-                            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                                        <th style={{ textAlign: 'left', padding: '12px 0', color: '#0f172a', fontSize: '0.9rem' }}>Beskrivelse</th>
-                                        <th style={{ textAlign: 'right', padding: '12px 0', color: '#0f172a', fontSize: '0.9rem' }}>Beløb</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {invoiceType === 'aconto' ? (
-                                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                            <td style={{ padding: '20px 0' }}>
-                                                <div style={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>Aconto betaling</div>
-                                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Vedrørende: {lead.project_category}</div>
-                                            </td>
-                                            <td style={{ padding: '20px 0', textAlign: 'right', fontWeight: 'bold', color: '#0f172a' }}>
-                                                {subtotalExVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        <>
-                                            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                                <td style={{ padding: '20px 0' }}>
-                                                    <div style={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>Oprindeligt Tilbud</div>
-                                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Ifølge accepteret tilbud</div>
-                                                </td>
-                                                <td style={{ padding: '20px 0', textAlign: 'right', fontWeight: 'bold', color: '#0f172a' }}>
-                                                    {(basePrice / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
-                                                </td>
+                                    <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '12px' }}>BELØB:</div>
+                                        
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {invoiceType === 'aconto' ? (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
+                                                    <span style={{ color: '#475569' }}>Aconto betaling</span>
+                                                    <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{subtotalExVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
+                                                        <span style={{ color: '#475569' }}>Oprindeligt Tilbud</span>
+                                                        <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{(basePrice / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                                    </div>
+                                                    {extraPrice > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
+                                                            <span style={{ color: '#475569' }}>Ekstra Aftalesedler</span>
+                                                            <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{(extraPrice / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                                        </div>
+                                                    )}
+                                                    {invoiced > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
+                                                            <span style={{ color: '#475569' }}>Allerede faktureret</span>
+                                                            <span style={{ fontWeight: 'bold', color: '#e11d48' }}>-{(invoiced / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+
+                                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '2px solid #e2e8f0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748b', fontSize: '0.9rem' }}>
+                                                <span>Subtotal ekskl. moms:</span>
+                                                <span>{subtotalExVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748b', fontSize: '0.9rem' }}>
+                                                <span>Moms ({isReverseCharge ? '0%' : '25%'}):</span>
+                                                <span>{vatAmount.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0 0', color: '#0f172a', fontSize: '1.2rem', fontWeight: '900', marginTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
+                                                <span>I alt til betaling:</span>
+                                                <span>{totalInclVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {isReverseCharge && (
+                                        <div style={{ padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', color: '#991b1b', fontSize: '0.85rem' }}>
+                                            <strong>Omvendt betalingspligt.</strong> Uden moms (B2B).
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                /* DESKTOP A4 PAPER MOCKUP */
+                                <div style={{ background: '#fff', width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '60px', borderRadius: '4px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0', borderBottom: '2px solid #0f172a', paddingBottom: '32px', marginBottom: '40px' }}>
+                                        <div>
+                                            <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', color: '#0f172a', letterSpacing: '2px', textTransform: 'uppercase' }}>Faktura</h1>
+                                            <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '4px' }}>Fakturanr: <strong style={{ color: '#0f172a' }}>KLADDE</strong></div>
+                                            <div style={{ color: '#64748b', fontSize: '0.9rem' }}>Dato: {new Date().toLocaleDateString('da-DK')}</div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.1rem', marginBottom: '4px' }}>{carpenterProfile?.company_name || 'Din Tømrervirksomhed ApS'}</div>
+                                            <div style={{ color: '#475569', fontSize: '0.9rem' }}>{carpenterProfile?.address || 'Håndværkervej 12, 8000 Aarhus C'}</div>
+                                            <div style={{ color: '#475569', fontSize: '0.9rem' }}>CVR: {carpenterProfile?.cvr || '12345678'}</div>
+                                            <div style={{ color: '#475569', fontSize: '0.9rem' }}>{carpenterProfile?.email || 'kontakt@firma.dk'}</div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ marginBottom: '50px', padding: '24px', background: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
+                                        <div style={{ width: '400px' }}>
+                                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '4px' }}>FAKTURERES TIL:</div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#0f172a' }}>{editableCustomer.fullName}</div>
+                                            <div style={{ fontSize: '0.9rem', color: '#475569' }}>
+                                                {editableCustomer.address}<br/>
+                                                {editableCustomer.zip} {editableCustomer.city}
+                                            </div>
+                                            {isB2B && <div style={{ fontSize: '0.9rem', color: '#475569', marginTop: '4px' }}>CVR: {editableCustomer.cvr}</div>}
+                                        </div>
+                                        <div style={{ marginTop: '12px', fontSize: '0.9rem', color: '#0f172a' }}><strong>Sagsnr:</strong> {lead.id} - {lead.project_category}</div>
+                                    </div>
+
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px' }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                                                <th style={{ textAlign: 'left', padding: '12px 0', color: '#0f172a', fontSize: '0.9rem' }}>Beskrivelse</th>
+                                                <th style={{ textAlign: 'right', padding: '12px 0', color: '#0f172a', fontSize: '0.9rem' }}>Beløb</th>
                                             </tr>
-                                            {extraPrice > 0 && (
+                                        </thead>
+                                        <tbody>
+                                            {invoiceType === 'aconto' ? (
                                                 <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                                                     <td style={{ padding: '20px 0' }}>
-                                                        <div style={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>Ekstra Aftalesedler</div>
-                                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Godkendt merarbejde</div>
+                                                        <div style={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>Aconto betaling</div>
+                                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Vedrørende: {lead.project_category}</div>
                                                     </td>
                                                     <td style={{ padding: '20px 0', textAlign: 'right', fontWeight: 'bold', color: '#0f172a' }}>
-                                                        {(extraPrice / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
+                                                        {subtotalExVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
                                                     </td>
                                                 </tr>
+                                            ) : (
+                                                <>
+                                                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                        <td style={{ padding: '20px 0' }}>
+                                                            <div style={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>Oprindeligt Tilbud</div>
+                                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Ifølge accepteret tilbud</div>
+                                                        </td>
+                                                        <td style={{ padding: '20px 0', textAlign: 'right', fontWeight: 'bold', color: '#0f172a' }}>
+                                                            {(basePrice / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
+                                                        </td>
+                                                    </tr>
+                                                    {extraPrice > 0 && (
+                                                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                            <td style={{ padding: '20px 0' }}>
+                                                                <div style={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>Ekstra Aftalesedler</div>
+                                                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Godkendt merarbejde</div>
+                                                            </td>
+                                                            <td style={{ padding: '20px 0', textAlign: 'right', fontWeight: 'bold', color: '#0f172a' }}>
+                                                                {(extraPrice / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                    {invoiced > 0 && (
+                                                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                            <td style={{ padding: '20px 0' }}>
+                                                                <div style={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>Allerede faktureret (Aconto)</div>
+                                                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Fratrækkes totalen</div>
+                                                            </td>
+                                                            <td style={{ padding: '20px 0', textAlign: 'right', fontWeight: 'bold', color: '#e11d48' }}>
+                                                                -{(invoiced / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </>
                                             )}
-                                            {invoiced > 0 && (
-                                                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                                    <td style={{ padding: '20px 0' }}>
-                                                        <div style={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>Allerede faktureret (Aconto)</div>
-                                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Fratrækkes totalen</div>
-                                                    </td>
-                                                    <td style={{ padding: '20px 0', textAlign: 'right', fontWeight: 'bold', color: '#e11d48' }}>
-                                                        -{(invoiced / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </>
-                                    )}
-                                </tbody>
-                            </table>
+                                        </tbody>
+                                    </table>
 
-                            <div style={{ marginTop: 'auto' }}>
-                                <div style={{ width: '350px', marginLeft: 'auto' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', color: '#475569' }}>
-                                        <span>Subtotal ekskl. moms:</span>
-                                        <span>{subtotalExVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', color: '#475569', borderBottom: '1px solid #e2e8f0', marginBottom: '12px' }}>
-                                        <span>Moms ({isReverseCharge ? '0%' : '25%'}):</span>
-                                        <span>{vatAmount.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', color: '#0f172a', fontSize: '1.2rem', fontWeight: '900' }}>
-                                        <span>I alt til betaling:</span>
-                                        <span>{totalInclVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                    <div style={{ marginTop: 'auto' }}>
+                                        <div style={{ width: '350px', marginLeft: 'auto' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', color: '#475569' }}>
+                                                <span>Subtotal ekskl. moms:</span>
+                                                <span>{subtotalExVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', color: '#475569', borderBottom: '1px solid #e2e8f0', marginBottom: '12px' }}>
+                                                <span>Moms ({isReverseCharge ? '0%' : '25%'}):</span>
+                                                <span>{vatAmount.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', color: '#0f172a', fontSize: '1.2rem', fontWeight: '900' }}>
+                                                <span>I alt til betaling:</span>
+                                                <span>{totalInclVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                            </div>
+                                        </div>
+
+                                        {isReverseCharge && (
+                                            <div style={{ marginTop: '40px', padding: '16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '0.9rem' }}>
+                                                <strong>Omvendt betalingspligt.</strong> Fakturaen er udstedt uden moms i henhold til reglerne om omvendt betalingspligt ved bygge- og anlægsydelser. Køber er ansvarlig for at afregne momsen.
+                                            </div>
+                                        )}
+
+                                        <div style={{ marginTop: '60px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.85rem', textAlign: 'center' }}>
+                                            Betalingsbetingelser: Netto 8 dage<br/>
+                                            <span style={{ fontSize: '0.75rem', fontStyle: 'italic', opacity: 0.8, marginTop: '4px', display: 'inline-block' }}>
+                                                *(Dine bankoplysninger og reg.nr tilføjes automatisk af dit valgte regnskabsprogram på den endelige faktura)*
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-
-                                {isReverseCharge && (
-                                    <div style={{ marginTop: '40px', padding: '16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '0.9rem' }}>
-                                        <strong>Omvendt betalingspligt.</strong> Fakturaen er udstedt uden moms i henhold til reglerne om omvendt betalingspligt ved bygge- og anlægsydelser. Køber er ansvarlig for at afregne momsen.
-                                    </div>
-                                )}
-
-                                <div style={{ marginTop: '60px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.85rem', textAlign: 'center' }}>
-                                    Betalingsbetingelser: Netto 8 dage<br/>
-                                    <span style={{ fontSize: '0.75rem', fontStyle: 'italic', opacity: 0.8, marginTop: '4px', display: 'inline-block' }}>
-                                        *(Dine bankoplysninger og reg.nr tilføjes automatisk af dit valgte regnskabsprogram på den endelige faktura)*
-                                    </span>
-                                </div>
-                            </div>
+                            )}
                         </div>
-                    </div>
-                    
+                        
                         {/* FOOTER ACTION BAR */}
-                        <div style={{ padding: isMobile ? '16px' : '20px 40px', background: '#fff', borderTop: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 -4px 6px -1px rgba(0,0,0,0.02)', zIndex: 10 }}>
-                            <div style={{ color: '#64748b', fontSize: '0.95rem' }}>
-                                Tjek at beløb og moms stemmer overens med aftalen.
-                            </div>
-                            <div style={{ display: 'flex', gap: '16px' }}>
-                                <button onClick={() => setShowPreview(false)} style={{ padding: '14px 28px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 'bold', cursor: 'pointer', fontSize: '1.05rem', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>Luk Preview</button>
-                                <button onClick={() => { setShowPreview(false); handleSendToDinero(); }} style={{ padding: '14px 28px', borderRadius: '8px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.transform = 'translateY(-2px)' }} onMouseLeave={e => { e.currentTarget.style.background = '#0f172a'; e.currentTarget.style.transform = 'translateY(0)' }}>
-                                    <Send size={20} /> 
-                                    {carpenterProfile?.dinero_api_key && carpenterProfile.dinero_api_key !== 'pending_authorization' ? 'Overfør som kladde til Dinero' : 
-                                     carpenterProfile?.economic_api_key && carpenterProfile.economic_api_key !== 'pending_authorization' ? 'Overfør som kladde til e-conomic' : 
-                                     'Overfør til Regnskab'}
+                        <div style={{ padding: isMobile ? '16px 16px calc(env(safe-area-inset-bottom, 16px) + 16px) 16px' : '20px 40px', background: '#fff', borderTop: '1px solid #cbd5e1', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: '16px', boxShadow: '0 -4px 6px -1px rgba(0,0,0,0.05)', zIndex: 10, flexShrink: 0 }}>
+                            {!isMobile && (
+                                <div style={{ color: '#64748b', fontSize: '0.95rem' }}>
+                                    Tjek at beløb og moms stemmer overens med aftalen.
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '12px' }}>
+                                <button onClick={() => setShowPreview(false)} style={{ flex: isMobile ? 1 : 'none', padding: '14px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 'bold', cursor: 'pointer', fontSize: '1.05rem', transition: 'all 0.2s', display: 'flex', justifyContent: 'center' }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                                    Luk
+                                </button>
+                                <button onClick={() => { setShowPreview(false); handleSendToDinero(); }} style={{ flex: isMobile ? 1 : 'none', padding: '14px 28px', borderRadius: '12px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '1.05rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.transform = 'translateY(-2px)' }} onMouseLeave={e => { e.currentTarget.style.background = '#0f172a'; e.currentTarget.style.transform = 'translateY(0)' }}>
+                                    <Send size={18} /> 
+                                    {carpenterProfile?.dinero_api_key && carpenterProfile.dinero_api_key !== 'pending_authorization' ? 'Overfør til Dinero' : 
+                                     carpenterProfile?.economic_api_key && carpenterProfile.economic_api_key !== 'pending_authorization' ? 'Overfør til e-conomic' : 
+                                     'Overfør'}
                                 </button>
                             </div>
                         </div>

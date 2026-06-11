@@ -2185,7 +2185,7 @@ const Dashboard = () => {
     };
 
     return (
-        <div className={`dashboard-layout dashboard-tab-${activeTab}`}>
+        <div className={`dashboard-layout dashboard-tab-${activeTab} ${['worker', 'apprentice', 'sales'].includes(effectiveRole) && activeTab === 'overview' ? 'worker-overview-active' : ''}`}>
             {showOnboarding && carpenterProfile && (
                 <OnboardingModal 
                     profile={carpenterProfile} 
@@ -2632,7 +2632,7 @@ const Dashboard = () => {
 
                 {/* The old inline trial banner has been removed */}
                 
-                <div className="dashboard-content">
+                <div className="dashboard-content" style={activeTab === 'overview' && ['worker', 'apprentice', 'sales'].includes(effectiveRole) ? { padding: 0, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' } : { display: 'flex', flexDirection: 'column' }}>
                     {isPaywallActive && activeTab !== 'account_settings' ? (
                         <div className="smooth-fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center' }}>
                             <div style={{ background: '#fef2f2', border: '1px solid #e8e6e1', padding: '40px', borderRadius: '20px', maxWidth: '600px', boxShadow: '0 10px 25px -5px rgba(239, 68, 68, 0.1)' }}>
@@ -2656,7 +2656,7 @@ const Dashboard = () => {
                             </div>
                         </div>
                     ) : (
-                        <div key={activeTab} className="smooth-fade-in" style={{ height: '100%' }}>
+                        <div key={activeTab} className="smooth-fade-in" style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                         {renderDashboardMobileHeader()}
                         {activeTab === 'superadmin' && myProfile?.email === 'team@bisoncompany.dk' && (
                         <SuperAdminView />
@@ -6377,7 +6377,7 @@ const Dashboard = () => {
                 </AnimatePresence>,
                 document.body
             )}
-            {activeTab === 'overview' && (
+            {activeTab === 'overview' && effectiveRole === 'admin' && (
                 <MobileQuickShare carpenterProfile={carpenterProfile} />
             )}
 

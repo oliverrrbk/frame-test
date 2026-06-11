@@ -208,6 +208,60 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
         toast.success('Ny materialeliste oprettet');
     };
 
+    // Del den samlede liste op i én bestillings-liste pr. etape (til store projekter).
+    // Ændrer KUN hvilken liste en vare hører til (listId) — aldrig navn, mængde, pris eller beregner.
+    const handleSplitByPhase = () => {
+        const ordered = [];
+        materials.forEach(m => {
+            const sec = m.section || 'Hovedmaterialer';
+            if (!ordered.includes(sec)) ordered.push(sec);
+        });
+        const etapeSections = ordered.filter(s => !sectionsList.includes(s));
+        if (etapeSections.length === 0) {
+            toast('Der er ingen etaper at dele op efter.');
+            return;
+        }
+
+        const newMeta = [];
+        const knownItemsExist = materials.some(m => sectionsList.includes(m.section || 'Hovedmaterialer'));
+        if (knownItemsExist) {
+            const prevDefault = materialListsMeta.find(l => l.id === 'default');
+            newMeta.push({ id: 'default', name: 'Beregnerens forslag', price: prevDefault?.price || '' });
+        }
+        const sectionToListId = {};
+        etapeSections.forEach((sec, i) => {
+            const id = `phase_${i}_${Date.now()}`;
+            sectionToListId[sec] = id;
+            const prev = materialListsMeta.find(l => l.name === sec);
+            newMeta.push({ id, name: sec, price: prev?.price || '' });
+        });
+
+        const newMaterials = materials.map(m => {
+            const sec = m.section || 'Hovedmaterialer';
+            return { ...m, listId: sectionsList.includes(sec) ? 'default' : sectionToListId[sec] };
+        });
+
+        const openState = {};
+        newMeta.forEach(l => { openState[l.id] = true; });
+        setMaterials(newMaterials);
+        setMaterialListsMeta(newMeta);
+        setOpenLists(openState);
+        handleSaveList(newMaterials, newMeta);
+        toast.success('Materialelisten er delt op pr. etape');
+    };
+
+    // Saml alt tilbage til én liste (fuldt reversibelt — rører kun listId/meta).
+    const handleMergeToOne = () => {
+        const prevPrice = materialListsMeta[0]?.price || '';
+        const newMeta = [{ id: 'default', name: 'Materialeliste til Opgaven', price: prevPrice }];
+        const newMaterials = materials.map(m => ({ ...m, listId: 'default' }));
+        setMaterials(newMaterials);
+        setMaterialListsMeta(newMeta);
+        setOpenLists({ default: true });
+        handleSaveList(newMaterials, newMeta);
+        toast.success('Samlet til én materialeliste');
+    };
+
     const handleDeleteListClick = (e, listId) => {
         e.stopPropagation();
         if (listId === 'default') return;
@@ -293,7 +347,10 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
             
             y += 8;
             
-            const sections = ['Hovedmaterialer', 'Underkonstruktion', 'Fastgørelse & Beslag', 'Underlag & Tilbehør', 'Afslutning', 'Forbrugsstoffer & Værktøj'];
+            // Kendte sektioner først, derefter evt. etape-sektioner (så intet udelades fra bestillingen)
+            const knownPdfSections = ['Hovedmaterialer', 'Underkonstruktion', 'Fastgørelse & Beslag', 'Underlag & Tilbehør', 'Afslutning', 'Forbrugsstoffer & Værktøj'];
+            const presentPdfSections = [...new Set(listMaterials.map(m => m.section || 'Hovedmaterialer'))];
+            const sections = [...knownPdfSections.filter(s => presentPdfSections.includes(s)), ...presentPdfSections.filter(s => !knownPdfSections.includes(s))];
             
             sections.forEach(sec => {
                 const secItems = listMaterials.filter(m => m.section === sec);
@@ -411,6 +468,11 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
 
     const sectionsList = ['Hovedmaterialer', 'Underkonstruktion', 'Fastgørelse & Beslag', 'Underlag & Tilbehør', 'Afslutning', 'Forbrugsstoffer & Værktøj'];
 
+    // Til "Del op pr. etape" / "Saml til én liste"-knappen (kun relevant for etape-/AI-projekter)
+    const hasPhaseSections = materials.some(m => m.section && !sectionsList.includes(m.section));
+    const isSplitByPhase = materialListsMeta.length > 1;
+    const canManageLists = !isLead && profile?.role !== 'worker' && profile?.role !== 'apprentice';
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-in' }}>
 
@@ -458,7 +520,16 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                 {materialListsMeta.map((list) => {
                     const isOpen = openLists[list.id];
                     const listMaterials = materials.filter(m => m.listId === list.id);
-                    
+
+                    // To-spors visning: kendte (beregner) sektioner først, derefter etape-sektioner
+                    const listKnownSections = sectionsList.filter(s => listMaterials.some(m => (m.section || 'Hovedmaterialer') === s));
+                    const listExtraSections = [...new Set(listMaterials.map(m => m.section || 'Hovedmaterialer'))].filter(s => !sectionsList.includes(s));
+                    const totalSectionGroups = listKnownSections.length + listExtraSections.length;
+                    const listHasBoth = listKnownSections.length > 0 && listExtraSections.length > 0;
+                    const renderGroups = listHasBoth
+                        ? [{ label: 'Beregnerens forslag', sections: listKnownSections }, { label: 'Fra tilbuddet', sections: listExtraSections }]
+                        : [{ label: null, sections: [...listKnownSections, ...listExtraSections] }];
+
                     return (
                         <div key={list.id} style={{ 
                             border: '1px solid #e2e8f0', 
@@ -626,17 +697,27 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
 
                                     {/* GROUPED MATERIALS */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                        {sectionsList.map(section => {
-                                            const secItems = listMaterials.filter(m => m.section === section);
+                                        {renderGroups.map((grp, gi) => (
+                                          <div key={`grp-${gi}`} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            {grp.label && (
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: gi > 0 ? '8px' : '0' }}>
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: grp.label === 'Fra tilbuddet' ? '#0284c7' : '#64748b', background: grp.label === 'Fra tilbuddet' ? '#e0f2fe' : '#f1f5f9', padding: '6px 12px', borderRadius: '999px', whiteSpace: 'nowrap' }}>{grp.label}</span>
+                                                <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                                              </div>
+                                            )}
+                                            {grp.sections.map(section => {
+                                            const secItems = listMaterials.filter(m => (m.section || 'Hovedmaterialer') === section);
                                             if (secItems.length === 0) return null;
 
                                             return (
                                                 <div key={section} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    {totalSectionGroups > 1 && (
                                                     <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                         <div style={{ height: '1px', flex: 1, backgroundColor: '#e2e8f0' }}></div>
                                                         {section}
                                                         <div style={{ height: '1px', flex: 1, backgroundColor: '#e2e8f0' }}></div>
                                                     </h5>
+                                                    )}
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                         {secItems.map((item, localIdx) => {
                                                             const originalIndex = materials.findIndex(m => m === item);
@@ -723,6 +804,8 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                                 </div>
                                             );
                                         })}
+                                          </div>
+                                        ))}
                                     </div>
 
                                     {/* TILFØJ MATERIALE TIL DENNE LISTE */}
@@ -821,8 +904,26 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                     );
                 })}
 
+                {/* DEL OP PR. ETAPE / SAML TIL ÉN LISTE (kun etape-/AI-projekter) */}
+                {hasPhaseSections && canManageLists && (
+                    <button
+                        onClick={isSplitByPhase ? handleMergeToOne : handleSplitByPhase}
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                            background: '#ffffff', border: '1px solid #e2e8f0', color: '#0f172a',
+                            padding: '16px', borderRadius: '16px', cursor: 'pointer',
+                            fontWeight: 'bold', width: '100%', fontSize: '1rem',
+                            transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0284c7'; e.currentTarget.style.backgroundColor = '#f0f9ff'; e.currentTarget.style.color = '#0284c7'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(2,132,199,0.10)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.color = '#0f172a'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; }}
+                    >
+                        {isSplitByPhase ? <><Package size={18} /> Saml til én liste</> : <><FolderPlus size={18} /> Del op pr. etape</>}
+                    </button>
+                )}
+
                 {/* OPRET NY LISTE KNAP */}
-                <button 
+                <button
                     onClick={handleCreateNewList}
                     style={{ 
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', 

@@ -1,12 +1,13 @@
-import React, { useState, useMemo } from 'react';
-import { Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Phone } from 'lucide-react';
-import { startOfWeek, startOfMonth, isAfter, isSameDay } from 'date-fns';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Clock, Briefcase, Calendar, MapPin, ChevronDown, Phone, X, Play, Square, Users, MessageSquare, AlertCircle, CheckCircle2, Navigation } from 'lucide-react';
+import { startOfWeek, startOfMonth, isAfter, isSameDay, eachDayOfInterval, subDays, isWeekend, isToday, format } from 'date-fns';
+import { da } from 'date-fns/locale';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import TimeRegistrationReminder from './TimeRegistrationReminder';
+import { createPortal } from 'react-dom';
 
 export default function WorkerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId, simulatedRole }) {
-    // Filtrer sager, som arbejderen er tilknyttet
+    // ---- EKSISTERENDE LOGIK (Beholdt for funktionel integritet) ----
     const activeWorkerCases = useMemo(() => {
         return leadsData.filter(lead => {
             const role = myProfile?.role;
@@ -25,13 +26,10 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                 isAssigned = isAssignedWorker;
             }
 
-            // Hvis det er en simulator for en svend/lærling ELLER projektleder, lader vi dem se relevante sager 
-            // så de kan teste systemet uden at skulle assigne sig selv først.
             if (simulatedRole && ['worker', 'apprentice', 'sales'].includes(role)) {
                 return ['Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag'].includes(lead.status);
             }
 
-            // For produktion vis de sager man er assignet til
             return isAssigned && ['Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag'].includes(lead.status || '');
         });
     }, [leadsData, myProfile, simulatedRole]);
@@ -104,7 +102,6 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         let diffHours = (end - start) / (1000 * 60 * 60);
         if (diffHours < 0) diffHours = 0;
         
-        // Afrund til nærmeste kvarter
         entry.hours = Math.round(diffHours * 4) / 4;
         entry.desc = 'Arbejde udført (Tjek-ud)';
         
@@ -120,7 +117,6 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         }
     };
 
-    // Beregn timeforbrug for den valgte periode
     const timeStats = useMemo(() => {
         const now = new Date();
         const weekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -139,7 +135,6 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                     
                     if (isAfter(entryDate, monthStart) || isSameDay(entryDate, monthStart)) {
                         hoursThisMonth += hours;
-                        // Hvis den er inden for denne uge også
                         if (isAfter(entryDate, weekStart) || isSameDay(entryDate, weekStart)) {
                             hoursThisWeek += hours;
                         }
@@ -151,295 +146,515 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         return { hoursThisWeek, hoursThisMonth };
     }, [leadsData, myProfile]);
 
-    return (
-        <div className="dashboard-workspace worker-overview" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
+
+    // ---- NY LOGIK TIL COCKPIT (Manglende dage, etc.) ----
+    const allEntries = useMemo(() => {
+        let entries = [];
+        (leadsData || []).forEach(lead => {
+            const leadEntries = lead.raw_data?.time_entries || [];
+            leadEntries.forEach(t => {
+                if (t.employeeId === myProfile?.id) {
+                    entries.push({ ...t, source: 'lead' });
+                }
+            });
+        });
+
+        const profileEntries = myProfile?.raw_data?.time_entries || [];
+        profileEntries.forEach(t => {
+            entries.push({ ...t, source: 'profile' });
+        });
+
+        return entries;
+    }, [leadsData, myProfile]);
+
+    const recentWorkDays = useMemo(() => {
+        const today = new Date();
+        const pastDays = eachDayOfInterval({
+            start: subDays(today, 10), 
+            end: today
+        });
+        
+        const workDays = pastDays.filter(d => !isWeekend(d)).slice(-5);
+        
+        return workDays.map(date => {
+            const hasTime = allEntries.some(entry => isSameDay(new Date(entry.date), date) && Number(entry.hours || 0) > 0);
+            return {
+                date,
+                hasTime,
+                isToday: isToday(date),
+                label: isToday(date) ? 'I dag' : format(date, 'EEEE', { locale: da })
+            };
+        });
+    }, [allEntries]);
+
+    const hasMissingPastDays = recentWorkDays.some(d => !d.hasTime && !d.isToday);
+
+    // Modal States
+    const [activeModal, setActiveModal] = useState(null); // 'team', 'messages', 'cases', 'time'
+
+    // Fravær Logik
+    const [selectedMissingDate, setSelectedMissingDate] = useState(null);
+    const [absenceType, setAbsenceType] = useState('Syg');
+    const [absenceHours, setAbsenceHours] = useState('7.5');
+
+    const handleLogAbsence = async () => {
+        if (!selectedMissingDate || !absenceHours || isNaN(absenceHours)) {
+            toast.error('Udfyld venligst timer');
+            return;
+        }
+
+        const newEntry = {
+            id: `absence-${Date.now()}`,
+            date: format(selectedMissingDate, 'yyyy-MM-dd'),
+            hours: parseFloat(absenceHours),
+            desc: `Internt: ${absenceType}`,
+            absenceType: absenceType,
+            employeeId: myProfile?.id,
+            employeeName: myProfile?.owner_name || myProfile?.company_name || 'Medarbejder',
+            startTime: '07:00',
+            endTime: '15:00'
+        };
+
+        const currentProfileEntries = myProfile?.raw_data?.time_entries || [];
+        const updatedEntries = [newEntry, ...currentProfileEntries];
+        const newRawData = { ...(myProfile?.raw_data || {}), time_entries: updatedEntries };
+
+        const { error } = await supabase.from('profiles').update({ raw_data: newRawData }).eq('id', myProfile.id);
+
+        if (error) {
+            toast.error('Kunne ikke gemme fravær');
+        } else {
+            toast.success(`${absenceType} er registreret!`);
+            setSelectedMissingDate(null);
+            setTimeout(() => window.location.reload(), 1000);
+        }
+    };
+
+    // Tæller for aktiv timer
+    const [activeTimerStr, setActiveTimerStr] = useState('00:00:00');
+    useEffect(() => {
+        if (!activeCheckInInfo) return;
+        const startStr = `${activeCheckInInfo.activeEntry.date}T${activeCheckInInfo.activeEntry.startTime}`;
+        const startTime = new Date(startStr).getTime();
+        
+        const interval = setInterval(() => {
+            const now = new Date().getTime();
+            const diff = now - startTime;
+            if (diff < 0) return;
             
-            {/* Header */}
-            <div style={{ padding: '0 8px' }}>
-                <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.5rem' }}>
-                    Hej {(myProfile?.owner_name || myProfile?.company_name || 'Mester').split(' ')[0]}!
-                </h2>
-                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.1rem' }}>
-                    Her er dit overblik over timer og projekter.
-                </p>
-            </div>
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            setActiveTimerStr(
+                `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+            );
+        }, 1000);
 
-            <TimeRegistrationReminder leadsData={leadsData} myProfile={myProfile} setActiveTab={setActiveTab} />
+        return () => clearInterval(interval);
+    }, [activeCheckInInfo]);
 
-            {/* GLOBAL STEMPLING MODUL */}
-            <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', background: '#ffffff', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center', position: 'relative', zIndex: 20, overflow: 'visible' }}>
-                <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    Stempling
-                </h3>
-                
-                {activeCheckInInfo ? (
-                    <>
-                        <div style={{ margin: 0, color: '#6b7280', fontSize: '0.95rem' }}>
-                            Du har været tjekket ind siden kl. <strong>{activeCheckInInfo.activeEntry.startTime}</strong> på sag: <em>{activeCheckInInfo.lead.customer_name}</em>
-                            {activeCheckInInfo.lead.customer_address && (
-                                <div style={{ marginTop: '8px' }}>
-                                    <MapPin size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-                                    <a 
-                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeCheckInInfo.lead.customer_address)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{ color: '#10b981', textDecoration: 'underline', fontWeight: '500' }}
-                                    >
-                                        {activeCheckInInfo.lead.customer_address}
-                                    </a>
+    // ---- RENDER MODALS ----
+    const renderModal = () => {
+        if (!activeModal) return null;
+
+        return createPortal(
+            <div style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(20px)', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
+                        {activeModal === 'team' && 'Mit Team'}
+                        {activeModal === 'messages' && 'Beskeder & Info'}
+                        {activeModal === 'cases' && 'Mine Aktive Sager'}
+                        {activeModal === 'time' && 'Timer & Fravær'}
+                    </h2>
+                    <button onClick={() => { setActiveModal(null); setSelectedMissingDate(null); }} style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f1f5f9', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}>
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+                    
+                    {/* TEAM MODAL */}
+                    {activeModal === 'team' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'linear-gradient(135deg, #10b981, #059669)', padding: '24px', borderRadius: '20px', color: 'white', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.3)' }}>
+                                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 'bold' }}>
+                                    {myProfile?.avatar_url ? <img src={myProfile.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}/> : (myProfile?.owner_name || 'U').charAt(0)}
                                 </div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 'bold' }}>{myProfile?.owner_name || myProfile?.company_name || 'Medarbejder'}</h3>
+                                    <p style={{ margin: '4px 0 0', opacity: 0.9, fontSize: '1rem' }}>
+                                        {myProfile?.role === 'sales' ? 'Projektleder' : myProfile?.role === 'worker' ? 'Svend' : 'Lærling'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div style={{ background: '#f8fafc', borderRadius: '20px', padding: '20px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                                <Users size={32} color="#94a3b8" style={{ margin: '0 auto 12px' }} />
+                                <h4 style={{ margin: '0 0 8px', color: '#334155' }}>Dine Kollegaer</h4>
+                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem' }}>Team-overblik er i øjeblikket styret fra sagsniveau. Du kan se dine kollegaer inde på de specifikke sager, I er tildelt sammen.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MESSAGES MODAL */}
+                    {activeModal === 'messages' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', textAlign: 'center' }}>
+                            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+                                <MessageSquare size={32} color="#cbd5e1" />
+                            </div>
+                            <h3 style={{ margin: '0 0 8px', color: '#334155', fontSize: '1.2rem' }}>Ingen nye beskeder</h3>
+                            <p style={{ margin: 0, maxWidth: '250px' }}>Du har læst alle interne beskeder. Tag en kop kaffe!</p>
+                        </div>
+                    )}
+
+                    {/* CASES MODAL */}
+                    {activeModal === 'cases' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {activeWorkerCases.length === 0 ? (
+                                <div style={{ background: '#f8fafc', padding: '32px', borderRadius: '20px', textAlign: 'center', border: '1px dashed #cbd5e1' }}>
+                                    <p style={{ margin: 0, color: '#64748b' }}>Du har ingen aktive sager i dag.</p>
+                                </div>
+                            ) : (
+                                activeWorkerCases.map((lead, idx) => {
+                                    const title = lead.raw_data?.project_title || lead.project_category || 'Projekt';
+                                    const caseNo = lead.case_number || String(lead.id).substring(0,6);
+                                    const address = lead.customer_address || lead.raw_data?.customerDetails?.address;
+                                    
+                                    return (
+                                        <div key={idx} style={{ background: '#fff', borderRadius: '20px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <div>
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', letterSpacing: '0.05em' }}>SAG #{caseNo}</span>
+                                                    <h3 style={{ margin: '4px 0 0', fontSize: '1.2rem', color: '#0f172a', fontWeight: '700' }}>{title}</h3>
+                                                </div>
+                                                <div style={{ padding: '6px 12px', background: '#ecfdf5', color: '#10b981', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>Aktiv</div>
+                                            </div>
+                                            
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#475569', fontSize: '0.95rem' }}>
+                                                    <Briefcase size={16} color="#94a3b8" />
+                                                    <span>{lead.customer_name || 'Ukendt kunde'}</span>
+                                                </div>
+                                                {address && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#475569', fontSize: '0.95rem' }}>
+                                                        <MapPin size={16} color="#94a3b8" />
+                                                        <span>{address}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                                                {address && (
+                                                    <a 
+                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} 
+                                                        target="_blank" rel="noopener noreferrer"
+                                                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', background: '#f1f5f9', color: '#3b82f6', borderRadius: '12px', textDecoration: 'none', fontWeight: '600' }}
+                                                    >
+                                                        <Navigation size={16} /> Vis Vej
+                                                    </a>
+                                                )}
+                                                <button 
+                                                    onClick={() => {
+                                                        setActiveModal(null);
+                                                        if (setTargetCaseId) setTargetCaseId(lead.id);
+                                                        if (setActiveTab) setActiveTab('cases');
+                                                    }}
+                                                    style={{ flex: address ? 1 : 'none', width: address ? 'auto' : '100%', padding: '12px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}
+                                                >
+                                                    Åbn Sag
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )
+                                })
                             )}
                         </div>
+                    )}
+
+                    {/* TIME MODAL (Kalender & Manglende Timer) */}
+                    {activeModal === 'time' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            
+                            {/* Hurtig-Oversigt */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Denne Uge</span>
+                                    <div style={{ fontSize: '2rem', fontWeight: '900', color: '#0f172a', marginTop: '4px' }}>{timeStats.hoursThisWeek.toFixed(1)} <span style={{fontSize: '1rem', color: '#94a3b8', fontWeight: '500'}}>t</span></div>
+                                </div>
+                                <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Denne Måned</span>
+                                    <div style={{ fontSize: '2rem', fontWeight: '900', color: '#0f172a', marginTop: '4px' }}>{timeStats.hoursThisMonth.toFixed(1)} <span style={{fontSize: '1rem', color: '#94a3b8', fontWeight: '500'}}>t</span></div>
+                                </div>
+                            </div>
+
+                            {/* Fravær/Manglende Registrering Logik */}
+                            {selectedMissingDate ? (
+                                <div style={{ background: '#fff', borderRadius: '20px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                        <div>
+                                            <h3 style={{ margin: '0 0 4px', fontSize: '1.2rem', color: '#0f172a', fontWeight: 'bold' }}>Registrér Fravær</h3>
+                                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>For {format(selectedMissingDate, 'EEEE d. MMMM', { locale: da })}</p>
+                                        </div>
+                                        <button onClick={() => setSelectedMissingDate(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={20} /></button>
+                                    </div>
+                                    
+                                    <label style={{ display: 'block', fontSize: '0.9rem', color: '#475569', fontWeight: '600', marginBottom: '8px' }}>Årsag</label>
+                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                                        {['Syg', 'Ferie', 'Afspadsering'].map(type => (
+                                            <button
+                                                key={type}
+                                                onClick={() => setAbsenceType(type)}
+                                                style={{ flex: 1, padding: '10px 0', border: '1px solid #e2e8f0', background: absenceType === type ? '#0f172a' : '#f8fafc', color: absenceType === type ? '#fff' : '#64748b', borderRadius: '10px', fontWeight: absenceType === type ? 'bold' : '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <label style={{ display: 'block', fontSize: '0.9rem', color: '#475569', fontWeight: '600', marginBottom: '8px' }}>Antal Timer</label>
+                                    <input 
+                                        type="number" step="0.25" value={absenceHours} onChange={e => setAbsenceHours(e.target.value)} 
+                                        style={{ width: '100%', padding: '14px', border: '1px solid #cbd5e1', borderRadius: '12px', fontSize: '1rem', outline: 'none', marginBottom: '20px' }}
+                                    />
+                                    
+                                    <button onClick={handleLogAbsence} style={{ width: '100%', padding: '16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer' }}>
+                                        Gem Fravær
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ background: hasMissingPastDays ? '#fef2f2' : '#f8fafc', padding: '24px', borderRadius: '20px', border: `1px solid ${hasMissingPastDays ? '#fecaca' : '#e2e8f0'}` }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                                        {hasMissingPastDays ? <AlertCircle size={24} color="#ef4444" /> : <CheckCircle2 size={24} color="#10b981" />}
+                                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: hasMissingPastDays ? '#9f1239' : '#065f46', fontWeight: 'bold' }}>
+                                            {hasMissingPastDays ? 'Hov! Du mangler at registrere timer' : 'Timeregistrering i top!'}
+                                        </h3>
+                                    </div>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                                        {recentWorkDays.map((day, idx) => {
+                                            const isRed = !day.hasTime && !day.isToday;
+                                            const isGreen = day.hasTime;
+                                            
+                                            return (
+                                                <div 
+                                                    key={idx} 
+                                                    onClick={() => { if (isRed) setSelectedMissingDate(day.date); }}
+                                                    style={{ 
+                                                        padding: '12px 4px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+                                                        background: isGreen ? '#ecfdf5' : isRed ? '#fff' : '#f1f5f9',
+                                                        border: `1px solid ${isGreen ? '#a7f3d0' : isRed ? '#fca5a5' : '#cbd5e1'}`,
+                                                        cursor: isRed ? 'pointer' : 'default',
+                                                        boxShadow: isRed ? '0 4px 6px rgba(239,68,68,0.1)' : 'none'
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: '0.7rem', fontWeight: 'bold', textTransform: 'uppercase', color: isGreen ? '#059669' : isRed ? '#dc2626' : '#64748b' }}>
+                                                        {day.label.substring(0, 3)}
+                                                    </span>
+                                                    {isGreen ? <CheckCircle2 size={20} color="#10b981" /> : isRed ? <AlertCircle size={20} color="#ef4444" /> : <Clock size={20} color="#94a3b8" />}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                    
+                                    {hasMissingPastDays && (
+                                        <p style={{ margin: '16px 0 0', fontSize: '0.85rem', color: '#ef4444', textAlign: 'center' }}>Tryk på en rød dag for at melde fravær (syg/ferie) eller gå til din timeregistrering og indtast arbejdstimer.</p>
+                                    )}
+                                </div>
+                            )}
+
+                            <button 
+                                onClick={() => {
+                                    setActiveModal(null);
+                                    if(setActiveTab) setActiveTab('worker_timesheet');
+                                }}
+                                style={{ width: '100%', padding: '16px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1.05rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                                Gå til Fuld Timeregistrering
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>,
+            document.body
+        );
+    };
+
+    // ---- HOVED-LAYOUT (COCKPIT) ----
+    return (
+        <div style={{
+            flex: 1, height: '100%', position: 'relative', zIndex: 10, 
+            background: 'linear-gradient(135deg, #f8fafc, #e2e8f0)',
+            overflow: 'hidden', display: 'flex', flexDirection: 'column',
+            justifyContent: 'space-between', padding: '20px 24px 90px 24px'
+        }}>
+            
+            {/* TOP ROW: Widgets & Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', zIndex: 10 }}>
+                {/* Top Left: Profil/Team */}
+                <div onClick={() => setActiveModal('team')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '20px', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(0,0,0,0.05)' }}>
+                        <Users size={24} color="#3b82f6" />
+                    </div>
+                </div>
+
+                {/* Header (Center) */}
+                <div style={{ textAlign: 'center', flex: 1, padding: '0 10px' }}>
+                    <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#0f172a', fontWeight: '800' }}>
+                        Hej {myProfile?.owner_name?.split(' ')[0] || 'Der'}!
+                    </h1>
+                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.95rem' }}>
+                        Klar til at tage fat?
+                    </p>
+                </div>
+
+                {/* Top Right: Messages */}
+                <div onClick={() => setActiveModal('messages')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '20px', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(0,0,0,0.05)', position: 'relative' }}>
+                        <MessageSquare size={24} color="#8b5cf6" />
+                    </div>
+                </div>
+            </div>
+
+            {/* MIDDLE ROW: THE BIG BUTTON */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px', width: '100%', maxWidth: '300px', margin: '0 auto', flex: 1, zIndex: 20 }}>
+                {activeCheckInInfo ? (
+                    <>
                         <button 
                             onClick={handleGlobalCheckOut}
-                            style={{ maxWidth: '400px', width: '100%', padding: '20px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 8px 16px rgba(239, 68, 68, 0.3)', transition: 'transform 0.1s' }}
-                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
+                            style={{ 
+                                width: '220px', height: '220px', borderRadius: '50%', 
+                                background: 'linear-gradient(145deg, #ef4444, #dc2626)',
+                                border: 'none', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                                boxShadow: '0 20px 40px rgba(239, 68, 68, 0.4), inset 0 2px 0 rgba(255,255,255,0.2)',
+                                cursor: 'pointer', animation: 'pulseRed 2s infinite cubic-bezier(0.4, 0, 0.6, 1)',
+                                transition: 'transform 0.1s'
+                            }}
+                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                             onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         >
-                            ◼ STOP ARBEJDE
+                            <Square size={48} fill="currentColor" />
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <span style={{ fontSize: '1.2rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '2px' }}>Stop</span>
+                                <span style={{ fontSize: '1.5rem', fontWeight: '900', marginTop: '8px', fontFamily: 'monospace' }}>{activeTimerStr}</span>
+                            </div>
                         </button>
+                        <div style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', padding: '12px 20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.5)', textAlign: 'center', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>I gang med</p>
+                            <h4 style={{ margin: '4px 0 0', color: '#0f172a', fontSize: '1.1rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {activeCheckInInfo.lead.customer_name}
+                            </h4>
+                        </div>
                     </>
                 ) : (
                     <>
-                        <p style={{ margin: 0, color: '#6b7280', fontSize: '0.95rem' }}>
-                            Vælg et projekt og tryk start for at stemple ind.
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '400px' }}>
-                            <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
-                                <div 
-                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                    style={{ 
-                                        padding: '16px', 
-                                        borderRadius: '12px', 
-                                        border: '1px solid #e5e7eb', 
-                                        background: '#ffffff', 
-                                        fontSize: '1.05rem', 
-                                        color: selectedCheckInProject ? '#111827' : '#6b7280', 
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: selectedCheckInProject ? '500' : 'normal' }}>
-                                        {selectedCheckInProject 
-                                            ? (() => {
-                                                const p = activeWorkerCases.find(l => l.id === selectedCheckInProject);
-                                                return p ? `Sag ${p.case_number || String(p.id).substring(0,6)} - ${p.customer_name} (${p.category || 'Ukendt kategori'}, ${p.customer_address || 'Adresse ikke angivet'})` : '-- Vælg projekt --';
-                                            })()
-                                            : '-- Vælg projekt --'}
-                                    </span>
-                                    <ChevronDown size={20} style={{ color: '#9ca3af', transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                                </div>
-                                
-                                {isDropdownOpen && (
-                                    <div style={{ 
-                                        position: 'absolute', 
-                                        top: '100%', 
-                                        left: 0, 
-                                        right: 0, 
-                                        marginTop: '8px', 
-                                        background: '#ffffff', 
-                                        borderRadius: '12px', 
-                                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
-                                        border: '1px solid #f3f4f6',
-                                        overflow: 'hidden',
-                                        zIndex: 50,
-                                        maxHeight: '250px',
-                                        overflowY: 'auto',
-                                        animation: 'fadeIn 0.2s ease-out'
-                                    }}>
-                                        {activeWorkerCases.filter(l => l.status !== 'Historik').length === 0 ? (
-                                            <div style={{ padding: '16px', color: '#6b7280', textAlign: 'center' }}>Ingen aktive projekter at stemple ind på.</div>
-                                        ) : (
-                                            activeWorkerCases.filter(l => l.status !== 'Historik').map(lead => (
-                                                <div 
-                                                    key={lead.id}
-                                                    onClick={() => {
-                                                        setSelectedCheckInProject(lead.id);
-                                                        setIsDropdownOpen(false);
-                                                    }}
-                                                    style={{
-                                                        padding: '14px 16px',
-                                                        cursor: 'pointer',
-                                                        borderBottom: '1px solid #f9fafb',
-                                                        color: '#1f2937',
-                                                        textAlign: 'left',
-                                                        transition: 'background 0.15s',
-                                                    }}
-                                                    onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'}
-                                                    onMouseOut={(e) => e.currentTarget.style.background = '#ffffff'}
-                                                >
-                                                    <div style={{ fontWeight: '600' }}>Sag {lead.case_number || String(lead.id).substring(0,6)} - {lead.customer_name}</div>
-                                                    <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '2px' }}>{lead.category || 'Ukendt kategori'}, {lead.customer_address || 'Adresse ikke angivet'}</div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            <button 
-                                onClick={handleGlobalCheckIn}
-                                style={{ width: '100%', padding: '20px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.3)', transition: 'transform 0.1s' }}
-                                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
-                                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        <button 
+                            onClick={handleGlobalCheckIn}
+                            style={{ 
+                                width: '220px', height: '220px', borderRadius: '50%', 
+                                background: 'linear-gradient(145deg, #10b981, #059669)',
+                                border: 'none', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                                boxShadow: '0 20px 40px rgba(16, 185, 129, 0.4), inset 0 2px 0 rgba(255,255,255,0.2)',
+                                cursor: 'pointer', transition: 'transform 0.1s'
+                            }}
+                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                            <Play size={48} fill="currentColor" />
+                            <span style={{ fontSize: '1.2rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '2px' }}>Start</span>
+                        </button>
+                        
+                        <div style={{ position: 'relative', width: '100%' }}>
+                            <div 
+                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                style={{ 
+                                    padding: '16px 20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)', 
+                                    background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(10px)',
+                                    fontSize: '1rem', color: selectedCheckInProject ? '#0f172a' : '#64748b', cursor: 'pointer',
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    boxShadow: '0 8px 16px rgba(0,0,0,0.05)'
+                                }}
                             >
-                                ▶ START ARBEJDE
-                            </button>
+                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: selectedCheckInProject ? '700' : '500' }}>
+                                    {selectedCheckInProject 
+                                        ? (() => {
+                                            const p = activeWorkerCases.find(l => String(l.id) === String(selectedCheckInProject));
+                                            return p ? `${p.customer_name}` : 'Vælg projekt...';
+                                        })()
+                                        : 'Vælg projekt...'}
+                                </span>
+                                <ChevronDown size={20} style={{ color: '#94a3b8', transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                            </div>
+                            
+                            {isDropdownOpen && (
+                                <div style={{ 
+                                    position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: '12px', 
+                                    background: '#ffffff', borderRadius: '20px', boxShadow: '0 -10px 40px rgba(0,0,0,0.1)', 
+                                    border: '1px solid #f1f5f9', overflow: 'hidden', zIndex: 50, maxHeight: '250px', overflowY: 'auto'
+                                }}>
+                                    {activeWorkerCases.filter(l => l.status !== 'Historik').length === 0 ? (
+                                        <div style={{ padding: '20px', color: '#64748b', textAlign: 'center' }}>Ingen aktive sager.</div>
+                                    ) : (
+                                        activeWorkerCases.filter(l => l.status !== 'Historik').map(lead => (
+                                            <div 
+                                                key={lead.id}
+                                                onClick={() => { setSelectedCheckInProject(lead.id); setIsDropdownOpen(false); }}
+                                                style={{ padding: '16px 20px', cursor: 'pointer', borderBottom: '1px solid #f8fafc', color: '#0f172a' }}
+                                            >
+                                                <div style={{ fontWeight: '700' }}>{lead.customer_name}</div>
+                                                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>Sag #{lead.case_number || String(lead.id).substring(0,6)}</div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </>
                 )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-                
-                {/* AKTIVE SAGER KORT */}
-                <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ padding: '8px', background: '#fffbeb', color: '#f59e0b', borderRadius: '8px' }}>
-                            <Briefcase size={20} />
-                        </div>
-                        Dine Projekter
-                    </h3>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px', width: '100%' }}>
-                        {activeWorkerCases.length === 0 ? (
-                            <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', borderRadius: '12px', padding: '24px', border: '1px dashed var(--border-light)' }}>
-                                <p style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: '0.95rem', textAlign: 'center' }}>
-                                    Du er ikke tilknyttet nogle projekter endnu.
-                                </p>
+            {/* BOTTOM ROW: Widgets */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', zIndex: 10 }}>
+                {/* Bottom Left: Cases */}
+                <div onClick={() => setActiveModal('cases')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <div style={{ width: '64px', height: '64px', borderRadius: '24px', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 20px rgba(0,0,0,0.05)', position: 'relative' }}>
+                        <Briefcase size={28} color="#0f172a" />
+                        {activeWorkerCases.length > 0 && (
+                            <div style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#0f172a', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #f8fafc' }}>
+                                {activeWorkerCases.length}
                             </div>
-                        ) : (
-                            activeWorkerCases.map((lead, idx) => {
-                                const title = lead.raw_data?.project_title || lead.project_category || 'Projekt';
-                                const caseNo = lead.case_number || String(lead.id).substring(0,6);
-                                const customerName = lead.customer_name || lead.raw_data?.customerDetails?.name || 'Ukendt kunde';
-                                const address = lead.customer_address || lead.raw_data?.customerDetails?.address || 'Adresse ikke angivet';
-                                const customerPhone = lead.customer_phone || lead.raw_data?.customerDetails?.phone || lead.raw_data?.customerDetails?.telephone || null;
-                                const isArchived = lead.status === 'Historik';
-                                
-                                return (
-                                    <div key={lead.id || idx} className="glass-panel" style={{ padding: '0', display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer', border: '1px solid var(--border-light)', overflow: 'hidden' }}
-                                         onClick={() => { 
-                                             if (setTargetCaseId) setTargetCaseId(lead.id);
-                                             if (setActiveTab) setActiveTab('cases');
-                                         }}
-                                         onMouseOver={(e) => {
-                                             e.currentTarget.style.transform = 'translateY(-4px)';
-                                             e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.06)';
-                                             e.currentTarget.style.borderColor = isArchived ? 'rgba(100, 116, 139, 0.3)' : 'rgba(16, 185, 129, 0.3)';
-                                         }}
-                                         onMouseOut={(e) => {
-                                             e.currentTarget.style.transform = 'translateY(0)';
-                                             e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)';
-                                             e.currentTarget.style.borderColor = 'var(--border-light)';
-                                         }}
-                                    >
-                                        {/* Card Header */}
-                                        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'rgba(248, 250, 252, 0.5)' }}>
-                                            <div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '4px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                    <span>SAG #{caseNo}</span>
-                                                    {lead.status === 'Sæt i bero' && (
-                                                        <span style={{ fontSize: '0.65rem', backgroundColor: '#ffedd5', color: '#c2410c', padding: '2px 6px', borderRadius: '6px', border: '1px solid #fdba74' }}>Sat i bero</span>
-                                                    )}
-                                                    {lead.status === 'Afbrudt Sag' && (
-                                                        <span style={{ fontSize: '0.65rem', backgroundColor: '#fee2e2', color: '#991b1b', padding: '2px 6px', borderRadius: '6px', border: '1px solid #fca5a5' }}>Afbrudt</span>
-                                                    )}
-                                                </div>
-                                                <h4 style={{ margin: '0', fontSize: '1.15rem', color: 'var(--text-primary)', fontWeight: '700', lineHeight: '1.2' }}>{title}</h4>
-                                            </div>
-                                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: isArchived ? '#94a3b8' : '#10b981', boxShadow: isArchived ? '0 0 0 4px rgba(148,163,184,0.1)' : '0 0 0 4px rgba(16,185,129,0.1)' }} title={isArchived ? "Afsluttet" : "Aktiv"} />
-                                        </div>
-                                        
-                                        {/* Card Body */}
-                                        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                        <Briefcase size={12} />
-                                                    </div>
-                                                    <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{customerName}</span>
-                                                </div>
-                                                
-                                                {customerPhone && (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                            <Phone size={12} />
-                                                        </div>
-                                                        <a 
-                                                            href={`tel:${customerPhone}`} 
-                                                            onClick={(e) => e.stopPropagation()} 
-                                                            style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: '500' }}
-                                                            onMouseOver={(e) => { e.currentTarget.style.color = '#10b981'; e.currentTarget.style.textDecoration = 'underline'; }}
-                                                            onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.textDecoration = 'none'; }}
-                                                        >
-                                                            {customerPhone}
-                                                        </a>
-                                                    </div>
-                                                )}
-
-                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
-                                                        <MapPin size={12} />
-                                                    </div>
-                                                    <a 
-                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} 
-                                                        target="_blank" 
-                                                        rel="noopener noreferrer" 
-                                                        style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: '500', lineHeight: '1.4' }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onMouseOver={(e) => { e.currentTarget.style.color = '#10b981'; e.currentTarget.style.textDecoration = 'underline'; }}
-                                                        onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.textDecoration = 'none'; }}
-                                                    >
-                                                        {address}
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )
-                            })
                         )}
                     </div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#475569' }}>Sager</span>
                 </div>
 
-                {/* TIMEREGISTRERING KORT */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
-                        {/* Kort: Denne uge */}
-                        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                            <div style={{ padding: '8px', background: '#ecfdf5', color: '#10b981', borderRadius: '8px', marginBottom: '4px' }}>
-                                <Clock size={24} />
-                            </div>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timer denne uge</span>
-                            <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>{timeStats.hoursThisWeek.toFixed(1)}</span>
-                        </div>
-                        {/* Kort: Denne måned */}
-                        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                            <div style={{ padding: '8px', background: '#eff6ff', color: '#3b82f6', borderRadius: '8px', marginBottom: '4px' }}>
-                                <Calendar size={24} />
-                            </div>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timer denne måned</span>
-                            <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-primary)', lineHeight: '1' }}>{timeStats.hoursThisMonth.toFixed(1)}</span>
-                        </div>
+                {/* Bottom Right: Time & Missing */}
+                <div onClick={() => setActiveModal('time')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <div style={{ width: '64px', height: '64px', borderRadius: '24px', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: hasMissingPastDays ? '0 0 20px rgba(239, 68, 68, 0.4)' : '0 10px 20px rgba(0,0,0,0.05)', position: 'relative', animation: hasMissingPastDays ? 'pulseRed 2s infinite' : 'none' }}>
+                        <Calendar size={28} color={hasMissingPastDays ? '#ef4444' : '#0f172a'} />
+                        {hasMissingPastDays && (
+                            <div style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #f8fafc' }} />
+                        )}
                     </div>
-                    {/* Knap til fuld timeseddel */}
-                    <button 
-                        onClick={() => {
-                            if (setActiveTab) setActiveTab('worker_timesheet');
-                        }}
-                        style={{ width: '100%', padding: '16px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-light)', borderRadius: '12px', fontSize: '1.05rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
-                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-primary)'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
-                    >
-                        Gå til din timeregistrering <ArrowRight size={18} />
-                    </button>
+                    <span style={{ fontSize: '0.8rem', fontWeight: '600', color: hasMissingPastDays ? '#ef4444' : '#475569' }}>Timer</span>
                 </div>
-
             </div>
+
+            {/* Modals are rendered here via portal */}
+            {renderModal()}
+
+            <style>{`
+                @keyframes pulseRed {
+                    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+                    70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+                }
+                @keyframes slideUp {
+                    from { transform: translateY(100%); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+            `}</style>
         </div>
     );
 }
