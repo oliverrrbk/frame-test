@@ -60,6 +60,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [selectedMobileDate, setSelectedMobileDate] = useState(new Date());
     const [showMobileFilter, setShowMobileFilter] = useState(false);
     const [showMobileSearch, setShowMobileSearch] = useState(false);
+    const [mobileViewType, setMobileViewType] = useState('month'); // 'month' or 'timeline'
     
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -73,6 +74,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     
     // Drag and Drop & Modals
     const [draggedLead, setDraggedLead] = useState(null);
+    const [draggedEvent, setDraggedEvent] = useState(null);
+    const dragTimeoutRef = useRef(null);
     const [showEventModal, setShowEventModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [popoverLead, setPopoverLead] = useState(null);
@@ -225,7 +228,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const prevPeriod = () => {
         let newDate;
         if (view === 'month') newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-        if (view === 'week') newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7);
+        if (view === 'week' || view === 'timeline') newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7);
         if (view === 'year') newDate = new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), 1);
         setCurrentDate(newDate);
         if (isMobile) setSelectedMobileDate(newDate);
@@ -233,13 +236,30 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const nextPeriod = () => {
         let newDate;
         if (view === 'month') newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-        if (view === 'week') newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7);
+        if (view === 'week' || view === 'timeline') newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7);
         if (view === 'year') newDate = new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), 1);
         setCurrentDate(newDate);
         if (isMobile) setSelectedMobileDate(newDate);
     };
 
     const monthNames = ['Januar', 'Februar', 'Marts', 'April', 'Maj', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'December'];
+
+    const handleDragOverNav = (e, direction) => {
+        e.preventDefault();
+        if (!dragTimeoutRef.current) {
+            dragTimeoutRef.current = setTimeout(() => {
+                if (direction === 'prev') prevPeriod();
+                if (direction === 'next') nextPeriod();
+            }, 800);
+        }
+    };
+    
+    const clearDragTimeout = () => {
+        if (dragTimeoutRef.current) {
+            clearTimeout(dragTimeoutRef.current);
+            dragTimeoutRef.current = null;
+        }
+    };
 
     // Tjek overlaps for en given dag
     const getItemsForDay = (checkDate) => {
@@ -358,9 +378,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         }
     };
 
-    const handleDropLead = (day) => {
+    const handleDropLead = (targetDateObj) => {
         if (!draggedLead || !isManager) return;
-        const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
         
         // Find varighed
         let daysDuration = 1;
@@ -375,13 +394,13 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         }
 
         // Tjek for ferie kollision
-        const endDate = new Date(selectedDate);
+        const endDate = new Date(targetDateObj);
         endDate.setDate(endDate.getDate() + daysDuration - 1);
         
         // Simpel kollisions-tjek: Har nogen team members på sagen ferie i perioden, eller er der andre sager?
         let collisionFound = false;
         const assigned = draggedLead.raw_data?.assigned_workers || [];
-        for (let d = new Date(selectedDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        for (let d = new Date(targetDateObj); d <= endDate; d.setDate(d.getDate() + 1)) {
              const items = getItemsForDay(new Date(d));
              if (items.absences.some(a => assigned.includes(a.employeeId))) {
                  collisionFound = true;
@@ -395,9 +414,58 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
         // Åbn varigheds-bekræftelsen (samme trin på mobil og desktop). Kollision vises live i modalen.
         void collisionFound;
-        const startStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+        const startStr = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
         openScheduleConfirm(draggedLead, startStr, daysDuration, 'new');
         setDraggedLead(null);
+    };
+
+    const handleDropEvent = async (targetDateObj) => {
+        if (!draggedEvent || !isManager) return;
+        
+        const year = targetDateObj.getFullYear();
+        const month = String(targetDateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(targetDateObj.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${d}`;
+
+        // Opdater start- og slutdato med samme forskel (hvis flerdages event)
+        let start = new Date(draggedEvent.startDate || draggedEvent.date);
+        let end = new Date(draggedEvent.endDate || draggedEvent.date);
+        
+        // Nulstil tider for at beregne rene dage forskel
+        start.setHours(0,0,0,0);
+        end.setHours(0,0,0,0);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        
+        const newEndDateObj = new Date(targetDateObj);
+        newEndDateObj.setDate(newEndDateObj.getDate() + diffDays);
+        const endYear = newEndDateObj.getFullYear();
+        const endMonth = String(newEndDateObj.getMonth() + 1).padStart(2, '0');
+        const endD = String(newEndDateObj.getDate()).padStart(2, '0');
+        const endDateStr = `${endYear}-${endMonth}-${endD}`;
+
+        const updatedEvent = { ...draggedEvent, startDate: dateStr, endDate: endDateStr };
+        
+        const updatedEvents = (carpenterProfile?.raw_data?.calendar_events || []).map(ev => 
+            ev.id === draggedEvent.id ? updatedEvent : ev
+        );
+        const updatedRawData = { ...carpenterProfile.raw_data, calendar_events: updatedEvents };
+        
+        setDraggedEvent(null);
+        
+        try {
+            await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
+            if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: updatedRawData });
+            toast.success('Aftale flyttet');
+        } catch (error) {
+            toast.error('Fejl ved flytning af aftale');
+        }
+    };
+
+    const handleDropOnDate = (targetDateObj) => {
+        clearDragTimeout();
+        if (draggedLead) handleDropLead(targetDateObj);
+        if (draggedEvent) handleDropEvent(targetDateObj);
     };
 
     const confirmScheduleLead = async (lead, start, end) => {
@@ -518,9 +586,19 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 style={{ flex: 1, border: 'none', outline: 'none', background: '#f1f5f9', padding: '8px 12px', borderRadius: '8px', fontSize: '1rem', width: '100%' }}
                             />
                         ) : (
-                            <h2 style={{ fontSize: '1.4rem', fontWeight: '800', margin: 0, color: '#0f172a', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
-                                {format(currentDate, 'MMMM yyyy', { locale: da })}
-                            </h2>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <h2 style={{ fontSize: '1.4rem', fontWeight: '800', margin: 0, color: '#0f172a', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                                    {format(currentDate, 'MMMM yyyy', { locale: da })}
+                                </h2>
+                                <div style={{ display: 'flex', background: '#e2e8f0', padding: '3px', borderRadius: '10px', marginTop: '8px' }}>
+                                    <button onClick={() => setMobileViewType('month')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 16px', borderRadius: '8px', border: 'none', background: mobileViewType === 'month' ? '#fff' : 'transparent', color: mobileViewType === 'month' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: mobileViewType === 'month' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s' }}>
+                                        <CalendarIcon size={16} />
+                                    </button>
+                                    <button onClick={() => setMobileViewType('timeline')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 16px', borderRadius: '8px', border: 'none', background: mobileViewType === 'timeline' ? '#fff' : 'transparent', color: mobileViewType === 'timeline' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: mobileViewType === 'timeline' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s' }}>
+                                        <Users size={16} />
+                                    </button>
+                                </div>
+                            </div>
                         )}
                         
                         <button onClick={nextPeriod} style={{ background: 'none', border: 'none', padding: '4px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
@@ -594,6 +672,103 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     </div>
                 ) : (
                     <>
+                        {mobileViewType === 'timeline' ? (() => {
+                            const startOfWeekMobile = new Date(currentDate);
+                            const dayOfWeekMobile = startOfWeekMobile.getDay();
+                            const diffMobile = startOfWeekMobile.getDate() - dayOfWeekMobile + (dayOfWeekMobile === 0 ? -6 : 1);
+                            startOfWeekMobile.setDate(diffMobile);
+
+                            return (
+                            <div style={{ padding: '0 0 16px 0', overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', minWidth: 'max-content', padding: '0 12px' }}>
+                                    <div style={{ width: '56px', flexShrink: 0 }}></div>
+                                    {Array.from({ length: 5 }).map((_, i) => {
+                                        const d = new Date(startOfWeekMobile);
+                                        d.setDate(startOfWeekMobile.getDate() + i);
+                                        const isToday = new Date().getDate() === d.getDate() && new Date().getMonth() === d.getMonth() && new Date().getFullYear() === d.getFullYear();
+                                        const shortDayName = format(d, 'eeeee', { locale: da }); // e.g., 'M', 'T'
+                                        return (
+                                            <div key={i} style={{ width: '48px', flexShrink: 0, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.65rem', fontWeight: '700', color: isToday ? '#2563eb' : '#64748b', textTransform: 'uppercase' }}>{shortDayName}</span>
+                                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: isToday ? '#2563eb' : 'transparent', color: isToday ? '#fff' : '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: '700' }}>
+                                                    {d.getDate()}
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 'max-content', padding: '0 12px' }}>
+                                    {[
+                                        { id: String(myProfile?.id), name: myProfile?.owner_name || myProfile?.company_name || 'Mig' },
+                                        ...teamMembers.filter(m => String(m.id) !== String(myProfile?.id)).map(m => ({
+                                            id: String(m.id),
+                                            name: m.owner_name || m.company_name || 'Ukendt'
+                                        }))
+                                    ].map((emp, empIdx) => {
+                                        if (selectedEmployeeIds.length > 0 && !selectedEmployeeIds.includes('all') && !selectedEmployeeIds.includes(emp.id)) return null;
+
+                                        const initials = emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                                        // Genererer en fast, lys og pæn farve ud fra ID
+                                        const hue = (String(emp.id).charCodeAt(0) * 137) % 360;
+                                        const bgColor = `hsl(${hue}, 70%, 90%)`;
+                                        const textColor = `hsl(${hue}, 70%, 30%)`;
+
+                                        return (
+                                            <div key={emp.id} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                <div style={{ width: '56px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: bgColor, color: textColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '800', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                                        {initials}
+                                                    </div>
+                                                </div>
+                                                {Array.from({ length: 5 }).map((_, i) => {
+                                                    const d = new Date(startOfWeekMobile);
+                                                    d.setDate(startOfWeekMobile.getDate() + i);
+                                                    const items = getItemsForDay(d);
+                                                    const empAbsences = items.absences.filter(a => String(a.employeeId) === emp.id);
+                                                    const empLeads = items.leads.filter(l => (l.raw_data?.assigned_workers || []).includes(emp.id) || (l.raw_data?.assigned_pm || []).includes(emp.id));
+                                                    const empEvents = items.events.filter(e => e.participants.includes('all') || e.participants.includes(emp.id));
+                                                    
+                                                    const pills = [];
+                                                    if (empAbsences.length > 0) {
+                                                        const isSygdom = empAbsences.some(a => a.absenceType === 'Sygdom');
+                                                        pills.push(<div key={`abs`} style={{ width: '100%', height: '6px', borderRadius: '3px', background: isSygdom ? '#ef4444' : '#f59e0b' }} />);
+                                                    }
+                                                    if (empLeads.length > 0) {
+                                                        pills.push(<div key={`lead`} style={{ width: '100%', height: '6px', borderRadius: '3px', background: '#3b82f6' }} />);
+                                                    }
+                                                    if (empEvents.length > 0) {
+                                                        pills.push(<div key={`event`} style={{ width: '100%', height: '6px', borderRadius: '3px', background: '#10b981' }} />);
+                                                    }
+
+                                                    const isToday = new Date().getDate() === d.getDate() && new Date().getMonth() === d.getMonth() && new Date().getFullYear() === d.getFullYear();
+
+                                                    return (
+                                                        <div key={i} 
+                                                            onClick={() => {
+                                                                if (empLeads.length === 1 && empEvents.length === 0 && empAbsences.length === 0) {
+                                                                    setCaseActionSheet({ lead: empLeads[0] });
+                                                                } else if (pills.length > 0) {
+                                                                    setCurrentDate(d);
+                                                                    setMobileViewType('month');
+                                                                    setSelectedMobileDate(d);
+                                                                }
+                                                            }}
+                                                            style={{ width: '48px', flexShrink: 0, height: '48px', background: isToday ? '#eff6ff' : '#f8fafc', border: isToday ? '1px solid #bfdbfe' : '1px solid #e2e8f0', borderRadius: '12px', padding: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px', cursor: pills.length > 0 ? 'pointer' : 'default' }}>
+                                                            {pills.length === 0 && (
+                                                                <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#cbd5e1', margin: '0 auto' }} />
+                                                            )}
+                                                            {pills}
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                            );
+                        })() : (
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {/* Mobile Grid */}
                         <div style={{ padding: '0 16px' }}>
                             {/* Ugedage */}
@@ -708,6 +883,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 );
                             })()}
                         </div>
+                        </div>
+                        )}
                     </>
                 )}
 
@@ -772,6 +949,118 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
     // ----------------- RENDER VIEWS -----------------
 
+    const renderTimelineView = () => {
+        const startOfWeek = new Date(currentDate);
+        const dayOfWeek = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        startOfWeek.setDate(diff);
+
+        return (
+            <div className="custom-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflowX: 'auto', overflowY: 'auto' }}>
+                <div style={{ minWidth: 'max-content', paddingBottom: '16px' }}>
+                    
+                    {/* Header: Dage */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', position: 'sticky', top: 0, background: '#f8fafc', zIndex: 10, paddingBottom: '8px', borderBottom: '1px solid #e2e8f0' }}>
+                        <div style={{ width: '150px', flexShrink: 0, fontWeight: '800', color: '#0f172a', fontSize: '0.9rem', padding: '12px 8px', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 11, borderRight: '1px solid #e2e8f0' }}>Medarbejder</div>
+                        {Array.from({ length: 7 }).map((_, idx) => {
+                            const checkDate = new Date(startOfWeek);
+                            checkDate.setDate(startOfWeek.getDate() + idx);
+                            const isToday = new Date().getDate() === checkDate.getDate() && new Date().getMonth() === checkDate.getMonth() && new Date().getFullYear() === checkDate.getFullYear();
+                            return (
+                                <div key={idx} className="cal-day-header" style={{ width: '120px', flexShrink: 0, textAlign: 'center', fontWeight: '700', fontSize: '0.85rem', color: isToday ? '#2563eb' : '#0f172a', background: isToday ? '#eff6ff' : 'transparent', padding: '12px 8px', borderRadius: '8px' }}>
+                                    {format(checkDate, 'eee d. MMM', { locale: da })}
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {/* Rækker (Medarbejdere) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {[
+                            { id: String(myProfile?.id), name: myProfile?.owner_name || myProfile?.company_name || 'Mig' },
+                            ...teamMembers.filter(m => String(m.id) !== String(myProfile?.id)).map(m => ({
+                                id: String(m.id),
+                                name: m.owner_name || m.company_name || 'Ukendt'
+                            }))
+                        ].map(emp => {
+                            if (selectedEmployeeIds.length > 0 && !selectedEmployeeIds.includes('all') && !selectedEmployeeIds.includes(emp.id)) return null;
+
+                            return (
+                                <div key={emp.id} style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                                    <div className="cal-employee-name" style={{ width: '150px', flexShrink: 0, fontWeight: '700', fontSize: '0.85rem', color: '#334155', display: 'flex', alignItems: 'center', padding: '0 8px', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 5, borderRight: '1px solid #e2e8f0' }}>
+                                        {emp.name}
+                                    </div>
+                                    {Array.from({ length: 7 }).map((_, idx) => {
+                                        const checkDate = new Date(startOfWeek);
+                                        checkDate.setDate(startOfWeek.getDate() + idx);
+                                        const items = getItemsForDay(checkDate);
+                                        
+                                        const empAbsences = items.absences.filter(a => String(a.employeeId) === emp.id);
+                                        const empLeads = items.leads.filter(l => (l.raw_data?.assigned_workers || []).includes(emp.id) || (l.raw_data?.assigned_pm || []).includes(emp.id));
+                                        const empEvents = items.events.filter(e => e.participants.includes('all') || e.participants.includes(emp.id));
+                                        const isOverbooked = empLeads.length + empEvents.length > 1;
+
+                                        return (
+                                            <div 
+                                                key={idx} 
+                                                className="cal-grid-cell"
+                                                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(226, 232, 240, 0.8)'; }}
+                                                onDragLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+                                                onDrop={(e) => { 
+                                                    e.preventDefault(); 
+                                                    e.currentTarget.style.background = '#fff'; 
+                                                    handleDropOnDate(checkDate); 
+                                                }}
+                                                style={{ width: '120px', flexShrink: 0, minHeight: '80px', background: '#fff', border: '1px dashed #e2e8f0', borderRadius: '8px', padding: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                {isOverbooked && <div style={{ fontSize: '0.7rem', color: '#fff', background: '#ef4444', padding: '2px 4px', borderRadius: '4px', textAlign: 'center', fontWeight: 'bold' }}>Dobbeltbooket</div>}
+                                                
+                                                {empAbsences.map((a, i) => (
+                                                    <div key={`abs-${i}`} style={{ background: a.absenceType === 'Sygdom' ? '#fef2f2' : '#fff7ed', border: `1px solid ${a.absenceType === 'Sygdom' ? '#fca5a5' : '#fed7aa'}`, borderRadius: '4px', padding: '4px', fontSize: '0.7rem', fontWeight: '700', color: a.absenceType === 'Sygdom' ? '#dc2626' : '#ea580c' }}>
+                                                        {a.absenceType}
+                                                    </div>
+                                                ))}
+                                                
+                                                {empLeads.map(lead => {
+                                                    const colors = getStatusColor(lead.status);
+                                                    return (
+                                                        <div key={lead.id} 
+                                                            className="cal-event-card"
+                                                            draggable={isManager}
+                                                            onDragStart={() => setDraggedLead(lead)}
+                                                            onDragEnd={() => setDraggedLead(null)}
+                                                            onClick={(e) => { e.stopPropagation(); onCaseClick(lead); }} 
+                                                            style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '4px', padding: '6px 4px', fontSize: '0.75rem', fontWeight: '700', color: colors.text, cursor: isManager ? 'grab' : 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                            Sag {lead.case_number || String(lead.id).substring(0,4)}
+                                                        </div>
+                                                    )
+                                                })}
+
+                                                {empEvents.map(e => {
+                                                    const style = getEventStyle(e.type);
+                                                    return (
+                                                        <div key={e.id} 
+                                                            className="cal-event-card"
+                                                            draggable={isManager}
+                                                            onDragStart={() => setDraggedEvent(e)}
+                                                            onDragEnd={() => setDraggedEvent(null)}
+                                                            onClick={(evt) => { evt.stopPropagation(); openModalForDate(null, e); }} 
+                                                            style={{ background: style.bg, borderLeft: `3px solid ${style.leftBorder}`, borderRadius: '2px 4px 4px 2px', padding: '4px', fontSize: '0.75rem', cursor: isManager ? 'grab' : 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                            {e.startTime} {e.title}
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
 
     const renderMonthView = () => {
         return (
@@ -805,8 +1094,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
                                 onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = isToday ? '#3b82f6' : '#e2e8f0'; }}
                                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(226, 232, 240, 0.8)'; }}
-                                onDragLeave={(e) => { e.currentTarget.style.background = isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'); }}
-                                onDrop={(e) => { e.preventDefault(); e.currentTarget.style.background = isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'); handleDropLead(day); }}
+                                onDragLeave={(e) => { e.currentTarget.style.background = isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'); clearDragTimeout(); }}
+                                onDrop={(e) => { e.preventDefault(); e.currentTarget.style.background = isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'); handleDropOnDate(checkDate); }}
                                 style={{ 
                                     background: isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'), 
                                     borderRadius: '16px', 
@@ -832,13 +1121,16 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                             <div 
                                                 key={ev.id} 
                                                 onClick={(e) => { e.stopPropagation(); openModalForDate(null, ev); }}
+                                                draggable={isManager}
+                                                onDragStart={() => setDraggedEvent(ev)}
+                                                onDragEnd={() => setDraggedEvent(null)}
                                                 style={{ 
                                                     background: evStyle.bg, color: evStyle.text, 
                                                     fontSize: '0.75rem', padding: '4px 6px', 
                                                     borderRadius: '4px', borderLeft: `3px solid ${evStyle.leftBorder}`,
                                                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                                     display: 'flex', alignItems: 'center', gap: '4px',
-                                                    cursor: 'pointer'
+                                                    cursor: isManager ? 'grab' : 'pointer'
                                                 }}
                                                 title={ev.title}
                                             >
@@ -915,7 +1207,11 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     const { isHoliday, leads, absences, events } = getItemsForDay(checkDate);
 
                     return (
-                        <div key={idx} onClick={() => openModalForDate(checkDate)} style={{ background: isToday ? '#eff6ff' : '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: isManager ? 'pointer' : 'default', transition: 'all 0.2s' }}
+                        <div key={idx} onClick={() => openModalForDate(checkDate)} 
+                            onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(226, 232, 240, 0.8)'; }}
+                            onDragLeave={(e) => { e.currentTarget.style.background = isToday ? '#eff6ff' : '#fff'; clearDragTimeout(); }}
+                            onDrop={(e) => { e.preventDefault(); e.currentTarget.style.background = isToday ? '#eff6ff' : '#fff'; handleDropOnDate(checkDate); }}
+                            style={{ background: isToday ? '#eff6ff' : '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: isManager ? 'pointer' : 'default', transition: 'all 0.2s' }}
                             onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
                             onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
                         >
@@ -930,7 +1226,12 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 {leads.map(lead => {
                                     const colors = getStatusColor(lead.status);
                                     return (
-                                        <div key={lead.id} onClick={(e) => { e.stopPropagation(); onCaseClick(lead); }} style={{ background: colors.bg, borderRadius: '8px', padding: '8px', fontSize: '0.8rem', fontWeight: '700', color: colors.text, cursor: 'pointer' }}>
+                                        <div key={lead.id} 
+                                            draggable={isManager}
+                                            onDragStart={() => setDraggedLead(lead)}
+                                            onDragEnd={() => setDraggedLead(null)}
+                                            onClick={(e) => { e.stopPropagation(); onCaseClick(lead); }} 
+                                            style={{ background: colors.bg, borderRadius: '8px', padding: '8px', fontSize: '0.8rem', fontWeight: '700', color: colors.text, cursor: isManager ? 'grab' : 'pointer' }}>
                                             {lead.case_number} - {lead.project_category}
                                         </div>
                                     )
@@ -952,7 +1253,12 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 {events.map(e => {
                                     const style = getEventStyle(e.type);
                                     return (
-                                        <div key={e.id} onClick={(evt) => { evt.stopPropagation(); openModalForDate(null, e); }} style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, borderRadius: '0 8px 8px 0', padding: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                        <div key={e.id} 
+                                            draggable={isManager}
+                                            onDragStart={() => setDraggedEvent(e)}
+                                            onDragEnd={() => setDraggedEvent(null)}
+                                            onClick={(evt) => { evt.stopPropagation(); openModalForDate(null, e); }} 
+                                            style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, borderRadius: '0 8px 8px 0', padding: '8px', fontSize: '0.8rem', cursor: isManager ? 'grab' : 'pointer' }}>
                                             <strong>{e.startTime} - {e.endTime}</strong><br/>{e.title}
                                         </div>
                                     )
@@ -1057,23 +1363,24 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 {/* Header Row 2: View Toggles & Navigation */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                     <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
-                        {['month', 'week', 'year'].map(v => (
+                        {['month', 'week', 'year', 'timeline'].map(v => (
                             <button 
                                 key={v}
                                 onClick={() => setView(v)}
-                                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: view === v ? '#fff' : 'transparent', color: view === v ? '#0f172a' : '#64748b', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: view === v ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', textTransform: 'capitalize' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '8px', border: 'none', background: view === v ? '#fff' : 'transparent', color: view === v ? '#0f172a' : '#64748b', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: view === v ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', textTransform: 'capitalize' }}
                                 onMouseOver={e=> { if(view !== v) e.currentTarget.style.color = '#0f172a'; }}
                                 onMouseOut={e=> { if(view !== v) e.currentTarget.style.color = '#64748b'; }}
                             >
-                                {v === 'month' ? 'Måned' : v === 'week' ? 'Uge' : 'År'}
+                                {v === 'timeline' && <Users size={16} />}
+                                {v === 'month' ? 'Måned' : v === 'week' ? 'Uge' : v === 'year' ? 'År' : 'Personale'}
                             </button>
                         ))}
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={prevPeriod} style={{ width: '40px', height: '40px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e=>e.currentTarget.style.background='#f8fafc'} onMouseOut={e=>e.currentTarget.style.background='#fff'}><ChevronLeft size={20}/></button>
-                        <button onClick={() => setCurrentDate(new Date())} style={{ height: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e=>e.currentTarget.style.background='#f8fafc'} onMouseOut={e=>e.currentTarget.style.background='#fff'}>I dag</button>
-                        <button onClick={nextPeriod} style={{ width: '40px', height: '40px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e=>e.currentTarget.style.background='#f8fafc'} onMouseOut={e=>e.currentTarget.style.background='#fff'}><ChevronRight size={20}/></button>
+                        <button className="cal-nav-btn" onClick={prevPeriod} onDragOver={(e) => handleDragOverNav(e, 'prev')} onDragLeave={clearDragTimeout} onDrop={clearDragTimeout} style={{ width: '40px', height: '40px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><ChevronLeft size={20}/></button>
+                        <button className="cal-nav-btn" onClick={() => setCurrentDate(new Date())} onDragOver={(e) => e.preventDefault()} onDrop={clearDragTimeout} style={{ height: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', fontWeight: '600', cursor: 'pointer' }}>I dag</button>
+                        <button className="cal-nav-btn" onClick={nextPeriod} onDragOver={(e) => handleDragOverNav(e, 'next')} onDragLeave={clearDragTimeout} onDrop={clearDragTimeout} style={{ width: '40px', height: '40px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><ChevronRight size={20}/></button>
                     </div>
                 </div>
 
@@ -1081,6 +1388,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 {view === 'month' && renderMonthView()}
                 {view === 'week' && renderWeekView()}
                 {view === 'year' && renderYearView()}
+                {view === 'timeline' && renderTimelineView()}
 
             </div>
 

@@ -3307,3 +3307,63 @@ button:focus-visible {
         padding: 0 !important;
     }
 }
+
+/* ═══════════════════════════════════════
+   CALENDAR / TIMELINE HOVER EFFECTS (BISON STYLE)
+   ═══════════════════════════════════════ */
+
+/* Navigation Arrows */
+.cal-nav-btn {
+    transition: var(--spring);
+    border-radius: 50%;
+}
+.cal-nav-btn:hover {
+    background: var(--bg-hover) !important;
+    transform: scale(1.15);
+    box-shadow: var(--shadow-sm);
+}
+.cal-nav-btn:active {
+    transform: scale(0.95);
+}
+
+/* Day Headers (Dates) */
+.cal-day-header {
+    transition: var(--spring);
+    cursor: pointer;
+}
+.cal-day-header:hover {
+    transform: translateY(-2px);
+    background: #e2e8f0 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* Grid Cells / Dropzones */
+.cal-grid-cell {
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+.cal-grid-cell:hover {
+    background: #f8fafc !important;
+}
+
+/* Event/Lead Cards */
+.cal-event-card {
+    transition: var(--spring);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.cal-event-card:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-md);
+    z-index: 10;
+}
+.cal-event-card:active {
+    transform: scale(0.98);
+}
+
+/* Employee Row Names */
+.cal-employee-name {
+    transition: color 0.2s ease;
+    cursor: pointer;
+}
+.cal-employee-name:hover {
+    color: var(--accent-blue) !important;
+}
