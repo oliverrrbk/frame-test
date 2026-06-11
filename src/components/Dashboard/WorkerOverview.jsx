@@ -219,7 +219,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         const updatedEntries = [newEntry, ...currentProfileEntries];
         const newRawData = { ...(myProfile?.raw_data || {}), time_entries: updatedEntries };
 
-        const { error } = await supabase.from('profiles').update({ raw_data: newRawData }).eq('id', myProfile.id);
+        const { error } = await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', myProfile.id);
 
         if (error) {
             toast.error('Kunne ikke gemme fravær');

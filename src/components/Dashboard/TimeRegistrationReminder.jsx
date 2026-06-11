@@ -130,7 +130,7 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
         const newRawData = { ...(myProfile?.raw_data || {}), time_entries: updatedEntries };
 
         const { error } = await supabase
-            .from('profiles')
+            .from('carpenters')
             .update({ raw_data: newRawData })
             .eq('id', myProfile.id);
 
