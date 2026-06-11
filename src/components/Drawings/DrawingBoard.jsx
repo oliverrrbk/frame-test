@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, CircleDashed, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate, Trash2, ClipboardList } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, CircleDashed, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate, Trash2, ClipboardList, Share } from 'lucide-react';
 import { getElementBounds, getElementAtPosition, rotatePoint, findSnapPoint, getConnectedModule } from './engineUtils';
 import { getDrawingBounds, renderElementsToCanvas } from './renderUtils';
 
@@ -3497,7 +3497,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             {/* 1. TOP BAR (Header) - ORIGINAL FLOATING STYLE */}
             <div className="drawing-board-header" style={{ 
                 position: 'absolute',
-                top: '20px',
+                top: 'calc(max(env(safe-area-inset-top), 20px) + 12px)',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 background: 'rgba(255, 255, 255, 0.85)',
@@ -3569,8 +3569,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         onMouseOver={(e) => { if (!isSaving) { e.currentTarget.style.background = '#f0f9ff'; } }}
                         onMouseOut={(e) => { if (!isSaving) { e.currentTarget.style.background = 'white'; } }}
                     >
-                        <FileImage size={18} />
-                        <span className="drawing-desktop-text">Gør Officiel</span>
+                        <Share size={18} />
+                        <span className="drawing-desktop-text">Gem som PDF</span>
                     </button>
 
                     <button 
@@ -3603,7 +3603,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
             {/* 2. RIGHT PANEL (Colors & Undo) - TLDRAW CLONE */}
             {/* MOBILE TOGGLE BUTTON */}
-            <div className="drawing-mobile-toggle" style={{ position: 'absolute', top: 80, right: 16, zIndex: 10001 }}>
+            <div className="drawing-mobile-toggle" style={{ position: 'absolute', top: 'calc(max(env(safe-area-inset-top), 20px) + 76px)', right: 16, zIndex: 10001 }}>
                 <button 
                     onClick={() => setShowMobileRightPanel(!showMobileRightPanel)}
                     style={{
@@ -3618,7 +3618,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             </div>
 
             <div className={`drawing-right-panel ${showMobileRightPanel ? 'open' : ''}`} style={{
-                position: 'absolute', top: 80, right: 16, zIndex: 10000,
+                position: 'absolute', top: 'calc(max(env(safe-area-inset-top), 20px) + 76px)', right: 16, zIndex: 10000,
                 backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(16px)',
                 borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px', gap: '8px',

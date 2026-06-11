@@ -3198,17 +3198,26 @@ const Dashboard = () => {
                                                                 NY
                                                             </span>
                                                         )}
-                                                        {lead.status === 'Intern Kladde' && lead.raw_data?.created_by && (() => {
+                                                        {lead.raw_data?.created_by ? (() => {
                                                             const creator = teamMembers.find(m => m.id === lead.raw_data.created_by);
                                                             if (creator) {
                                                                 return (
-                                                                    <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '6px', backgroundColor: '#f1f5f9', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #e2e8f0' }}>
-                                                                        <User size={12} /> Lavet af {creator.full_name || creator.email}
+                                                                    <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '6px', backgroundColor: '#f1f5f9', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #e2e8f0' }}>
+                                                                        {creator.avatar_url ? (
+                                                                            <img src={creator.avatar_url} alt="avatar" style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                                        ) : (
+                                                                            <User size={12} />
+                                                                        )}
+                                                                        Oprettet af {creator.full_name || creator.owner_name || creator.company_name || creator.email}
                                                                     </span>
                                                                 );
                                                             }
                                                             return null;
-                                                        })()}
+                                                        })() : (
+                                                            <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '6px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #bfdbfe' }}>
+                                                                <Calculator size={12} /> Ny online forespørgsel
+                                                            </span>
+                                                        )}
                                                     </h3>
                                                     <p style={{ margin: '0', color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                         <Clock size={14} /> Modtaget: {new Date(lead.created_at).toLocaleDateString('da-DK')} kl. {new Date(lead.created_at).toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'})}
@@ -6415,17 +6424,17 @@ const Dashboard = () => {
             
 
             {isTestWizardOpen && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(10px)', zIndex: 100000, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-                    <div style={{ padding: '16px', display: 'flex', justifyContent: 'flex-end', position: 'sticky', top: 0, zIndex: 100001 }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#f8fafc', zIndex: 100000, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: 'calc(max(env(safe-area-inset-top), 16px)) 16px 12px 16px', display: 'flex', justifyContent: 'flex-end', position: 'sticky', top: 0, zIndex: 100001, backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                         <button 
                             onClick={() => setIsTestWizardOpen(false)}
-                            style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                            style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
                         >
-                            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#0f172a' }}>×</span>
+                            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#0f172a', lineHeight: 1 }}>×</span>
                         </button>
                     </div>
-                    <div style={{ flex: 1, padding: '0 16px 64px 16px', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
-                        <div style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ flex: 1, maxWidth: '1000px', margin: '0 auto', width: '100%', backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}>
                             {/* Vi sender isTestMode med ned til Wizard */}
                             <Wizard carpenter={carpenterProfile} isTestMode={true} testSettings={settingsData} testMaterials={materialsData} onComplete={() => setIsTestWizardOpen(false)} />
                         </div>

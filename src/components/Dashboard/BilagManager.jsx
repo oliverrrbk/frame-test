@@ -254,7 +254,9 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false }) => {
                 </div>
             </div>
             <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '20px', lineHeight: '1.5' }}>
-                Her registrerer du de udgifter og fakturaer du modtager på denne sag. Husk at vælge den rigtige kategori, så materialebudgettet stemmer.
+                {isMobile
+                    ? 'Registrér udgifter og fakturaer på sagen — vælg den rigtige kategori.'
+                    : 'Her registrerer du de udgifter og fakturaer du modtager på denne sag. Husk at vælge den rigtige kategori, så materialebudgettet stemmer.'}
             </p>
 
             <div style={{ marginBottom: '20px' }}>

@@ -188,24 +188,44 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     
                     {/* FAKTURAMODTAGER */}
-                    <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                    <div style={{ background: '#fff', borderRadius: isMobile ? '20px' : '16px', border: '1px solid #e2e8f0', padding: isMobile ? '18px' : '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                        {isMobile ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', minWidth: 0 }}>
+                                {isB2B ? <Building2 size={18} color="#3b82f6" /> : <User size={18} color="#10b981" />}
+                                Fakturamodtager
+                            </h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                <div style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 'bold', background: isB2B ? '#eff6ff' : '#ecfdf5', color: isB2B ? '#3b82f6' : '#10b981', border: `1px solid ${isB2B ? '#bfdbfe' : '#a7f3d0'}`, whiteSpace: 'nowrap' }}>
+                                    {isB2B ? 'Erhverv' : 'Privat'}
+                                </div>
+                                <button
+                                    onClick={() => setIsEditingCustomer(!isEditingCustomer)}
+                                    title={isEditingCustomer ? 'Gem ændringer' : 'Ret oplysninger'}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', borderRadius: '12px', background: isEditingCustomer ? '#ecfdf5' : '#f8fafc', border: `1px solid ${isEditingCustomer ? '#a7f3d0' : '#e2e8f0'}`, cursor: 'pointer', color: isEditingCustomer ? '#10b981' : '#64748b', flexShrink: 0 }}
+                                >
+                                    {isEditingCustomer ? <Save size={16} /> : <Edit2 size={16} />}
+                                </button>
+                            </div>
+                        </div>
+                        ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {isB2B ? <Building2 size={18} color="#3b82f6" /> : <User size={18} color="#10b981" />} 
+                                    {isB2B ? <Building2 size={18} color="#3b82f6" /> : <User size={18} color="#10b981" />}
                                     Fakturamodtager
                                 </h3>
-                                <button 
+                                <button
                                     onClick={() => setIsEditingCustomer(!isEditingCustomer)}
                                     style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer', color: isEditingCustomer ? '#10b981' : '#64748b', fontSize: '0.85rem', fontWeight: 'bold' }}
                                 >
                                     {isEditingCustomer ? <><Save size={14} /> Gem ændringer</> : <><Edit2 size={14} /> Ret Oplysninger</>}
                                 </button>
                             </div>
-                            <div style={{ 
-                                padding: '4px 10px', 
-                                borderRadius: '20px', 
-                                fontSize: '0.8rem', 
+                            <div style={{
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                fontSize: '0.8rem',
                                 fontWeight: 'bold',
                                 background: isB2B ? '#eff6ff' : '#ecfdf5',
                                 color: isB2B ? '#3b82f6' : '#10b981',
@@ -214,6 +234,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                 {isB2B ? 'Erhvervskunde' : 'Privatkunde'}
                             </div>
                         </div>
+                        )}
 
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                             {isEditingCustomer ? (
@@ -242,14 +263,14 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                             ) : (
                                 <>
                                     <div>
-                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '2px' }}>Faktureres til:</div>
+                                        {!isMobile && <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '2px' }}>Faktureres til:</div>}
                                         <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.05rem' }}>{editableCustomer.fullName}</div>
                                         {isB2B && (
                                             <div style={{ color: '#475569', fontSize: '0.9rem', marginTop: '4px' }}>CVR: {editableCustomer.cvr}</div>
                                         )}
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '2px' }}>Kontakt:</div>
+                                        {!isMobile && <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '2px' }}>Kontakt:</div>}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontSize: '0.9rem', marginBottom: '4px' }}>
                                             <Mail size={14} /> {editableCustomer.email || 'Ingen email indtastet'}
                                         </div>
@@ -258,7 +279,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                         </div>
                                     </div>
                                     <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '12px', marginTop: '4px' }}>
-                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '4px' }}>Faktureringsadresse:</div>
+                                        {!isMobile && <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '4px' }}>Faktureringsadresse:</div>}
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#475569', fontSize: '0.95rem' }}>
                                             <MapPin size={16} style={{ marginTop: '2px', color: '#94a3b8' }} />
                                             <div>
@@ -282,8 +303,8 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                     </div>
 
                     {/* FAKTURALINJER */}
-                    <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                        <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ background: '#fff', borderRadius: isMobile ? '20px' : '16px', border: '1px solid #e2e8f0', padding: isMobile ? '18px' : '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                        <h3 style={{ margin: '0 0 16px 0', fontSize: isMobile ? '1.05rem' : '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <FileText size={18} color="#3b82f6" /> Fakturalinjer
                         </h3>
                         
@@ -320,66 +341,85 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                     </div>
 
                     {/* VALG AF FAKTURERING (FULDT / ACONTO) */}
-                    <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                        <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ background: '#fff', borderRadius: isMobile ? '20px' : '16px', border: '1px solid #e2e8f0', padding: isMobile ? '18px' : '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                        <h3 style={{ margin: '0 0 16px 0', fontSize: isMobile ? '1.05rem' : '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Banknote size={18} color="#10b981" /> Hvad skal der faktureres?
                         </h3>
 
-                        <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-                            <div 
+                        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '12px' : '16px', marginBottom: '20px' }}>
+                            <div
                                 onClick={() => setInvoiceType('full')}
-                                style={{ flex: 1, padding: '16px', border: `2px solid ${invoiceType === 'full' ? '#3b82f6' : '#e2e8f0'}`, borderRadius: '12px', cursor: 'pointer', backgroundColor: invoiceType === 'full' ? '#eff6ff' : '#fff', transition: 'all 0.2s' }}
+                                style={{ flex: 1, padding: isMobile ? '18px' : '16px', border: `2px solid ${invoiceType === 'full' ? '#3b82f6' : '#e2e8f0'}`, borderRadius: isMobile ? '16px' : '12px', cursor: 'pointer', backgroundColor: invoiceType === 'full' ? '#eff6ff' : '#fff', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: isMobile ? '14px' : '0', justifyContent: isMobile ? 'flex-start' : 'normal' }}
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <span style={{ fontWeight: 'bold', color: invoiceType === 'full' ? '#1d4ed8' : '#475569' }}>Fakturér Alt (Afslut)</span>
-                                    {invoiceType === 'full' && <CheckCircle2 size={18} color="#3b82f6" />}
+                                {isMobile && (
+                                    <div style={{ width: '44px', height: '44px', flexShrink: 0, borderRadius: '14px', background: invoiceType === 'full' ? '#3b82f6' : '#f1f5f9', color: invoiceType === 'full' ? '#fff' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                                        <CheckCircle2 size={22} />
+                                    </div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '2px' : '8px' }}>
+                                        <span style={{ fontWeight: 'bold', color: invoiceType === 'full' ? '#1d4ed8' : '#475569' }}>Fakturér Alt (Afslut)</span>
+                                        {!isMobile && invoiceType === 'full' && <CheckCircle2 size={18} color="#3b82f6" />}
+                                    </div>
+                                    <div style={{ fontSize: isMobile ? '1.35rem' : '1.2rem', fontWeight: '800', color: '#0f172a' }}>{remaining.toLocaleString('da-DK')} kr.</div>
                                 </div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>{remaining.toLocaleString('da-DK')} kr.</div>
                             </div>
-                            
-                            <div 
+
+                            <div
                                 onClick={() => setInvoiceType('aconto')}
-                                style={{ flex: 1, padding: '16px', border: `2px solid ${invoiceType === 'aconto' ? '#3b82f6' : '#e2e8f0'}`, borderRadius: '12px', cursor: 'pointer', backgroundColor: invoiceType === 'aconto' ? '#eff6ff' : '#fff', transition: 'all 0.2s' }}
+                                style={{ flex: 1, padding: isMobile ? '18px' : '16px', border: `2px solid ${invoiceType === 'aconto' ? '#3b82f6' : '#e2e8f0'}`, borderRadius: isMobile ? '16px' : '12px', cursor: 'pointer', backgroundColor: invoiceType === 'aconto' ? '#eff6ff' : '#fff', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: isMobile ? '14px' : '0', justifyContent: isMobile ? 'flex-start' : 'normal' }}
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <span style={{ fontWeight: 'bold', color: invoiceType === 'aconto' ? '#1d4ed8' : '#475569' }}>Aconto (Delfakturering)</span>
-                                    {invoiceType === 'aconto' && <CheckCircle2 size={18} color="#3b82f6" />}
+                                {isMobile && (
+                                    <div style={{ width: '44px', height: '44px', flexShrink: 0, borderRadius: '14px', background: invoiceType === 'aconto' ? '#3b82f6' : '#f1f5f9', color: invoiceType === 'aconto' ? '#fff' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                                        <Banknote size={22} />
+                                    </div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '2px' : '8px' }}>
+                                        <span style={{ fontWeight: 'bold', color: invoiceType === 'aconto' ? '#1d4ed8' : '#475569' }}>Aconto (Delfakturering)</span>
+                                        {!isMobile && invoiceType === 'aconto' && <CheckCircle2 size={18} color="#3b82f6" />}
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Vælg et specifikt beløb</div>
                                 </div>
-                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Vælg et specifikt beløb</div>
                             </div>
                         </div>
 
                         {invoiceType === 'aconto' && (
                             <div style={{ animation: 'fadeIn 0.3s ease-out', marginBottom: '20px' }}>
                                 <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 'bold', marginBottom: '8px' }}>Indtast Aconto-beløb (ekskl. moms)</label>
-                                <div style={{ position: 'relative', width: '50%', marginBottom: '12px' }}>
-                                    <input 
-                                        type="text" 
+                                <div style={{ position: 'relative', width: isMobile ? '100%' : '50%', marginBottom: '12px' }}>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
                                         value={acontoAmountRaw ? Number(acontoAmountRaw).toLocaleString('da-DK') : ''}
                                         onChange={(e) => {
                                             const val = e.target.value.replace(/[^0-9]/g, '');
                                             setAcontoAmountRaw(val);
                                         }}
                                         placeholder="0"
-                                        style={{ width: '100%', padding: '14px 40px 14px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1.05rem', fontWeight: '600', outline: 'none', transition: 'border-color 0.2s' }}
+                                        style={{ width: '100%', padding: '14px 40px 14px 16px', borderRadius: isMobile ? '12px' : '8px', border: '1px solid #cbd5e1', fontSize: isMobile ? '16px' : '1.05rem', fontWeight: '600', outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box' }}
                                         onFocus={e => e.target.style.borderColor = '#3b82f6'}
                                         onBlur={e => e.target.style.borderColor = '#cbd5e1'}
                                     />
                                     <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontWeight: 'bold' }}>kr.</span>
                                 </div>
-                                <div style={{ 
-                                    padding: '12px 16px', 
-                                    background: (remaining - currentAmountToBill) < 0 ? '#fef2f2' : '#f8fafc', 
-                                    border: `1px dashed ${(remaining - currentAmountToBill) < 0 ? '#fecaca' : '#cbd5e1'}`, 
-                                    borderRadius: '8px', 
-                                    display: 'inline-flex', 
-                                    alignItems: 'center', 
+                                <div style={{
+                                    padding: '12px 16px',
+                                    background: (remaining - currentAmountToBill) < 0 ? '#fef2f2' : '#f8fafc',
+                                    border: `1px dashed ${(remaining - currentAmountToBill) < 0 ? '#fecaca' : '#cbd5e1'}`,
+                                    borderRadius: isMobile ? '12px' : '8px',
+                                    display: isMobile ? 'flex' : 'inline-flex',
+                                    width: isMobile ? '100%' : 'auto',
+                                    boxSizing: 'border-box',
+                                    flexWrap: 'wrap',
+                                    alignItems: 'center',
+                                    justifyContent: isMobile ? 'space-between' : 'flex-start',
                                     gap: '8px',
                                     color: (remaining - currentAmountToBill) < 0 ? '#e11d48' : '#334155',
                                     transition: 'all 0.2s'
                                 }}>
                                     <div style={{ fontSize: '0.9rem', fontWeight: '500' }}>
-                                        Mangler at blive faktureret bagefter: 
+                                        Mangler at blive faktureret bagefter:
                                     </div>
                                     <div style={{ fontSize: '1.05rem', fontWeight: '800' }}>
                                         {Math.max(0, remaining - currentAmountToBill).toLocaleString('da-DK')} kr.
@@ -470,7 +510,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
 
                 {/* HØJRE: LEVERANDØRBILAG */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    <BilagManager lead={lead} profile={carpenterProfile} onUpdateLead={onUpdateLead} />
+                    <BilagManager lead={lead} profile={carpenterProfile} onUpdateLead={onUpdateLead} isMobile={isMobile} />
                 </div>
             </div>
 

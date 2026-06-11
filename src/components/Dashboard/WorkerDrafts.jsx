@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FileEdit, Plus, Send, Clock, User, Trash2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,6 +11,13 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
     const [createMode, setCreateMode] = useState(null); // 'classic' or 'custom'
     const [selectedDraft, setSelectedDraft] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState(null);
+    const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth <= 768);
+
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
 
     const requestConfirm = (title, message, type, onConfirm) => {
         setConfirmDialog({
@@ -88,16 +95,16 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
 
     return (
         <div className="worker-drafts-container" style={{ padding: '24px 0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '16px' : '0', marginBottom: '32px' }}>
                 <div>
-                    <h2 style={{ margin: '0 0 8px 0', fontSize: '1.8rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <FileEdit size={28} color="#2563eb" /> Dine Tilbudskladder
+                    <h2 style={{ margin: '0 0 8px 0', fontSize: isMobile ? '1.5rem' : '1.8rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <FileEdit size={isMobile ? 24 : 28} color="#2563eb" /> Dine Tilbudskladder
                     </h2>
-                    <p style={{ margin: 0, color: '#64748b', fontSize: '1.05rem' }}>Opret og administrer kladdetilbud, inden de sendes til mester.</p>
+                    <p style={{ margin: 0, color: '#64748b', fontSize: isMobile ? '0.95rem' : '1.05rem' }}>Opret og administrer kladdetilbud, inden de sendes til mester.</p>
                 </div>
-                <button 
+                <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    style={{ padding: '12px 24px', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(37, 99, 235, 0.3)', transition: 'all 0.2s ease' }}
+                    style={{ padding: isMobile ? '16px 24px' : '12px 24px', width: isMobile ? '100%' : 'auto', flexShrink: 0, justifyContent: 'center', whiteSpace: 'nowrap', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(37, 99, 235, 0.3)', transition: 'all 0.2s ease' }}
                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(37, 99, 235, 0.4)'; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(37, 99, 235, 0.3)'; }}
                 >
@@ -161,22 +168,22 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
 
             {/* VIEWER MODAL */}
             {selectedDraft && createPortal(
-                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }} onClick={() => setSelectedDraft(null)}>
-                    <div style={{ backgroundColor: '#fff', borderRadius: '24px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
-                        
-                        <div style={{ padding: '24px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', position: 'sticky', top: 0, zIndex: 10 }}>
+                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'stretch' : 'center', padding: isMobile ? '0' : '20px' }} onClick={() => setSelectedDraft(null)}>
+                    <div style={{ backgroundColor: '#fff', borderRadius: isMobile ? '0' : '24px', width: '100%', maxWidth: isMobile ? '100%' : '600px', height: isMobile ? '100dvh' : 'auto', maxHeight: isMobile ? '100dvh' : '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+
+                        <div style={{ padding: isMobile ? 'calc(env(safe-area-inset-top) + 16px) 20px 16px' : '24px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', position: 'sticky', top: 0, zIndex: 10 }}>
                             <h3 style={{ margin: 0, fontSize: '1.3rem', color: '#0f172a' }}>Kladde Detaljer</h3>
-                            <button onClick={() => setSelectedDraft(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
+                            <button onClick={() => setSelectedDraft(null)} style={{ background: isMobile ? '#fff' : 'none', border: isMobile ? '1px solid #e2e8f0' : 'none', borderRadius: isMobile ? '10px' : '0', width: isMobile ? '40px' : 'auto', height: isMobile ? '40px' : 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
                         </div>
 
-                        <div style={{ padding: '32px', flex: 1 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '32px' }}>
+                        <div style={{ padding: isMobile ? '20px' : '32px', flex: 1 }}>
+                            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '16px' : '0', justifyContent: 'space-between', marginBottom: '32px' }}>
                                 <div>
                                     <h4 style={{ margin: '0 0 8px 0', fontSize: '1.4rem', color: '#1e293b' }}>{selectedDraft.customer_name}</h4>
                                     <p style={{ margin: '0 0 4px 0', color: '#64748b' }}>{selectedDraft.customer_address}</p>
                                     <p style={{ margin: 0, color: '#64748b' }}>{selectedDraft.customer_email} • {selectedDraft.customer_phone}</p>
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
+                                <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
                                     <span style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Estimeret Pris</span>
                                     <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>{selectedDraft.price_estimate}</span>
                                 </div>
@@ -198,10 +205,10 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
 
                         </div>
 
-                        <div style={{ padding: '24px 32px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
-                            <button 
+                        <div style={{ padding: isMobile ? '16px 20px calc(env(safe-area-inset-bottom) + 16px)' : '24px 32px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', flexDirection: isMobile ? 'column-reverse' : 'row', gap: isMobile ? '12px' : '16px', justifyContent: 'flex-end' }}>
+                            <button
                                 onClick={() => handleDeleteDraft(selectedDraft.id)}
-                                style={{ padding: '12px 20px', background: '#fff', border: '1px solid #ef4444', borderRadius: '10px', color: '#ef4444', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+                                style={{ padding: isMobile ? '16px 20px' : '12px 20px', width: isMobile ? '100%' : 'auto', justifyContent: 'center', background: '#fff', border: '1px solid #ef4444', borderRadius: isMobile ? '12px' : '10px', color: '#ef4444', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
                                 onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fef2f2'}
                                 onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fff'}
                             >
@@ -209,9 +216,9 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
                             </button>
 
                             {selectedDraft.status === 'Kladde' && (
-                                <button 
+                                <button
                                     onClick={() => handleSendToMester(selectedDraft.id)}
-                                    style={{ padding: '12px 24px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)', transition: 'all 0.2s' }}
+                                    style={{ padding: isMobile ? '16px 24px' : '12px 24px', width: isMobile ? '100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', borderRadius: isMobile ? '12px' : '10px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)', transition: 'all 0.2s' }}
                                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)'; }}
                                     onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'; }}
                                 >
@@ -226,7 +233,7 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
 
             {/* CREATE MODAL */}
             {isCreateModalOpen && createPortal(
-                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => {
+                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'stretch' : 'center', zIndex: 100000, padding: isMobile ? '0' : '20px' }} onClick={() => {
                     if (createMode !== null) {
                         requestConfirm('Afbryd Oprettelse', 'Er du sikker på, at du vil lukke? Du mister din indtastning.', 'warning', () => {
                             setIsCreateModalOpen(false);
@@ -236,7 +243,7 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
                         setIsCreateModalOpen(false);
                     }
                 }}>
-                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: isMobile ? '0' : '20px', width: '100%', maxWidth: isMobile ? '100%' : '1000px', height: isMobile ? '100dvh' : 'auto', maxHeight: isMobile ? '100dvh' : '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => {
                             if (createMode !== null) {
                                 requestConfirm('Afbryd Oprettelse', 'Er du sikker på, at du vil lukke? Du mister din indtastning.', 'warning', () => {
@@ -246,11 +253,12 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
                             } else {
                                 setIsCreateModalOpen(false);
                             }
-                        }} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f3f1ed', border: 'none', fontSize: '1.2rem', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>×</button>
-                        
+                        }} style={{ position: isMobile ? 'fixed' : 'absolute', top: isMobile ? 'calc(env(safe-area-inset-top) + 12px)' : '20px', right: isMobile ? '16px' : '20px', background: '#f3f1ed', border: 'none', fontSize: isMobile ? '1.4rem' : '1.2rem', width: isMobile ? '42px' : '36px', height: isMobile ? '42px' : '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100001, boxShadow: isMobile ? '0 2px 8px rgba(0,0,0,0.15)' : 'none' }}>×</button>
+
                         <div style={{ padding: '0' }}>
                             {createMode === null && (
-                                <CreateLeadSelector 
+                                <CreateLeadSelector
+                                    isMobile={isMobile}
                                     onSelectClassic={() => setCreateMode('classic')}
                                     onSelectCustom={() => setCreateMode('custom')}
                                 />
@@ -275,8 +283,9 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
                             )}
 
                             {createMode === 'custom' && (
-                                <CustomProjectCreator 
+                                <CustomProjectCreator
                                     carpenter={profile}
+                                    isMobile={isMobile}
                                     draftCreator={profile}
                                     onCancel={() => {
                                         requestConfirm('Afbryd Oprettelse', 'Er du sikker på, at du vil afbryde?', 'warning', () => {

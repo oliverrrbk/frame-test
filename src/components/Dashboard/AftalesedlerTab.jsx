@@ -81,13 +81,15 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
         
         // Handle both mouse and touch
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         
         ctx.beginPath();
-        ctx.moveTo(clientX - rect.left, clientY - rect.top);
+        ctx.moveTo((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
         setIsDrawing(true);
     };
 
@@ -97,11 +99,13 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
         
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         
-        ctx.lineTo(clientX - rect.left, clientY - rect.top);
+        ctx.lineTo((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
         ctx.stroke();
     };
 
@@ -319,12 +323,12 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
 
             {/* MODAL (Oprettelse) */}
             {showModal && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', zIndex: 99999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '40px 20px', animation: 'fadeIn 0.2s ease-out' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#f8fafc', zIndex: 99999, display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.2s ease-out' }}>
                     
-                    <div style={{ backgroundColor: 'white', borderRadius: '24px', width: '100%', maxWidth: '700px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', position: 'relative', overflow: 'hidden', animation: 'fadeInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                    <div style={{ backgroundColor: 'white', width: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', margin: '0 auto', maxWidth: '800px', boxShadow: '0 0 40px rgba(0,0,0,0.05)' }}>
                         
                         {/* Header */}
-                        <div style={{ padding: '24px 32px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ padding: 'calc(max(env(safe-area-inset-top), 20px)) 24px 20px 24px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10, flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <div style={{ padding: '10px', backgroundColor: '#f5f3ff', color: '#8b5cf6', borderRadius: '12px' }}>
                                     <Edit3 size={24} />
@@ -342,7 +346,7 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
                         </div>
 
                         {/* Content */}
-                        <div style={{ padding: '32px' }}>
+                        <div style={{ padding: '32px 24px', overflowY: 'auto', flex: 1, minHeight: 0, paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 32px)' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '40px' }}>
                                 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -445,7 +449,7 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
                         </div>
 
                         {/* Footer */}
-                        <div style={{ padding: '24px 32px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        <div style={{ padding: '20px 24px max(env(safe-area-inset-bottom, 20px), 20px) 24px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px', position: 'sticky', bottom: 0, zIndex: 10 }}>
                             <button 
                                 onClick={closeModal}
                                 style={{ padding: '12px 24px', borderRadius: '10px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', transition: 'all 0.2s' }}
