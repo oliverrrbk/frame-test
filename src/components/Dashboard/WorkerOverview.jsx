@@ -259,9 +259,9 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         if (!activeModal) return null;
 
         return createPortal(
-            <div style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(20px)', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(20px)', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', paddingTop: 'max(24px, env(safe-area-inset-top, 40px))', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                     <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
                         {activeModal === 'team' && 'Mit Team'}
                         {activeModal === 'messages' && 'Beskeder & Info'}
@@ -487,7 +487,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             flex: 1, height: '100%', position: 'relative', zIndex: 10, 
             background: 'linear-gradient(135deg, #f8fafc, #e2e8f0)',
             overflow: 'hidden', display: 'flex', flexDirection: 'column',
-            justifyContent: 'space-between', padding: '20px 24px 90px 24px'
+            justifyContent: 'space-between', padding: '20px 24px calc(90px + env(safe-area-inset-bottom, 20px)) 24px'
         }}>
             
             {/* TOP ROW: Widgets & Header */}
