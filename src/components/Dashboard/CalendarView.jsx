@@ -78,6 +78,13 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [popoverLead, setPopoverLead] = useState(null);
     const [collisionWarning, setCollisionWarning] = useState(null); // { lead, day, daysDuration }
 
+    // Sag-planlægning fra kalenderen (additivt — ny funktion)
+    const [showAddChooser, setShowAddChooser] = useState(false);          // "+"-vælger (mobil)
+    const [showCasePicker, setShowCasePicker] = useState(false);          // vælg sag
+    const [casePickerSearch, setCasePickerSearch] = useState('');
+    const [scheduleConfirm, setScheduleConfirm] = useState(null);         // { lead, startDate, durationDays, mode }
+    const [caseActionSheet, setCaseActionSheet] = useState(null);         // { lead } — tryk på sag
+
     const [eventFormData, setEventFormData] = useState({
         id: '',
         title: '',
@@ -386,11 +393,10 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
              }
         }
 
-        if (collisionFound) {
-             setCollisionWarning({ lead: draggedLead, selectedDate, endDate });
-        } else {
-             confirmScheduleLead(draggedLead, selectedDate, endDate);
-        }
+        // Åbn varigheds-bekræftelsen (samme trin på mobil og desktop). Kollision vises live i modalen.
+        void collisionFound;
+        const startStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+        openScheduleConfirm(draggedLead, startStr, daysDuration, 'new');
         setDraggedLead(null);
     };
 
@@ -404,6 +410,65 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             toast.success('Sag planlagt');
         } catch (error) {
             toast.error('Fejl ved gem kalenderdato');
+        }
+    };
+
+    // ---- Sag-planlægning fra kalenderen (delt mobil + desktop) ----
+    // Original estimat ud fra arbejdstimer (samme formel som drag-and-drop)
+    const estimatFraTimer = (lead) => {
+        const laborHours = lead?.raw_data?.calc_data?.laborHours || 0;
+        return Math.max(1, Math.ceil(laborHours / 37)) * 5;
+    };
+    // Default-varighed: brug eksisterende start/slut hvis planlagt, ellers timer-estimat
+    const estimerDage = (lead) => {
+        if (lead?.raw_data?.start_date && lead?.raw_data?.end_date) {
+            const s = new Date(lead.raw_data.start_date);
+            const e = new Date(lead.raw_data.end_date);
+            return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1);
+        }
+        return estimatFraTimer(lead);
+    };
+    const endFromDuration = (startStr, days) => {
+        const start = new Date(startStr + 'T00:00:00');
+        const end = new Date(start);
+        end.setDate(end.getDate() + Math.max(1, days) - 1);
+        return end;
+    };
+    const checkCollision = (lead, start, end) => {
+        const assigned = lead?.raw_data?.assigned_workers || [];
+        const s = new Date(start); s.setHours(0, 0, 0, 0);
+        const e = new Date(end); e.setHours(0, 0, 0, 0);
+        for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+            const items = getItemsForDay(new Date(d));
+            if (items.absences.some(a => assigned.includes(a.employeeId))) return true;
+            if (items.leads.filter(l => l.id !== lead.id).length > 0) return true;
+        }
+        return false;
+    };
+    const openScheduleConfirm = (lead, startStr, days, mode = 'new') => {
+        setScheduleConfirm({ lead, startDate: startStr, durationDays: Math.max(1, days), mode });
+    };
+    const saveSchedule = () => {
+        if (!scheduleConfirm) return;
+        const { lead, startDate, durationDays } = scheduleConfirm;
+        const start = new Date(startDate + 'T00:00:00');
+        const end = endFromDuration(startDate, durationDays);
+        confirmScheduleLead(lead, start, end);
+        setScheduleConfirm(null);
+        setShowCasePicker(false);
+    };
+    const unscheduleLead = async (lead) => {
+        const updatedRawData = { ...lead.raw_data };
+        delete updatedRawData.start_date;
+        delete updatedRawData.end_date;
+        const updatedLead = { ...lead, raw_data: updatedRawData };
+        setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
+        setCaseActionSheet(null);
+        try {
+            await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', lead.id);
+            toast.success('Sag fjernet fra kalender');
+        } catch (error) {
+            toast.error('Fejl ved fjernelse');
         }
     };
 
@@ -480,7 +545,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         
                         {/* Tilføj aftale */}
                         {isManager && (
-                            <button onClick={() => openModalForDate(selectedMobileDate)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                            <button onClick={() => setShowAddChooser(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                                 <Plus size={24} color="#0f172a" strokeWidth={3} />
                             </button>
                         )}
@@ -630,7 +695,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                         {leads.map(lead => {
                                             const colors = getStatusColor(lead.status);
                                             return (
-                                                <div key={lead.id} onClick={() => onCaseClick(lead)} style={{ background: '#fff', border: `1px solid ${colors.border}`, borderLeft: `4px solid ${colors.bg}`, padding: '12px 16px', borderRadius: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '6px', cursor: 'pointer' }}>
+                                                <div key={lead.id} onClick={() => setCaseActionSheet({ lead })} style={{ background: '#fff', border: `1px solid ${colors.border}`, borderLeft: `4px solid ${colors.bg}`, padding: '12px 16px', borderRadius: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '6px', cursor: 'pointer' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '6px' }}>Sag: {lead.case_number || String(lead.id).substring(0,6)}</span>
                                                         <span style={{ fontSize: '0.8rem', color: colors.text, fontWeight: 600 }}>{lead.status}</span>
@@ -1053,6 +1118,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         style={{ position: 'absolute', top: popoverLead.y + 30, left: popoverLead.x, background: '#fff', borderRadius: '12px', padding: '8px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}
                     >
                         <button onClick={() => { onCaseClick(popoverLead.lead); setPopoverLead(null); }} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#0f172a' }} onMouseOver={e=>e.currentTarget.style.background='#f1f5f9'} onMouseOut={e=>e.currentTarget.style.background='none'}>Gå til Ordrestyring</button>
+                        {isManager && <button onClick={() => { const l = popoverLead.lead; setPopoverLead(null); const startStr = l.raw_data?.start_date ? new Date(l.raw_data.start_date).toISOString().substring(0,10) : new Date().toISOString().substring(0,10); openScheduleConfirm(l, startStr, estimerDage(l), 'edit'); }} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#2563eb' }} onMouseOver={e=>e.currentTarget.style.background='#eff6ff'} onMouseOut={e=>e.currentTarget.style.background='none'}>Redigér planlægning</button>}
                         {isManager && <button onClick={removeLeadFromCalendar} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#ef4444' }} onMouseOver={e=>e.currentTarget.style.background='#fef2f2'} onMouseOut={e=>e.currentTarget.style.background='none'}>Fjern fra kalender</button>}
                     </div>
                 </div>,
@@ -1259,6 +1325,179 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             <button onClick={() => confirmScheduleLead(collisionWarning.lead, collisionWarning.selectedDate, collisionWarning.endDate)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#dc2626', color: '#fff', fontWeight: '700', cursor: 'pointer' }}>Ja, planlæg alligevel</button>
                         </div>
                     </div>
+                </div>,
+                document.body
+            )}
+            {/* MODAL: "+"-VÆLGER (Ny begivenhed / Tilføj sag) */}
+            {showAddChooser && createPortal(
+                <div onClick={() => setShowAddChooser(false)} style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', padding: isMobile ? 0 : '20px' }}>
+                    <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: isMobile ? 40 : 16, scale: isMobile ? 1 : 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ background: '#fff', width: '100%', maxWidth: isMobile ? '100%' : '440px', borderRadius: isMobile ? '24px 24px 0 0' : '24px', padding: isMobile ? '24px 20px calc(env(safe-area-inset-bottom) + 24px)' : '28px', boxShadow: '0 24px 48px -12px rgba(15,23,42,0.3)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#0f172a' }}>Tilføj til kalenderen</h3>
+                            <button onClick={() => setShowAddChooser(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '10px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}><X size={18} /></button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {[
+                                { Icon: CalendarIcon, color: '#0284c7', bg: '#e0f2fe', title: 'Ny begivenhed', desc: 'Møde, levering, arrangement m.m.', onClick: () => { setShowAddChooser(false); openModalForDate(selectedMobileDate); } },
+                                { Icon: Briefcase, color: '#7c3aed', bg: '#ede9fe', title: 'Tilføj sag til kalenderen', desc: 'Planlæg en bekræftet sag', onClick: () => { setShowAddChooser(false); setShowCasePicker(true); } }
+                            ].map((opt, i) => {
+                                const Icon = opt.Icon;
+                                return (
+                                    <button key={i} onClick={opt.onClick} style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%', textAlign: 'left', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        onMouseEnter={e => { e.currentTarget.style.borderColor = opt.color; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 18px rgba(15,23,42,0.08)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+                                        <div style={{ width: '46px', height: '46px', flexShrink: 0, borderRadius: '14px', background: opt.bg, color: opt.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon size={22} /></div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '1.02rem' }}>{opt.title}</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{opt.desc}</div>
+                                        </div>
+                                        <ChevronRight size={18} color="#cbd5e1" />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </motion.div>
+                </div>,
+                document.body
+            )}
+
+            {/* MODAL: VÆLG SAG (fuldskærm på mobil) */}
+            {showCasePicker && createPortal(
+                <div onClick={() => { setShowCasePicker(false); setCasePickerSearch(''); }} style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'center', padding: isMobile ? 0 : '20px' }}>
+                    <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ background: '#fff', width: '100%', maxWidth: isMobile ? '100%' : '520px', height: isMobile ? '100dvh' : 'auto', maxHeight: isMobile ? '100dvh' : '85vh', borderRadius: isMobile ? 0 : '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 48px -12px rgba(15,23,42,0.3)' }}>
+                        <div style={{ padding: isMobile ? 'calc(env(safe-area-inset-top) + 16px) 20px 16px' : '24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                            <div style={{ minWidth: 0 }}>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Vælg sag</h3>
+                                <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Bekræftede og igangværende sager</p>
+                            </div>
+                            <button onClick={() => { setShowCasePicker(false); setCasePickerSearch(''); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: '10px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', flexShrink: 0 }}><X size={18} /></button>
+                        </div>
+                        <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9' }}>
+                            <div style={{ position: 'relative' }}>
+                                <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                                <input value={casePickerSearch} onChange={e => setCasePickerSearch(e.target.value)} placeholder="Søg sag eller kunde..." style={{ width: '100%', boxSizing: 'border-box', padding: '12px 12px 12px 36px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px', outline: 'none' }} />
+                            </div>
+                        </div>
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {(() => {
+                                const term = casePickerSearch.toLowerCase();
+                                const list = relevantLeads.filter(l => !term || (l.case_number?.toLowerCase().includes(term) || l.project_category?.toLowerCase().includes(term) || l.customer_name?.toLowerCase().includes(term) || l.raw_data?.project_title?.toLowerCase().includes(term)));
+                                if (list.length === 0) return <p style={{ textAlign: 'center', color: '#94a3b8', marginTop: '24px' }}>Ingen sager fundet</p>;
+                                return list.map(lead => {
+                                    const days = estimerDage(lead);
+                                    const scheduled = !!lead.raw_data?.start_date;
+                                    return (
+                                        <button key={lead.id} onClick={() => {
+                                            const base = isMobile ? selectedMobileDate : new Date();
+                                            const startStr = lead.raw_data?.start_date ? new Date(lead.raw_data.start_date).toISOString().substring(0, 10) : `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}`;
+                                            setShowCasePicker(false);
+                                            openScheduleConfirm(lead, startStr, days, scheduled ? 'edit' : 'new');
+                                        }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#f8fafc'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; }}>
+                                            <div style={{ width: '42px', height: '42px', flexShrink: 0, borderRadius: '12px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Briefcase size={20} /></div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.98rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{lead.raw_data?.project_title || lead.project_category}</div>
+                                                <div style={{ fontSize: '0.82rem', color: '#64748b' }}>Sag {lead.case_number || String(lead.id).substring(0, 6)} · ~{days} dage{scheduled ? ' · planlagt' : ''}</div>
+                                            </div>
+                                            <ChevronRight size={18} color="#cbd5e1" />
+                                        </button>
+                                    );
+                                });
+                            })()}
+                        </div>
+                    </motion.div>
+                </div>,
+                document.body
+            )}
+
+            {/* MODAL: VARIGHEDS-BEKRÆFTELSE (mobil + desktop) */}
+            {scheduleConfirm && createPortal(
+                <div onClick={() => setScheduleConfirm(null)} style={{ position: 'fixed', inset: 0, zIndex: 100001, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', padding: isMobile ? 0 : '20px' }}>
+                    <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: isMobile ? 40 : 16, scale: isMobile ? 1 : 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ background: '#fff', width: '100%', maxWidth: isMobile ? '100%' : '460px', borderRadius: isMobile ? '24px 24px 0 0' : '24px', padding: isMobile ? '24px 20px calc(env(safe-area-inset-bottom) + 24px)' : '28px', boxShadow: '0 24px 48px -12px rgba(15,23,42,0.35)' }}>
+                        {(() => {
+                            const lead = scheduleConfirm.lead;
+                            const startStr = scheduleConfirm.startDate;
+                            const days = scheduleConfirm.durationDays;
+                            const end = endFromDuration(startStr, days);
+                            const collision = checkCollision(lead, new Date(startStr + 'T00:00:00'), end);
+                            return (
+                                <>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><CalendarIcon size={24} /></div>
+                                        <div style={{ minWidth: 0 }}>
+                                            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>{scheduleConfirm.mode === 'edit' ? 'Redigér planlægning' : 'Planlæg sag'}</h3>
+                                            <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{lead.raw_data?.project_title || lead.project_category} · Sag {lead.case_number || String(lead.id).substring(0, 6)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '14px', padding: '14px 16px', marginBottom: '18px', color: '#0369a1', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                                        Denne sag er estimeret til at vare <strong>{estimatFraTimer(lead)} dage</strong>. Passer det — eller vil du justere?
+                                    </div>
+
+                                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Startdato</label>
+                                    <input type="date" value={startStr} onChange={e => setScheduleConfirm(s => ({ ...s, startDate: e.target.value }))} style={{ width: '100%', boxSizing: 'border-box', padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '16px', outline: 'none', marginBottom: '16px' }} />
+
+                                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Varighed</label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <button onClick={() => setScheduleConfirm(s => ({ ...s, durationDays: Math.max(1, s.durationDays - 1) }))} style={{ width: '48px', height: '48px', flexShrink: 0, borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontSize: '1.5rem', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>−</button>
+                                        <div style={{ flex: 1, textAlign: 'center' }}>
+                                            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>{days} {days === 1 ? 'dag' : 'dage'}</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', textTransform: 'capitalize' }}>{format(new Date(startStr + 'T00:00:00'), 'd. MMM', { locale: da })} – {format(end, 'd. MMM yyyy', { locale: da })}</div>
+                                        </div>
+                                        <button onClick={() => setScheduleConfirm(s => ({ ...s, durationDays: s.durationDays + 1 }))} style={{ width: '48px', height: '48px', flexShrink: 0, borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontSize: '1.5rem', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>+</button>
+                                    </div>
+
+                                    {collision && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '10px 12px', color: '#b45309', fontSize: '0.85rem', marginTop: '14px' }}>
+                                            <AlertCircle size={16} style={{ flexShrink: 0 }} /> Der er allerede ferie eller en anden sag i perioden.
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'flex', gap: '12px', marginTop: '22px' }}>
+                                        <button onClick={() => setScheduleConfirm(null)} style={{ flex: '0 0 auto', padding: '14px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
+                                        <button onClick={saveSchedule} style={{ flex: 1, padding: '14px', borderRadius: '12px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 16px rgba(15,23,42,0.2)' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                                            <CheckCircle size={18} /> {scheduleConfirm.mode === 'edit' ? 'Gem ændringer' : 'Planlæg i kalender'}
+                                        </button>
+                                    </div>
+                                </>
+                            );
+                        })()}
+                    </motion.div>
+                </div>,
+                document.body
+            )}
+
+            {/* MODAL: VALGMENU VED TRYK PÅ SAG (mobil) */}
+            {caseActionSheet && createPortal(
+                <div onClick={() => setCaseActionSheet(null)} style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ background: '#fff', width: '100%', borderRadius: '24px 24px 0 0', padding: '20px 20px calc(env(safe-area-inset-bottom) + 20px)', boxShadow: '0 -8px 32px rgba(15,23,42,0.18)' }}>
+                        <div style={{ marginBottom: '14px' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>{caseActionSheet.lead.raw_data?.project_title || caseActionSheet.lead.project_category}</h3>
+                            <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Sag {caseActionSheet.lead.case_number || String(caseActionSheet.lead.id).substring(0, 6)}</p>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {[
+                                { Icon: Briefcase, label: 'Åbn sag', color: '#0f172a', onClick: () => { const l = caseActionSheet.lead; setCaseActionSheet(null); onCaseClick(l); } },
+                                ...(isManager ? [{ Icon: CalendarIcon, label: 'Redigér planlægning', color: '#2563eb', onClick: () => { const l = caseActionSheet.lead; setCaseActionSheet(null); const startStr = l.raw_data?.start_date ? new Date(l.raw_data.start_date).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10); openScheduleConfirm(l, startStr, estimerDage(l), 'edit'); } }] : []),
+                                ...(isManager ? [{ Icon: Trash2, label: 'Fjern fra kalender', color: '#ef4444', onClick: () => unscheduleLead(caseActionSheet.lead) }] : [])
+                            ].map((a, i) => {
+                                const Icon = a.Icon;
+                                return (
+                                    <button key={i} onClick={a.onClick} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left', background: '#f8fafc', border: '1px solid #eef2f7', borderRadius: '14px', padding: '15px', cursor: 'pointer', color: a.color, fontWeight: 600, fontSize: '1rem', transition: 'all 0.2s' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}>
+                                        <Icon size={20} /> {a.label}
+                                    </button>
+                                );
+                            })}
+                            <button onClick={() => setCaseActionSheet(null)} style={{ marginTop: '4px', padding: '14px', borderRadius: '14px', border: 'none', background: 'transparent', color: '#94a3b8', fontWeight: 600, cursor: 'pointer' }}>Luk</button>
+                        </div>
+                    </motion.div>
                 </div>,
                 document.body
             )}
