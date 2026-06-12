@@ -4,6 +4,35 @@ import { User, Lock, Camera, Copy, CheckCircle, Phone, MessageSquare, Shield, Be
 import { motion } from 'framer-motion';
 import PushSubscriber from './PushSubscriber';
 
+const labelStyle = { display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '6px', letterSpacing: '0.01em' };
+const inputStyle = { width: '100%', boxSizing: 'border-box', padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '1rem', color: '#0f172a', background: '#f8fafc', outline: 'none', transition: 'border-color .15s, box-shadow .15s, background .15s' };
+const onProfileFieldFocus = (e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)'; e.target.style.background = '#fff'; };
+const onProfileFieldBlur = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; e.target.style.background = '#f8fafc'; };
+
+const ProfileCard = ({ icon, title, badge, isMobile, children }) => (
+    <motion.div 
+        whileHover={!isMobile ? { y: -4, boxShadow: '0 12px 24px rgba(15,23,42,0.08)' } : {}}
+        transition={{ duration: 0.2 }}
+        style={{ background: '#fff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15,23,42,0.04)', padding: isMobile ? '20px' : '28px' }}
+    >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ width: '38px', height: '38px', flexShrink: 0, borderRadius: '11px', background: '#f1f5f9', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {icon}
+            </div>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>{title}</h3>
+            {badge && <div style={{ marginLeft: 'auto' }}>{badge}</div>}
+        </div>
+        {children}
+    </motion.div>
+);
+
+const ProfileField = ({ label, full, children }) => (
+    <div style={{ gridColumn: full ? '1 / -1' : 'auto' }}>
+        <label style={labelStyle}>{label}</label>
+        {children}
+    </div>
+);
+
 const MyProfileView = ({ myProfile, setMyProfile }) => {
 
     const [isSaving, setIsSaving] = useState(false);
@@ -163,36 +192,6 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
         setTimeout(() => setIsCopied(false), 3000);
     };
 
-    // --- Genbrugelige stil-helpers (Bison Frame) ---
-    const labelStyle = { display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '6px', letterSpacing: '0.01em' };
-    const inputStyle = { width: '100%', boxSizing: 'border-box', padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '1rem', color: '#0f172a', background: '#f8fafc', outline: 'none', transition: 'border-color .15s, box-shadow .15s, background .15s' };
-    const onFieldFocus = (e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)'; e.target.style.background = '#fff'; };
-    const onFieldBlur = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; e.target.style.background = '#f8fafc'; };
-
-    const Card = ({ icon, title, badge, children }) => (
-        <motion.div 
-            whileHover={!isMobile ? { y: -4, boxShadow: '0 12px 24px rgba(15,23,42,0.08)' } : {}}
-            transition={{ duration: 0.2 }}
-            style={{ background: '#fff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15,23,42,0.04)', padding: isMobile ? '20px' : '28px' }}
-        >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <div style={{ width: '38px', height: '38px', flexShrink: 0, borderRadius: '11px', background: '#f1f5f9', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {icon}
-                </div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>{title}</h3>
-                {badge && <div style={{ marginLeft: 'auto' }}>{badge}</div>}
-            </div>
-            {children}
-        </motion.div>
-    );
-
-    const Field = ({ label, full, children }) => (
-        <div style={{ gridColumn: full ? '1 / -1' : 'auto' }}>
-            <label style={labelStyle}>{label}</label>
-            {children}
-        </div>
-    );
-
     const masterBadge = (
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#7c3aed', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px', fontWeight: 600 }}>
             <Lock size={11} /> Kun for mester
@@ -200,7 +199,7 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
     );
 
     // --- Identitetskort (avatar + navn + rolle) ---
-    const identityCard = (
+    const identityProfileCard = (
         <motion.div 
             whileHover={!isMobile ? { y: -4, boxShadow: '0 12px 24px rgba(15,23,42,0.08)' } : {}}
             transition={{ duration: 0.2 }}
@@ -323,109 +322,109 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
 
                 {/* VENSTRE: identitet + notifikationer */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '24px', position: isMobile ? 'static' : 'sticky', top: '24px' }}>
-                    {identityCard}
+                    {identityProfileCard}
 
-                    <Card icon={<Bell size={19} />} title="Notifikationer">
+                    <ProfileCard icon={<Bell size={19} />} title="Notifikationer">
                         <PushSubscriber />
-                    </Card>
+                    </ProfileCard>
                 </div>
 
                 {/* HØJRE: redigerbare felter + gem */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '24px' }}>
 
                     {/* GENERELT */}
-                    <Card icon={<User size={19} />} title="Generelt">
+                    <ProfileCard icon={<User size={19} />} title="Generelt">
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                            <Field label="Dit fulde navn">
+                            <ProfileField label="Dit fulde navn">
                                 <input
                                     placeholder="Dit fulde navn"
                                     value={formData.owner_name}
                                     onChange={(e) => setFormData(prev => ({ ...prev, owner_name: e.target.value }))}
-                                    style={inputStyle} onFocus={onFieldFocus} onBlur={onFieldBlur}
+                                    style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
                                 />
-                            </Field>
-                            <Field label="Telefonnummer">
+                            </ProfileField>
+                            <ProfileField label="Telefonnummer">
                                 <input
                                     placeholder="Telefonnummer"
                                     value={formData.phone}
                                     onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))}
-                                    style={inputStyle} onFocus={onFieldFocus} onBlur={onFieldBlur}
+                                    style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
                                 />
-                            </Field>
+                            </ProfileField>
                         </div>
-                    </Card>
+                    </ProfileCard>
 
                     {/* PRIVATE OPLYSNINGER */}
-                    <Card icon={<Shield size={19} />} title="Private oplysninger" badge={masterBadge}>
+                    <ProfileCard icon={<Shield size={19} />} title="Private oplysninger" badge={masterBadge}>
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                            <Field label="Hjemmeadresse" full>
+                            <ProfileField label="Hjemmeadresse" full>
                                 <input
                                     placeholder="Vej og husnummer"
                                     value={formData.home_address}
                                     onChange={(e) => setFormData(prev => ({ ...prev, home_address: e.target.value }))}
-                                    style={inputStyle} onFocus={onFieldFocus} onBlur={onFieldBlur}
+                                    style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
                                 />
-                            </Field>
-                            <Field label="Postnummer">
+                            </ProfileField>
+                            <ProfileField label="Postnummer">
                                 <input
                                     placeholder="Postnummer"
                                     value={formData.home_zip}
                                     onChange={(e) => setFormData(prev => ({ ...prev, home_zip: e.target.value }))}
-                                    style={inputStyle} onFocus={onFieldFocus} onBlur={onFieldBlur}
+                                    style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
                                 />
-                            </Field>
-                            <Field label="By">
+                            </ProfileField>
+                            <ProfileField label="By">
                                 <input
                                     placeholder="By"
                                     value={formData.home_city}
                                     onChange={(e) => setFormData(prev => ({ ...prev, home_city: e.target.value }))}
-                                    style={inputStyle} onFocus={onFieldFocus} onBlur={onFieldBlur}
+                                    style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
                                 />
-                            </Field>
-                            <Field label="Pårørendes navn">
+                            </ProfileField>
+                            <ProfileField label="Pårørendes navn">
                                 <input
                                     placeholder="Pårørendes navn"
                                     value={formData.next_of_kin_name}
                                     onChange={(e) => setFormData(prev => ({ ...prev, next_of_kin_name: e.target.value }))}
-                                    style={inputStyle} onFocus={onFieldFocus} onBlur={onFieldBlur}
+                                    style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
                                 />
-                            </Field>
-                            <Field label="Pårørendes telefonnummer">
+                            </ProfileField>
+                            <ProfileField label="Pårørendes telefonnummer">
                                 <input
                                     placeholder="Pårørendes telefonnummer"
                                     value={formData.next_of_kin_phone}
                                     onChange={(e) => setFormData(prev => ({ ...prev, next_of_kin_phone: formatPhoneNumber(e.target.value) }))}
-                                    style={inputStyle} onFocus={onFieldFocus} onBlur={onFieldBlur}
+                                    style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
                                 />
-                            </Field>
+                            </ProfileField>
                         </div>
-                    </Card>
+                    </ProfileCard>
 
                     {/* SIKKERHED */}
-                    <Card icon={<Lock size={19} />} title="Sikkerhed">
+                    <ProfileCard icon={<Lock size={19} />} title="Sikkerhed">
                         <div style={{ display: 'grid', gridTemplateColumns: (isMobile || !formData.newPassword) ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                            <Field label="Nyt kodeord (valgfrit)">
+                            <ProfileField label="Nyt kodeord (valgfrit)">
                                 <input
                                     type="password"
                                     placeholder="Nyt kodeord"
                                     value={formData.newPassword}
                                     onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
-                                    style={inputStyle} onFocus={onFieldFocus} onBlur={onFieldBlur}
+                                    style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
                                 />
-                            </Field>
+                            </ProfileField>
                             {formData.newPassword.length > 0 && (
-                                <Field label="Gentag nyt kodeord">
+                                <ProfileField label="Gentag nyt kodeord">
                                     <input
                                         type="password"
                                         placeholder="Gentag nyt kodeord"
                                         value={formData.confirmPassword}
                                         onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                                        style={inputStyle} onFocus={onFieldFocus} onBlur={onFieldBlur}
+                                        style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
                                     />
-                                </Field>
+                                </ProfileField>
                             )}
                         </div>
-                    </Card>
+                    </ProfileCard>
 
                     {/* GEM KNAP */}
                     <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-end' }}>
