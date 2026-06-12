@@ -1,10 +1,12 @@
 const baseStyle = `
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(135deg, #e0f2fe 0%, #fce7f3 50%, #ffedd5 100%);
     background-color: #f8fafc;
     color: #0f172a;
     line-height: 1.6;
     margin: 0;
-    padding: 40px 20px;
+    padding: 60px 20px;
+    min-height: 100vh;
 `;
 
 const containerStyle = `
@@ -13,15 +15,8 @@ const containerStyle = `
     background-color: #ffffff;
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    border: 1px solid #e2e8f0;
-`;
-
-const headerStyle = `
-    background: #0f172a;
-    color: #ffffff;
-    padding: 32px 40px;
-    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.5);
 `;
 
 const contentStyle = `
@@ -58,10 +53,10 @@ const footerStyle = `
 `;
 
 const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
-    // Dynamisk Header: Logo eller Firmanavn
+    // Dynamisk Header: Logo eller Firmanavn (Udenfor kortet, mørk tekst)
     const headerContent = carpenter?.logo_url 
         ? `<img src="${carpenter.logo_url}" alt="${carpenter.company_name}" style="max-height: 60px; max-width: 200px; display: inline-block; vertical-align: middle;" />`
-        : `<h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em;">${carpenter?.company_name || 'Bison Frame'}</h1>`;
+        : `<h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #0f172a;">${carpenter?.company_name || 'BISON FRAME'} 🦬</h1>`;
 
     // Dynamisk Footer
     const footerContent = carpenter
@@ -87,10 +82,12 @@ const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
 </head>
 <body style="${baseStyle}">
     <span style="display:none;font-size:1px;color:#f8fafc;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${preheader}</span>
+    
+    <div style="max-width: 600px; margin: 0 auto 24px auto; text-align: center;">
+        ${headerContent}
+    </div>
+
     <div style="${containerStyle}">
-        <div style="${headerStyle}">
-            ${headerContent}
-        </div>
         <div style="${contentStyle}">
             ${content}
         </div>
@@ -258,14 +255,14 @@ export const getCustomerFastTrackTemplate = (customerName, categoryName, carpent
 export const getCarpenterWelcomeTemplate = (companyName, loginUrl) => {
     const content = `
         <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Velkommen til Bison Frame, ${companyName}!</h2>
-        <p style="color: #334155; font-size: 16px; line-height: 1.6;">Vi er super glade for at have dig ombord. Din nye tilbuds- og lead-portal er nu oprettet og klar til at skaffe dig flere (og bedre) kunder.</p>
+        <p style="color: #334155; font-size: 16px; line-height: 1.6;">Vi er super glade for at have dig ombord. Din nye tilbuds- og ordrestyringsportal er nu oprettet. Vi har bygget systemet for at gøre din hverdag nemmere, spare dig for kontortid og give dine kunder en professionel oplevelse fra første klik til færdig opgave.</p>
         
         <div style="background-color: #f8fafc; padding: 24px; border-radius: 8px; margin: 32px 0; border: 1px solid #e2e8f0; border-left: 4px solid #10b981;">
             <h3 style="margin: 0 0 16px 0; color: #0f172a; font-size: 16px;">Kom godt fra start i 3 nemme trin:</h3>
             <ol style="margin: 0; color: #475569; font-size: 15px; line-height: 1.8; padding-left: 20px;">
-                <li style="margin-bottom: 12px;"><strong>Log ind i Dashboardet:</strong> Følg din opsætning og indstil din timepris.</li>
-                <li style="margin-bottom: 12px;"><strong>Test din beregner:</strong> Tryk på "Kopiér Link" og prøv at udfylde en opgave som var du en kunde.</li>
-                <li style="margin-bottom: 0;"><strong>Del dit link:</strong> Læg linket på din hjemmeside eller Facebook-side for at lade kunderne beregne priser døgnet rundt.</li>
+                <li style="margin-bottom: 12px;"><strong>Tilpas din profil:</strong> Indstil din timepris og upload dit logo i kontrolpanelet.</li>
+                <li style="margin-bottom: 12px;"><strong>Kopiér din beregner:</strong> Sæt linket på din hjemmeside eller send det direkte til kunden.</li>
+                <li style="margin-bottom: 0;"><strong>Styr dine sager:</strong> Administrer tilbud, bilag og aftalesedler ét og samme sted.</li>
             </ol>
         </div>
 
