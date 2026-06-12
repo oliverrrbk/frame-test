@@ -1050,11 +1050,11 @@ const Dashboard = () => {
         }
 
         // Tjek Onboarding (Vis kun hvis de mangler det, og det er ejeren selv)
-        if (userProfile.role === 'admin' && userProfile.has_completed_onboarding === false && !impersonateId) {
+        if (userProfile.role === 'admin' && !userProfile.has_completed_onboarding && !impersonateId) {
             setShowOnboarding(true);
         }
         // Tjek Password Skift (Kun for employees)
-        if (userProfile.requires_password_change === true && !impersonateId) {
+        if (userProfile.role !== 'admin' && !userProfile.has_completed_onboarding && !impersonateId) {
             setShowSetPassword(true);
         }
 
