@@ -993,38 +993,6 @@ const Dashboard = () => {
             }
             
             userProfile = profile;
-            setCarpenterProfile(profile);
-            
-            // Hvis det er en admin, hent deres medarbejdere til lead-fordeling
-            if (profile.role === 'admin') {
-                const { data: teamData } = await supabase.from('carpenters').select('*').eq('company_id', profile.company_id || profile.id);
-                if (teamData) setTeamMembers(teamData);
-            } else if (profile.role === 'accountant') {
-                setLeadFilter('Bekræftet opgave');
-                const { data: adminSecrets } = await supabase.from('carpenter_secrets').select('economic_api_key, dinero_api_key').eq('carpenter_id', profile.company_id).single();
-                if (adminSecrets) {
-                    profile.economic_api_key = adminSecrets.economic_api_key;
-                    profile.dinero_api_key = adminSecrets.dinero_api_key;
-                    setCarpenterProfile(profile);
-                }
-            } else if (profile.role === 'worker' || profile.role === 'apprentice') {
-                // Lad dem blive på 'overview'
-            }
-
-            // Tjek Onboarding (Vis kun hvis de mangler det, og det er ejeren selv)
-            if (profile.role === 'admin' && profile.has_completed_onboarding === false && !impersonateId) {
-                setShowOnboarding(true);
-            }
-            // Tjek Password Skift (Kun for employees)
-            if (profile.requires_password_change === true && !impersonateId) {
-                setShowSetPassword(true);
-            }
-
-            // --- VIGTIGT: Hvis brugeren er en medarbejder, skal alle data-kald laves mod Mesterens firma-id ---
-            if (profile.company_id) {
-                targetId = profile.company_id;
-            }
-
         } else {
             if (authUser?.email === 'team@bisoncompany.dk' && !impersonateId) {
                 // Admin skal ikke have oprettet en tømrer-profil, men sendes til Admin panelet
@@ -1032,7 +1000,7 @@ const Dashboard = () => {
                 return;
             }
 
-            // Første gang tømreren logger ind, skabes hans hvid-mærke skab ud fra auth metadata!
+            // Første gang tømreren/medarbejderen logger ind, skabes hans profil ud fra auth metadata!
             const metadata = authUser?.user_metadata || {};
             const baseSlug = metadata.company_name 
                 ? metadata.company_name.toLowerCase().replace(/[^a-z0-9æøå-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') 
@@ -1052,22 +1020,47 @@ const Dashboard = () => {
                 company_id: metadata.company_id || null,
                 tier: metadata.tier || 'standard',
                 has_completed_onboarding: false,
+                requires_password_change: metadata.role && metadata.role !== 'admin' ? true : false,
                 success_message: 'Tusind tak for din henvendelse! Vi går tilbuddet igennem hurtigst muligt.'
             };
             const { data, error } = await supabase.from('carpenters').upsert([newProfile], { onConflict: 'id' }).select().single();
             if (error) {
                  console.error("Oprettelsesfejl:", error);
-                 // Ignorer fejlen visuelt hvis det bare var en overskrivning der fejlede, men prøv at hente profilen alligevel
                  if (error.code !== '23505') {
                      toast.error('Profil-Oprettelse i databasen blokeres: ' + JSON.stringify(error));
                  }
             }
             userProfile = data || newProfile;
-            setCarpenterProfile(userProfile);
+        }
 
-            if (userProfile.role === 'admin' && userProfile.has_completed_onboarding === false && !impersonateId) {
-                setShowOnboarding(true);
+        setCarpenterProfile(userProfile);
+
+        // Hvis det er en admin, hent deres medarbejdere til lead-fordeling
+        if (userProfile.role === 'admin') {
+            const { data: teamData } = await supabase.from('carpenters').select('*').eq('company_id', userProfile.company_id || userProfile.id);
+            if (teamData) setTeamMembers(teamData);
+        } else if (userProfile.role === 'accountant') {
+            setLeadFilter('Bekræftet opgave');
+            const { data: adminSecrets } = await supabase.from('carpenter_secrets').select('economic_api_key, dinero_api_key').eq('carpenter_id', userProfile.company_id).single();
+            if (adminSecrets) {
+                userProfile.economic_api_key = adminSecrets.economic_api_key;
+                userProfile.dinero_api_key = adminSecrets.dinero_api_key;
+                setCarpenterProfile(userProfile);
             }
+        }
+
+        // Tjek Onboarding (Vis kun hvis de mangler det, og det er ejeren selv)
+        if (userProfile.role === 'admin' && userProfile.has_completed_onboarding === false && !impersonateId) {
+            setShowOnboarding(true);
+        }
+        // Tjek Password Skift (Kun for employees)
+        if (userProfile.requires_password_change === true && !impersonateId) {
+            setShowSetPassword(true);
+        }
+
+        // --- VIGTIGT: Hvis brugeren er en medarbejder, skal alle data-kald laves mod Mesterens firma-id ---
+        if (userProfile.company_id) {
+            targetId = userProfile.company_id;
         }
 
         // Hent den speficikke tømrers priser & leads
