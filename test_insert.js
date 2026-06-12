@@ -1,26 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ path: '.env' });
 
 const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
 
 async function test() {
-  const payload = {
-            customer_name: 'Test',
-            customer_address: 'Test',
-            customer_zip: '8000',
-            customer_city: 'Test',
-            customer_email: 'Test',
-            customer_phone: 'Test',
-            status: 'Ny forespørgsel',
-            project_category: 'special',
-            details: { title: 'Test' },
-            calc_data: {},
-            actual_quote_price: 1000,
-            carpenter_id: null,
-            assigned_to: null
-  };
-  const { data, error } = await supabase.from('leads').insert([payload]).select();
-  console.log("Result:", data, "Error:", error);
+    const { error } = await supabase.from('carpenters').insert([{
+        id: '12345678-1234-1234-1234-123456789012',
+        email: 'test@test.com',
+        owner_name: 'Test',
+        phone: '12345678',
+        role: 'worker',
+        company_id: '12345678-1234-1234-1234-123456789012',
+        company_name: 'Medarbejder',
+        requires_password_change: true
+    }]);
+    console.log("Error:", error);
 }
 test();
