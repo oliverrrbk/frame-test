@@ -1012,7 +1012,7 @@ const Dashboard = () => {
             }
 
             // Tjek Onboarding (Vis kun hvis de mangler det, og det er ejeren selv)
-            if (profile.has_completed_onboarding === false && !impersonateId) {
+            if (profile.role === 'admin' && profile.has_completed_onboarding === false && !impersonateId) {
                 setShowOnboarding(true);
             }
             // Tjek Password Skift (Kun for employees)
@@ -1065,7 +1065,7 @@ const Dashboard = () => {
             userProfile = data || newProfile;
             setCarpenterProfile(userProfile);
 
-            if (userProfile.has_completed_onboarding === false && !impersonateId) {
+            if (userProfile.role === 'admin' && userProfile.has_completed_onboarding === false && !impersonateId) {
                 setShowOnboarding(true);
             }
         }
@@ -6169,7 +6169,7 @@ const Dashboard = () => {
                 document.body
             )}
             {/* Floating Trial Toast */}
-            {trialDaysLeft > 0 && !isPaywallActive && createPortal(
+            {trialDaysLeft > 0 && !isPaywallActive && effectiveRole === 'admin' && createPortal(
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={`trial-toast-${activeTab}`} // Re-triggers animation on tab change
