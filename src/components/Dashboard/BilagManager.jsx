@@ -25,45 +25,65 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false }) => {
 
     const unsentInvoices = supplierInvoices.filter(inv => !inv.is_sent_to_accounting);
 
+    // Vælg regnskabssystem: Dinero hvis forbundet, ellers e-conomic.
+    const useDinero = profile?.dinero_api_key && profile.dinero_api_key !== 'pending_authorization';
+    const accountingFn = useDinero ? 'dinero-voucher' : 'economic-voucher';
+    const accountingName = useDinero ? 'Dinero' : 'e-conomic';
+
+    // Byg payload til voucher edge-funktionen for ét bilag.
+    const buildVoucherBody = (inv) => ({
+        companyId: lead.carpenter_id || profile?.company_id || profile?.id,
+        amount: inv.amount,
+        description: inv.description || inv.name,
+        date: inv.date ? String(inv.date).substring(0, 10) : undefined,
+        fileData: inv.file_data || null,   // gammelt base64-format
+        filePath: inv.file_path || null,   // nyt storage-format
+        fileName: inv.file_name || inv.name
+    });
+
+    // Marker de(t) lykkede bilag som sendt — læser nyeste raw_data først, så vi
+    // ikke overskriver bilag der er uploadet imens.
+    const markInvoicesSent = async (sentMap) => {
+        const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+        const currentRawData = latestData?.raw_data || lead.raw_data || {};
+        const latestInvoices = (currentRawData.supplier_invoices || []).map(i =>
+            (i.id in sentMap) ? { ...i, is_sent_to_accounting: true, accounting_voucher_number: sentMap[i.id] } : i
+        );
+        const updatedCase = { ...lead, raw_data: { ...currentRawData, supplier_invoices: latestInvoices } };
+        const { error } = await supabase.from('leads').update({ raw_data: updatedCase.raw_data }).eq('id', lead.id);
+        if (error) throw error;
+        if (onUpdateLead) onUpdateLead(updatedCase);
+    };
+
     const handleSendAllToAccounting = async () => {
         if (unsentInvoices.length === 0) return;
         setIsSendingAll(true);
+        const sentMap = {};
+        let failed = 0;
         try {
-            await new Promise(r => setTimeout(r, 2000)); // Simulate slightly longer delay for multiple
-            
-            const updatedInvoices = rawSupplierInvoices.map(inv => {
-                if (unsentInvoices.some(u => u.id === inv.id)) {
-                    return { ...inv, is_sent_to_accounting: true };
+            for (const inv of unsentInvoices) {
+                const { data, error } = await supabase.functions.invoke(accountingFn, { body: buildVoucherBody(inv) });
+                if (!error && data?.success) {
+                    sentMap[inv.id] = data.voucherNumber || null;
+                } else {
+                    failed++;
+                    console.error('Bilag fejlede:', inv.id, error?.message || data?.error);
                 }
-                return inv;
-            });
-            
-            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
-            const currentRawData = latestData?.raw_data || lead.raw_data || {};
-
-            const updatedCase = {
-                ...lead,
-                raw_data: {
-                    ...currentRawData,
-                    supplier_invoices: updatedInvoices
-                }
-            };
-
-            const { error } = await supabase
-                .from('leads')
-                .update({ raw_data: updatedCase.raw_data })
-                .eq('id', lead.id);
-
-            if (error) throw error;
-
-            if (onUpdateLead) {
-                onUpdateLead(updatedCase);
             }
-            
-            toast.success(`${unsentInvoices.length} bilag overført til e-conomic!`);
+
+            if (Object.keys(sentMap).length > 0) await markInvoicesSent(sentMap);
+
+            const ok = Object.keys(sentMap).length;
+            if (failed === 0) {
+                toast.success(`${ok} bilag overført til ${accountingName}!`);
+            } else if (ok > 0) {
+                toast(`${ok} bilag overført, ${failed} fejlede. Prøv de resterende igen.`, { icon: '⚠️' });
+            } else {
+                toast.error(`Ingen bilag kunne overføres til ${accountingName}.`);
+            }
         } catch (err) {
             console.error("Fejl ved afsendelse af alle:", err);
-            toast.error("Kunne ikke sende bilagene til regnskab");
+            toast.error("Kunne ikke gemme status efter overførsel.");
         } finally {
             setIsSendingAll(false);
         }
@@ -71,45 +91,20 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false }) => {
 
     const handleSendToAccounting = async (invId, e) => {
         e.stopPropagation(); // Prevent opening the file preview
-        
-        // This is only allowed for the boss/admin, but we show it in the UI if it's the "InvoiceEditor"
-        // For now, we simulate the API request
+        const inv = rawSupplierInvoices.find(i => i.id === invId);
+        if (!inv) return;
         setSendingId(invId);
-        
+
         try {
-            // Simulate API Delay
-            await new Promise(r => setTimeout(r, 1500));
-            
-            const updatedInvoices = rawSupplierInvoices.map(inv => 
-                inv.id === invId ? { ...inv, is_sent_to_accounting: true } : inv
-            );
-            
-            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
-            const currentRawData = latestData?.raw_data || lead.raw_data || {};
-
-            const updatedCase = {
-                ...lead,
-                raw_data: {
-                    ...currentRawData,
-                    supplier_invoices: updatedInvoices
-                }
-            };
-
-            const { error } = await supabase
-                .from('leads')
-                .update({ raw_data: updatedCase.raw_data })
-                .eq('id', lead.id);
-
-            if (error) throw error;
-
-            if (onUpdateLead) {
-                onUpdateLead(updatedCase);
+            const { data, error } = await supabase.functions.invoke(accountingFn, { body: buildVoucherBody(inv) });
+            if (error || !data?.success) {
+                throw new Error(error?.message || data?.error || `Ukendt fejl fra ${accountingName}`);
             }
-            
-            toast.success("Bilag overført til indbakken i e-conomic!");
+            await markInvoicesSent({ [invId]: data.voucherNumber || null });
+            toast.success(data.message || `Bilag overført til ${accountingName}!`);
         } catch (err) {
             console.error("Fejl ved afsendelse:", err);
-            toast.error("Kunne ikke sende til regnskab");
+            toast.error(`Kunne ikke sende til ${accountingName}: ` + (err.message || ''));
         } finally {
             setSendingId(null);
         }

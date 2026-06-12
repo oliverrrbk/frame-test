@@ -16,6 +16,7 @@ import ConfirmedPage from './components/Auth/ConfirmedPage';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import QuoteAcceptPage from './components/Wizard/QuoteAcceptPage';
 import EstimateAcceptPage from './components/Wizard/EstimateAcceptPage';
+import MinubaIntegration from './components/Dashboard/MinubaIntegration';
 import { supabase } from './supabaseClient';
 import React, { useState, useEffect } from 'react';
 // Protected Route Komponent
@@ -204,6 +205,7 @@ const AnimatedRoutes = ({ session, setSession }) => {
         <Route path="/:slug/tilbud/:lead_id" element={<QuoteAcceptPage />} />
         <Route path="/bekraeftet" element={<ConfirmedPage />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/minuba-login" element={<MinubaIntegration />} />
         <Route path="/register" element={
           session ? (
             session.user?.email === 'team@bisoncompany.dk' 

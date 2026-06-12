@@ -22,6 +22,7 @@ import AdminTimesheet from './AdminTimesheet';
 import WorkerDrafts from './WorkerDrafts';
 import ProjectManagerOverview from './ProjectManagerOverview';
 import FinanceOverview from './FinanceOverview';
+import VoucherAccountConfig from './VoucherAccountConfig';
 import OnboardingModal from './OnboardingModal';
 import SetPasswordModal from './SetPasswordModal';
 import SuperAdminView from './SuperAdminView';
@@ -5680,8 +5681,12 @@ const Dashboard = () => {
                                         )}
                                         
                                         {carpenterProfile?.dinero_api_key && carpenterProfile.dinero_api_key !== 'pending_authorization' && (
-                                            <button 
-                                                style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
+                                            <VoucherAccountConfig system="dinero" carpenterProfile={carpenterProfile} setCarpenterProfile={setCarpenterProfile} />
+                                        )}
+
+                                        {carpenterProfile?.dinero_api_key && carpenterProfile.dinero_api_key !== 'pending_authorization' && (
+                                            <button
+                                                style={{ width: '100%', marginTop: '16px', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
                                                 onClick={async () => {
                                                     const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, dinero_api_key: null });
                                                     if (!error) setCarpenterProfile(prev => ({...prev, dinero_api_key: null}));
@@ -5738,8 +5743,12 @@ const Dashboard = () => {
                                         )}
                                         
                                         {carpenterProfile?.economic_api_key && carpenterProfile.economic_api_key !== 'pending_authorization' && (
-                                            <button 
-                                                style={{ width: '100%', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
+                                            <VoucherAccountConfig system="economic" carpenterProfile={carpenterProfile} setCarpenterProfile={setCarpenterProfile} />
+                                        )}
+
+                                        {carpenterProfile?.economic_api_key && carpenterProfile.economic_api_key !== 'pending_authorization' && (
+                                            <button
+                                                style={{ width: '100%', marginTop: '16px', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
                                                 onClick={async () => {
                                                     const { error } = await supabase.from('carpenter_secrets').upsert({ carpenter_id: carpenterProfile.id, economic_api_key: null });
                                                     if (!error) setCarpenterProfile(prev => ({...prev, economic_api_key: null}));
