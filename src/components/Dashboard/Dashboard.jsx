@@ -24,7 +24,7 @@ import ProjectManagerOverview from './ProjectManagerOverview';
 import FinanceOverview from './FinanceOverview';
 import VoucherAccountConfig from './VoucherAccountConfig';
 import OnboardingModal from './OnboardingModal';
-import SetPasswordModal from './SetPasswordModal';
+import EmployeeOnboardingModal from './EmployeeOnboardingModal';
 import SuperAdminView from './SuperAdminView';
 import MyProfileView from './MyProfileView';
 import SubscriptionSettings from './SubscriptionSettings';
@@ -2209,12 +2209,12 @@ const Dashboard = () => {
             )}
 
             {showSetPassword && carpenterProfile && (
-                <SetPasswordModal 
-                    profile={carpenterProfile} 
+                <EmployeeOnboardingModal 
+                    profile={carpenterProfile}
                     onComplete={() => {
                         setShowSetPassword(false);
-                        setCarpenterProfile({...carpenterProfile, requires_password_change: false});
-                    }} 
+                        setCarpenterProfile({...carpenterProfile, requires_password_change: false, has_completed_onboarding: true});
+                    }}
                 />
             )}
             
