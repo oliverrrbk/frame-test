@@ -56,7 +56,10 @@ const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
     // Dynamisk Header: Logo eller Firmanavn (Udenfor kortet, mørk tekst)
     const headerContent = carpenter?.logo_url 
         ? `<img src="${carpenter.logo_url}" alt="${carpenter.company_name}" style="max-height: 60px; max-width: 200px; display: inline-block; vertical-align: middle;" />`
-        : `<h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #0f172a;">${carpenter?.company_name || 'BISON FRAME'} 🦬</h1>`;
+        : `<h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #0f172a;">
+            ${carpenter?.company_name || 'BISON FRAME'}
+            <img src="https://bisonframe.dk/clean-transparent.png" alt="Logo" style="height: 26px; width: auto; vertical-align: middle; margin-left: 6px; margin-top: -4px;" />
+           </h1>`;
 
     // Dynamisk Footer
     const footerContent = carpenter
