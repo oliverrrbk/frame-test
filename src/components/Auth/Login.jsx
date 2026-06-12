@@ -40,8 +40,8 @@ const Login = ({ setSession, onClose }) => {
 
         try {
             let authResponse = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
+                email: email.trim(),
+                password: password.trim(),
             });
 
             const { data, error } = authResponse;
