@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { randomBytes } from 'crypto';
 import { applyCors } from './_cors.js';
+import { getEmployeeInviteTemplate } from '../src/utils/emailTemplates.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -125,26 +126,12 @@ export default async function handler(req, res) {
         // 3. Send velkomstmail via Resend API (samme logik som send-email.js)
         const resendApiKey = process.env.RESEND_API_KEY;
         if (resendApiKey) {
-            const htmlContent = `
-                <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h2 style="color: #0f172a;">Velkommen til Bison Frame</h2>
-                    <p>Hej ${name},</p>
-                    <p>Du er blevet oprettet som bruger af din virksomhed på Bison Frame.</p>
-                    <p>Du kan nu logge ind og få adgang til dine opgaver og kunder.</p>
-                    
-                    <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
-                        <p style="margin: 0 0 10px 0;"><strong>Dine login-oplysninger:</strong></p>
-                        <p style="margin: 0 0 5px 0;">Brugernavn: <strong>${email}</strong></p>
-                        <p style="margin: 0;">Adgangskode: <strong>${finalPassword}</strong></p>
-                    </div>
-
-                    <p><em>Bemærk: Første gang du logger ind, vil du blive bedt om at ændre adgangskoden til din egen personlige.</em></p>
-                    
-                    <div style="margin-top: 30px;">
-                        <a href="https://bisonframe.dk/login" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Gå til Login</a>
-                    </div>
-                </div>
-            `;
+            const htmlContent = getEmployeeInviteTemplate(
+                name.split(' ')[0], // Brug kun fornavn
+                email,
+                finalPassword,
+                { company_name: callerProfile?.company_name || 'Bison Frame' }
+            );
 
             try {
                 await fetch('https://api.resend.com/emails', {

@@ -515,3 +515,26 @@ export const getCustomerBookingConfirmationTemplate = (customerName, categoryNam
     `;
     return getBaseTemplate("Tak for din bekræftelse", content, `Vi kontakter dig ${contactText}`, carpenter);
 };
+
+export const getEmployeeInviteTemplate = (employeeName, loginEmail, loginPassword, carpenter) => {
+    const carpenterCompanyName = carpenter?.company_name || 'Virksomheden';
+
+    const content = `
+        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Hej ${employeeName},</h2>
+        <p style="color: #334155;">Du er netop blevet oprettet som bruger af <strong>${carpenterCompanyName}</strong> på Bison Frame.</p>
+        <p style="color: #334155;">Du kan nu logge ind og få hurtig adgang til dine sager, uploade bilag og meget mere.</p>
+        
+        <div style="background-color: #f1f5f9; padding: 24px; border-radius: 8px; margin: 24px 0; border: 1px solid #e2e8f0; text-align: center;">
+            <p style="margin: 0 0 16px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Dine midlertidige login-oplysninger</p>
+            <p style="margin: 0 0 8px 0; color: #0f172a; font-size: 16px;">Brugernavn: <strong>${loginEmail}</strong></p>
+            <p style="margin: 0; color: #0f172a; font-size: 16px;">Adgangskode: <strong style="background-color: #e2e8f0; padding: 4px 8px; border-radius: 4px; letter-spacing: 1px;">${loginPassword}</strong></p>
+        </div>
+        
+        <p style="color: #64748b; font-size: 14px; font-style: italic; text-align: center;">Bemærk: Første gang du logger ind, vil du blive bedt om at ændre adgangskoden til din egen personlige.</p>
+        
+        <div style="margin-top: 32px; text-align: center;">
+            <a href="https://bisonframe.dk/login" style="${buttonStyle}">Gå til Login</a>
+        </div>
+    `;
+    return getBaseTemplate("Velkommen til Bison Frame", content, "Dine login oplysninger er klar.", carpenter);
+};
