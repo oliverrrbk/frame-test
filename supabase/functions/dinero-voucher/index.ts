@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
 
 import { corsHeadersFor } from "../_shared/cors.ts"
+import { getValidDineroToken } from "../_shared/dineroToken.ts"
 
 // Opretter et købs-bilag (udgift) i Dinero og vedhæfter billedet af kvitteringen,
 // så det står klar til bogføring. Samme princip som economic-voucher.
@@ -48,15 +49,8 @@ serve(async (req) => {
       throw new Error("Manglende konto-opsætning. Vælg udgiftskonto under Indstillinger → Dinero, før bilag kan overføres.")
     }
 
-    // 1b. Hent Dinero access token
-    const { data: secret, error: dbError } = await supabaseClient
-      .from('carpenter_secrets').select('dinero_api_key').eq('carpenter_id', targetCarpenterId).single()
-    if (dbError || !secret?.dinero_api_key) throw new Error("Ingen Dinero-forbindelse fundet for profilen")
-
-    let tokenData: { access_token?: string }
-    try { tokenData = JSON.parse(secret.dinero_api_key) } catch { throw new Error("Ugyldigt Dinero-token format i databasen") }
-    const accessToken = tokenData.access_token
-    if (!accessToken) throw new Error("Mangler access_token i Dinero-profilen")
+    // 1b. Hent et gyldigt Dinero access token (forny automatisk hvis udløbet)
+    const accessToken = await getValidDineroToken(supabaseClient, targetCarpenterId)
 
     const fetchDinero = async (method: string, path: string, data: unknown = null) => {
       const options: RequestInit = { method, headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }

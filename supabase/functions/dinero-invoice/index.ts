@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
 
 import { corsHeadersFor } from "../_shared/cors.ts"
+import { getValidDineroToken } from "../_shared/dineroToken.ts"
 
 serve(async (req) => {
   const corsHeaders = corsHeadersFor(req)
@@ -35,26 +36,8 @@ serve(async (req) => {
 
     console.log("Starter Dinero overførsel for:", lead.customer_name);
 
-    // 1. Hent tokens fra DB
-    const { data: profile, error: dbError } = await supabaseClient
-      .from('carpenter_secrets')
-      .select('dinero_api_key')
-      .eq('carpenter_id', user.id)
-      .single()
-
-    if (dbError || !profile || !profile.dinero_api_key) {
-      throw new Error("Ingen Dinero-forbindelse fundet for profilen")
-    }
-
-    let tokenData;
-    try {
-      tokenData = JSON.parse(profile.dinero_api_key);
-    } catch(e) {
-      throw new Error("Ugyldigt token format i databasen");
-    }
-
-    const accessToken = tokenData.access_token;
-    if (!accessToken) throw new Error("Mangler access_token i profilen");
+    // 1. Hent et gyldigt Dinero access token (forny automatisk hvis udløbet)
+    const accessToken = await getValidDineroToken(supabaseClient, user.id)
 
     // Helper til Dinero API kald
     const fetchDinero = async (method, path, data = null) => {
