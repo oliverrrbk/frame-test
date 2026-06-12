@@ -1031,6 +1031,11 @@ const Dashboard = () => {
                  }
             }
             userProfile = data || newProfile;
+            
+            // Hvis det er min egen profil jeg lige har oprettet via fallback, så husk at sætte myProfile i state
+            if (targetId === userId) {
+                setMyProfile(userProfile);
+            }
         }
 
         setCarpenterProfile(userProfile);
