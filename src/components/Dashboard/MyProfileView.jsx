@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { User, Lock, Camera, Copy, CheckCircle, Phone, MessageSquare, Shield, Bell } from 'lucide-react';
+import { motion } from 'framer-motion';
 import PushSubscriber from './PushSubscriber';
 
 const MyProfileView = ({ myProfile, setMyProfile }) => {
@@ -169,7 +170,11 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
     const onFieldBlur = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; e.target.style.background = '#f8fafc'; };
 
     const Card = ({ icon, title, badge, children }) => (
-        <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15,23,42,0.04)', padding: isMobile ? '20px' : '28px' }}>
+        <motion.div 
+            whileHover={!isMobile ? { y: -4, boxShadow: '0 12px 24px rgba(15,23,42,0.08)' } : {}}
+            transition={{ duration: 0.2 }}
+            style={{ background: '#fff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15,23,42,0.04)', padding: isMobile ? '20px' : '28px' }}
+        >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                 <div style={{ width: '38px', height: '38px', flexShrink: 0, borderRadius: '11px', background: '#f1f5f9', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {icon}
@@ -178,7 +183,7 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                 {badge && <div style={{ marginLeft: 'auto' }}>{badge}</div>}
             </div>
             {children}
-        </div>
+        </motion.div>
     );
 
     const Field = ({ label, full, children }) => (
@@ -196,8 +201,14 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
 
     // --- Identitetskort (avatar + navn + rolle) ---
     const identityCard = (
-        <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15,23,42,0.04)', padding: isMobile ? '24px' : '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-            <div
+        <motion.div 
+            whileHover={!isMobile ? { y: -4, boxShadow: '0 12px 24px rgba(15,23,42,0.08)' } : {}}
+            transition={{ duration: 0.2 }}
+            style={{ background: '#fff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15,23,42,0.04)', padding: isMobile ? '24px' : '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
+        >
+            <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => fileInputRef.current?.click()}
                 style={{ width: isMobile ? '96px' : '116px', height: isMobile ? '96px' : '116px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', overflow: 'hidden', boxShadow: '0 4px 14px rgba(15,23,42,0.08)', border: '3px solid #fff' }}
             >
@@ -215,7 +226,7 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                 <div style={{ position: 'absolute', bottom: '2px', right: '2px', width: '30px', height: '30px', borderRadius: '50%', background: '#0f172a', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
                     <Camera color="white" size={14} />
                 </div>
-            </div>
+            </motion.div>
             <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleAvatarUpload} style={{ display: 'none' }} />
 
             <h2 style={{ margin: '18px 0 8px', fontSize: '1.4rem', fontWeight: 800, color: '#0f172a' }}>{formData.owner_name || 'Dit Navn'}</h2>
@@ -227,7 +238,7 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                     <Phone size={16} /> {formData.phone}
                 </div>
             )}
-        </div>
+        </motion.div>
     );
 
     // --- SMS-genvej (kun mester/admin) ---
@@ -244,7 +255,11 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
             <p style={{ margin: '0 0 18px', color: '#64748b', fontSize: isMobile ? '0.9rem' : '1rem' }}>Gør det lynhurtigt at sende dit prisberegner-link til kunder.</p>
             <div className="hide-scrollbar" style={smsCardWrapStyle}>
                 {/* Kort 1 */}
-                <div style={{ ...smsCardBase, background: 'linear-gradient(145deg, #3b82f6, #2563eb)', borderRadius: '24px', padding: '24px', color: 'white', boxShadow: '0 10px 30px -10px rgba(37, 99, 235, 0.5)' }}>
+                <motion.div 
+                    whileHover={!isMobile ? { y: -4, boxShadow: '0 15px 35px -10px rgba(37, 99, 235, 0.6)' } : {}}
+                    transition={{ duration: 0.2 }}
+                    style={{ ...smsCardBase, background: 'linear-gradient(145deg, #3b82f6, #2563eb)', borderRadius: '24px', padding: '24px', color: 'white', boxShadow: '0 10px 30px -10px rgba(37, 99, 235, 0.5)' }}
+                >
                     <div style={{ background: 'rgba(255,255,255,0.2)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', marginBottom: '16px' }}>1</div>
                     <h4 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 'bold' }}>Kopiér link</h4>
                     <p style={{ margin: '0 0 16px', fontSize: '0.9rem', opacity: 0.9 }}>Kopiér din personlige besked, som du vil sende til kunderne.</p>
@@ -252,10 +267,14 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                         {isCopied ? <CheckCircle size={18} /> : <Copy size={18} />}
                         {isCopied ? 'Kopieret!' : 'Kopiér besked'}
                     </button>
-                </div>
+                </motion.div>
 
                 {/* Kort 2 */}
-                <div style={{ ...smsCardBase, background: '#fff', borderRadius: '24px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                <motion.div 
+                    whileHover={!isMobile ? { y: -4, boxShadow: '0 12px 24px rgba(15,23,42,0.08)' } : {}}
+                    transition={{ duration: 0.2 }}
+                    style={{ ...smsCardBase, background: '#fff', borderRadius: '24px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}
+                >
                     <div style={{ background: '#f1f5f9', color: '#64748b', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', marginBottom: '16px' }}>2</div>
                     <h4 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a' }}>Åbn indstillinger</h4>
                     <p style={{ margin: '0 0 16px', fontSize: '0.9rem', color: '#64748b' }}>Gå til tastaturindstillinger på din telefon.</p>
@@ -263,10 +282,14 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                         <div style={{ fontSize: '0.8rem', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', color: '#475569' }}><strong>iPhone:</strong> Indstillinger → Generelt → Tastatur → Teksterstatning</div>
                         <div style={{ fontSize: '0.8rem', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', color: '#475569' }}><strong>Android:</strong> Indstillinger → System → Personlig ordbog</div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Kort 3 */}
-                <div style={{ ...smsCardBase, background: '#fff', borderRadius: '24px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                <motion.div 
+                    whileHover={!isMobile ? { y: -4, boxShadow: '0 12px 24px rgba(15,23,42,0.08)' } : {}}
+                    transition={{ duration: 0.2 }}
+                    style={{ ...smsCardBase, background: '#fff', borderRadius: '24px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}
+                >
                     <div style={{ background: '#ecfdf5', color: '#10b981', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', marginBottom: '16px' }}>3</div>
                     <h4 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a' }}>Opret genvej</h4>
                     <p style={{ margin: '0 0 16px', fontSize: '0.9rem', color: '#64748b' }}>Indsæt beskeden og vælg et kort ord, fx <strong>mitlink</strong>.</p>
@@ -274,7 +297,7 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                         <MessageSquare size={20} color="#3b82f6" />
                         <div style={{ fontSize: '0.85rem', color: '#475569' }}>Skriv <strong>mitlink</strong> i en SMS næste gang!</div>
                     </div>
-                </div>
+                </motion.div>
             </div>
         </div>
     );

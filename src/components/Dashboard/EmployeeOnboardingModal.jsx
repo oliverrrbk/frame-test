@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
-import { Lock, Eye, EyeOff, ShieldCheck, User, Phone, Check, ChevronRight, Loader2, Share, PlusSquare, Search } from 'lucide-react';
+import { Lock, Eye, EyeOff, ShieldCheck, User, Phone, Check, ChevronRight, Loader2, Share, PlusSquare, Search, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PushSubscriber from './PushSubscriber';
 
 const EmployeeOnboardingModal = ({ profile, onComplete }) => {
     const [step, setStep] = useState(1);
@@ -336,6 +337,16 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
                                             </span> 
                                         </p>
                                     </div>
+                                </div>
+                                
+                                <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3">
+                                    <h3 className="font-semibold text-slate-800 text-center mb-1 flex items-center justify-center gap-2">
+                                        <Bell size={18} className="text-blue-500" /> Vigtigt: Push Notifikationer
+                                    </h3>
+                                    <p className="text-sm text-slate-600 text-center mb-3">
+                                        Slå notifikationer til for at modtage vigtige påmindelser, f.eks. hvis du har glemt at registrere timer.
+                                    </p>
+                                    <PushSubscriber />
                                 </div>
 
                                 <button 
