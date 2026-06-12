@@ -29,6 +29,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
     const isB2B = !!(lead.raw_data?.customerDetails?.cvr);
     const [isReverseCharge, setIsReverseCharge] = useState(isB2B); // Default til omvendt betalingspligt hvis B2B
     const [showPreview, setShowPreview] = useState(false);
+    const [confirmVoidId, setConfirmVoidId] = useState(null);
 
     // Calculations
     const basePrice = (lead.finance?.caseTotal || 0) - (lead.finance?.extraPrice || 0);
@@ -153,6 +154,46 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
             toast.success("Fil vedhæftet!");
         };
         reader.readAsDataURL(file);
+    };
+
+    // Opdatér fakturahistorikken (markér betalt / annullér). Læser nyeste raw_data først,
+    // så vi ikke overskriver andre felter, og persisterer derefter.
+    const updateInvoiceHistory = async (transform) => {
+        try {
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const currentRawData = latestData?.raw_data || lead.raw_data || {};
+            const { history, invoicedDelta } = transform(currentRawData.invoice_history || []);
+            currentRawData.invoice_history = history;
+            if (invoicedDelta) {
+                currentRawData.invoiced_amount = Math.max(0, (currentRawData.invoiced_amount || 0) + invoicedDelta);
+            }
+            const { error } = await supabase.from('leads').update({ raw_data: currentRawData }).eq('id', lead.id);
+            if (error) throw error;
+            if (onUpdateLead) onUpdateLead({ ...lead, raw_data: currentRawData });
+            return true;
+        } catch (err) {
+            console.error('Fejl ved opdatering af fakturahistorik:', err);
+            toast.error('Kunne ikke opdatere fakturaen.');
+            return false;
+        }
+    };
+
+    const handleMarkPaid = async (invId) => {
+        const ok = await updateInvoiceHistory((history) => ({
+            history: history.map(h => h.id === invId ? { ...h, status: 'paid', paid_date: new Date().toISOString() } : h),
+            invoicedDelta: 0
+        }));
+        if (ok) toast.success('Faktura markeret som betalt.');
+    };
+
+    const handleVoidInvoice = async (invId) => {
+        const entry = (lead.raw_data?.invoice_history || []).find(h => h.id === invId);
+        const ok = await updateInvoiceHistory((history) => ({
+            history: history.filter(h => h.id !== invId),
+            invoicedDelta: -(entry?.amount || 0)
+        }));
+        setConfirmVoidId(null);
+        if (ok) toast.success('Faktura annulleret og fjernet fra faktureret beløb.');
     };
 
     return (
@@ -482,7 +523,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                                 <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem' }}>Faktura #{inv.id}</div>
                                                 <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{new Date(inv.date).toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                                                 <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#0f172a' }}>
                                                     {Number(inv.amount).toLocaleString('da-DK')} kr.
                                                 </div>
@@ -494,10 +535,28 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                                     <span style={{ background: '#eff6ff', color: '#3b82f6', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                         Bogført
                                                     </span>
+                                                ) : inv.status === 'manual' ? (
+                                                    <span style={{ background: '#fffbeb', color: '#b45309', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                        Registreret manuelt
+                                                    </span>
                                                 ) : (
                                                     <span style={{ background: '#f1f5f9', color: '#64748b', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                         Kladde
                                                     </span>
+                                                )}
+                                                {inv.status !== 'paid' && (
+                                                    <button onClick={() => handleMarkPaid(inv.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                                                        <CheckCircle2 size={14} /> Markér betalt
+                                                    </button>
+                                                )}
+                                                {confirmVoidId === inv.id ? (
+                                                    <button onClick={() => handleVoidInvoice(inv.id)} style={{ background: '#e11d48', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                                                        Bekræft annullér?
+                                                    </button>
+                                                ) : (
+                                                    <button onClick={() => setConfirmVoidId(inv.id)} title="Annullér faktura og fjern fra faktureret beløb" style={{ background: 'none', color: '#94a3b8', border: '1px solid #e2e8f0', padding: '6px 10px', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                                        Annullér
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>

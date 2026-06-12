@@ -5,6 +5,7 @@ export const initialCategories = [
     { id: 'terrace', label: 'Træterrasse', desc: 'Lille, stor, overdækket', img: '/images/terrace.png' },
     { id: 'roof', label: 'Tagprojekt', desc: 'Nyt tag eller renovering', img: 'https://images.unsplash.com/photo-1518736346281-76873166a64a?w=400&q=80' },
     { id: 'kitchen', label: 'Køkkenmontage', desc: 'Nyt køkken, flotte detaljer', img: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=400&q=80' },
+    { id: 'bath', label: 'Renovering af badeværelse', desc: 'Nyt badeværelse, fliser og montering', img: '/bath.png' },
     { id: 'ceilings', label: 'Indvendige lofter', desc: 'Akustik, gips, træ', img: '/images/ceilings.png' },
     { id: 'facades', label: 'Træfacader & Isolering', desc: 'Eksklusiv ydre beklædning eller hulmur', img: '/images/icon_facade_main_carpenter_1781101264924.png' },
     { id: 'extensions', label: 'Tilbygning', desc: 'Ny etage, udvidelse', img: '/images/extensions_ai.png' },
@@ -706,6 +707,7 @@ export const QUESTIONS = {
         }
     ],
     kitchen: [],
+    bath: [],
     ceilings: [
         { 
             id: 'material', 

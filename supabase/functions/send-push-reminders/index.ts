@@ -32,35 +32,49 @@ serve(async (req) => {
         // --- 1. TIMEREGISTRERING (Kl 15) ---
         if (type === 'timesheet' || type === 'all') {
             const today = new Date().toISOString().split('T')[0];
-            
+
+            // Find hvem der ALLEREDE har registreret timer i dag.
+            // Timer gemmes i raw_data.time_entries — på leads (sagstimer) og på carpenters (internt/fravær).
+            // (Der findes ingen separat 'timesheets'-tabel; den gamle forespørgsel ramte derfor altid tomt.)
+            const registeredToday = new Set<string>();
+            const collectEntries = (rows: any[] | null) => {
+                for (const row of rows || []) {
+                    const entries = row.raw_data?.time_entries || [];
+                    for (const entry of entries) {
+                        if (entry.date === today && entry.employeeId) {
+                            registeredToday.add(String(entry.employeeId));
+                        }
+                    }
+                }
+            };
+
+            const { data: leadsRows } = await supabaseClient.from('leads').select('raw_data');
+            collectEntries(leadsRows);
+            const { data: carpenterRows } = await supabaseClient.from('carpenters').select('raw_data');
+            collectEntries(carpenterRows);
+
             // Hent alle brugere med aktive subscriptions
             const { data: subs, error: subsError } = await supabaseClient.from('push_subscriptions').select('user_id, subscription_data');
-            
+
             if (subs && !subsError) {
                 // Vi tjekker, hvem der mangler at indtaste timer for i dag
                 for (const sub of subs) {
-                    const { data: timesheets } = await supabaseClient
-                        .from('timesheets')
-                        .select('id')
-                        .eq('employee_id', sub.user_id)
-                        .eq('date', today);
-                        
-                    if (!timesheets || timesheets.length === 0) {
-                        // Mangler timer! Send notifikation
-                        const payload = JSON.stringify({
-                            title: 'Bison Frame',
-                            body: 'Husk at indtaste dine timer for i dag! ⏱️',
-                            url: '/dashboard'
-                        });
-                        
-                        try {
-                            if (privateVapidKey) {
-                                await webPush.sendNotification(sub.subscription_data, payload);
-                                sentCount++;
-                            }
-                        } catch (err) {
-                            console.error('Push failed for user', sub.user_id, err);
+                    if (registeredToday.has(String(sub.user_id))) continue; // Har allerede registreret i dag
+
+                    // Mangler timer! Send notifikation
+                    const payload = JSON.stringify({
+                        title: 'Bison Frame',
+                        body: 'Husk at indtaste dine timer for i dag! ⏱️',
+                        url: '/dashboard'
+                    });
+
+                    try {
+                        if (privateVapidKey) {
+                            await webPush.sendNotification(sub.subscription_data, payload);
+                            sentCount++;
                         }
+                    } catch (err) {
+                        console.error('Push failed for user', sub.user_id, err);
                     }
                 }
             }
@@ -111,9 +125,19 @@ serve(async (req) => {
                         }
 
                         if (shouldSend && event.participants && Array.isArray(event.participants)) {
-                            for (const userId of event.participants) {
-                                if (userId === 'all') continue;
-                                
+                            // Find de faktiske modtagere. 'all' = ejeren + alle ansatte i firmaet
+                            // (kalenderaftaler ligger på ejerens carpenter-profil, så carpenter.id er firma-id'et).
+                            let recipientIds = event.participants.filter((p: any) => p !== 'all');
+                            if (event.participants.includes('all')) {
+                                const { data: teamMembers } = await supabaseClient
+                                    .from('carpenters')
+                                    .select('id')
+                                    .eq('company_id', carpenter.id);
+                                recipientIds.push(carpenter.id, ...(teamMembers || []).map((m: any) => m.id));
+                            }
+                            recipientIds = [...new Set(recipientIds.map(String))]; // Fjern dubletter
+
+                            for (const userId of recipientIds) {
                                 const { data: subs } = await supabaseClient
                                     .from('push_subscriptions')
                                     .select('subscription_data')

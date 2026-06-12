@@ -442,6 +442,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
             'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
             'Tagprojekt': 'roof', 'Tag': 'roof', 'Nyt Køkken': 'kitchen', 'Køkken': 'kitchen',
+            'Renovering af badeværelse': 'bath', 'Badeværelse': 'bath', 'Nyt Badeværelse': 'bath',
             'Nye Lofter': 'ceilings', 'Lofter': 'ceilings', 'Ny Facadebeklædning': 'facades',
             'Facader': 'facades', 'Tilbygning': 'extensions', 'Anneks': 'annex', 'Annekser & Skure': 'annex',
             'Carport': 'carport', 'Hegn': 'fence'

@@ -1,7 +1,7 @@
 import { QUESTIONS } from '../components/Wizard/questionsConfig.js';
 
 export const generateTaskDescription = (category, details, customerType = 'privat') => {
-    if (!details || ['special', 'extensions', 'carport', 'kitchen'].includes(category)) return [];
+    if (!details || ['special', 'extensions', 'carport', 'kitchen', 'bath'].includes(category)) return [];
     let tasks = [];
     
     let qty = details.amount || details.kvm || '';
@@ -369,6 +369,7 @@ export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter 
         terrace: 'Træterrasse',
         roof: 'Tagprojekt',
         kitchen: 'Nyt Køkken',
+        bath: 'Renovering af badeværelse',
         ceilings: 'Nye Lofter',
         facades: 'Ny Facadebeklædning',
         extensions: 'Tilbygning',
@@ -430,7 +431,7 @@ export const generateTaskAndQaHtml = (projectData, includeBreakdownForCarpenter 
         return kombiHtml;
     }
     
-    if (category === 'special' || category === 'extensions' || category === 'carport' || category === 'kitchen') {
+    if (category === 'special' || category === 'extensions' || category === 'carport' || category === 'kitchen' || category === 'bath') {
         let aiHtml = '';
 
         if (details?.aiBreakdown && details.aiBreakdown.length > 0) {

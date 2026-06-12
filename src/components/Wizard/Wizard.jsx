@@ -427,7 +427,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
 
             const isFastTrack = isKombi 
                 ? res.priceRange === 'Besigtigelse kræves'
-                : ['extensions', 'carport', 'kitchen'].includes(updatedProjectData.category) || 
+                : ['extensions', 'carport', 'kitchen', 'bath'].includes(updatedProjectData.category) || 
                     (updatedProjectData.category === 'annex' && (
                         updatedProjectData.details?.annexType === 'Isoleret skur/værksted' || 
                         updatedProjectData.details?.annexType === 'Fuldt beboeligt anneks' || 

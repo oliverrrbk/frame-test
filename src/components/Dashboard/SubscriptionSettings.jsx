@@ -134,24 +134,20 @@ const SubscriptionSettings = () => {
     const currentTier = tiers[company.tier] || tiers.standard;
 
     return (
-        <div className="space-y-8 animate-fadeIn" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-
+        <div className="space-y-6 animate-fadeIn" style={{ maxWidth: '600px', margin: '0 auto' }}>
 
             {/* Trial Banner */}
             {company.subscription_status === 'trialing' && daysLeft > 0 && (
-                <div className="glass-panel" style={{ padding: '20px', marginBottom: '30px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid var(--accent-primary)' }}>
-                    <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '16px', marginBottom: '4px' }}>
-                            <Calendar size={18} color="var(--accent-primary)" />
-                            Prøveperiode: {daysLeft} dage tilbage
-                        </div>
-                        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '14px' }}>Jeres firma har fuld adgang til <strong>{currentTier.name}-pakken</strong>. Tilknyt et firmakort for at undgå afbrydelser i driften.</p>
+                <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #10b981', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 'bold', fontSize: '1rem', marginBottom: '4px' }}>
+                        <Calendar size={18} color="#10b981" />
+                        Prøveperiode: {daysLeft} dage tilbage
                     </div>
+                    <p style={{ color: '#64748b', margin: '0 0 16px 0', fontSize: '0.9rem', lineHeight: '1.4' }}>Jeres firma har fuld adgang til <strong>{currentTier.name}-pakken</strong>. Tilknyt et firmakort for at undgå afbrydelser i driften.</p>
                     <button 
-                        className="btn-primary"
                         onClick={() => setShowPricingWall(true)}
                         disabled={isManaging}
-                        style={{ whiteSpace: 'nowrap' }}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', background: '#0f172a', color: 'white', fontWeight: '600', border: 'none', cursor: 'pointer' }}
                     >
                         Tilknyt Firmakort
                     </button>
@@ -159,159 +155,98 @@ const SubscriptionSettings = () => {
             )}
 
             {company.subscription_status === 'trialing' && daysLeft <= 0 && (
-                <div className="glass-panel" style={{ padding: '20px', marginBottom: '30px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #ef4444' }}>
-                    <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', fontWeight: 'bold', fontSize: '16px', marginBottom: '4px' }}>
-                            <AlertTriangle size={18} />
-                            Prøveperiode udløbet
-                        </div>
-                        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '14px' }}>Jeres prøveperiode er udløbet. Tilknyt et betalingskort for fortsat at bruge platformen.</p>
+                <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #ef4444', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', fontWeight: 'bold', fontSize: '1rem', marginBottom: '4px' }}>
+                        <AlertTriangle size={18} />
+                        Prøveperiode udløbet
                     </div>
+                    <p style={{ color: '#64748b', margin: '0 0 16px 0', fontSize: '0.9rem', lineHeight: '1.4' }}>Jeres prøveperiode er udløbet. Tilknyt et betalingskort for fortsat at bruge platformen.</p>
                     <button 
-                        className="btn-primary"
                         onClick={() => setShowPricingWall(true)}
-                        style={{ background: '#ef4444', borderColor: '#ef4444', color: 'white' }}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', background: '#ef4444', color: 'white', fontWeight: '600', border: 'none', cursor: 'pointer' }}
                     >
                         Aktiver Abonnement
                     </button>
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* ABONNEMENT */}
+            <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
                 {/* Nuværende Plan */}
-                <div className="settings-card flex flex-col">
-                    <div className="card-body flex-1 flex flex-col">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-                            <div>
-                                <h3 style={{ color: 'var(--text-secondary)', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.75rem', fontWeight: '600' }}>Nuværende Plan</h3>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                    <span style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{currentTier.name}</span>
-                                </div>
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>{currentTier.price} kr. / md. (ex. moms)</div>
-                            </div>
-                            <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <CheckCircle size={14} /> Aktiv
-                            </div>
+                <div style={{ padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.05em' }}>Nuværende Plan</span>
+                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle size={12} /> AKTIV
                         </div>
-                        
-                        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px 0', flex: 1 }}>
-                            {currentTier.features.map((feat, idx) => (
-                                <li key={idx} style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <CheckCircle size={16} color="var(--accent-primary)" /> {feat}
-                                </li>
-                            ))}
-                        </ul>
-
-                        <button 
-                            className="btn-secondary"
-                            onClick={() => company.subscription_status === 'active' ? handleManagePortal() : setShowPricingWall(true)}
-                            style={{ width: '100%', justifyContent: 'center' }}
-                        >
-                            Skift Plan
-                        </button>
                     </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>{currentTier.name}</div>
+                    <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '16px' }}>{currentTier.price} kr. / md. (ex. moms)</div>
+                    <button 
+                        onClick={() => company.subscription_status === 'active' ? handleManagePortal() : setShowPricingWall(true)}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', background: '#f1f5f9', color: '#334155', fontWeight: '600', border: 'none', cursor: 'pointer' }}
+                    >
+                        Skift Plan
+                    </button>
                 </div>
-
-                {/* Betalingsmetode & Opsigelse */}
-                <div className="space-y-8">
-                    <div className="settings-card">
-                        <div className="card-header">
-                            <div className="icon-wrapper">
-                                <CreditCard size={20} />
-                            </div>
-                            <h3 style={{ fontSize: '1.1rem' }}>Betalingsmetode</h3>
-                        </div>
-                        <div className="card-body">
+                
+                {/* Betalingsmetode */}
+                <div style={{ padding: '16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <CreditCard size={20} color="#94a3b8" style={{ marginRight: '16px', flexShrink: 0 }}/>
+                        <div>
+                            <div style={{ fontSize: '1rem', color: '#0f172a' }}>Betalingsmetode</div>
                             {company.subscription_status === 'trialing' ? (
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5' }}>
-                                    Der er endnu ikke tilknyttet et firmakort. Betaling trækkes først, når prøveperioden udløber.
-                                </div>
+                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Intet kort tilknyttet</div>
                             ) : (
-                                <div className="glass-panel flex items-center justify-between" style={{ padding: '16px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ background: 'white', color: '#1a1a1a', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>VISA</div>
-                                        <span style={{ color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '500' }}>•••• 4242</span>
-                                    </div>
-                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Udløber 12/26</span>
-                                </div>
+                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Aktivt betalingskort</div>
                             )}
-                            <button 
-                                className="btn-secondary"
-                                onClick={company.payment_customer_id ? handleManagePortal : handleManageSubscription}
-                                disabled={isManaging}
-                                style={{ display: 'flex', width: '100%', marginTop: '24px', justifyContent: 'center' }}
-                            >
-                                {company.payment_customer_id ? 'Åbn Kundeportal' : 'Opdater betalingsoplysninger'}
-                            </button>
                         </div>
                     </div>
-
-                    <div className="settings-card">
-                        <div className="card-body">
-                            <h3 style={{ color: 'var(--text-primary)', margin: '0 0 8px 0', fontSize: '1.1rem' }}>Opsig Firmaaftale</h3>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '0 0 20px 0', lineHeight: '1.5' }}>
-                                Når du opsiger, vil platformen forblive aktiv perioden ud. Vi binder jer ikke til noget, I ikke bruger.
-                            </p>
-                            <button 
-                                onClick={handleManagePortal}
-                                disabled={isManaging || !company.payment_customer_id}
-                                style={{ 
-                                    background: 'transparent', 
-                                    color: '#ef4444', 
-                                    border: '1px solid rgba(239, 68, 68, 0.3)', 
-                                    padding: '8px 16px', 
-                                    borderRadius: '8px', 
-                                    fontWeight: '600', 
-                                    cursor: isManaging || !company.payment_customer_id ? 'not-allowed' : 'pointer', 
-                                    fontSize: '0.9rem', 
-                                    transition: 'all 0.2s', 
-                                    opacity: !company.payment_customer_id ? 0.5 : 1 
-                                }}
-                                className={company.payment_customer_id ? "hover:bg-red-50 dark:hover:bg-red-900/10" : ""}
-                            >
-                                Opsig abonnement
-                            </button>
+                    <button 
+                        onClick={company.payment_customer_id ? handleManagePortal : handleManageSubscription}
+                        disabled={isManaging}
+                        style={{ background: 'transparent', color: '#3b82f6', border: 'none', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', padding: 0 }}
+                    >
+                        Opdater
+                    </button>
+                </div>
+                
+                {/* Opsigelse */}
+                <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <AlertTriangle size={20} color="#ef4444" style={{ marginRight: '16px', flexShrink: 0 }}/>
+                        <div>
+                            <div style={{ fontSize: '1rem', color: '#0f172a' }}>Opsig Aftale</div>
                         </div>
                     </div>
+                    <button 
+                        onClick={handleManagePortal}
+                        disabled={isManaging || !company.payment_customer_id}
+                        style={{ background: 'transparent', color: '#ef4444', border: 'none', fontWeight: '600', fontSize: '0.9rem', cursor: isManaging || !company.payment_customer_id ? 'not-allowed' : 'pointer', padding: 0, opacity: !company.payment_customer_id ? 0.5 : 1 }}
+                    >
+                        Opsig
+                    </button>
                 </div>
             </div>
 
-            {/* Fakturering (Bogholderi) */}
-            <div className="settings-card">
-                <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: 'none', paddingBottom: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div className="icon-wrapper">
-                            <FileText size={20} />
+            {/* Fakturaer */}
+            <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <FileText size={20} color="#94a3b8" style={{ marginRight: '16px', flexShrink: 0 }}/>
+                        <div>
+                            <div style={{ fontSize: '1rem', color: '#0f172a' }}>Faktura-arkiv</div>
+                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Bogholderi PDF'er</div>
                         </div>
-                        <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Fakturaer til Bogholderiet</h3>
                     </div>
-                    <div style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '600', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 10px', borderRadius: '12px' }}>
-                        <Shield size={14} /> Sikker B2B Fakturering
-                    </div>
-                </div>
-                <div className="card-body">
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '24px' }}>
-                        Her vil du kunne downloade alle firmaets månedlige fakturaer som PDF med udspecificeret moms, når abonnementet er aktivt.
-                    </p>
-
-                    {company.payment_customer_id ? (
-                        <div className="glass-panel" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                                Alle fakturaer gemmes automatisk i din kundekonto.
-                            </div>
-                            <button 
-                                className="btn-secondary"
-                                onClick={handleManagePortal}
-                                disabled={isManaging}
-                            >
-                                Åbn Faktura-arkiv
-                            </button>
-                        </div>
-                    ) : (
-                        <div style={{ background: 'var(--surface-bg)', border: '1px dashed var(--border-light)', borderRadius: '12px', padding: '48px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-                            Ingen betalte fakturaer endnu.
-                        </div>
-                    )}
+                    <button 
+                        onClick={handleManagePortal}
+                        disabled={isManaging || !company.payment_customer_id}
+                        style={{ background: '#f1f5f9', color: '#334155', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '0.85rem', fontWeight: '600', cursor: isManaging || !company.payment_customer_id ? 'not-allowed' : 'pointer', opacity: !company.payment_customer_id ? 0.5 : 1 }}
+                    >
+                        Åbn
+                    </button>
                 </div>
             </div>
 

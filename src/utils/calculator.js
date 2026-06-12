@@ -109,6 +109,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         terrace: 'Træterrasse',
         roof: 'Tagprojekt',
         kitchen: 'Nyt Køkken',
+        bath: 'Renovering af badeværelse',
         ceilings: 'Nye Lofter',
         facades: 'Ny Facadebeklædning',
         extensions: 'Tilbygning',
@@ -127,7 +128,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         let isAnyFastTrack = false;
 
         for (const p of projectData.projects) {
-            const isComplex = ['extensions', 'carport', 'kitchen'].includes(p.category) || 
+            const isComplex = ['extensions', 'carport', 'kitchen', 'bath'].includes(p.category) || 
                 (p.category === 'annex' && (
                     p.details?.annexType === 'Isoleret skur/værksted' || 
                     p.details?.annexType === 'Fuldt beboeligt anneks' || 
@@ -418,8 +419,8 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         bArr.push(`Opgaven er estimeret automatisk via den digitale assistent.`);
         bArr.push(`Systemets vurdering: ${laborHours} arbejdstimer`);
         bArr.push(`Systemets vurdering af materialer: ${rawMat} kr.`);
-    } else if (cat === 'extensions' || cat === 'carport' || cat === 'kitchen' || (cat === 'annex' && (d.annexType === 'Isoleret skur/værksted' || d.annexType === 'Fuldt beboeligt anneks' || numericAmount > 12))) {
-        const catLabel = cat === 'extensions' ? 'Tilbygning' : cat === 'carport' ? 'Carport' : cat === 'kitchen' ? 'Køkkenmontage' : 'Anneks & Skur';
+    } else if (cat === 'extensions' || cat === 'carport' || cat === 'kitchen' || cat === 'bath' || (cat === 'annex' && (d.annexType === 'Isoleret skur/værksted' || d.annexType === 'Fuldt beboeligt anneks' || numericAmount > 12))) {
+        const catLabel = cat === 'extensions' ? 'Tilbygning' : cat === 'carport' ? 'Carport' : cat === 'kitchen' ? 'Køkkenmontage' : cat === 'bath' ? 'Renovering af badeværelse' : 'Anneks & Skur';
         bArr.push(`${catLabel}/Kompleks opgave: Der foretages ingen automatisk prisudregning.`);
         bArr.push(`Kunden har indsendt en beskrivelse, og afventer kontakt for besigtigelse.`);
         return {
@@ -1606,15 +1607,17 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                         externalLeaseCost += scaffoldCost;
                     }
                     laborHours += initialInstallHours * 0.25;
-                    bArr.push(`Tillæg: Facadestilladsleje skaleret efter areal (Inkl. avance) samt forsinket arbejdsgang pga. husets højde (flere etager)`);
+                bArr.push(`Tillæg: Facadestilladsleje skaleret efter areal (Inkl. avance) samt forsinket arbejdsgang pga. husets højde (flere etager)`);
                 }
             }
         }
         
-        if (cat === 'kitchen') {
+        if (cat === 'kitchen' || cat === 'bath') {
+            if (numericAmount <= 0) return { laborHours: 0, materialCost: 0, bArr: [], isComplex: false };
+            
             if (d.assembly && d.assembly.startsWith('Flat-pack')) {
                 laborHours += numericAmount * (formula.assemblyHours || 0.8);
-                bArr.push(`Tillæg: Samling af flat-pack / usamlede køkkenelementer`);
+                bArr.push(`Tillæg: Samling af flat-pack / usamlede elementer`);
             }
             if (d.worktop && d.worktop.startsWith('Ja')) {
                 laborHours += (formula.worktopHours || 4.0);
@@ -1997,6 +2000,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                  'facades': 'facadeskruer, beslag, vindspærretape, papsøm, slitage',
                  'roof': 'papsøm, tagskruer, bindekroge, fugemasse, undertagstape',
                  'kitchen': 'monteringsskruer, beslag, silikonefuge, D3-trælim, kiler, afdækning',
+                 'bath': 'vådrumsmembran, primer, fugemasse, beslag, afdækning, skruer',
                  'extensions': 'skruer, fuge, beslag, dampspærretape, afdækning, slitage',
                  'annex': 'skruer, beslag, papsøm, lim, afdækning, slitage',
                  'carport': 'stolpebeton, franske skruer, beslag, tagskruer, slitage',

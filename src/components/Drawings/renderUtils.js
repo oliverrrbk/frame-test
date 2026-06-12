@@ -191,8 +191,14 @@ export const drawElement = async (ctx, el, options = {}) => {
         }
     } else if (el.type === 'text') {
         if (el.text && el.id !== skipTextId) {
-            ctx.font = `600 ${el.fontSize || 20}px Inter, sans-serif`;
+            const fontSize = el.fontSize || 20;
+            ctx.font = `600 ${fontSize}px Inter, sans-serif`;
             ctx.textBaseline = 'top';
+            if (el.isLineNote || el.attachedToId) {
+                const textWidth = ctx.measureText(el.text).width;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(el.x - 5, el.y - 3, textWidth + 10, fontSize + 8);
+            }
             ctx.fillStyle = el.color || '#0f172a';
             ctx.fillText(el.text, el.x, el.y);
         }

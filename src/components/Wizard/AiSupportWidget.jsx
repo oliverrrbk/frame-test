@@ -60,6 +60,12 @@ const AiSupportWidget = ({ carpenter, currentStep, projectData, projects }) => {
                         'Inkluderer jeres tilbud VVS- og el-tilslutning?',
                         'Hvor lang tid tager en komplet køkkenudskiftning?'
                     ];
+                case 'bath':
+                    return [
+                        'Kræver mit nye badeværelse byggetilladelse?',
+                        'Hvem koordinerer elektriker og VVS?',
+                        'Kan jeg selv købe badeværelsesmøbler og fliser?'
+                    ];
                 default:
                     return [
                         'Hvilket materiale anbefaler I?',

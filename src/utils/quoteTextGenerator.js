@@ -74,6 +74,15 @@ export const generateHumanQuoteText = (category, details, categoryName) => {
                 '• Slutfinish og oprydning'
             ];
             break;
+        case 'bath':
+            bulletPoints = [
+                '• Klargøring af badeværelse til renovering',
+                '• Udførelse af aftalt VVS-, murer- og tømrerarbejde',
+                `• Opbygning af konstruktioner og montering af badeværelseselementer${specificInfo}`,
+                '• Tilpasning, fugning og finish',
+                '• Kvalitetssikring, slutrengøring og aflevering'
+            ];
+            break;
         case 'facades':
             bulletPoints = [
                 '• Etablering af stillads og fjernelse af gammel beklædning (hvis relevant)',

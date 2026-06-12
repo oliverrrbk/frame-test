@@ -714,7 +714,7 @@ abc-123-uuid,roof,140,Tegl,1100000,510000,2024-08-12
 abc-123-uuid,windows,6,Træ/alu (kombination),135000,142000,2024-09-03
 ...`}
                 </pre>
-                <p style={{ marginTop: '12px' }}>Kategorier skal matche systemets: <code>roof, windows, doors, floor, terrace, kitchen, ceilings, facades, extensions, annex, carport, fence</code>.</p>
+                <p style={{ marginTop: '12px' }}>Kategorier skal matche systemets: <code>roof, windows, doors, floor, terrace, kitchen, bath, ceilings, facades, extensions, annex, carport, fence</code>.</p>
                 <p>Importerede rækker indgår i næste kalibrering. Ugyldige rækker rapporteres efter import.</p>
 
                 <div style={{ marginTop: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>

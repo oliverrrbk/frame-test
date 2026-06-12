@@ -52,10 +52,11 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
             case 'windows': return 'Særlige ønsker eller kommentarer til vinduerne? (valgfrit)';
             case 'doors': return 'Særlige ønsker eller kommentarer til dørene? (valgfrit)';
             case 'floor': return 'Særlige ønsker eller kommentarer til gulvet? (valgfrit)';
+            case 'kitchen': return 'Særlige ønsker eller kommentarer til køkkenet? (valgfrit)';
+            case 'bath': return 'Særlige ønsker eller kommentarer til badeværelset? (valgfrit)';
             case 'ceilings': return 'Særlige ønsker eller kommentarer til lofterne? (valgfrit)';
             case 'facades': return 'Særlige ønsker eller kommentarer til facaden? (valgfrit)';
             case 'terrace': return 'Særlige ønsker eller kommentarer til terrassen? (valgfrit)';
-            case 'kitchen': return 'Særlige ønsker eller kommentarer til køkkenet? (valgfrit)';
             case 'annex': return 'Særlige ønsker eller kommentarer til annekset? (valgfrit)';
             case 'carport': return 'Særlige ønsker eller kommentarer til carporten? (valgfrit)';
             case 'fence': return 'Særlige ønsker eller kommentarer til hegnet? (valgfrit)';
@@ -1102,7 +1103,7 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
         parseFloat(details?.amount) > 12
     );
 
-    const isInspectionRequired = ['special', 'extensions', 'carport', 'kitchen'].includes(category) || isAnnexComplex;
+    const isInspectionRequired = ['special', 'extensions', 'carport', 'kitchen', 'bath'].includes(category) || isAnnexComplex;
 
     return (
         <section className="wizard-step active dynamic-form-section">

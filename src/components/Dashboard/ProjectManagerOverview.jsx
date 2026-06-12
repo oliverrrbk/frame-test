@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import { mutateTimeEntries } from '../../utils/timeEntries';
 
 export default function ProjectManagerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId }) {
     // Filtrer sager, som projektlederen er tilknyttet
@@ -43,56 +43,40 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
             employeeName: myProfile?.owner_name || myProfile?.company_name || 'Ukendt medarbejder'
         };
         
-        const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', leadToUpdate.id).single();
-        const currentRawData = latestData?.raw_data || leadToUpdate.raw_data || {};
-
-        const currentEntries = currentRawData.time_entries || [];
-        const updatedEntries = [entry, ...currentEntries];
-        const newRawData = { ...currentRawData, time_entries: updatedEntries };
-        
-        const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', leadToUpdate.id);
-        if (error) {
-            toast.error('Fejl ved stempling.');
-        } else {
+        try {
+            await mutateTimeEntries({ table: 'leads', id: leadToUpdate.id, add: [entry] });
             toast.success('Du er nu tjekket ind!');
             setTimeout(() => window.location.reload(), 1000);
+        } catch {
+            toast.error('Fejl ved stempling.');
         }
     };
 
     const handleGlobalCheckOut = async () => {
         if (!activeCheckInInfo) return;
-        
+
         const { lead, activeEntry } = activeCheckInInfo;
         const nowTime = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
-        
-        const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
-        const currentRawData = latestData?.raw_data || lead.raw_data || {};
 
-        const currentEntries = [...(currentRawData.time_entries || [])];
-        const entryIndex = currentEntries.findIndex(t => t.id === activeEntry.id);
-        if (entryIndex === -1) return;
-        
-        const entry = { ...currentEntries[entryIndex] };
+        const entry = { ...activeEntry };
         entry.endTime = nowTime;
-        
+
         const start = new Date(`${entry.date}T${entry.startTime}`);
         const end = new Date(`${entry.date}T${entry.endTime}`);
         let diffHours = (end - start) / (1000 * 60 * 60);
         if (diffHours < 0) diffHours = 0;
-        
+
         // Afrund til nærmeste kvarter
         entry.hours = Math.round(diffHours * 4) / 4;
         entry.desc = 'Arbejde udført (Tjek-ud)';
-        
-        currentEntries[entryIndex] = entry;
-        const newRawData = { ...currentRawData, time_entries: currentEntries };
-        
-        const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', lead.id);
-        if (error) {
-            toast.error('Fejl ved udstempling.');
-        } else {
+
+        try {
+            // Atomisk: fjern den åbne registrering og tilføj den afsluttede i én operation.
+            await mutateTimeEntries({ table: 'leads', id: lead.id, removeIds: [activeEntry.id], add: [entry] });
             toast.success('Tjekket ud! Timerne er nu gemt.');
             setTimeout(() => window.location.reload(), 1000);
+        } catch {
+            toast.error('Fejl ved udstempling.');
         }
     };
 

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { isWeekendOrHoliday } from '../../utils/holidays';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
+import { mutateTimeEntries } from '../../utils/timeEntries';
 import TimeRegistrationReminder from './TimeRegistrationReminder';
 
 const CustomSelect = ({ value, onChange, options, placeholder }) => {
@@ -338,36 +339,41 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
         }
 
         if (entry.leadId === 'internal') {
-            const { data: latestData } = await supabase.from('carpenters').select('raw_data').eq('id', myProfile.id).single();
-            const currentRawData = latestData?.raw_data || myProfile.raw_data || {};
-            
-            let currentEntries = currentRawData.time_entries || [];
+            let removeIds;
             if (entry.isGrouped) {
-                const parts = entry.id.split('-');
+                // Find alle medlems-id'er i ferie-/skoleperioden (samme base-id-præfiks).
+                const parts = String(entry.id).split('-');
                 const baseId = parts.length >= 2 ? `${parts[0]}-${parts[1]}` : entry.id;
-                currentEntries = currentEntries.filter(t => {
-                    const tParts = t.id.split('-');
-                    const tBaseId = tParts.length >= 2 ? `${tParts[0]}-${tParts[1]}` : t.id;
-                    return tBaseId !== baseId;
-                });
+                const { data: latestData } = await supabase.from('carpenters').select('raw_data').eq('id', myProfile.id).single();
+                const currentEntries = latestData?.raw_data?.time_entries || [];
+                removeIds = currentEntries
+                    .filter(t => {
+                        const tParts = String(t.id).split('-');
+                        const tBaseId = tParts.length >= 2 ? `${tParts[0]}-${tParts[1]}` : t.id;
+                        return tBaseId === baseId;
+                    })
+                    .map(t => t.id);
             } else {
-                currentEntries = currentEntries.filter(t => t.id !== entry.id);
+                removeIds = [entry.id];
             }
 
-            const newRawData = { ...currentRawData, time_entries: currentEntries };
-            const { error } = await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', myProfile.id);
-            if (error) toast.error('Kunne ikke slette fravær/internt.');
-            else { toast.success(entry.isGrouped ? 'Ferie-periode slettet.' : 'Registrering slettet.'); setTimeout(() => window.location.reload(), 800); }
+            try {
+                await mutateTimeEntries({ table: 'carpenters', id: myProfile.id, removeIds });
+                toast.success(entry.isGrouped ? 'Ferie-periode slettet.' : 'Registrering slettet.');
+                setTimeout(() => window.location.reload(), 800);
+            } catch {
+                toast.error('Kunne ikke slette fravær/internt.');
+            }
         } else {
             const lead = leadsData.find(l => l.id === entry.leadId);
             if (!lead) return toast.error('Sag ikke fundet');
-            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
-            const currentRawData = latestData?.raw_data || lead.raw_data || {};
-            const currentEntries = (currentRawData.time_entries || []).filter(t => t.id !== entry.id);
-            const newRawData = { ...currentRawData, time_entries: currentEntries };
-            const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', lead.id);
-            if (error) toast.error('Kunne ikke slette tiden.');
-            else { toast.success('Tidsregistrering slettet.'); setTimeout(() => window.location.reload(), 800); }
+            try {
+                await mutateTimeEntries({ table: 'leads', id: lead.id, removeIds: [entry.id] });
+                toast.success('Tidsregistrering slettet.');
+                setTimeout(() => window.location.reload(), 800);
+            } catch {
+                toast.error('Kunne ikke slette tiden.');
+            }
         }
     };
 
@@ -418,35 +424,26 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
         
         try {
             if (formData.regType === 'internal') {
-                const { data: latestData } = await supabase.from('carpenters').select('raw_data').eq('id', myProfile.id).single();
-                const currentRawData = latestData?.raw_data || myProfile.raw_data || {};
-                let currentEntries = currentRawData.time_entries || [];
+                const newEntries = datesToSave.map((dateStr, idx) => ({
+                    id: (isAdding || datesToSave.length > 1) ? `time-${Date.now()}-${idx}` : editingEntry.id,
+                    startTime: isMultiDayAbsence ? '' : (formData.startTime || ''),
+                    endTime: isMultiDayAbsence ? '' : (formData.endTime || ''),
+                    pauseMinutes: isMultiDayAbsence ? 0 : (parseInt(formData.pauseMinutes) || 0),
+                    hours: isMultiDayAbsence ? 7.4 : (parseFloat(formData.hours) || 0),
+                    date: dateStr,
+                    desc: formData.desc || '',
+                    employeeId: myProfile.id,
+                    employeeName: myProfile.owner_name || myProfile.company_name || 'Ukendt',
+                    km: isMultiDayAbsence ? 0 : (formData.km ? parseFloat(formData.km) : 0),
+                    absenceType: formData.absenceType || 'Internt'
+                }));
 
-                if (!isAdding && editingEntry) {
-                    currentEntries = currentEntries.filter(t => t.id !== editingEntry.id);
-                }
+                const removeIds = (!isAdding && editingEntry) ? [editingEntry.id] : [];
 
-                datesToSave.forEach((dateStr, idx) => {
-                    const finalEntry = {
-                        id: (isAdding || datesToSave.length > 1) ? `time-${Date.now()}-${idx}` : editingEntry.id,
-                        startTime: isMultiDayAbsence ? '' : (formData.startTime || ''),
-                        endTime: isMultiDayAbsence ? '' : (formData.endTime || ''),
-                        pauseMinutes: isMultiDayAbsence ? 0 : (parseInt(formData.pauseMinutes) || 0),
-                        hours: isMultiDayAbsence ? 7.4 : (parseFloat(formData.hours) || 0),
-                        date: dateStr,
-                        desc: formData.desc || '',
-                        employeeId: myProfile.id,
-                        employeeName: myProfile.owner_name || myProfile.company_name || 'Ukendt',
-                        km: isMultiDayAbsence ? 0 : (formData.km ? parseFloat(formData.km) : 0),
-                        absenceType: formData.absenceType || 'Internt'
-                    };
-                    currentEntries.push(finalEntry);
-                });
-
-                const newRawData = { ...currentRawData, time_entries: currentEntries };
-                const { error } = await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', myProfile.id);
-                if (error) {
-                    console.error("Supabase update error (carpenters):", error);
+                try {
+                    await mutateTimeEntries({ table: 'carpenters', id: myProfile.id, removeIds, add: newEntries });
+                } catch (error) {
+                    console.error("Supabase RPC error (carpenters):", error);
                     throw new Error('Fejl ved gem internt: ' + error.message);
                 }
             } else {
@@ -465,20 +462,13 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
 
                 const lead = leadsData.find(l => String(l.id) === String(formData.leadId));
                 if (!lead) return toast.error('Sag ikke fundet');
-                
-                const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
-                const currentRawData = latestData?.raw_data || lead.raw_data || {};
-                let currentEntries = currentRawData.time_entries || [];
 
-                if (!isAdding && editingEntry) {
-                    currentEntries = currentEntries.filter(t => t.id !== finalEntry.id);
-                }
-                currentEntries.push(finalEntry);
-                
-                const newRawData = { ...currentRawData, time_entries: currentEntries };
-                const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', lead.id);
-                if (error) {
-                    console.error("Supabase update error (leads):", error);
+                const removeIds = (!isAdding && editingEntry) ? [finalEntry.id] : [];
+
+                try {
+                    await mutateTimeEntries({ table: 'leads', id: lead.id, removeIds, add: [finalEntry] });
+                } catch (error) {
+                    console.error("Supabase RPC error (leads):", error);
                     throw new Error('Fejl ved gem tid på sag: ' + error.message);
                 }
             }

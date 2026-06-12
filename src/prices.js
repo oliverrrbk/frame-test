@@ -158,6 +158,9 @@ export const MATERIAL_INDEX = {
     kitchen: {
         'Default': 0 // Materialer på køkken bestilles typisk kunden selv, vi beregner typisk kun installation pr. enhed
     },
+    bath: {
+        'Default': 0
+    },
     ceilings: {
         'Træloft (listeloft/paneler/rustikloft)': 280,
         'Gipsloft (standard 2-lag)': 180,
@@ -352,6 +355,10 @@ export const WORK_FORMULAS = {
         applianceHours: 1.5, // Fast tidstillæg til finjustering af træfronter på integrerede hvidevarer
         disposalHours: 0.5, // Timer pr. køkkenelement til demontering og sortering
         containerThreshold: 15 // Et gennemsnitligt køkken over 15 elementer udløser en hel container
+    },
+    bath: {
+        hoursPerUnit: 0,
+        containerThreshold: 100
     },
     ceilings: {
         hoursPerUnit: 0.8, // Timer pr. m2 loft (kun selve loftet)

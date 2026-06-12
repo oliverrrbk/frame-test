@@ -600,6 +600,36 @@ const getMeasurementLabel = (element, settings = null) => {
     return `L ${formatLengthWithSettings(metrics.length, settings)} · ${Math.round(metrics.angle)}°`;
 };
 
+const getLineNoteAnchorId = (element) => element?.attachedToId || element?.parentId || null;
+
+const isLineNoteElement = (element, elements = []) => {
+    if (!element || element.type !== 'text') return false;
+    if (element.isLineNote || element.attachedToId) return true;
+    if (!element.parentId) return false;
+    const parent = elements.find(el => el.id === element.parentId);
+    return !!parent && MEASURABLE_TYPES.includes(parent.type);
+};
+
+const getLineNotePosition = (lineElement, point, fontSize = 20) => {
+    const metrics = getLineMetrics(lineElement);
+    if (!metrics || metrics.length < 1) {
+        return { x: point.x, y: point.y - 25 };
+    }
+    const dx = lineElement.endX - lineElement.x;
+    const dy = lineElement.endY - lineElement.y;
+    let nx = -dy / metrics.length;
+    let ny = dx / metrics.length;
+    if (ny > 0) {
+        nx *= -1;
+        ny *= -1;
+    }
+    const offset = 22;
+    return {
+        x: point.x + nx * offset,
+        y: point.y + ny * offset - fontSize / 2
+    };
+};
+
 const getShapeMetrics = (element, settings = null) => {
     if (!element || !SHAPE_DIMENSION_TYPES.includes(element.type)) return null;
     const bounds = getElementBounds(element);
@@ -806,6 +836,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const endHandleRef = useRef(null);
     const lastActionPointRef = useRef({ x: 0, y: 0 });
     const dragHistoryPushedRef = useRef(false);
+    const activeTouchPointersRef = useRef(new Map());
+    const pinchRef = useRef(null);
     const [showShapesMenu, setShowShapesMenu] = useState(false);
     const [showColorMenu, setShowColorMenu] = useState(false);
     const [showSymbolsMenu, setShowSymbolsMenu] = useState(false);
@@ -886,7 +918,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const getSelectionWithChildren = useCallback((ids = getSelectedIds()) => {
         const selectedSet = new Set(ids);
         activeElementsRef.current.forEach(el => {
-            if (selectedSet.has(el.id) && el.parentId) selectedSet.add(el.parentId);
+            if (selectedSet.has(el.id) && el.parentId && !isLineNoteElement(el, activeElementsRef.current)) selectedSet.add(el.parentId);
         });
 
         let added = true;
@@ -898,11 +930,25 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     selectedSet.add(el.id);
                     added = true;
                 }
+                if (el.attachedToId && selectedSet.has(el.attachedToId) && !selectedSet.has(el.id)) {
+                    selectedSet.add(el.id);
+                    added = true;
+                }
             });
         }
 
         return Array.from(selectedSet);
     }, [getSelectedIds]);
+
+    const expandMoveIdsWithAttachedNotes = useCallback((ids = [], sourceElements = activeElementsRef.current) => {
+        const moveSet = new Set(ids);
+        sourceElements.forEach(el => {
+            if (!isLineNoteElement(el, sourceElements)) return;
+            const anchorId = getLineNoteAnchorId(el);
+            if (anchorId && moveSet.has(anchorId)) moveSet.add(el.id);
+        });
+        return Array.from(moveSet);
+    }, []);
 
     const updateSelectedElements = useCallback((updater) => {
         const selectedIds = getSelectionWithChildren();
@@ -1724,6 +1770,46 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         setAppState(s => ({ ...s, tool: 'select', editingTextId: null, snapPoint: null }));
     }, [appState.selectedElementId, pushHistory]);
 
+    const addNoteToSelectedLine = useCallback(() => {
+        const lineId = appState.selectedElementId;
+        const lineElement = activeElementsRef.current.find(el => el.id === lineId);
+        const metrics = getLineMetrics(lineElement);
+        if (!lineElement || !metrics) return;
+        if (lineElement.locked) {
+            toast.error('Elementet er låst.');
+            return;
+        }
+
+        const fontSize = appState.fontSize || 20;
+        const notePos = getLineNotePosition(lineElement, metrics.midpoint, fontSize);
+        const textId = generateId();
+        const newText = {
+            id: textId,
+            type: 'text',
+            attachedToId: lineElement.id,
+            isLineNote: true,
+            text: '',
+            color: appState.color,
+            x: notePos.x,
+            y: notePos.y,
+            w: 120,
+            h: Math.max(30, fontSize + 12),
+            fontSize
+        };
+
+        pushHistory(activeElementsRef.current);
+        const updatedElements = [...activeElementsRef.current, newText];
+        activeElementsRef.current = updatedElements;
+        setElements(updatedElements);
+        setAppState(s => ({
+            ...s,
+            tool: 'select',
+            selectedElementId: textId,
+            selectedElementIds: [],
+            editingTextId: textId
+        }));
+    }, [appState.color, appState.fontSize, appState.selectedElementId, pushHistory]);
+
     const toggleSelectedLock = useCallback(() => {
         const selectedIds = getSelectionWithChildren();
         if (selectedIds.length === 0) return;
@@ -1744,15 +1830,15 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         const selectedIds = getSelectedIds();
         if (selectedIds.length === 0) return;
         pushHistory(activeElementsRef.current);
-        const selectedSet = new Set(selectedIds);
+        const selectedSet = new Set(expandMoveIdsWithAttachedNotes(selectedIds));
         const updatedElements = activeElementsRef.current.map(el => {
-            const isMoving = selectedSet.has(el.id) || selectedSet.has(el.parentId);
+            const isMoving = selectedSet.has(el.id) || selectedSet.has(el.parentId) || selectedSet.has(el.attachedToId);
             if (!isMoving || el.locked) return el;
             return translateElement(el, dx, dy);
         });
         activeElementsRef.current = updatedElements;
         setElements(updatedElements);
-    }, [getSelectedIds, pushHistory]);
+    }, [expandMoveIdsWithAttachedNotes, getSelectedIds, pushHistory]);
 
     const handleUndo = () => {
         if (history.length === 0) return;
@@ -2019,8 +2105,14 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 }
             } else if (el.type === 'text') {
                 if (el.text && el.id !== appState.editingTextId) {
-                    ctx.font = `600 ${el.fontSize || 20}px Inter, sans-serif`;
+                    const fontSize = el.fontSize || 20;
+                    ctx.font = `600 ${fontSize}px Inter, sans-serif`;
                     ctx.textBaseline = 'top';
+                    if (isLineNoteElement(el, elementsToDraw)) {
+                        const textWidth = ctx.measureText(el.text).width;
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(el.x - 5, el.y - 3, textWidth + 10, fontSize + 8);
+                    }
                     ctx.fillStyle = el.color || '#0f172a';
                     ctx.fillText(el.text, el.x, el.y);
                 }
@@ -2201,8 +2293,55 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         };
     };
 
+    const getTouchPair = () => Array.from(activeTouchPointersRef.current.values()).slice(0, 2);
+
+    const getTouchGesture = (points) => {
+        if (points.length < 2) return null;
+        const [a, b] = points;
+        const center = {
+            x: (a.x + b.x) / 2,
+            y: (a.y + b.y) / 2
+        };
+        return {
+            center,
+            distance: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y))
+        };
+    };
+
     // Pointer Events
     const handlePointerDown = (e) => {
+        if (e.pointerType === 'touch') {
+            activeTouchPointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (activeTouchPointersRef.current.size >= 2) {
+                const gesture = getTouchGesture(getTouchPair());
+                if (gesture) {
+                    if (appState.dragging && appState.tool !== 'select' && appState.selectedElementId) {
+                        const cleanedElements = activeElementsRef.current.filter(el => el.id !== appState.selectedElementId);
+                        activeElementsRef.current = cleanedElements;
+                        setElements(cleanedElements);
+                    }
+                    pinchRef.current = {
+                        startDistance: gesture.distance,
+                        startZoom: activeZoomRef.current,
+                        startPan: { ...activePanRef.current },
+                        startCenter: gesture.center
+                    };
+                    setAppState(s => ({
+                        ...s,
+                        dragging: false,
+                        rotating: false,
+                        resizing: false,
+                        panning: false,
+                        marqueeStartPoint: null,
+                        marqueeCurrentPoint: null,
+                        snapPoint: null,
+                        dragGuide: null
+                    }));
+                }
+                return;
+            }
+        }
+
         if (e.button === 1 || e.button === 2 || appState.isSpaceDown) {
             lastPointerRef.current = { x: e.clientX || (e.touches && e.touches[0].clientX) || 0, y: e.clientY || (e.touches && e.touches[0].clientY) || 0 };
             setAppState(s => ({ ...s, panning: true }));
@@ -2229,11 +2368,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     setAppState(s => ({ ...s, editingTextId: clickedElement.id }));
                 } else {
                     let moduleIds = [clickedElement.id];
-                    if (!appState.drillDown) {
+                    const clickedLineNote = isLineNoteElement(clickedElement, activeElementsRef.current);
+                    if (!appState.drillDown && !clickedLineNote) {
                         const moduleRootId = clickedElement.parentId || clickedElement.id;
                         moduleIds = getConnectedModule(moduleRootId, activeElementsRef.current);
                         if (!moduleIds.includes(clickedElement.id)) moduleIds.push(clickedElement.id);
                     }
+                    moduleIds = clickedLineNote ? moduleIds : expandMoveIdsWithAttachedNotes(moduleIds);
                     activeModuleIdsRef.current = moduleIds;
 
                     setAppState(s => ({ 
@@ -2259,7 +2400,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             const clickedElement = getElementAtPosition(pos.x, pos.y, activeElementsRef.current);
             if (clickedElement && !clickedElement.locked) {
                 pushHistory(elements);
-                const updatedElements = activeElementsRef.current.filter(el => el.id !== clickedElement.id);
+                const deleteIds = getSelectionWithChildren([clickedElement.id]);
+                const updatedElements = activeElementsRef.current.filter(el => el.locked || !deleteIds.includes(el.id));
                 activeElementsRef.current = updatedElements;
                 setElements(updatedElements);
             }
@@ -2317,6 +2459,34 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     };
 
     const handlePointerMove = (e) => {
+        if (e.pointerType === 'touch' && activeTouchPointersRef.current.has(e.pointerId)) {
+            activeTouchPointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        }
+
+        if (pinchRef.current && activeTouchPointersRef.current.size >= 2) {
+            const gesture = getTouchGesture(getTouchPair());
+            if (!gesture) return;
+            const rect = containerRef.current.getBoundingClientRect();
+            const screenX = gesture.center.x - rect.left;
+            const screenY = gesture.center.y - rect.top;
+            const start = pinchRef.current;
+            const worldAtStartCenter = {
+                x: (start.startCenter.x - rect.left - start.startPan.x) / start.startZoom,
+                y: (start.startCenter.y - rect.top - start.startPan.y) / start.startZoom
+            };
+            const nextZoom = Math.min(Math.max(start.startZoom * (gesture.distance / start.startDistance), 0.1), 10);
+
+            activeZoomRef.current = nextZoom;
+            activePanRef.current = {
+                x: screenX - worldAtStartCenter.x * nextZoom,
+                y: screenY - worldAtStartCenter.y * nextZoom
+            };
+            setAppState(s => ({ ...s, zoom: nextZoom }));
+            syncOverlayTransform();
+            redraw();
+            return;
+        }
+
         if (appState.panning) {
             const currentX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
             const currentY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
@@ -2425,7 +2595,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             let moduleIds = appState.selectedElementId ? activeModuleIdsRef.current : appState.selectedElementIds;
 
             activeElementsRef.current = activeElementsRef.current.map(el => {
-                const isMoving = moduleIds.includes(el.id) || moduleIds.includes(el.parentId);
+                const isMoving = moduleIds.includes(el.id) || moduleIds.includes(el.parentId) || moduleIds.includes(el.attachedToId);
                 if (!isMoving) return el;
                 if (el.locked) return el;
 
@@ -2467,7 +2637,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             if (appState.tool === 'select' && moduleIds?.length > 0) {
                 const movingSet = new Set(moduleIds);
                 const movingElements = activeElementsRef.current.filter(el => (
-                    movingSet.has(el.id) || (el.parentId && movingSet.has(el.parentId))
+                    movingSet.has(el.id) || (el.parentId && movingSet.has(el.parentId)) || (el.attachedToId && movingSet.has(el.attachedToId))
                 ));
                 const movingBounds = getDrawingBounds(movingElements);
                 const totalDx = pos.x - (appState.actionStartPoint?.x || pos.x);
@@ -2520,7 +2690,14 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         }
     };
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (e) => {
+        if (e?.pointerType === 'touch') {
+            activeTouchPointersRef.current.delete(e.pointerId);
+            if (activeTouchPointersRef.current.size < 2) {
+                pinchRef.current = null;
+            }
+        }
+
         setAppState(s => ({ ...s, snapPoint: null, dragGuide: null }));
         if (appState.panning) {
             setAppState(s => ({ ...s, panning: false, pan: { ...activePanRef.current } }));
@@ -2579,14 +2756,16 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 }
                 else if (appState.tool === 'callout' && activeEl.callout) {
                     const textId = generateId();
+                    const notePos = getLineNotePosition(activeEl, { x: activeEl.endX, y: activeEl.endY }, appState.fontSize || 20);
                     const newText = {
                         id: textId,
                         type: 'text',
-                        parentId: activeEl.id,
+                        attachedToId: activeEl.id,
+                        isLineNote: true,
                         text: '',
                         color: appState.color,
-                        x: activeEl.endX + 16,
-                        y: activeEl.endY - 10,
+                        x: notePos.x,
+                        y: notePos.y,
                         w: 140,
                         h: Math.max(30, (appState.fontSize || 20) + 12),
                         fontSize: appState.fontSize || 20
@@ -3083,25 +3262,72 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         if (!metrics || metrics.length < 1) return null;
         const settings = getDrawingSettings(activeElementsRef.current);
         const zoom = activeZoomRef.current || 1;
+        const physicalLength = settings?.measurementScale?.metersPerUnit
+            ? metrics.length * settings.measurementScale.metersPerUnit
+            : null;
 
         return (
             <div style={{
                 position: 'absolute',
                 left: metrics.midpoint.x + 12 / zoom,
                 top: metrics.midpoint.y - 34 / zoom,
-                padding: `${5 / zoom}px ${8 / zoom}px`,
+                padding: `${6 / zoom}px ${7 / zoom}px`,
                 borderRadius: 6 / zoom,
-                background: 'rgba(15, 23, 42, 0.92)',
-                color: '#ffffff',
+                background: 'rgba(255, 255, 255, 0.96)',
+                color: '#0f172a',
                 fontSize: 11 / zoom,
                 fontWeight: 700,
                 letterSpacing: 0,
                 whiteSpace: 'nowrap',
-                pointerEvents: 'none',
+                pointerEvents: 'auto',
                 zIndex: 72,
-                boxShadow: '0 8px 20px rgba(15, 23, 42, 0.2)'
+                boxShadow: '0 8px 20px rgba(15, 23, 42, 0.14)',
+                border: `${1 / zoom}px solid rgba(37, 99, 235, 0.22)`,
+                display: 'grid',
+                gridTemplateColumns: `${14 / zoom}px ${74 / zoom}px`,
+                gap: `${4 / zoom}px`,
+                alignItems: 'center'
             }}>
-                {getMeasurementLabel(element, settings)}
+                {[
+                    {
+                        metric: 'length',
+                        label: 'L',
+                        value: physicalLength ? formatPhysicalLength(physicalLength) : formatMeasurementNumber(metrics.length)
+                    },
+                    {
+                        metric: 'angle',
+                        label: '°',
+                        value: `${Math.round(metrics.angle)}°`
+                    }
+                ].map(item => (
+                    <React.Fragment key={item.metric}>
+                        <span style={{ color: '#64748b', fontSize: 10 / zoom, textAlign: 'center' }}>{item.label}</span>
+                        <input
+                            key={`${element.id}-${item.metric}-${item.value}`}
+                            defaultValue={item.value}
+                            disabled={element.locked}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onBlur={(e) => updateSelectedLineMetric(item.metric, e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') e.currentTarget.blur();
+                                if (e.key === 'Escape') e.currentTarget.blur();
+                            }}
+                            style={{
+                                width: 74 / zoom,
+                                height: 20 / zoom,
+                                border: `${1 / zoom}px solid #cbd5e1`,
+                                borderRadius: 5 / zoom,
+                                padding: `0 ${5 / zoom}px`,
+                                fontSize: 10 / zoom,
+                                fontWeight: 800,
+                                color: '#0f172a',
+                                outline: 'none',
+                                background: element.locked ? '#f1f5f9' : '#ffffff'
+                            }}
+                            title={item.metric === 'length' ? 'Præcis længde' : 'Præcis vinkel'}
+                        />
+                    </React.Fragment>
+                ))}
             </div>
         );
     };
@@ -3146,6 +3372,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             const bounds = getElementBounds(textEl);
             textOverlay = (
                 <input
+                    className="drawing-text-editor"
                     autoFocus
                     type="text"
                     defaultValue={textEl.text || ''}
@@ -3231,17 +3458,22 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 return;
             }
             if (['line', 'arrow', 'dimension', ...DRAWING_SHAPE_TOOLS].includes(clickedElement.type)) {
+                if (MEASURABLE_TYPES.includes(clickedElement.type)) {
+                    setAppState(s => ({ ...s, selectedElementId: clickedElement.id, selectedElementIds: [], editingTextId: null }));
+                    return;
+                }
                 const textId = generateId();
                 pushHistory(elements);
+                const notePos = getLineNotePosition(clickedElement, pos, appState.fontSize || 20);
                 
                 const newElement = {
                     id: textId,
                     type: 'text',
-                    parentId: clickedElement.id, // For linked moving!
+                    parentId: clickedElement.id,
                     text: '',
                     color: appState.color,
-                    x: pos.x,
-                    y: pos.y - 25, // Offset 25px!
+                    x: notePos.x,
+                    y: notePos.y,
                     w: 100,
                     h: 30,
                     fontSize: appState.fontSize
@@ -3275,6 +3507,37 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const canUngroupSelection = selectedLockableElements.some(el => el.parentId && selectedIdsForPanel.includes(el.parentId));
     const canAlignSelection = selectedLockableElements.length > 1;
     const canDistributeSelection = selectedLockableElements.length > 2;
+    const activeToolTitle = (() => {
+        if (appState.tool.startsWith(SYMBOL_TOOL_PREFIX)) {
+            const symbol = CARPENTER_SYMBOLS.find(item => `${SYMBOL_TOOL_PREFIX}${item.id}` === appState.tool);
+            return symbol ? `Symbol: ${symbol.title}` : 'Symbol';
+        }
+        if (appState.tool.startsWith(TEMPLATE_TOOL_PREFIX)) return 'Skabelon';
+        const tool = [
+            { id: 'select', title: 'Markør' },
+            { id: 'pen', title: 'Fritegning' },
+            { id: 'line', title: 'Lige streg' },
+            { id: 'arrow', title: 'Pil' },
+            { id: 'dimension', title: 'Målebånd' },
+            { id: 'callout', title: 'OBS-note' },
+            { id: 'text', title: 'Tekst' },
+            { id: 'eraser', title: 'Viskelæder' },
+            ...DRAWING_SHAPE_TOOLS.map(id => ({
+                id,
+                title: ({
+                    rectangle: 'Firkant',
+                    circle: 'Cirkel',
+                    semicircle: 'Halvcirkel',
+                    triangle: 'Trekant',
+                    polygon: 'Polygon',
+                    rhombus: 'Rombe',
+                    parallelogram: 'Parallelogram',
+                    trapezoid: 'Trapez'
+                })[id] || id
+            }))
+        ].find(item => item.id === appState.tool);
+        return tool?.title || 'Værktøj';
+    })();
     const handlePanelTooltipMove = (e) => {
         const target = e.target.closest('[title], [data-tooltip-title]');
         if (!target) {
@@ -3466,6 +3729,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
+                onPointerCancel={handlePointerUp}
                 onDoubleClick={handleDoubleClick}
                 onWheel={handleWheel}
             >
@@ -3493,6 +3757,23 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 </div>
             </div>
             {templateSaveModal}
+            <div className="drawing-mobile-tool-chip">
+                <span>{activeToolTitle}</span>
+                {appState.snapEnabled && <span className="drawing-mobile-tool-chip-dot">Snap</span>}
+            </div>
+            {appState.editingTextId && (
+                <button
+                    type="button"
+                    className="drawing-mobile-done-button"
+                    onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        document.activeElement?.blur?.();
+                    }}
+                >
+                    Færdig
+                </button>
+            )}
 
             {/* 1. TOP BAR (Header) - ORIGINAL FLOATING STYLE */}
             <div className="drawing-board-header" style={{ 
@@ -3651,7 +3932,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         <Palette size={18} />
                     </button>
                     {showColorMenu && (
-                        <div style={{
+                        <div className="drawing-mobile-popover drawing-color-popover" style={{
                             position: 'absolute',
                             right: 'calc(100% + 10px)',
                             top: 0,
@@ -3789,6 +4070,16 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                                 </React.Fragment>
                             ))}
                         </div>
+                        <button
+                            onClick={addNoteToSelectedLine}
+                            disabled={selectedElement.locked}
+                            className="rounded-md text-slate-600 hover:bg-slate-100 disabled:opacity-30 transition-all active:scale-95 flex items-center justify-center gap-1"
+                            style={{ width: 86, height: 27, fontSize: 11, fontWeight: 800 }}
+                            title="Tilføj note til linje"
+                        >
+                            <AlertTriangle size={13} />
+                            Note
+                        </button>
                         {metersPerUnit && (
                             <div
                                 style={{
@@ -4284,7 +4575,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         <Shapes size={18} strokeWidth={DRAWING_SHAPE_TOOLS.includes(appState.tool) ? 2.5 : 2} />
                     </button>
                     {showShapesMenu && (
-                        <div style={{
+                        <div className="drawing-mobile-popover drawing-shapes-popover" style={{
                             position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px',
                             backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
                             border: '1px solid rgba(226, 232, 240, 1)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px',
@@ -4350,7 +4641,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         <LibraryBig size={18} strokeWidth={appState.tool.startsWith(SYMBOL_TOOL_PREFIX) ? 2.5 : 2} />
                     </button>
                     {showSymbolsMenu && (
-                        <div style={{
+                        <div className="drawing-mobile-popover drawing-symbols-popover" style={{
                             position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px',
                             backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
                             border: '1px solid rgba(226, 232, 240, 1)', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px',
@@ -4394,7 +4685,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                         <LayoutTemplate size={18} strokeWidth={appState.tool.startsWith(TEMPLATE_TOOL_PREFIX) ? 2.5 : 2} />
                     </button>
                     {showTemplatesMenu && (
-                        <div style={{
+                        <div className="drawing-mobile-popover drawing-templates-popover" style={{
                             position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px',
                             backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
                             border: '1px solid rgba(226, 232, 240, 1)', width: 244, display: 'flex', flexDirection: 'column', gap: '8px',

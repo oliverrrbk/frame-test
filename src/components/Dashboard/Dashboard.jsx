@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown, Play } from 'lucide-react';
+import { Home, Droplets, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown, Play } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
@@ -36,6 +36,7 @@ import CustomProjectCreator from './CustomProjectCreator';
 import DrawingsGallery from '../Drawings/DrawingsGallery';
 import CalendarView from './CalendarView';
 import PwaOnboarding from './PwaOnboarding';
+import AccountSettingsView from './AccountSettingsView';
 
 // Konfiguration til det nye Google Map
 const MAP_LIBRARIES = ['places'];
@@ -297,6 +298,7 @@ const generateShortSummary = (lead) => {
         'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
         'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
         'Tagprojekt': 'roof', 'Tag': 'roof', 'Nyt Køkken': 'kitchen', 'Køkken': 'kitchen',
+        'Renovering af badeværelse': 'bath', 'Badeværelse': 'bath', 'Nyt Badeværelse': 'bath',
         'Nye Lofter': 'ceilings', 'Lofter': 'ceilings', 'Ny Facadebeklædning': 'facades',
         'Facader': 'facades', 'Tilbygning': 'extensions', 'Anneks': 'annex', 'Annekser & Skure': 'annex',
         'Carport': 'carport', 'Hegn': 'fence'
@@ -374,6 +376,9 @@ const generateShortSummary = (lead) => {
             text += `montering af nyt køkken`;
             if (material) text += ` fra ${material}.`; else text += `.`;
             if (d.kitchenElements) text += ` Det anslås at indeholde ca. ${d.kitchenElements} elementer, der skal opstilles og justeres.`;
+            break;
+        case 'bath':
+            text += `renovering af badeværelse. Kunden afventer kontakt med henblik på besigtigelse.`;
             break;
         default:
             text += `et projekt inden for ${lead.project_category}`;
@@ -1212,6 +1217,12 @@ const Dashboard = () => {
                 { category: 'kitchen', name: 'Nedtagning af gammelt køkken (fast)', price: 3500, carpenter_id: targetId },
                 { category: 'kitchen', name: 'Sikkerhed (Buffer-pris)', price: 800, carpenter_id: targetId },
 
+                // Badeværelse
+                { category: 'bath', name: 'Murer-arbejde (Fliser & Vådrum)', price: 15000, carpenter_id: targetId },
+                { category: 'bath', name: 'VVS Installationer', price: 12000, carpenter_id: targetId },
+                { category: 'bath', name: 'Elektriker (Spots, Gulvvarme)', price: 8000, carpenter_id: targetId },
+                { category: 'bath', name: 'Sikkerhed (Buffer-pris)', price: 5000, carpenter_id: targetId },
+
                 // Tilbygning
                 { category: 'extensions', name: 'Træbeklædning', price: 15000, carpenter_id: targetId },
                 { category: 'extensions', name: 'Hardwood / Cedertræ', price: 18000, carpenter_id: targetId },
@@ -1347,6 +1358,35 @@ const Dashboard = () => {
         if (activeTab === 'leads') setIsLeadsLoading(false);
     };
 
+    // Gem en fakturarekord på sagen (historik + faktureret beløb). Bruges af både
+    // Dinero-, e-conomic- og manuel-fakturering, så de tre veje er konsistente.
+    const recordInvoiceLocally = async ({ lead, leadForInvoice, totalAmountToBill, invoiceId, system, action }) => {
+        const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+        const currentRawData = latestData?.raw_data || leadForInvoice?.raw_data || lead.raw_data || {};
+
+        const status = system === 'manual'
+            ? 'manual'
+            : (action === 'book_and_send' ? 'booked' : 'draft');
+
+        const history = currentRawData.invoice_history || [];
+        history.push({
+            id: invoiceId,
+            amount: totalAmountToBill || 0,
+            date: new Date().toISOString(),
+            system,
+            status
+        });
+        currentRawData.invoice_history = history;
+        currentRawData.invoiced_amount = (currentRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
+        if (system !== 'manual') currentRawData.synced_to_accounting = true;
+
+        const updatedLead = { ...(leadForInvoice || lead), raw_data: currentRawData };
+        await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
+        setSelectedLead(updatedLead);
+        setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
+        return updatedLead;
+    };
+
     const syncToAccounting = async (lead, action = 'draft', invoiceLines = [], isReverseCharge = false, customerOverride = null) => {
         if (!carpenterProfile) return;
 
@@ -1400,26 +1440,7 @@ const Dashboard = () => {
                     toast.error("Der opstod en fejl ved overførsel til Dinero: " + (error?.message || data?.error));
                 } else {
                     toast.success(data.message || `Fakturakladde oprettet i Dinero! (ID: ${data.invoiceId})`);
-                    
-                    const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
-                    let currentRawData = latestData?.raw_data || leadForInvoice.raw_data || {};
-
-                    const history = currentRawData.invoice_history || [];
-                    history.push({
-                        id: data.invoiceId,
-                        amount: totalAmountToBill || 0,
-                        date: new Date().toISOString(),
-                        system: 'dinero',
-                        status: action === 'book_and_send' ? 'booked' : 'draft'
-                    });
-                    currentRawData.invoice_history = history;
-                    currentRawData.invoiced_amount = (currentRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
-                    currentRawData.synced_to_accounting = true;
-                    
-                    const updatedLead = { ...leadForInvoice, raw_data: currentRawData };
-                    await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
-                    setSelectedLead(updatedLead);
-                    setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
+                    await recordInvoiceLocally({ lead, leadForInvoice, totalAmountToBill, invoiceId: data.invoiceId, system: 'dinero', action });
                 }
 
             } else if (carpenterProfile.economic_api_key && carpenterProfile.economic_api_key !== 'pending_authorization') {
@@ -1434,31 +1455,14 @@ const Dashboard = () => {
                     toast.error("Der opstod en fejl ved overførsel til e-conomic: " + (error?.message || data?.error));
                 } else {
                     toast.success(data.message || `Fakturakladde oprettet i e-conomic! (ID: ${data.invoiceId})`);
-                    
-                    const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
-                    let currentRawData = latestData?.raw_data || leadForInvoice.raw_data || {};
-
-                    const history = currentRawData.invoice_history || [];
-                    history.push({
-                        id: data.invoiceId,
-                        amount: totalAmountToBill || 0,
-                        date: new Date().toISOString(),
-                        system: 'economic',
-                        status: action === 'book_and_send' ? 'booked' : 'draft'
-                    });
-                    currentRawData.invoice_history = history;
-                    currentRawData.invoiced_amount = (currentRawData.invoiced_amount || 0) + (totalAmountToBill || 0);
-                    currentRawData.synced_to_accounting = true;
-
-                    const updatedLead = { ...leadForInvoice, raw_data: currentRawData };
-                    await supabase.from('leads').update({ raw_data: updatedLead.raw_data }).eq('id', lead.id);
-                    setSelectedLead(updatedLead);
-                    setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
+                    await recordInvoiceLocally({ lead, leadForInvoice, totalAmountToBill, invoiceId: data.invoiceId, system: 'economic', action });
                 }
             } else {
-                toast('Forbind dit regnskabsprogram for at overføre. Du sendes til indstillinger.', { icon: 'ℹ️' });
-                setSelectedLead(null);
-                setActiveTab('integrations');
+                // Intet regnskabsprogram forbundet — registrér fakturaen manuelt,
+                // så økonomi-oversigten opdateres og restbeløbet falder.
+                const manualId = `MANUAL-${Date.now()}`;
+                await recordInvoiceLocally({ lead, leadForInvoice, totalAmountToBill, invoiceId: manualId, system: 'manual', action });
+                toast.success(`Faktura på ${(totalAmountToBill || 0).toLocaleString('da-DK')} kr. registreret manuelt. Forbind et regnskabsprogram i Indstillinger for automatisk overførsel.`, { duration: 5000 });
             }
         } catch(err) {
             console.error('Fejl under regnskabssynkronisering:', err);
@@ -1926,6 +1930,7 @@ const Dashboard = () => {
         ceilings: 'Lofter',
         facades: 'Facader',
         kitchen: 'Køkken',
+        bath: 'Badeværelse',
         extensions: 'Tilbygning',
         annex: 'Anneks',
         carport: 'Carport',
@@ -1942,6 +1947,7 @@ const Dashboard = () => {
             case 'ceilings': return <ArrowUpToLine size={size} />;
             case 'facades': return <PanelRight size={size} />;
             case 'kitchen': return <Utensils size={size} />;
+            case 'bath': return <Droplets size={size} />;
             case 'extensions': return <PlusSquare size={size} />;
             case 'annex': return <Home size={size} />;
             case 'carport': return <Car size={size} />;
@@ -2165,6 +2171,11 @@ const Dashboard = () => {
             icon: PenTool,
             title: 'Skitser',
             desc: 'Se og rediger byggetegninger direkte på mobilen.'
+        },
+        profile: {
+            icon: User,
+            title: 'Min Profil',
+            desc: 'Administrer dine personlige oplysninger og præferencer.'
         }
     };
 
@@ -2369,7 +2380,7 @@ const Dashboard = () => {
                     </div>
 
                     {headerInfo && activeTab !== 'overview' && (
-                        <div className="page-title-section" style={{ flex: 1, paddingLeft: '0', paddingTop: '20px', paddingBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div className="page-title-section hidden md:flex" style={{ flex: 1, paddingLeft: '0', paddingTop: '20px', paddingBottom: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div>
                                 <h2 style={{ margin: '0 0 6px', fontSize: '1.75rem', color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '-0.5px' }}>{headerInfo.title}</h2>
                                 <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{headerInfo.desc}</p>
@@ -2738,182 +2749,19 @@ const Dashboard = () => {
                         <div className="space-y-8" style={{ maxWidth: '1200px', margin: '0 auto' }}>
                             {/* Vis kun firma-indstillinger hvis brugeren er ejer af firmaet (admin) */}
                             {myProfile.role === 'admin' && carpenterProfile && (
-                                <div className="admin-settings-section" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                                    
-                                    <div className="settings-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', alignItems: 'stretch', display: 'grid', gap: '32px' }}>
-                                        <div className="settings-card">
-                                            <div className="card-header">
-                                                <div className="icon-wrapper">
-                                                    <Shield size={24} />
-                                                </div>
-                                                <h3>Firmaoplysninger (Internt)</h3>
-                                            </div>
-                                            <div className="card-body">
-                                                <div className="input-group">
-                                                    <label>System Login E-mail (Brugernavn)</label>
-                                                    <input 
-                                                        type="text" 
-                                                        value={new URLSearchParams(window.location.search).get('impersonate') ? 'Skjult under Admin-adgang' : (session?.user?.email || 'Ingen session')} 
-                                                        disabled 
-                                                    />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Firmanavn</label>
-                                                    <input type="text" value={carpenterProfile.company_name || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, company_name: e.target.value }))} placeholder="Eks. Vestkystens Tømrer A/S" />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Ejer / Kontaktperson</label>
-                                                    <input type="text" value={carpenterProfile.owner_name || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, owner_name: e.target.value }))} placeholder="Jens Jensen" />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Firma Adresse</label>
-                                                    <input type="text" value={carpenterProfile.address || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, address: e.target.value }))} placeholder="Skovvejen 15, 8000 Aarhus" />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>CVR-nummer</label>
-                                                    <input type="text" value={carpenterProfile.cvr || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, cvr: e.target.value }))} placeholder="12345678" />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Telefonnummer</label>
-                                                    <input type="text" value={carpenterProfile.phone || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, phone: e.target.value }))} placeholder="+45 12 34 56 78" />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Fakturerings E-mail</label>
-                                                    <input type="text" value={carpenterProfile.email || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, email: e.target.value }))} placeholder="regnskab@mit-firma.dk" />
-                                                </div>
-                                            </div>
-                                            <div className="card-footer">
-                                                <button className="btn-primary" onClick={handleProfileSave}>{isSaving ? 'Gemmer...' : 'Gem Firma-Oplysninger'}</button>
-                                            </div>
-                                        </div>
-
-                                        <div className="settings-card">
-                                            <div className="card-header">
-                                                <div className="icon-wrapper">
-                                                    <Globe size={24} />
-                                                </div>
-                                                <h3>Kunde-Portal (Offentlig)</h3>
-                                            </div>
-                                            <div className="card-body">
-                                                <div className="input-group">
-                                                    <label>Dit kunde-link</label>
-                                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                                        <div 
-                                                            style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-primary)', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '0 12px', flex: 1, transition: 'border-color 0.2s', boxShadow: 'none' }}
-                                                            onFocus={(e) => e.currentTarget.style.borderColor = '#10b981'}
-                                                            onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-light)'}
-                                                        >
-                                                            <span style={{ color: 'var(--text-muted)', userSelect: 'none' }}>bisonframe.dk/</span>
-                                                            <input 
-                                                                type="text" 
-                                                                value={carpenterProfile.slug || ''} 
-                                                                onChange={(e) => setCarpenterProfile(prev => ({ ...prev, slug: e.target.value }))} 
-                                                                style={{ border: 'none', background: 'transparent', padding: '12px 0', flex: 1, outline: 'none', boxShadow: 'none', fontWeight: 'bold', color: 'var(--text-primary)' }} 
-                                                            />
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => {
-                                                                navigator.clipboard.writeText(`https://bisonframe.dk/${carpenterProfile.slug || ''}`);
-                                                                toast.success('Kunde-linket er kopieret til din udklipsholder!');
-                                                            }}
-                                                            className="btn-primary"
-                                                        >Kopiér Link</button>
-                                                    </div>
-                                                    <span className="help-text">Dette er linket du sender til dine kunder, når de skal ind og have udført et lynhurtigt overslag.</span>
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Dit Firmalogo (PNG/JPG)</label>
-                                                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                                                        {carpenterProfile.logo_url && (
-                                                            <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-light)', backgroundColor: 'var(--card-bg)', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
-                                                                <img src={carpenterProfile.logo_url} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                                                            </div>
-                                                        )}
-                                                        <div style={{ flex: 1, overflow: 'hidden' }}>
-                                                            <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'logo')} disabled={isUploadingLogo} style={{ width: '100%', fontSize: '0.9rem' }} />
-                                                            {isUploadingLogo && <span className="help-text" style={{ color: 'var(--accent-primary)' }}>Uploader logo til databasen...</span>}
-                                                        </div>
-                                                    </div>
-                                                    <span className="help-text">Det her vises i bekræftelsesmails og inde i kundeportalen.</span>
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Personligt Billede / Portræt</label>
-                                                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                                                        {carpenterProfile.portrait_url && (
-                                                            <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-light)', backgroundColor: 'var(--card-bg)', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
-                                                                <img src={carpenterProfile.portrait_url} alt="Portræt" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                            </div>
-                                                        )}
-                                                        <div style={{ flex: 1, overflow: 'hidden' }}>
-                                                            <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'portrait')} disabled={isUploadingPortrait} style={{ width: '100%', fontSize: '0.9rem' }} />
-                                                            {isUploadingPortrait && <span className="help-text" style={{ color: 'var(--accent-primary)' }}>Uploader portræt til databasen...</span>}
-                                                        </div>
-                                                    </div>
-                                                    <span className="help-text">Menneskelighed konverterer! Det her vises ved siden af prisen i portalen.</span>
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Afslutningsbesked til kunden</label>
-                                                    <textarea value={carpenterProfile.success_message || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, success_message: e.target.value }))} rows="3" placeholder="Tusind tak fordi du valgte os! Vi vender tilbage hurtigst muligt med næste skridt."></textarea>
-                                                </div>
-                                            </div>
-                                            <div className="card-footer">
-                                                <button className="btn-primary" onClick={handleProfileSave}>{isSaving ? 'Gemmer...' : 'Gem Kunde-Portal'}</button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Nyt Panel til Valg af Kategorier / Arbejdsområder */}
-                                    <div className="settings-card">
-                                        <div className="card-header">
-                                            <div className="icon-wrapper">
-                                                <Wrench size={24} />
-                                            </div>
-                                            <h3>Dine Arbejdsområder (Filtrering)</h3>
-                                        </div>
-                                        <div className="card-body">
-                                            <p className="help-text" style={{ marginBottom: '24px' }}>Vælg hvilke hovedkategorier kunden må se i din prisberegner. Sluk for dem du ikke tilbyder.</p>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-                                                {initialCategories.map(cat => {
-                                                    const isActive = !disabledCategories.includes(cat.id);
-                                                    return (
-                                                        <div 
-                                                            key={cat.id} 
-                                                            onClick={() => toggleCategoryActive(cat.id)}
-                                                            className="category-toggle-card"
-                                                            style={{
-                                                                padding: '16px',
-                                                                borderRadius: 'var(--radius-md)',
-                                                                border: `1px solid ${isActive ? '#10b981' : 'var(--border-light)'}`,
-                                                                backgroundColor: isActive ? 'rgba(16, 185, 129, 0.05)' : 'rgba(0,0,0,0.05)',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '12px',
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s',
-                                                                opacity: isActive ? (isSaving ? 0.6 : 1) : 0.5,
-                                                                filter: isActive ? 'none' : 'grayscale(100%)'
-                                                            }}
-                                                        >
-                                                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: `2px solid ${isActive ? '#10b981' : 'var(--border-light)'}`, display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: isActive ? '#10b981' : 'transparent', flexShrink: 0 }}>
-                                                                {isActive && <Check size={14} color="#ffffff" />}
-                                                            </div>
-                                                            <div>
-                                                                <strong style={{ display: 'block', color: 'var(--text-primary)', fontSize: '1rem' }}>{cat.label}</strong>
-                                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{isActive ? 'Synlig for kunden' : 'Skjult i beregneren'}</span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Subscription Settings Container */}
-                                    <div className="subscription-wrapper">
-                                        <SubscriptionSettings />
-                                    </div>
-
-                                </div>
+                                <AccountSettingsView 
+                                    carpenterProfile={carpenterProfile}
+                                    setCarpenterProfile={setCarpenterProfile}
+                                    handleProfileSave={handleProfileSave}
+                                    isSaving={isSaving}
+                                    initialCategories={initialCategories}
+                                    disabledCategories={disabledCategories}
+                                    toggleCategoryActive={toggleCategoryActive}
+                                    handleFileUpload={handleFileUpload}
+                                    isUploadingLogo={isUploadingLogo}
+                                    isUploadingPortrait={isUploadingPortrait}
+                                    session={session}
+                                />
                             )}
                         </div>
                     )}
@@ -3600,7 +3448,7 @@ const Dashboard = () => {
                                                             })() : <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>? kr. inkl. moms</span>}
                                                         </div>
                                                     </>
-                                                ) : (['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? (
+                                                ) : (['extensions', 'carport', 'kitchen', 'bath'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? (
                                                     <>
                                                         <span style={{ fontSize: '0.85rem', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overslag udeladt</span>
                                                         <p style={{ margin: '4px 0 0', fontWeight: 'bold', color: '#d97706', fontSize: '1.1rem' }}>
@@ -3736,6 +3584,7 @@ const Dashboard = () => {
                                                                 'Nyt Gulv': 'floor', 'Gulv': 'floor', 'Nye Vinduer': 'windows', 'Vinduer': 'windows',
                                                                 'Nye Døre': 'doors', 'Døre': 'doors', 'Træterrasse': 'terrace', 'Terrasse': 'terrace',
                                                                 'Tagprojekt': 'roof', 'Tag': 'roof', 'Nyt Køkken': 'kitchen', 'Køkken': 'kitchen',
+                                                                'Renovering af badeværelse': 'bath', 'Badeværelse': 'bath', 'Nyt Badeværelse': 'bath',
                                                                 'Nye Lofter': 'ceilings', 'Lofter': 'ceilings', 'Ny Facadebeklædning': 'facades',
                                                                 'Facader': 'facades', 'Tilbygning': 'extensions', 'Anneks': 'annex', 'Annekser & Skure': 'annex',
                                                                 'Carport': 'carport', 'Hegn': 'fence'
@@ -4600,7 +4449,7 @@ const Dashboard = () => {
                                                     style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px', marginTop: '24px' }}
                                                 >
                                                     <h3 style={{ color: '#1a1a1a', margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <FileText size={18} style={{ color: '#6b7280' }} /> {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
+                                                        <FileText size={18} style={{ color: '#6b7280' }} /> {(['extensions', 'carport', 'kitchen', 'bath'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
                                                     </h3>
                                                     <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: 'bold' }}>
                                                         {isQuoteEditorOpen ? 'Skjul ▲' : 'Vis ▼'}
@@ -4631,10 +4480,10 @@ const Dashboard = () => {
                                                     ) : (
                                                     <div style={{ marginTop: '24px', padding: '24px', backgroundColor: '#f3f1ed', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                                         <h3 style={{ margin: '0', color: '#1a1a1a' }}>
-                                                            {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
+                                                            {(['extensions', 'carport', 'kitchen', 'bath'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
                                                         </h3>
                                                         <p style={{ margin: '0', color: '#6b7280', fontSize: '0.95rem' }}>
-                                                            {(['extensions', 'carport', 'kitchen'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') 
+                                                            {(['extensions', 'carport', 'kitchen', 'bath'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') 
                                                                 ? "Dette er et projekt uden auto-estimat. Opbyg tilbuddet fra bunden ved at indtaste dine beregnede timer og materialer, så bygger systemet en professionel PDF-kontrakt." 
                                                                 : "Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig."}
                                                         </p>
@@ -6108,11 +5957,11 @@ const Dashboard = () => {
             {/* Feedback Modal Portal */}
             {isFeedbackModalOpen && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => setIsFeedbackModalOpen(false)}>
-                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '500px', padding: '32px', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => setIsFeedbackModalOpen(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
+                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '500px', padding: '24px', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setIsFeedbackModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
                         
                         <h2 style={{ margin: '0 0 16px 0', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '1.5rem' }}>💡</span> Hjælp os med at forbedre
+                            Hjælp os med at forbedre
                         </h2>
                         
                         <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.95rem', lineHeight: '1.5' }}>
