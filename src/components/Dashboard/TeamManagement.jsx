@@ -63,19 +63,37 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
         return () => window.removeEventListener('resize', onResize);
     }, []);
 
-    // Kald det sikre backend-endpoint (auth-header + service-role server-side)
+    // Kald det sikre backend-endpoint (auth-header + service-role server-side).
+    // Viser tydelige fejl, så vi aldrig ender i en "der sker ingenting"-tilstand.
     const callManage = async (action, payload) => {
         const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch('/api/manage-employee', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
-            },
-            body: JSON.stringify({ action, ...payload })
-        });
-        const result = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(result.error || 'Handlingen mislykkedes.');
+
+        let res;
+        try {
+            res = await fetch('/api/manage-employee', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+                },
+                body: JSON.stringify({ action, ...payload })
+            });
+        } catch (e) {
+            console.error('manage-employee netværksfejl:', e);
+            throw new Error('Kunne ikke nå serveren (netværksfejl). Prøv igen.');
+        }
+
+        const rawText = await res.text();
+        let result = {};
+        try {
+            result = rawText ? JSON.parse(rawText) : {};
+        } catch {
+            // Ikke-JSON svar (typisk at API-ruten ikke er deployet og SPA-HTML returneres).
+            console.error('manage-employee uventet svar:', res.status, rawText.slice(0, 200));
+            throw new Error(`Serveren svarede uventet (status ${res.status}). API'et er måske ikke deployet endnu.`);
+        }
+
+        if (!res.ok) throw new Error(result.error || `Handlingen mislykkedes (status ${res.status}).`);
         return result;
     };
 
