@@ -18,6 +18,7 @@ import QuoteAcceptPage from './components/Wizard/QuoteAcceptPage';
 import EstimateAcceptPage from './components/Wizard/EstimateAcceptPage';
 import MinubaIntegration from './components/Dashboard/MinubaIntegration';
 import { supabase } from './supabaseClient';
+import { isStandalonePWA } from './utils/pwa';
 import React, { useState, useEffect } from 'react';
 // Protected Route Komponent
 class ErrorBoundary extends React.Component {
@@ -180,7 +181,13 @@ const AnimatedRoutes = ({ session, setSession }) => {
             session.user?.email === 'team@bisoncompany.dk' 
               ? <Navigate to="/admin" replace /> 
               : <Navigate to="/dashboard" replace />
-          ) : <LandingPage setSession={setSession} />
+          ) : (
+            // Installeret webapp → send direkte til login (ikke marketing-forsiden).
+            // I browseren vises forsiden som hidtil.
+            isStandalonePWA()
+              ? <Navigate to="/login" replace />
+              : <LandingPage setSession={setSession} />
+          )
         } />
         <Route path="/calculate" element={<CalculatorPage setSession={setSession} />} />
         <Route path="/features" element={<FeaturesPage setSession={setSession} />} />
@@ -193,7 +200,7 @@ const AnimatedRoutes = ({ session, setSession }) => {
               ? <Navigate to="/admin" replace /> 
               : <Navigate to="/dashboard" replace />
           ) : (
-            <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyItems: 'center' }}>
+            <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', boxSizing: 'border-box' }}>
                 <div style={{ margin: '0 auto', width: '100%', maxWidth: '550px' }}>
                     <Login setSession={setSession} />
                 </div>

@@ -17,9 +17,11 @@ export default function TopNavBar({ onLoginClick }) {
     ];
 
     return (
-        <nav className={`sticky top-0 w-full z-50 font-headline tracking-tight antialiased text-slate-600 dark:text-slate-300 transition-colors duration-300 ${
-            isMobileMenuOpen 
-                ? 'bg-white dark:bg-slate-950' 
+        <nav
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+            className={`sticky top-0 w-full z-50 font-headline tracking-tight antialiased text-slate-600 dark:text-slate-300 transition-colors duration-300 ${
+            isMobileMenuOpen
+                ? 'bg-white dark:bg-slate-950'
                 : 'bg-white/80 dark:bg-slate-950/80 backdrop-blur-lg'
         }`}>
             <div className="flex justify-between items-center max-w-[1440px] mx-auto px-6 md:px-8 py-4">

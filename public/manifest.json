@@ -2,7 +2,7 @@
   "name": "Bison Frame",
   "short_name": "Bison Frame",
   "description": "Din digitale tømrerassistent og prisberegner.",
-  "start_url": "/",
+  "start_url": "/login",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#ffffff",

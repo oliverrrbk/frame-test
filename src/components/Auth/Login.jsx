@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
 import { Wrench, Lock, X, ArrowLeft } from 'lucide-react';
+import { isStandalonePWA } from '../../utils/pwa';
 
 const Login = ({ setSession, onClose }) => {
     const navigate = useNavigate();
@@ -80,13 +81,16 @@ const Login = ({ setSession, onClose }) => {
                             <X size={20} />
                         </button>
                     ) : (
-                        <Link 
-                            to="/" 
-                            style={{ position: 'absolute', top: '24px', left: '24px', color: '#9ca3af', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500', zIndex: 10 }}
-                            className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-                        >
-                            <ArrowLeft size={16} /> Forside
-                        </Link>
+                        // Skjul "Forside" i den installerede webapp (der er ingen marketing-forside dér)
+                        !isStandalonePWA() && (
+                            <Link
+                                to="/"
+                                style={{ position: 'absolute', top: '24px', left: '24px', color: '#9ca3af', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500', zIndex: 10 }}
+                                className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                            >
+                                <ArrowLeft size={16} /> Forside
+                            </Link>
+                        )
                     )}
                     <div className="login-brand">
                         <Wrench size={32} color="#6b7280" style={{ opacity: 0.7 }} />
