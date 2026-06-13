@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
-import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin, X } from 'lucide-react';
+import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin, X, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
@@ -556,6 +556,28 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                         const workerCompleted = assignedLeads.filter(l => l.status === 'Historik');
                                         const isAdminOnly = ['admin'].includes(member.role);
 
+                                        const thisMonth = new Date().getMonth();
+                                        const thisYear = new Date().getFullYear();
+                                        let monthHours = 0;
+                                        assignedLeads.forEach(lead => {
+                                            const entries = lead.raw_data?.time_entries || [];
+                                            entries.forEach(entry => {
+                                                if (entry.employeeId === member.id) {
+                                                    const d = new Date(entry.date);
+                                                    if (d.getMonth() === thisMonth && d.getFullYear() === thisYear) {
+                                                        monthHours += parseFloat(entry.hours || 0);
+                                                    }
+                                                }
+                                            });
+                                        });
+                                        const internalEntries = member.raw_data?.time_entries || [];
+                                        internalEntries.forEach(entry => {
+                                            const d = new Date(entry.date);
+                                            if (d.getMonth() === thisMonth && d.getFullYear() === thisYear) {
+                                                monthHours += parseFloat(entry.hours || 0);
+                                            }
+                                        });
+
                                         return (
                                             <div key={member.id} className="flex flex-col" style={{ borderBottom: '1px solid var(--border-light)' }}>
                                                 <div 
@@ -680,6 +702,16 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                                 <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Gennemført</h5>
                                                                             </div>
                                                                             <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981', margin: 0 }}>{workerCompleted.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>afsluttet</span></p>
+                                                                        </div>
+
+                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
+                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                                                                <Clock size={16} color="#8b5cf6" />
+                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Timer denne md.</h5>
+                                                                            </div>
+                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#8b5cf6', margin: 0 }}>
+                                                                                {monthHours.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>timer</span>
+                                                                            </p>
                                                                         </div>
                                                                     </>
                                                                 )}
