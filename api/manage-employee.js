@@ -124,27 +124,27 @@ export default async function handler(req, res) {
         }
 
         if (action === 'delete') {
-            if (HAS_SERVICE_ROLE) {
-                // Hvis vi har master-nøglen, sletter vi dem bare direkte uden at spørge RLS
-                await supabase.from('carpenters').delete().eq('id', employeeId);
-                await supabase.auth.admin.deleteUser(employeeId).catch(() => {});
-                return res.status(200).json({ success: true });
-            }
+            const client = HAS_SERVICE_ROLE ? supabase : userSupabase;
 
-            // Prøv først en rigtig sletning med brugerens JWT
-            let { data, error } = await userSupabase.from('carpenters').delete().eq('id', employeeId).select('id');
+            // Prøv først at slette helt fra databasen
+            let { data, error: dbErr } = await client.from('carpenters').delete().eq('id', employeeId).select('id');
             
-            // Hvis det fejler pga RLS, så lav et Soft Delete (Fjern adgang fra firmaet)
-            if (error || !data || data.length === 0) {
-                const { data: softData, error: softErr } = await userSupabase.from('carpenters').update({ 
+            // Hvis sletning fejler (f.eks. pga Foreign Key constraint eller RLS afvisning), lav et Soft Delete
+            if (dbErr || !data || data.length === 0) {
+                const { data: softData, error: softErr } = await client.from('carpenters').update({ 
                     company_id: null, 
                     role: 'inactive', 
                     is_active: false 
                 }).eq('id', employeeId).select('id');
                 
                 if (softErr || !softData || softData.length === 0) {
-                    return res.status(400).json({ error: 'Sletning blokeret af sikkerhedssystemet. For at Mester kan slette/ændre andres profiler, mangler serveren "SUPABASE_SERVICE_ROLE_KEY".' });
+                    const failReason = dbErr ? dbErr.message : 'Sikkerhedssystemet afviste handlingen. Er Service Role Key sat korrekt op på Vercel?';
+                    return res.status(400).json({ error: `Sletning fejlede. Årsag: ${failReason}` });
                 }
+            }
+
+            if (HAS_SERVICE_ROLE) {
+                await supabase.auth.admin.deleteUser(employeeId).catch(() => {});
             }
 
             return res.status(200).json({ success: true });
