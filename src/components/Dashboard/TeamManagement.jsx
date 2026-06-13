@@ -756,11 +756,13 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                                 )}
                                                                             </AnimatePresence>
                                                                         </div>
-                                                                        <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(124, 58, 237, 0.05)', border: '1px solid rgba(124, 58, 237, 0.2)', borderRadius: '12px' }}>
-                                                                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                                                                                <strong>Adgang:</strong> {roles.find(r => r.value === member.role)?.desc}
-                                                                            </p>
-                                                                        </div>
+                                                                        {roleMenuFor !== member.id && (
+                                                                            <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(124, 58, 237, 0.05)', border: '1px solid rgba(124, 58, 237, 0.2)', borderRadius: '12px' }}>
+                                                                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                                                                                    <strong>Adgang:</strong> {roles.find(r => r.value === member.role)?.desc}
+                                                                                </p>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             )}
