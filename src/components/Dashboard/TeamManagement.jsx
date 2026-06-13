@@ -719,7 +719,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
 
                                                             {/* ROLLE (kun admin/Mester kan ændre) */}
                                                             {isAdmin && (
-                                                                <div className="px-6 pb-2">
+                                                                <div className="px-6 pb-2" style={{ position: 'relative', zIndex: roleMenuFor === member.id ? 50 : 1 }}>
                                                                     <div className="glass-panel" style={{ padding: '24px' }}>
                                                                         <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
                                                                             <Shield size={18} color="#7c3aed" />
