@@ -145,18 +145,23 @@ export default async function handler(req, res) {
                     .from('carpenters').select('raw_data').eq('id', employeeId).single();
 
                 if (tgt) {
-                    const keptLonnummer = tgt?.raw_data?.lonnummer || null;
+                    const existingRawData = tgt?.raw_data || {};
+                    // Slet kun private oplysninger, hvis de ligger i raw_data (fx adresse)
+                    if (existingRawData.address) delete existingRawData.address;
+                    if (existingRawData.emergencyContact) delete existingRawData.emergencyContact;
+
                     const { error: anonErr } = await supabase.from('carpenters').update({
                         owner_name: 'Slettet medarbejder',
                         email: `slettet-${employeeId}@slettet.invalid`,
                         phone: null,
                         avatar_url: null,
                         company_id: null,
-                        role: 'inactive',
+                        // Vi undlader at røre ved 'role', da tabellen højst sandsynligt har en CHECK constraint (enum), 
+                        // og 'inactive' vil få forespørgslen til at crashe! is_active: false er nok.
                         is_active: false,
                         requires_password_change: false,
-                        // Beholder kun lønnummer (lovpligtig løn-/timehistorik) — alt øvrigt persondata fjernes.
-                        raw_data: keptLonnummer ? { lonnummer: keptLonnummer } : {}
+                        // Vi SKAL bevare eksisterende raw_data for at gemme time_entries, lonnummer osv!
+                        raw_data: existingRawData
                     }).eq('id', employeeId).select('id');
 
                     if (anonErr) {
