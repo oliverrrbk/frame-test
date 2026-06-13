@@ -538,6 +538,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
             customer_address: `${customerInfo.address || ''}, ${customerInfo.zip || ''} ${customerInfo.city || ''}`.replace(/^, | , | $/g, '').trim() || 'Ukendt adresse',
             customer_email: customerInfo.email || 'Ukendt',
             customer_phone: customerInfo.phone || 'Ukendt',
+            carpenter_id: carpenter?.company_id || carpenter?.id || null,
             status: draftCreator ? 'Kladde' : 'Ny forespørgsel',
             project_category: 'special',
             price_estimate: totals.totalSales.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' kr.',
@@ -565,8 +566,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                 },
                 actual_quote_price: totals.totalSales,
                 project_title: projectTitle || 'Skræddersyet Opgave'
-            },
-            carpenter_id: carpenter?.id || null
+            }
         };
 
         try {

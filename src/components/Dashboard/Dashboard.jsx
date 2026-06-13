@@ -448,6 +448,9 @@ const PdfMobileWrapper = ({ children }) => {
 };
 
 const Dashboard = () => {
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const impersonateId = urlParams ? urlParams.get('impersonate') : null;
+    
     const [targetCaseId, setTargetCaseId] = useState(null);
     const [targetInvoiceCaseId, setTargetInvoiceCaseId] = useState(null);
     const [activeTab, setActiveTab] = useState(() => {
@@ -963,10 +966,6 @@ const Dashboard = () => {
 
     const initProfileAndData = async (authUser) => {
         const userId = authUser.id;
-        // Tjek URL parametre for Admin-impersonation (Super-Brugere)
-        const params = new URLSearchParams(window.location.search);
-        const impersonateId = params.get('impersonate');
-        
         // Hent den faktiske indloggede brugers profil først
         const { data: myDbProfile } = await supabase.from('carpenters').select('*').eq('id', userId).single();
         if (myDbProfile) {
@@ -1082,6 +1081,13 @@ const Dashboard = () => {
         // --- VIGTIGT: Hvis brugeren er en medarbejder, skal alle data-kald laves mod Mesterens firma-id ---
         if (userProfile.company_id) {
             targetId = userProfile.company_id;
+            
+            // --- AUTO-MIGRATE: Flyt evt. gamle stranded kladder fra medarbejderens ID til Mesterens ID ---
+            const { data: strandedLeads } = await supabase.from('leads').select('id').eq('carpenter_id', userProfile.id);
+            if (strandedLeads && strandedLeads.length > 0) {
+                console.log(`Auto-migrating ${strandedLeads.length} stranded leads from worker ${userProfile.id} to company ${userProfile.company_id}`);
+                await supabase.from('leads').update({ carpenter_id: userProfile.company_id }).eq('carpenter_id', userProfile.id);
+            }
         }
 
         // Hent den speficikke tømrers priser & leads
@@ -1341,10 +1347,19 @@ const Dashboard = () => {
         const { data: leadsDataFetch } = await supabase.from('leads').select('*').eq('carpenter_id', targetId).order('created_at', { ascending: false });
         // Orphane leads fix:
         let workingLeads = leadsDataFetch || [];
+        
+        // --- EMERGENCY FIX: Hent også strandede kladder fra medarbejderens eget ID ---
+        if (userProfile.role !== 'admin' && userProfile.company_id && targetId !== userProfile.id) {
+            const { data: strandedLeads } = await supabase.from('leads').select('*').eq('carpenter_id', userProfile.id).order('created_at', { ascending: false });
+            if (strandedLeads && strandedLeads.length > 0) {
+                workingLeads = [...workingLeads, ...strandedLeads];
+            }
+        }
+
         if (leadsDataFetch && leadsDataFetch.length < 2) { 
              await supabase.from('leads').update({ carpenter_id: targetId }).is('carpenter_id', null);
              const { data: nData } = await supabase.from('leads').select('*').eq('carpenter_id', targetId).order('created_at', { ascending: false });
-             workingLeads = nData || [];
+             if (nData) workingLeads = [...workingLeads.filter(l => l.carpenter_id !== targetId), ...nData];
         }
         workingLeads = workingLeads.filter(l => l.status !== 'Slettet');
         
@@ -1362,9 +1377,9 @@ const Dashboard = () => {
                     const confirmedStatuses = ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'];
                     workingLeads = workingLeads.filter(l => confirmedStatuses.includes(l.status));
                 } else if (userRole === 'sales') {
-                    workingLeads = workingLeads.filter(l => (l.raw_data?.assigned_pm || []).includes(userId) || l.assigned_to === userId);
+                    workingLeads = workingLeads.filter(l => (l.raw_data?.assigned_pm || []).includes(userId) || l.assigned_to === userId || l.raw_data?.created_by === userId || l.raw_data?.draft_mode === true);
                 } else if (userRole === 'worker' || userRole === 'apprentice') {
-                    workingLeads = workingLeads.filter(l => (l.raw_data?.assigned_workers || []).includes(userId));
+                    workingLeads = workingLeads.filter(l => (l.raw_data?.assigned_workers || []).includes(userId) || l.raw_data?.created_by === userId || l.raw_data?.draft_mode === true);
                 }
             }
         }
@@ -2734,7 +2749,7 @@ const Dashboard = () => {
 
                     {activeTab === 'worker_drafts' && ['worker', 'sales'].includes(effectiveRole) && (
                         <WorkerDrafts
-                            profile={myProfile}
+                            profile={{ ...myProfile, role: effectiveRole, id: impersonateId || myProfile.id }}
                             carpenterProfile={carpenterProfile}
                             supabase={supabase}
                             leadsData={leadsData}
@@ -2747,25 +2762,23 @@ const Dashboard = () => {
                             {carpenterProfile?.tier === 'enterprise' ? (
                                 <TeamManagement profile={{ ...carpenterProfile, role: effectiveRole }} leadsData={filteredLeads} />
                             ) : (
-                                <div className="settings-card" style={{ maxWidth: '600px', margin: '60px auto' }}>
-                                    <div className="card-body" style={{ padding: '40px', textAlign: 'center' }}>
-                                    <div style={{ width: '64px', height: '64px', background: '#fef2f2', color: '#ef4444', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 20px' }}>
-                                        <Lock size={32} />
+                                <div style={{ maxWidth: '600px', margin: '60px auto', background: '#fff', borderRadius: '24px', padding: '48px', textAlign: 'center', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px -15px rgba(0,0,0,0.05)' }}>
+                                    <div style={{ width: '80px', height: '80px', background: '#fef2f2', color: '#ef4444', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 24px', border: '1px solid #fee2e2', boxShadow: '0 4px 12px rgba(239,68,68,0.1)' }}>
+                                        <Lock size={40} />
                                     </div>
-                                    <h2 style={{ fontSize: '24px', color: '#1a1a1a', marginBottom: '16px' }}>Låst Premium Funktion</h2>
-                                    <p style={{ color: '#6b7280', fontSize: '16px', lineHeight: '1.6', marginBottom: '32px' }}>
+                                    <h2 style={{ fontSize: '1.75rem', color: '#0f172a', marginBottom: '16px', fontWeight: '800', letterSpacing: '-0.5px' }}>Låst Premium Funktion</h2>
+                                    <p style={{ color: '#64748b', fontSize: '1.05rem', lineHeight: '1.6', marginBottom: '32px' }}>
                                         "Team & Medarbejdere" funktionen er forbeholdt vores <strong>Enterprise</strong> pakkeløsning.<br/><br/>
                                         Få fuld kontrol over dit team, tildel opgaver og styr rettigheder ned til mindste detalje.
                                     </p>
                                     <button 
                                         onClick={() => setActiveTab('account_settings')}
-                                        style={{ background: '#3b82f6', color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' }}
-                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                                        style={{ background: '#0f172a', color: '#fff', padding: '14px 28px', borderRadius: '12px', border: 'none', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 8px 16px -4px rgba(15,23,42,0.3)' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                                     >
-                                        Gå til Indstillinger for at opgradere
+                                        Opgrader i Indstillinger
                                     </button>
-                                    </div>
                                 </div>
                             )}
                         </div>
@@ -2795,25 +2808,23 @@ const Dashboard = () => {
                                     session={session}
                                 />
                             ) : (
-                                <div className="settings-card" style={{ maxWidth: '600px', margin: '60px auto' }}>
-                                    <div className="card-body" style={{ padding: '40px', textAlign: 'center' }}>
-                                        <div style={{ width: '64px', height: '64px', background: '#f8fafc', color: '#64748b', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 20px', border: '1px solid #e2e8f0' }}>
-                                            <Lock size={32} />
-                                        </div>
-                                        <h2 style={{ fontSize: '24px', color: '#1a1a1a', marginBottom: '16px' }}>Firma Indstillinger Låst</h2>
-                                        <p style={{ color: '#6b7280', fontSize: '16px', lineHeight: '1.6', marginBottom: '32px' }}>
-                                            Du har ikke administrator-rettigheder til at se eller ændre firmaets indstillinger.<br/><br/>
-                                            Kontakt din mester (admin), hvis der er oplysninger, API-nøgler eller priser, der skal rettes for firmaet.
-                                        </p>
-                                        <button 
-                                            onClick={() => setActiveTab('profile')}
-                                            style={{ background: '#3b82f6', color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' }}
-                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-                                        >
-                                            Gå tilbage til Min Profil
-                                        </button>
+                                <div style={{ maxWidth: '600px', margin: '60px auto', background: '#fff', borderRadius: '24px', padding: '48px', textAlign: 'center', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px -15px rgba(0,0,0,0.05)' }}>
+                                    <div style={{ width: '80px', height: '80px', background: '#f1f5f9', color: '#64748b', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                                        <Lock size={40} />
                                     </div>
+                                    <h2 style={{ fontSize: '1.75rem', color: '#0f172a', marginBottom: '16px', fontWeight: '800', letterSpacing: '-0.5px' }}>Firma Indstillinger Låst</h2>
+                                    <p style={{ color: '#64748b', fontSize: '1.05rem', lineHeight: '1.6', marginBottom: '32px' }}>
+                                        Du har ikke administrator-rettigheder til at se eller ændre firmaets indstillinger.<br/><br/>
+                                        Kontakt din mester (admin), hvis der er oplysninger, API-nøgler eller priser, der skal rettes for firmaet.
+                                    </p>
+                                    <button 
+                                        onClick={() => setActiveTab('profile')}
+                                        style={{ background: '#0f172a', color: '#fff', padding: '14px 28px', borderRadius: '12px', border: 'none', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 8px 16px -4px rgba(15,23,42,0.3)' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                    >
+                                        Gå tilbage til Min Profil
+                                    </button>
                                 </div>
                             )}
                         </div>

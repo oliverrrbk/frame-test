@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FileEdit, Plus, Send, Clock, User, Trash2, Eye, EyeOff, AlertTriangle, CheckCircle, ChevronRight } from 'lucide-react';
+import { FileEdit, Plus, Send, Clock, User, Trash2, Eye, EyeOff, AlertTriangle, CheckCircle, ChevronRight, Search, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CreateLeadSelector from './CreateLeadSelector';
 import Wizard from '../Wizard/Wizard';
@@ -32,21 +32,53 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
         });
     };
 
+    const [draftFilter, setDraftFilter] = useState('all'); // 'all', 'drafts', 'sent'
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+
     // Filter leads to only show drafts created by this worker or sales person
     const myDrafts = useMemo(() => {
-        return leadsData.filter(lead => {
-            const isDraftStatus = lead.status === 'Kladde' || lead.status === 'Intern Kladde';
-            const isMyDraft = lead.raw_data?.created_by === profile?.id || lead.raw_data?.draft_mode === true;
-            return isDraftStatus && isMyDraft;
-        }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    }, [leadsData, profile]);
+        let filtered = leadsData.filter(lead => {
+            const isMine = lead.raw_data?.created_by === profile?.id;
+            
+            // Allow backward compatibility for old drafts without created_by if they have draft_mode = true AND status is Kladde
+            const isMineFallback = isMine || (lead.raw_data?.draft_mode === true && profile?.role !== 'admin');
+            
+            if (!isMineFallback) return false;
+
+            const isUnsent = lead.status === 'Kladde' || lead.status === 'Intern Kladde';
+            const isSent = lead.status === 'Ny forespørgsel' && lead.raw_data?.draft_mode === true;
+            
+            if (!isUnsent && !isSent) return false;
+
+            // Status filter
+            if (draftFilter === 'drafts' && !isUnsent) return false;
+            if (draftFilter === 'sent' && !isSent) return false;
+
+            // Search filter
+            if (searchQuery.trim()) {
+                const q = searchQuery.toLowerCase();
+                const matchName = (lead.customer_name || '').toLowerCase().includes(q);
+                const matchAddress = (lead.customer_address || '').toLowerCase().includes(q);
+                const matchEmail = (lead.customer_email || '').toLowerCase().includes(q);
+                const matchPhone = (lead.customer_phone || '').toLowerCase().includes(q);
+                const matchCat = (lead.project_category || '').toLowerCase().includes(q);
+                
+                if (!matchName && !matchAddress && !matchEmail && !matchPhone && !matchCat) return false;
+            }
+
+            return true;
+        });
+        
+        return filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }, [leadsData, profile, draftFilter, searchQuery]);
 
     const handleSendToMester = async (draftId) => {
         try {
             toast.loading("Sender til mester...", { id: "send_draft" });
             const { error } = await supabase
                 .from('leads')
-                .update({ status: 'Intern Kladde' })
+                .update({ status: 'Ny forespørgsel', is_read: false })
                 .eq('id', draftId);
 
             if (error) throw error;
@@ -55,7 +87,7 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
             
             // Local state update
             if (setLeadsData) {
-                setLeadsData(prev => prev.map(l => l.id === draftId ? { ...l, status: 'Intern Kladde' } : l));
+                setLeadsData(prev => prev.map(l => l.id === draftId ? { ...l, status: 'Ny forespørgsel', is_read: false } : l));
             }
             setSelectedDraft(null);
         } catch (err) {
@@ -103,13 +135,148 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                     <p style={{ margin: 0, color: '#64748b', fontSize: isMobile ? '0.95rem' : '1.05rem' }}>Opret og administrer kladdetilbud, inden de sendes til mester.</p>
                 </div>
                 <button
-                    onClick={() => setIsCreateModalOpen(true)}
+                    onClick={() => {
+                        setSelectedDraft(null);
+                        setIsCreateModalOpen(true);
+                    }}
                     style={{ padding: isMobile ? '16px 24px' : '12px 24px', width: isMobile ? '100%' : 'auto', flexShrink: 0, justifyContent: 'center', whiteSpace: 'nowrap', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(37, 99, 235, 0.3)', transition: 'all 0.2s ease' }}
                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(37, 99, 235, 0.4)'; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(37, 99, 235, 0.3)'; }}
                 >
                     <Plus size={20} /> Opret Kladde
                 </button>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: isMobile ? 'column' : 'row', 
+                justifyContent: 'space-between', 
+                alignItems: isMobile ? 'stretch' : 'center', 
+                gap: '16px', 
+                marginBottom: '32px',
+                backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                padding: '16px',
+                borderRadius: '20px',
+                border: '1px solid rgba(255, 255, 255, 0.8)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)'
+            }}>
+                {isMobile ? (
+                    <div style={{ position: 'relative', flexShrink: 0, width: '100%' }}>
+                        <button 
+                            onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                            style={{ 
+                                width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                                padding: '12px 16px', 
+                                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', 
+                                border: '1px solid #e2e8f0', 
+                                borderRadius: '16px', 
+                                fontSize: '1.05rem', 
+                                color: '#0f172a', 
+                                fontWeight: '700', 
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.03), inset 0 2px 4px rgba(255,255,255,0.8)', 
+                                cursor: 'pointer',
+                                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                            }}
+                        >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ background: '#e0e7ff', padding: '8px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.5)' }}>
+                                    <Filter size={18} color="#4f46e5" /> 
+                                </div>
+                                {draftFilter === 'all' ? 'Alle Kladder' : draftFilter === 'drafts' ? 'Kun Kladder' : 'Sendt til Mester'}
+                            </span>
+                            <div style={{ background: '#fff', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.06)' }}>
+                                <ChevronRight size={18} color="#64748b" style={{ transform: isFilterMenuOpen ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }} />
+                            </div>
+                        </button>
+
+                        {isFilterMenuOpen && (
+                            <div style={{ position: 'absolute', top: 'calc(100% + 12px)', left: 0, right: 0, backgroundColor: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 20px 40px rgba(0,0,0,0.12)', padding: '8px', zIndex: 10, animation: 'fadeIn 0.2s ease-out' }}>
+                                {[
+                                    { id: 'all', label: 'Alle Kladder', icon: <FileEdit size={18} /> },
+                                    { id: 'drafts', label: 'Kun Kladder', icon: <Clock size={18} /> },
+                                    { id: 'sent', label: 'Sendt til Mester', icon: <CheckCircle size={18} /> }
+                                ].map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => {
+                                            setDraftFilter(tab.id);
+                                            setIsFilterMenuOpen(false);
+                                        }}
+                                        style={{ width: '100%', textAlign: 'left', padding: '14px 20px', backgroundColor: draftFilter === tab.id ? '#eff6ff' : 'transparent', color: draftFilter === tab.id ? '#2563eb' : '#475569', border: 'none', borderRadius: '14px', fontSize: '1.05rem', fontWeight: draftFilter === tab.id ? '700' : '600', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    >
+                                        <div style={{ color: draftFilter === tab.id ? '#3b82f6' : '#94a3b8' }}>
+                                            {tab.icon}
+                                        </div>
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', backgroundColor: '#f1f5f9', borderRadius: '14px', padding: '4px', flexShrink: 0 }}>
+                        {[
+                            { id: 'all', label: 'Alle Kladder' },
+                            { id: 'drafts', label: 'Kun Kladder' },
+                            { id: 'sent', label: 'Sendt til Mester' }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setDraftFilter(tab.id)}
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    backgroundColor: draftFilter === tab.id ? '#fff' : 'transparent',
+                                    color: draftFilter === tab.id ? '#0f172a' : '#64748b',
+                                    fontWeight: draftFilter === tab.id ? '600' : '500',
+                                    fontSize: '0.95rem',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    boxShadow: draftFilter === tab.id ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                }}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                <div style={{ position: 'relative', flex: 1, maxWidth: isMobile ? '100%' : '320px' }}>
+                    <Search size={18} color="#94a3b8" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                    <input 
+                        type="text"
+                        placeholder="Søg i kladder..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '12px 16px 12px 42px',
+                            backgroundColor: '#fff',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '14px',
+                            fontSize: '0.95rem',
+                            color: '#1e293b',
+                            outline: 'none',
+                            transition: 'all 0.2s',
+                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
+                            boxSizing: 'border-box'
+                        }}
+                        onFocus={e => {
+                            e.currentTarget.style.borderColor = '#3b82f6';
+                            e.currentTarget.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)';
+                        }}
+                        onBlur={e => {
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                            e.currentTarget.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)';
+                        }}
+                    />
+                </div>
             </div>
 
             {myDrafts.length === 0 ? (
@@ -120,7 +287,10 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                     <h3 style={{ margin: '0 0 12px 0', fontSize: '1.4rem', color: '#1e293b' }}>Ingen kladder endnu</h3>
                     <p style={{ margin: '0 0 24px 0', color: '#64748b', fontSize: '1.05rem', maxWidth: '400px', marginInline: 'auto' }}>Du har ikke oprettet nogen tilbudskladder endnu. Opret en ny for at komme i gang.</p>
                     <button 
-                        onClick={() => setIsCreateModalOpen(true)}
+                        onClick={() => {
+                            setSelectedDraft(null);
+                            setIsCreateModalOpen(true);
+                        }}
                         style={{ padding: '10px 20px', background: '#f1f5f9', border: 'none', borderRadius: '8px', color: '#334155', fontWeight: '600', cursor: 'pointer' }}
                     >
                         Start din første kladde
@@ -129,7 +299,7 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
                     {myDrafts.map(draft => {
-                        const isSent = draft.status === 'Intern Kladde';
+                        const isSent = draft.status === 'Ny forespørgsel';
                         
                         return (
                             <div 
@@ -203,6 +373,16 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                                 </div>
                             </div>
 
+                            {selectedDraft.status === 'Ny forespørgsel' && (
+                                <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '16px', padding: '20px', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                                    <div style={{ color: '#3b82f6', marginTop: '2px' }}><CheckCircle size={24} /></div>
+                                    <div>
+                                        <h4 style={{ margin: '0 0 6px 0', color: '#1e3a8a', fontSize: '1.05rem' }}>Sendt til Mester</h4>
+                                        <p style={{ margin: 0, color: '#1e40af', fontSize: '0.95rem', lineHeight: '1.5' }}>Denne kladde er afleveret og behandles nu af mester. Du kan stadig se overslaget, men det er ikke længere muligt at ændre i detaljerne.</p>
+                                    </div>
+                                </div>
+                            )}
+
                             {selectedDraft.raw_data && selectedDraft.raw_data.calc_data && (
                                 <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
                                     <h5 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: '#334155', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Økonomi & Tidsforbrug</h5>
@@ -263,8 +443,9 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
 
                         </div>
 
-                        <div style={{ padding: isMobile ? '16px 20px calc(env(safe-area-inset-bottom) + 16px)' : '24px 32px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', flexDirection: isMobile ? 'column-reverse' : 'row', gap: isMobile ? '12px' : '16px', justifyContent: 'flex-end' }}>
-                            <div style={{ display: 'flex', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
+                        {selectedDraft.status !== 'Ny forespørgsel' && (
+                            <div style={{ padding: isMobile ? '16px 20px calc(env(safe-area-inset-bottom) + 16px)' : '24px 32px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', flexDirection: isMobile ? 'column-reverse' : 'row', gap: isMobile ? '12px' : '16px', justifyContent: 'flex-end' }}>
+                                <div style={{ display: 'flex', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
                                 <button
                                     onClick={() => handleDeleteDraft(selectedDraft.id)}
                                     style={{ padding: isMobile ? '16px 20px' : '12px 20px', width: '100%', justifyContent: 'center', background: '#fff', border: '1px solid #ef4444', borderRadius: isMobile ? '12px' : '10px', color: '#ef4444', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
@@ -277,6 +458,7 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                                     onClick={() => {
                                         const mode = selectedDraft.project_category === 'special' ? 'custom' : 'classic';
                                         setCreateMode(mode);
+                                        setIsCreateModalOpen(true);
                                     }}
                                     style={{ padding: isMobile ? '16px 20px' : '12px 20px', width: '100%', justifyContent: 'center', background: '#fff', border: '1px solid #e2e8f0', borderRadius: isMobile ? '12px' : '10px', color: '#334155', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
                                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
@@ -297,6 +479,7 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                                 </button>
                             )}
                         </div>
+                        )}
                     </div>
                 </div>,
                 document.body
@@ -346,9 +529,24 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                                         setCreateMode(null);
                                         toast.success('Ny kladde gemt!');
                                         // Refresh leads
-                                        const { data: newLeads } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+                                        const { data: newLeads } = await supabase.from('leads').select('*').eq('carpenter_id', carpenterProfile.id).order('created_at', { ascending: false });
                                         if (newLeads && setLeadsData) {
-                                            setLeadsData(newLeads.filter(l => l.status !== 'Slettet'));
+                                            const filteredLeads = newLeads.filter(l => {
+                                                if (l.status === 'Slettet') return false;
+                                                if (profile.role === 'admin') return true;
+                                                const assignedWorkers = l.raw_data?.assigned_workers || [];
+                                                const assignedPM = l.raw_data?.assigned_pm;
+                                                const createdBy = l.raw_data?.created_by;
+                                                
+                                                if (profile.role === 'worker' || profile.role === 'apprentice') {
+                                                    return assignedWorkers.includes(profile.id) || createdBy === profile.id;
+                                                }
+                                                if (profile.role === 'sales') {
+                                                    return assignedPM === profile.id || createdBy === profile.id;
+                                                }
+                                                return true;
+                                            });
+                                            setLeadsData(filteredLeads);
                                         }
                                     }} 
                                 />
@@ -370,9 +568,24 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                                         setIsCreateModalOpen(false);
                                         setCreateMode(null);
                                         toast.success('Ny skræddersyet kladde gemt!');
-                                        const { data: newLeads } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+                                        const { data: newLeads } = await supabase.from('leads').select('*').eq('carpenter_id', carpenterProfile.id).order('created_at', { ascending: false });
                                         if (newLeads && setLeadsData) {
-                                            setLeadsData(newLeads.filter(l => l.status !== 'Slettet'));
+                                            const filteredLeads = newLeads.filter(l => {
+                                                if (l.status === 'Slettet') return false;
+                                                if (profile.role === 'admin') return true;
+                                                const assignedWorkers = l.raw_data?.assigned_workers || [];
+                                                const assignedPM = l.raw_data?.assigned_pm;
+                                                const createdBy = l.raw_data?.created_by;
+                                                
+                                                if (profile.role === 'worker' || profile.role === 'apprentice') {
+                                                    return assignedWorkers.includes(profile.id) || createdBy === profile.id;
+                                                }
+                                                if (profile.role === 'sales') {
+                                                    return assignedPM === profile.id || createdBy === profile.id;
+                                                }
+                                                return true;
+                                            });
+                                            setLeadsData(filteredLeads);
                                         }
                                     }}
                                 />
