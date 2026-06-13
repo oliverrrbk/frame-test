@@ -9,15 +9,19 @@ import toast from 'react-hot-toast';
 import GorgeousMultiSelect from './GorgeousMultiSelect';
 import GorgeousSingleSelect from './GorgeousSingleSelect';
 import { getDanishHolidays } from '../../utils/holidays';
+import { mutateCalendarEvents } from '../../utils/calendarEvents';
 
 const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLeadsData, teamMembers = [], carpenterProfile, setCarpenterProfile }) => {
     const effectiveRole = simulatedRole || myProfile?.role;
     const isManager = ['admin', 'boss', 'accountant'].includes(effectiveRole);
     const userId = myProfile?.id;
 
-    const canViewTimeline = ['admin', 'boss', 'accountant', 'sales'].includes(effectiveRole);
+    // Åben firmakalender: alle roller må se folk-/tidslinje-visningen.
+    const canViewTimeline = ['admin', 'boss', 'accountant', 'sales', 'worker', 'apprentice'].includes(effectiveRole);
     const canEditLead = (lead) => isManager || (effectiveRole === 'sales' && (lead?.raw_data?.assigned_pm || []).includes(userId));
     const canClickLead = (lead) => canEditLead(lead) || (lead?.raw_data?.assigned_workers || []).includes(userId);
+    // Alle kan oprette events; rediger/slet kun på egne events (eller som mester/leder).
+    const canEditEvent = (ev) => !ev || isManager || (ev.createdById && ev.createdById === userId);
 
     // Define event types
     const EVENT_TYPES = [
@@ -93,9 +97,13 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [searchTerm, setSearchTerm] = useState('');
     const [hoverTooltip, setHoverTooltip] = useState(null); // { x, y, content }
 
+    // Aftalen der vises/redigeres lige nu — bruges til rettigheds-tjek i modalen.
+    const editingEvent = eventFormData.id ? (carpenterProfile?.raw_data?.calendar_events || []).find(ev => ev.id === eventFormData.id) : null;
+    const canModifyCurrentEvent = canEditEvent(editingEvent);
+
     const openModalForDate = (dateObj, eventToEdit = null) => {
-        if (!isManager && !eventToEdit) return; // Non-managers can't create, but maybe they can view? Let's just allow viewing if eventToEdit is passed.
-        
+        // Alle roller må oprette og se events i den fælles firmakalender.
+
         if (eventToEdit) {
             setEventFormData({
                 id: eventToEdit.id || '',
@@ -178,8 +186,11 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             const timeEntries = member.raw_data?.time_entries || [];
             timeEntries.forEach(entry => {
                 if (['Ferie', 'Sygdom', 'Skole'].includes(entry.absenceType)) {
+                    // Maskér kollegers sygdom for ikke-ledere: vis neutralt som "Fraværende".
+                    const masked = !isManager && entry.absenceType === 'Sygdom';
                     absences.push({
                         ...entry,
+                        absenceType: masked ? 'Fraværende' : entry.absenceType,
                         employeeName: member.owner_name || member.company_name,
                         employeeId: member?.id
                     });
@@ -200,7 +211,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             });
         }
         return absences;
-    }, [teamMembers, myProfile, selectedEmployeeIds]);
+    }, [teamMembers, myProfile, selectedEmployeeIds, isManager]);
 
     // 3. Kalenderaftaler (Møder & Leveringer)
     const calendarEvents = useMemo(() => {
@@ -317,6 +328,15 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             }
         }
 
+        // Find original (ved redigering) for at bevare opretteren og tjekke rettigheder.
+        const original = eventFormData.id
+            ? (carpenterProfile?.raw_data?.calendar_events || []).find(ev => ev.id === eventFormData.id)
+            : null;
+        if (original && !canEditEvent(original)) {
+            toast.error('Du kan kun ændre dine egne aftaler.');
+            return;
+        }
+
         const newEventObj = {
             id: eventFormData.id || `evt-${Date.now()}`,
             title: finalTitle,
@@ -327,23 +347,17 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             endTime: eventFormData.endTime,
             participants: finalParticipants,
             relatedLeadId: eventFormData.selectedLeadId || null,
-            notification_preference: eventFormData.notification_preference || 'day_before'
+            notification_preference: eventFormData.notification_preference || 'day_before',
+            createdById: original?.createdById || userId  // hvem oprettede aftalen
         };
-        
-        let updatedEvents;
-        if (eventFormData.id) {
-            updatedEvents = (carpenterProfile?.raw_data?.calendar_events || []).map(ev => 
-                ev.id === eventFormData.id ? newEventObj : ev
-            );
-        } else {
-            updatedEvents = [...(carpenterProfile?.raw_data?.calendar_events || []), newEventObj];
-        }
-        
-        const updatedRawData = { ...carpenterProfile.raw_data, calendar_events: updatedEvents };
-        
+
         try {
-            await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
-            if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: updatedRawData });
+            const updatedEvents = await mutateCalendarEvents({
+                companyId: carpenterProfile?.id,
+                removeIds: eventFormData.id ? [eventFormData.id] : [],
+                add: [newEventObj]
+            });
+            if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: { ...carpenterProfile.raw_data, calendar_events: updatedEvents } });
             toast.success(eventFormData.id ? 'Aftale opdateret' : 'Aftale oprettet i kalenderen');
             setShowEventModal(false);
         } catch (error) {
@@ -353,13 +367,19 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
     const confirmDeleteEvent = async () => {
         if (!eventFormData.id) return;
-        
-        const updatedEvents = (carpenterProfile?.raw_data?.calendar_events || []).filter(ev => ev.id !== eventFormData.id);
-        const updatedRawData = { ...carpenterProfile.raw_data, calendar_events: updatedEvents };
-        
+
+        const original = (carpenterProfile?.raw_data?.calendar_events || []).find(ev => ev.id === eventFormData.id);
+        if (original && !canEditEvent(original)) {
+            toast.error('Du kan kun slette dine egne aftaler.');
+            return;
+        }
+
         try {
-            await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
-            if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: updatedRawData });
+            const updatedEvents = await mutateCalendarEvents({
+                companyId: carpenterProfile?.id,
+                removeIds: [eventFormData.id]
+            });
+            if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: { ...carpenterProfile.raw_data, calendar_events: updatedEvents } });
             toast.success('Aftale slettet');
             setShowDeleteConfirm(false);
             setShowEventModal(false);
@@ -410,7 +430,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     };
 
     const handleDropEvent = async (targetDateObj) => {
-        if (!draggedEvent || !isManager) return;
+        if (!draggedEvent || !canEditEvent(draggedEvent)) return;
         
         const year = targetDateObj.getFullYear();
         const month = String(targetDateObj.getMonth() + 1).padStart(2, '0');
@@ -435,17 +455,16 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         const endDateStr = `${endYear}-${endMonth}-${endD}`;
 
         const updatedEvent = { ...draggedEvent, startDate: dateStr, endDate: endDateStr };
-        
-        const updatedEvents = (carpenterProfile?.raw_data?.calendar_events || []).map(ev => 
-            ev.id === draggedEvent.id ? updatedEvent : ev
-        );
-        const updatedRawData = { ...carpenterProfile.raw_data, calendar_events: updatedEvents };
-        
+        const movedId = draggedEvent.id;
         setDraggedEvent(null);
-        
+
         try {
-            await supabase.from('carpenters').update({ raw_data: updatedRawData }).eq('id', carpenterProfile?.id);
-            if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: updatedRawData });
+            const updatedEvents = await mutateCalendarEvents({
+                companyId: carpenterProfile?.id,
+                removeIds: [movedId],
+                add: [updatedEvent]
+            });
+            if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: { ...carpenterProfile.raw_data, calendar_events: updatedEvents } });
             toast.success('Aftale flyttet');
         } catch (error) {
             toast.error('Fejl ved flytning af aftale');
@@ -604,7 +623,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         </button>
                         
                         {/* Mobil Medarbejder Filter */}
-                        {isManager && (
+                        {(
                             <button onClick={() => setShowMobileFilter(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', position: 'relative' }}>
                                 <Users size={22} color="#0f172a" />
                                 {selectedEmployeeIds.length > 0 && !selectedEmployeeIds.includes('all') && (
@@ -614,7 +633,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         )}
                         
                         {/* Tilføj aftale */}
-                        {isManager && (
+                        {(
                             <button onClick={() => setShowAddChooser(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                                 <Plus size={24} color="#0f172a" strokeWidth={3} />
                             </button>
@@ -1344,7 +1363,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         />
 
                         {/* + Ny Aftale */}
-                        {isManager && (
+                        {(
                             <button onClick={() => setShowEventModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', background: '#0f172a', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'none'}>
                                 <Plus size={18} /> Ny Aftale
                             </button>
@@ -1560,9 +1579,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             )}
 
                             <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                                {eventFormData.id && (
-                                    <button 
-                                        type="button" 
+                                {eventFormData.id && canModifyCurrentEvent && (
+                                    <button
+                                        type="button"
                                         onClick={() => setShowDeleteConfirm(true)}
                                         style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#fef2f2', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                     >
@@ -1584,9 +1603,15 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                         Gå til sag
                                     </button>
                                 )}
-                                <button type="submit" style={{ flex: eventFormData.id ? 2 : 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#1d4ed8', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
-                                    {eventFormData.id ? 'Gem ændringer' : 'Opret aftale'}
-                                </button>
+                                {(!eventFormData.id || canModifyCurrentEvent) ? (
+                                    <button type="submit" style={{ flex: eventFormData.id ? 2 : 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#1d4ed8', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
+                                        {eventFormData.id ? 'Gem ændringer' : 'Opret aftale'}
+                                    </button>
+                                ) : (
+                                    <div style={{ flex: 2, padding: '12px', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem', alignSelf: 'center' }}>
+                                        Kun opretteren eller en leder kan ændre denne aftale.
+                                    </div>
+                                )}
                             </div>
                         </form>
                     </div>
