@@ -293,7 +293,7 @@ function App() {
               Bison Frame
             </h3>
             <p className="text-[10px] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase animate-pulse">
-              Låser systemet op
+              Indlæser arbejdsområde...
             </p>
           </div>
         </div>
