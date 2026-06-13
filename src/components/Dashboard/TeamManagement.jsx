@@ -973,70 +973,76 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             <SubcontractorManager profile={profile} isMobile={isMobile} />
 
             {/* ---- BEKRÆFT ADMIN-FORFREMMELSE ---- */}
-            <AnimatePresence>
-                {pendingPromo && createPortal(
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPendingPromo(null)}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                        <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
-                            style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
-                            <div style={{ padding: '28px', textAlign: 'center' }}>
-                                <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
-                                    <Shield size={30} />
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {pendingPromo && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPendingPromo(null)}
+                            style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                            <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
+                                style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+                                <div style={{ padding: '28px', textAlign: 'center' }}>
+                                    <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+                                        <Shield size={30} />
+                                    </div>
+                                    <h3 style={{ margin: '0 0 10px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Gør til Mester (Admin)?</h3>
+                                    <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                                        <strong>{pendingPromo.member.owner_name || 'Medarbejderen'}</strong> får <strong>fuld adgang</strong> til priser, økonomi, systemindstillinger og kan selv administrere andre medarbejdere. Er du sikker?
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                                        <button onClick={() => setPendingPromo(null)} disabled={actionBusy}
+                                            style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
+                                        <button onClick={() => doRoleChange(pendingPromo.member, pendingPromo.role)} disabled={actionBusy}
+                                            style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', fontWeight: 700, cursor: actionBusy ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                            {actionBusy ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />} Ja, gør til Mester
+                                        </button>
+                                    </div>
                                 </div>
-                                <h3 style={{ margin: '0 0 10px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Gør til Mester (Admin)?</h3>
-                                <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', lineHeight: 1.5 }}>
-                                    <strong>{pendingPromo.member.owner_name || 'Medarbejderen'}</strong> får <strong>fuld adgang</strong> til priser, økonomi, systemindstillinger og kan selv administrere andre medarbejdere. Er du sikker?
-                                </p>
-                                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                                    <button onClick={() => setPendingPromo(null)} disabled={actionBusy}
-                                        style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
-                                    <button onClick={() => doRoleChange(pendingPromo.member, pendingPromo.role)} disabled={actionBusy}
-                                        style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', fontWeight: 700, cursor: actionBusy ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                        {actionBusy ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />} Ja, gør til Mester
-                                    </button>
-                                </div>
-                            </div>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>, document.body
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
 
             {/* ---- FJERN MEDARBEJDER (deaktivér / slet) ---- */}
-            <AnimatePresence>
-                {removeTarget && createPortal(
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !actionBusy && setRemoveTarget(null)}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                        <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
-                            style={{ width: '100%', maxWidth: '460px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
-                            <div style={{ padding: '28px' }}>
-                                <h3 style={{ margin: '0 0 8px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Fjern {removeTarget.owner_name || 'medarbejder'}?</h3>
-                                <p style={{ margin: '0 0 20px', color: '#475569', fontSize: '0.92rem', lineHeight: 1.5 }}>Vælg hvordan medarbejderen skal fjernes:</p>
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {removeTarget && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !actionBusy && setRemoveTarget(null)}
+                            style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                            <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
+                                style={{ width: '100%', maxWidth: '460px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+                                <div style={{ padding: '28px' }}>
+                                    <h3 style={{ margin: '0 0 8px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Fjern {removeTarget.owner_name || 'medarbejder'}?</h3>
+                                    <p style={{ margin: '0 0 20px', color: '#475569', fontSize: '0.92rem', lineHeight: 1.5 }}>Vælg hvordan medarbejderen skal fjernes:</p>
 
-                                <button onClick={() => doRemove('deactivate')} disabled={actionBusy}
-                                    style={{ width: '100%', textAlign: 'left', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: actionBusy ? 'wait' : 'pointer', marginBottom: '12px', transition: 'all 0.2s' }}
-                                    onMouseEnter={(e) => { if (!actionBusy) { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; } }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}>
-                                    <div style={{ fontWeight: 700, color: '#0f172a' }}>Deaktivér (anbefalet)</div>
-                                    <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Fjerner login-adgang, men beholder profil og historik til genansættelse.</div>
-                                </button>
+                                    <button onClick={() => doRemove('deactivate')} disabled={actionBusy}
+                                        style={{ width: '100%', textAlign: 'left', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: actionBusy ? 'wait' : 'pointer', marginBottom: '12px', transition: 'all 0.2s' }}
+                                        onMouseEnter={(e) => { if (!actionBusy) { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; } }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}>
+                                        <div style={{ fontWeight: 700, color: '#0f172a' }}>Deaktivér (anbefalet)</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Fjerner login-adgang, men beholder profil og historik til genansættelse.</div>
+                                    </button>
 
-                                <button onClick={() => doRemove('delete')} disabled={actionBusy}
-                                    style={{ width: '100%', textAlign: 'left', padding: '16px', borderRadius: '14px', border: '1px solid #fee2e2', background: '#fff', cursor: actionBusy ? 'wait' : 'pointer', transition: 'all 0.2s' }}
-                                    onMouseEnter={(e) => { if (!actionBusy) { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.background = '#fef2f2'; } }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#fee2e2'; e.currentTarget.style.background = '#fff'; }}>
-                                    <div style={{ fontWeight: 700, color: '#b91c1c' }}>Slet helt (GDPR)</div>
-                                    <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Sletter login og persondata (adresse, pårørende). Løn-/timehistorik bevares lovpligtigt.</div>
-                                </button>
+                                    <button onClick={() => doRemove('delete')} disabled={actionBusy}
+                                        style={{ width: '100%', textAlign: 'left', padding: '16px', borderRadius: '14px', border: '1px solid #fee2e2', background: '#fff', cursor: actionBusy ? 'wait' : 'pointer', transition: 'all 0.2s' }}
+                                        onMouseEnter={(e) => { if (!actionBusy) { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.background = '#fef2f2'; } }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#fee2e2'; e.currentTarget.style.background = '#fff'; }}>
+                                        <div style={{ fontWeight: 700, color: '#b91c1c' }}>Slet helt (GDPR)</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Sletter login og persondata (adresse, pårørende). Løn-/timehistorik bevares lovpligtigt.</div>
+                                    </button>
 
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-                                    <button onClick={() => setRemoveTarget(null)} disabled={actionBusy}
-                                        style={{ padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+                                        <button onClick={() => setRemoveTarget(null)} disabled={actionBusy}
+                                            style={{ padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
+                                    </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>, document.body
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </div>
     );
 };
