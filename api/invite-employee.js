@@ -106,6 +106,19 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: authError.message });
         }
 
+        // Find højeste nuværende lønnummer for at tildele næste i rækken
+        const { data: existingTeam } = await supabase.from('carpenters').select('raw_data').eq('company_id', companyId);
+        const { data: adminProfile2 } = await supabase.from('carpenters').select('raw_data').eq('id', companyId).single();
+        
+        const existingNumbers = [
+            ...(existingTeam || []).map(m => m.raw_data?.lonnummer),
+            adminProfile2?.raw_data?.lonnummer
+        ].filter(Boolean);
+        
+        const validNumbers = existingNumbers.map(Number).filter(n => !isNaN(n));
+        const maxNum = validNumbers.length > 0 ? Math.max(...validNumbers) : 1000;
+        const autoLonnummer = (maxNum + 1).toString();
+
         // 2. Opret brugeren i carpenters tabellen så de dukker op i oversigten med det samme
         const { error: dbError } = await supabase.from('carpenters').insert([{
             id: authData.user.id,
@@ -115,6 +128,7 @@ export default async function handler(req, res) {
             role: role,
             company_id: companyId,
             company_name: 'Medarbejder',
+            raw_data: { lonnummer: autoLonnummer },
             requires_password_change: true
         }]);
 

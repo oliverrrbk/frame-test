@@ -633,7 +633,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: 'auto', opacity: 1 }}
                                                             exit={{ height: 0, opacity: 0 }}
-                                                            style={{ overflow: 'hidden', background: 'var(--surface-bg)', borderTop: '1px solid var(--border-light)' }}
+                                                            style={{ overflow: roleMenuFor === member.id ? 'visible' : 'hidden', background: 'var(--surface-bg)', borderTop: '1px solid var(--border-light)' }}
                                                         >
                                                             <div className="p-6 pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                                                 {isAdminOnly ? (
@@ -720,7 +720,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                             {/* ROLLE (kun admin/Mester kan ændre) */}
                                                             {isAdmin && (
                                                                 <div className="px-6 pb-2" style={{ position: 'relative', zIndex: roleMenuFor === member.id ? 50 : 1 }}>
-                                                                    <div className="glass-panel" style={{ padding: '24px' }}>
+                                                                    <div className="glass-panel" style={{ padding: '24px', overflow: 'visible' }}>
                                                                         <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
                                                                             <Shield size={18} color="#7c3aed" />
                                                                             <h5 style={{ fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Rolle</h5>

@@ -601,11 +601,11 @@ export const QUESTIONS = {
             condition: (d) => d.doorStyle === 'Terrassedør',
             tooltip: 'Terrassedøre er næsten altid glasdøre. Vælg mellem forskellige holdbare karmmaterialer.',
             options: [
-                { label: 'Træ (med glas)', img: '/images/door_terrace_wood.png' },
+                { label: 'Træ (med glas)', img: '/images/door_terrace_wood_danish_v2.png' },
                 { label: 'PVC / Plast (med glas)', img: '/images/door_terrace_pvc.png' },
-                { label: 'Træ / Alu (Kombination, med glas)', img: '/images/door_terrace_wood_alu.png' },
-                { label: 'Aluminium (med glas)', img: '/images/door_terrace_alu.png' },
-                { label: 'Fuldglas (skydedør)', img: '/images/door_terrace_fullglass.png' }
+                { label: 'Træ / Alu (Kombination, med glas)', img: '/images/door_terrace_wood_alu_danish_v2.png' },
+                { label: 'Aluminium (med glas)', img: '/images/door_terrace_alu_danish_v2.png' },
+                { label: 'Fuldglas (skydedør)', img: '/images/door_terrace_fullglass_danish_v2.png' }
             ] 
         },
         {

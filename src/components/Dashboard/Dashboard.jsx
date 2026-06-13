@@ -582,6 +582,7 @@ const Dashboard = () => {
     // carpenterProfile er firmaet (Mester), som dataene tilhører
     const [carpenterProfile, setCarpenterProfile] = useState(null);
     
+    const [isDashboardLoaded, setIsDashboardLoaded] = useState(false);
     const [isLeadsLoading, setIsLeadsLoading] = useState(false);
     const [isMaterialsLoading, setIsMaterialsLoading] = useState(false);
     const [expandedMaterialCategories, setExpandedMaterialCategories] = useState({});
@@ -1370,6 +1371,7 @@ const Dashboard = () => {
         
         setLeadsData(workingLeads);
         if (activeTab === 'leads') setIsLeadsLoading(false);
+        setIsDashboardLoaded(true);
     };
 
     // Gem en fakturarekord på sagen (historik + faktureret beløb). Bruges af både
@@ -2208,6 +2210,21 @@ const Dashboard = () => {
             </div>
         );
     };
+
+    if (!isDashboardLoaded) {
+        return (
+            <div style={{textAlign: 'center', padding: '100px', height: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
+                <div className="flex flex-col items-center gap-2">
+                    <h3 className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-200">
+                        Bison Frame
+                    </h3>
+                    <p className="text-[10px] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase animate-pulse">
+                        Indlæser arbejdsområdet...
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={`dashboard-layout dashboard-tab-${activeTab} ${['worker', 'apprentice', 'sales'].includes(effectiveRole) && activeTab === 'overview' ? 'worker-overview-active' : ''}`}>
