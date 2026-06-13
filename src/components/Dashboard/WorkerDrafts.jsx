@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FileEdit, Plus, Send, Clock, User, Trash2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { FileEdit, Plus, Send, Clock, User, Trash2, Eye, EyeOff, AlertTriangle, CheckCircle, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CreateLeadSelector from './CreateLeadSelector';
 import Wizard from '../Wizard/Wizard';
