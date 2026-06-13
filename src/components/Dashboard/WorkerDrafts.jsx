@@ -6,7 +6,7 @@ import CreateLeadSelector from './CreateLeadSelector';
 import Wizard from '../Wizard/Wizard';
 import CustomProjectCreator from './CustomProjectCreator';
 
-const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
+const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeadsData }) => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [createMode, setCreateMode] = useState(null); // 'classic' or 'custom'
     const [selectedDraft, setSelectedDraft] = useState(null);
@@ -194,7 +194,7 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                     <div>
                                         <span style={{ display: 'block', fontSize: '0.85rem', color: '#64748b' }}>Kategori</span>
-                                        <span style={{ fontWeight: '500', color: '#1e293b' }}>{selectedDraft.project_category}</span>
+                                        <span style={{ fontWeight: '500', color: '#1e293b', textTransform: 'capitalize' }}>{selectedDraft.project_category === 'special' ? 'Skræddersyet Opgave' : selectedDraft.project_category}</span>
                                     </div>
                                     <div>
                                         <span style={{ display: 'block', fontSize: '0.85rem', color: '#64748b' }}>Status</span>
@@ -203,17 +203,88 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
                                 </div>
                             </div>
 
+                            {selectedDraft.raw_data && selectedDraft.raw_data.calc_data && (
+                                <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                                    <h5 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: '#334155', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Økonomi & Tidsforbrug</h5>
+                                    
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px dashed #e2e8f0' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b' }}>
+                                            <Clock size={16} /> Estimeret arbejdstid
+                                        </div>
+                                        <span style={{ fontWeight: '600', color: '#1e293b' }}>
+                                            {selectedDraft.raw_data.calc_data.laborHours || 0} timer
+                                        </span>
+                                    </div>
+
+                                    {selectedDraft.raw_data.calc_data.materialCost !== undefined && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px dashed #e2e8f0' }}>
+                                            <span style={{ color: '#64748b' }}>Estimeret materialepris</span>
+                                            <span style={{ fontWeight: '600', color: '#1e293b' }}>
+                                                {selectedDraft.raw_data.calc_data.materialCost.toLocaleString('da-DK')} kr.
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {selectedDraft.raw_data.details && selectedDraft.raw_data.details.phases && (
+                                        <div style={{ marginTop: '20px' }}>
+                                            <h6 style={{ margin: '0 0 12px 0', color: '#475569', fontSize: '0.9rem' }}>Faser:</h6>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {selectedDraft.raw_data.details.phases.map((phase, idx) => (
+                                                    <div key={idx} style={{ padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '0.9rem', color: '#334155' }}>
+                                                        <strong>{phase.name}</strong>
+                                                        {phase.materials && phase.materials.length > 0 && (
+                                                            <div style={{ marginTop: '4px', fontSize: '0.8rem', color: '#64748b' }}>
+                                                                {phase.materials.length} materialer tilknyttet
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {selectedDraft.raw_data.answers && Object.keys(selectedDraft.raw_data.answers).length > 0 && (
+                                        <div style={{ marginTop: '20px' }}>
+                                            <h6 style={{ margin: '0 0 12px 0', color: '#475569', fontSize: '0.9rem' }}>Besvarelser:</h6>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {Object.entries(selectedDraft.raw_data.answers).slice(0, 5).map(([key, val], idx) => (
+                                                    <div key={idx} style={{ fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+                                                        <span style={{ color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{key}</span>
+                                                        <span style={{ color: '#1e293b', fontWeight: '500', whiteSpace: 'nowrap' }}>
+                                                            {typeof val === 'boolean' ? (val ? 'Ja' : 'Nej') : (typeof val === 'object' ? 'Flere valgt' : String(val))}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                         </div>
 
                         <div style={{ padding: isMobile ? '16px 20px calc(env(safe-area-inset-bottom) + 16px)' : '24px 32px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', flexDirection: isMobile ? 'column-reverse' : 'row', gap: isMobile ? '12px' : '16px', justifyContent: 'flex-end' }}>
-                            <button
-                                onClick={() => handleDeleteDraft(selectedDraft.id)}
-                                style={{ padding: isMobile ? '16px 20px' : '12px 20px', width: isMobile ? '100%' : 'auto', justifyContent: 'center', background: '#fff', border: '1px solid #ef4444', borderRadius: isMobile ? '12px' : '10px', color: '#ef4444', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fff'}
-                            >
-                                <Trash2 size={18} /> Slet Kladde
-                            </button>
+                            <div style={{ display: 'flex', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
+                                <button
+                                    onClick={() => handleDeleteDraft(selectedDraft.id)}
+                                    style={{ padding: isMobile ? '16px 20px' : '12px 20px', width: '100%', justifyContent: 'center', background: '#fff', border: '1px solid #ef4444', borderRadius: isMobile ? '12px' : '10px', color: '#ef4444', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+                                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fff'}
+                                >
+                                    <Trash2 size={18} /> Slet
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const mode = selectedDraft.project_category === 'special' ? 'custom' : 'classic';
+                                        setCreateMode(mode);
+                                    }}
+                                    style={{ padding: isMobile ? '16px 20px' : '12px 20px', width: '100%', justifyContent: 'center', background: '#fff', border: '1px solid #e2e8f0', borderRadius: isMobile ? '12px' : '10px', color: '#334155', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+                                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fff'}
+                                >
+                                    <FileEdit size={18} /> Rediger
+                                </button>
+                            </div>
 
                             {selectedDraft.status === 'Kladde' && (
                                 <button
@@ -266,9 +337,10 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
                             
                             {createMode === 'classic' && (
                                 <Wizard 
-                                    carpenter={profile} // profile is worker, so pass them
+                                    carpenter={carpenterProfile || profile} 
                                     isManualCreation={true} 
                                     draftCreator={profile}
+                                    initialData={selectedDraft}
                                     onComplete={async (data) => {
                                         setIsCreateModalOpen(false);
                                         setCreateMode(null);
@@ -284,9 +356,10 @@ const WorkerDrafts = ({ profile, supabase, leadsData, setLeadsData }) => {
 
                             {createMode === 'custom' && (
                                 <CustomProjectCreator
-                                    carpenter={profile}
+                                    carpenter={carpenterProfile || profile}
                                     isMobile={isMobile}
                                     draftCreator={profile}
+                                    initialData={selectedDraft}
                                     onCancel={() => {
                                         requestConfirm('Afbryd Oprettelse', 'Er du sikker på, at du vil afbryde?', 'warning', () => {
                                             setIsCreateModalOpen(false);

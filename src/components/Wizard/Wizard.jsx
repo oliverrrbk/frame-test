@@ -13,7 +13,7 @@ import { fetchCalibrationFactor } from '../../utils/calibration';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
-const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTestMode = false, testSettings = null, testMaterials = null, draftCreator = null }) => {
+const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTestMode = false, testSettings = null, testMaterials = null, draftCreator = null, initialData = null }) => {
     const [projectData, setProjectData] = useState({
         category: null,
         details: {},
@@ -21,6 +21,61 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
     const [projects, setProjects] = useState([]);
     const [currentStep, setCurrentStep] = useState(1);
     const [searchParams, setSearchParams] = useSearchParams();
+
+    React.useEffect(() => {
+        if (initialData && initialData.raw_data) {
+            const parsed = initialData.raw_data;
+            if (parsed.projects && parsed.projects.length > 0) {
+                setProjects(parsed.projects.filter(p => p.id !== 'active'));
+                const activeProject = parsed.projects.find(p => p.id === 'active') || parsed;
+                setProjectData({
+                    category: activeProject.category,
+                    details: activeProject.details || {},
+                    leadId: initialData.id,
+                    customerDetails: parsed.customerDetails || {
+                        fullName: initialData.customer_name || '',
+                        email: initialData.customer_email || '',
+                        phone: initialData.customer_phone || '',
+                        street: initialData.customer_address ? initialData.customer_address.split(',')[0] : '',
+                    }
+                });
+            } else {
+                setProjectData({
+                    category: parsed.category || (initialData.project_category === 'Specialopgave' ? 'special' : null),
+                    details: parsed.details || parsed.answers || {},
+                    leadId: initialData.id,
+                    customerDetails: parsed.customerDetails || {
+                        fullName: initialData.customer_name || '',
+                        email: initialData.customer_email || '',
+                        phone: initialData.customer_phone || '',
+                        street: initialData.customer_address ? initialData.customer_address.split(',')[0] : '',
+                    }
+                });
+                
+                if (!parsed.category && initialData.project_category) {
+                    const categoryMap = {
+                        'Nye Vinduer': 'windows',
+                        'Nye Døre': 'doors',
+                        'Nyt Gulv': 'floor',
+                        'Træterrasse': 'terrace',
+                        'Tagprojekt': 'roof',
+                        'Nyt Køkken': 'kitchen',
+                        'Nye Lofter': 'ceilings',
+                        'Ny Facadebeklædning': 'facades',
+                        'Tilbygning': 'extensions',
+                        'Anneks': 'annex',
+                        'Carport': 'carport',
+                        'Hegn': 'fence'
+                    };
+                    const cat = categoryMap[initialData.project_category];
+                    if (cat) {
+                        setProjectData(prev => ({ ...prev, category: cat }));
+                    }
+                }
+            }
+            goToStep(2);
+        }
+    }, [initialData]);
 
     const handleAddAnotherProject = (nextCategory = null) => {
         if (!isStep2Valid()) {

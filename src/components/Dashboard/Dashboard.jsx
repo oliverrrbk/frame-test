@@ -2735,6 +2735,7 @@ const Dashboard = () => {
                     {activeTab === 'worker_drafts' && ['worker', 'sales'].includes(effectiveRole) && (
                         <WorkerDrafts
                             profile={myProfile}
+                            carpenterProfile={carpenterProfile}
                             supabase={supabase}
                             leadsData={leadsData}
                             setLeadsData={setLeadsData}
@@ -2777,9 +2778,9 @@ const Dashboard = () => {
                     )}
                     
                     {activeTab === 'account_settings' && myProfile && (
-                        <div className="space-y-8" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        <div className="space-y-8" style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', overflowY: 'auto', padding: '24px' }}>
                             {/* Vis kun firma-indstillinger hvis brugeren er ejer af firmaet (admin) */}
-                            {myProfile.role === 'admin' && carpenterProfile && (
+                            {myProfile.role === 'admin' && carpenterProfile ? (
                                 <AccountSettingsView 
                                     carpenterProfile={carpenterProfile}
                                     setCarpenterProfile={setCarpenterProfile}
@@ -2793,6 +2794,27 @@ const Dashboard = () => {
                                     isUploadingPortrait={isUploadingPortrait}
                                     session={session}
                                 />
+                            ) : (
+                                <div className="settings-card" style={{ maxWidth: '600px', margin: '60px auto' }}>
+                                    <div className="card-body" style={{ padding: '40px', textAlign: 'center' }}>
+                                        <div style={{ width: '64px', height: '64px', background: '#f8fafc', color: '#64748b', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 20px', border: '1px solid #e2e8f0' }}>
+                                            <Lock size={32} />
+                                        </div>
+                                        <h2 style={{ fontSize: '24px', color: '#1a1a1a', marginBottom: '16px' }}>Firma Indstillinger Låst</h2>
+                                        <p style={{ color: '#6b7280', fontSize: '16px', lineHeight: '1.6', marginBottom: '32px' }}>
+                                            Du har ikke administrator-rettigheder til at se eller ændre firmaets indstillinger.<br/><br/>
+                                            Kontakt din mester (admin), hvis der er oplysninger, API-nøgler eller priser, der skal rettes for firmaet.
+                                        </p>
+                                        <button 
+                                            onClick={() => setActiveTab('profile')}
+                                            style={{ background: '#3b82f6', color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' }}
+                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                                        >
+                                            Gå tilbage til Min Profil
+                                        </button>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     )}

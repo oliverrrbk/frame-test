@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient';
 import { MATERIAL_INDEX } from '../../prices';
 import toast from 'react-hot-toast';
 
-const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = null, isMobile = false }) => {
+const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = null, isMobile = false, initialData = null }) => {
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessingAI, setIsProcessingAI] = useState(false);
     const [aiSummary, setAiSummary] = useState('');
@@ -62,13 +62,36 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
     const [suggestions, setSuggestions] = useState([]);
 
     useEffect(() => {
-        if (!draftCreator && !hasLocalDraft) {
+        if (!draftCreator && !hasLocalDraft && !initialData) {
             const draftData = {
                 customerInfo, projectTitle, projectNotes, hourlyRate, laborType, fixedLaborPrice, globalCosts, phases, aiSummary, viewMode, notepadText
             };
             localStorage.setItem('custom_project_draft', JSON.stringify(draftData));
         }
-    }, [customerInfo, projectTitle, projectNotes, hourlyRate, laborType, fixedLaborPrice, globalCosts, phases, aiSummary, viewMode, notepadText, draftCreator, hasLocalDraft]);
+    }, [customerInfo, projectTitle, projectNotes, hourlyRate, laborType, fixedLaborPrice, globalCosts, phases, aiSummary, viewMode, notepadText, draftCreator, hasLocalDraft, initialData]);
+
+    useEffect(() => {
+        if (initialData && initialData.raw_data) {
+            const parsed = initialData.raw_data;
+            if (initialData.customer_name) {
+                setCustomerInfo({
+                    name: initialData.customer_name || '',
+                    address: initialData.customer_address ? initialData.customer_address.split(',')[0] : '',
+                    zip: '',
+                    city: '',
+                    phone: initialData.customer_phone || '',
+                    email: initialData.customer_email || ''
+                });
+            }
+            if (parsed.details?.title) setProjectTitle(parsed.details.title);
+            if (parsed.details?.notes) setProjectNotes(parsed.details.notes);
+            if (parsed.calc_data?.hourlyRate) setHourlyRate(parsed.calc_data.hourlyRate);
+            if (parsed.details?.phases) setPhases(parsed.details.phases);
+            if (parsed.details?.ai_summary) setAiSummary(parsed.details.ai_summary);
+            
+            setViewMode('editor');
+        }
+    }, [initialData]);
 
     const restoreDraft = () => {
         const draft = localStorage.getItem('custom_project_draft');
@@ -547,16 +570,25 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
         };
 
         try {
-            toast.loading("Opretter skræddersyet sag...", { id: "save_custom" });
-            const { data, error } = await supabase.from('leads').insert([payload]).select();
-            if (error) throw error;
+            toast.loading(initialData ? "Opdaterer sagen..." : "Opretter skræddersyet sag...", { id: "save_custom" });
+            
+            let queryData;
+            if (initialData && initialData.id) {
+                const { data, error } = await supabase.from('leads').update(payload).eq('id', initialData.id).select();
+                if (error) throw error;
+                queryData = data;
+            } else {
+                const { data, error } = await supabase.from('leads').insert([payload]).select();
+                if (error) throw error;
+                queryData = data;
+            }
             
             localStorage.removeItem('custom_project_draft');
-            toast.success("Sagen er oprettet!", { id: "save_custom" });
-            if (onComplete) onComplete(data[0]);
+            toast.success(initialData ? "Sagen er opdateret!" : "Sagen er oprettet!", { id: "save_custom" });
+            if (onComplete) onComplete(queryData[0]);
         } catch (err) {
             console.error("Fejl:", err);
-            toast.error("Kunne ikke oprette sagen: " + err.message, { id: "save_custom" });
+            toast.error((initialData ? "Kunne ikke opdatere sagen: " : "Kunne ikke oprette sagen: ") + err.message, { id: "save_custom" });
         }
     };
 
