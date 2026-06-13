@@ -119,8 +119,10 @@ export default async function handler(req, res) {
         const maxNum = validNumbers.length > 0 ? Math.max(...validNumbers) : 1000;
         const autoLonnummer = (maxNum + 1).toString();
 
-        // 2. Opret brugeren i carpenters tabellen så de dukker op i oversigten med det samme
-        const { error: dbError } = await supabase.from('carpenters').insert([{
+        // 2. Opret/opdatér brugeren i carpenters tabellen så de dukker op i oversigten med det
+        //    samme — og så lønnummeret ALTID bliver sat, også hvis en database-trigger allerede
+        //    har oprettet rækken ved auth-signup (upsert i stedet for insert).
+        const { error: dbError } = await supabase.from('carpenters').upsert([{
             id: authData.user.id,
             email: email,
             owner_name: name,
@@ -130,10 +132,10 @@ export default async function handler(req, res) {
             company_name: 'Medarbejder',
             raw_data: { lonnummer: autoLonnummer },
             requires_password_change: true
-        }]);
+        }], { onConflict: 'id' });
 
         if (dbError) {
-            console.error("DB Insert Error:", dbError);
+            console.error("DB Upsert Error:", dbError);
             // Ignorerer fejlen her for ikke at blokere, men den burde gå igennem
         }
 

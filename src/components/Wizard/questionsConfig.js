@@ -584,14 +584,14 @@ export const QUESTIONS = {
             condition: (d) => d.doorStyle === 'Hoveddør (Udvendig)',
             tooltip: 'Vælg det ønskede materiale til din hoveddør. Træ/Alu er meget populært pga. minimal vedligeholdelse udvendigt.',
             options: [
-                { label: 'Massivt træ', img: '/images/door_solid_wood_1776258727433.png' },
-                { label: 'Massivt træ og glas', img: '/images/door_solid_wood_glass.png' },
-                { label: 'Finér', img: '/images/door_veneer_1776258742752.png' },
-                { label: 'PVC', img: '/images/door_pvc_solid.png' },
-                { label: 'PVC og glas', img: '/images/door_pvc_glass.png' },
-                { label: 'Aluminium', img: '/images/door_aluminum_1776258935245.png' },
-                { label: 'Træ / Alu (Kombination)', img: '/images/door_wood_alu.png' },
-                { label: 'Træ / Alu med glas', img: '/images/door_wood_alu_glass.png' }
+                { label: 'Massivt træ', img: '/images/door_front_solid_wood_danish_v2.png' },
+                { label: 'Massivt træ og glas', img: '/images/door_front_solid_wood_glass_danish_v2.png' },
+                { label: 'Finér', img: '/images/door_front_veneer_danish_v2.png' },
+                { label: 'PVC', img: '/images/door_front_pvc_solid_danish_v2.png' },
+                { label: 'PVC og glas', img: '/images/door_front_pvc_glass_danish_v2.png' },
+                { label: 'Aluminium', img: '/images/door_front_aluminium_danish_v2.png' },
+                { label: 'Træ / Alu (Kombination)', img: '/images/door_front_wood_alu_danish_v2.png' },
+                { label: 'Træ / Alu med glas', img: '/images/door_front_wood_alu_glass_danish_v2.png' }
             ] 
         },
         { 

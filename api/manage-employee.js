@@ -124,30 +124,53 @@ export default async function handler(req, res) {
         }
 
         if (action === 'delete') {
-            const client = HAS_SERVICE_ROLE ? supabase : userSupabase;
+            // Sletning af et login kan kun ske med service-role. Uden den ville vi kun
+            // kunne fjerne personen fra listen, men efterlade både login og persondata
+            // (= GDPR-brud). Derfor er det et hårdt krav, og vi melder klart hvis det mangler.
+            if (!HAS_SERVICE_ROLE) {
+                return res.status(400).json({ error: 'Sletning er ikke konfigureret korrekt på serveren: SUPABASE_SERVICE_ROLE_KEY mangler (sættes som miljøvariabel på Vercel). Indtil den er sat, kan login og persondata ikke fjernes forsvarligt.' });
+            }
 
-            // Prøv først at slette helt fra databasen
-            let { data, error: dbErr } = await client.from('carpenters').delete().eq('id', employeeId).select('id');
-            
-            // Hvis sletning fejler (f.eks. pga Foreign Key constraint eller RLS afvisning), lav et Soft Delete
-            if (dbErr || !data || data.length === 0) {
-                const { data: softData, error: softErr } = await client.from('carpenters').update({ 
-                    company_id: null, 
-                    role: 'inactive', 
-                    is_active: false 
-                }).eq('id', employeeId).select('id');
-                
-                if (softErr || !softData || softData.length === 0) {
-                    const failReason = dbErr ? dbErr.message : 'Sikkerhedssystemet afviste handlingen. Er Service Role Key sat korrekt op på Vercel?';
-                    return res.status(400).json({ error: `Sletning fejlede. Årsag: ${failReason}` });
+            // 1. Forsøg fuld sletning af medarbejder-rækken.
+            const { data: hardData, error: hardErr } = await supabase
+                .from('carpenters').delete().eq('id', employeeId).select('id');
+
+            let mode = 'deleted';
+
+            // 2. Hvis fuld sletning afvises (typisk fremmednøgle til løn-/timehistorik der
+            //    skal bevares lovpligtigt), anonymiserer vi i stedet personen (GDPR):
+            //    persondata fjernes, men lønnummer + opgavehistorik på sager bevares.
+            if (hardErr || !hardData || hardData.length === 0) {
+                const { data: tgt } = await supabase
+                    .from('carpenters').select('raw_data').eq('id', employeeId).single();
+
+                if (tgt) {
+                    const keptLonnummer = tgt?.raw_data?.lonnummer || null;
+                    const { error: anonErr } = await supabase.from('carpenters').update({
+                        owner_name: 'Slettet medarbejder',
+                        email: `slettet-${employeeId}@slettet.invalid`,
+                        phone: null,
+                        avatar_url: null,
+                        company_id: null,
+                        role: 'inactive',
+                        is_active: false,
+                        requires_password_change: false,
+                        // Beholder kun lønnummer (lovpligtig løn-/timehistorik) — alt øvrigt persondata fjernes.
+                        raw_data: keptLonnummer ? { lonnummer: keptLonnummer } : {}
+                    }).eq('id', employeeId).select('id');
+
+                    if (anonErr) {
+                        return res.status(400).json({ error: `Kunne ikke fjerne medarbejderen: ${anonErr.message}` });
+                    }
+                    mode = 'anonymized';
                 }
+                // tgt === null: rækken er allerede væk — betragtes som slettet.
             }
 
-            if (HAS_SERVICE_ROLE) {
-                await supabase.auth.admin.deleteUser(employeeId).catch(() => {});
-            }
+            // 3. Fjern selve login'et, så personen ikke kan logge ind igen.
+            await supabase.auth.admin.deleteUser(employeeId).catch(() => {});
 
-            return res.status(200).json({ success: true });
+            return res.status(200).json({ success: true, mode });
         }
 
         return res.status(400).json({ error: 'Ukendt handling.' });
