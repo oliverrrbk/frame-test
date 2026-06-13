@@ -554,7 +554,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                         // Worker metrics
                                         const workerActive = assignedLeads.filter(l => l.status === 'Bekræftet opgave');
                                         const workerCompleted = assignedLeads.filter(l => l.status === 'Historik');
-                                        const isSalesOrAdmin = ['sales', 'admin'].includes(member.role);
+                                        const isAdminOnly = ['admin'].includes(member.role);
 
                                         return (
                                             <div key={member.id} className="flex flex-col" style={{ borderBottom: '1px solid var(--border-light)' }}>
@@ -614,7 +614,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                             style={{ overflow: 'hidden', background: 'var(--surface-bg)', borderTop: '1px solid var(--border-light)' }}
                                                         >
                                                             <div className="p-6 pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                                {isSalesOrAdmin ? (
+                                                                {isAdminOnly ? (
                                                                     <>
                                                                         <div className="glass-panel" style={{ padding: '16px' }}>
                                                                             <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
