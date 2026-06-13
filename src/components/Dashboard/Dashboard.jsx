@@ -1006,7 +1006,21 @@ const Dashboard = () => {
                 ? metadata.company_name.toLowerCase().replace(/[^a-z0-9æøå-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') 
                 : 'tomrer';
             const randomSuffix = Math.floor(Math.random() * 10000);
-            
+            let autoLonnummer = null;
+            if (metadata.role && metadata.role !== 'admin' && metadata.company_id) {
+                const { data: existingTeam } = await supabase.from('carpenters').select('raw_data').eq('company_id', metadata.company_id);
+                const { data: adminProfile } = await supabase.from('carpenters').select('raw_data').eq('id', metadata.company_id).single();
+                
+                const existingNumbers = [
+                    ...(existingTeam || []).map(m => m.raw_data?.lonnummer),
+                    adminProfile?.raw_data?.lonnummer
+                ].filter(Boolean);
+                
+                const validNumbers = existingNumbers.map(Number).filter(n => !isNaN(n));
+                const maxNum = validNumbers.length > 0 ? Math.max(...validNumbers) : 1000;
+                autoLonnummer = (maxNum + 1).toString();
+            }
+
             const newProfile = {
                 id: targetId,
                 slug: `${baseSlug}-${randomSuffix}`,
@@ -1019,6 +1033,7 @@ const Dashboard = () => {
                 role: metadata.role || 'admin',
                 company_id: metadata.company_id || null,
                 tier: metadata.tier || 'standard',
+                raw_data: autoLonnummer ? { lonnummer: autoLonnummer } : {},
                 has_completed_onboarding: false,
                 requires_password_change: metadata.role && metadata.role !== 'admin' ? true : false,
                 success_message: 'Tusind tak for din henvendelse! Vi går tilbuddet igennem hurtigst muligt.'

@@ -8,19 +8,19 @@ import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
 import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
 
 const roles = [
-    { value: 'sales', label: 'Projektleder', desc: 'Ser kun egne leads og opretter tilbud.' },
-    { value: 'worker', label: 'Tømrersvend', desc: 'Kan registrere timer og se checklister.' },
-    { value: 'apprentice', label: 'Tømrerlærling', desc: 'Registrerer egne timer på sager.' },
-    { value: 'accountant', label: 'Bogholder / Sekretær', desc: 'Godkender timer og ser økonomisk bogføring.' },
-    { value: 'admin', label: 'Mester (Administrator)', desc: 'Fuld adgang til priser og systemindstillinger.' }
+    { value: 'sales', label: 'Projektleder', desc: 'Kan styre tildelte sager, oprette ordrer og se materialepriser. (Kan ikke ændre andres timer).' },
+    { value: 'worker', label: 'Svend', desc: 'Kan se tildelte sager, registrere timer, se materialeforbrug (uden pris) og tilføje billeder.' },
+    { value: 'apprentice', label: 'Lærling', desc: 'Kan kun registrere egne timer og uploade billeder. Ingen adgang til sagsdetaljer eller priser.' },
+    { value: 'accountant', label: 'Bogholder', desc: 'Har adgang til bekræftede sager for at håndtere fakturering, bilag og integrationer (e-conomic).' },
+    { value: 'admin', label: 'Mester (Admin)', desc: 'Fuld adgang til alt: økonomi, systemindstillinger, priser og fjernelse af brugere.' }
 ];
 
 const getRoleLabel = (role) => {
     switch (role) {
         case 'admin': return 'Mester';
         case 'sales': return 'Projektleder';
-        case 'worker': return 'Tømrersvend';
-        case 'apprentice': return 'Tømrerlærling';
+        case 'worker': return 'Svend';
+        case 'apprentice': return 'Lærling';
         case 'subcontractor': return 'Underleverandør';
         case 'accountant': return 'Bogholder';
         default: return role;
@@ -34,6 +34,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
     const [isInviting, setIsInviting] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
+    const [newNoteText, setNewNoteText] = useState('');
 
     const [inviteData, setInviteData] = useState({
         name: '',
@@ -191,6 +192,24 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             console.error("Kunne ikke opdatere feriesaldo:", error);
             fetchTeam();
         }
+    };
+
+    const handleAddNote = async (employeeId, currentRawData) => {
+        if (!newNoteText.trim()) return;
+        const note = { id: crypto.randomUUID(), date: new Date().toISOString(), text: newNoteText.trim() };
+        const updatedNotes = [...(currentRawData.hr_notes || []), note];
+        const newRawData = { ...currentRawData, hr_notes: updatedNotes };
+        
+        setTeam(team.map(m => m.id === employeeId ? { ...m, raw_data: newRawData } : m));
+        setNewNoteText('');
+        await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', employeeId);
+    };
+
+    const handleDeleteNote = async (employeeId, currentRawData, noteId) => {
+        const updatedNotes = (currentRawData.hr_notes || []).filter(n => n.id !== noteId);
+        const newRawData = { ...currentRawData, hr_notes: updatedNotes };
+        setTeam(team.map(m => m.id === employeeId ? { ...m, raw_data: newRawData } : m));
+        await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', employeeId);
     };
 
     // Lokal redigering mens man taster (gemmes ikke endnu)
@@ -532,6 +551,11 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                             return total + mat + labor;
                                         }, 0);
 
+                                        // Worker metrics
+                                        const workerActive = assignedLeads.filter(l => l.status === 'Bekræftet opgave');
+                                        const workerCompleted = assignedLeads.filter(l => l.status === 'Historik');
+                                        const isSalesOrAdmin = ['sales', 'admin'].includes(member.role);
+
                                         return (
                                             <div key={member.id} className="flex flex-col" style={{ borderBottom: '1px solid var(--border-light)' }}>
                                                 <div 
@@ -590,45 +614,75 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                             style={{ overflow: 'hidden', background: 'var(--surface-bg)', borderTop: '1px solid var(--border-light)' }}
                                                         >
                                                             <div className="p-6 pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                                <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                    <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                        <Target size={16} color="#3b82f6" />
-                                                                        <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Samlet Tildelt</h5>
-                                                                    </div>
-                                                                    <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{assignedLeads.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>leads</span></p>
-                                                                </div>
+                                                                {isSalesOrAdmin ? (
+                                                                    <>
+                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
+                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                                                                <Target size={16} color="#3b82f6" />
+                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Samlet Tildelt</h5>
+                                                                            </div>
+                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{assignedLeads.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>leads</span></p>
+                                                                        </div>
 
-                                                                <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                    <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                        <TrendingUp size={16} color="#10b981" />
-                                                                        <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Lukkerate</h5>
-                                                                    </div>
-                                                                    <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981', margin: 0 }}>
-                                                                        {wonLeads.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>vundne</span>
-                                                                    </p>
-                                                                    <p style={{ fontSize: '0.75rem', color: '#ef4444', margin: '4px 0 0' }}>{lostLeads.length} tabte</p>
-                                                                </div>
+                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
+                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                                                                <TrendingUp size={16} color="#10b981" />
+                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Lukkerate</h5>
+                                                                            </div>
+                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981', margin: 0 }}>
+                                                                                {wonLeads.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>vundne</span>
+                                                                            </p>
+                                                                            <p style={{ fontSize: '0.75rem', color: '#ef4444', margin: '4px 0 0' }}>{lostLeads.length} tabte</p>
+                                                                        </div>
 
-                                                                <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                    <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                        <DollarSign size={16} color="#8b5cf6" />
-                                                                        <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Vundet Omsætning</h5>
-                                                                    </div>
-                                                                    <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#8b5cf6', margin: 0 }}>
-                                                                        {revenueWon.toLocaleString('da-DK')} <span style={{ fontSize: '0.875rem', fontWeight: 'normal' }}>kr.</span>
-                                                                    </p>
-                                                                </div>
+                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
+                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                                                                <DollarSign size={16} color="#8b5cf6" />
+                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Vundet Omsætning</h5>
+                                                                            </div>
+                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#8b5cf6', margin: 0 }}>
+                                                                                {revenueWon.toLocaleString('da-DK')} <span style={{ fontSize: '0.875rem', fontWeight: 'normal' }}>kr.</span>
+                                                                            </p>
+                                                                        </div>
 
-                                                                <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                    <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                        <Briefcase size={16} color="#f59e0b" />
-                                                                        <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Aktive Tilbud</h5>
-                                                                    </div>
-                                                                    <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b', margin: 0 }}>
-                                                                        {revenueActive.toLocaleString('da-DK')} <span style={{ fontSize: '0.875rem', fontWeight: 'normal' }}>kr.</span>
-                                                                    </p>
-                                                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>{activeLeads.length} afventende</p>
-                                                                </div>
+                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
+                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                                                                <Briefcase size={16} color="#f59e0b" />
+                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Aktive Tilbud</h5>
+                                                                            </div>
+                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b', margin: 0 }}>
+                                                                                {revenueActive.toLocaleString('da-DK')} <span style={{ fontSize: '0.875rem', fontWeight: 'normal' }}>kr.</span>
+                                                                            </p>
+                                                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>{activeLeads.length} afventende</p>
+                                                                        </div>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
+                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                                                                <Target size={16} color="#3b82f6" />
+                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Samlet Tildelt</h5>
+                                                                            </div>
+                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{assignedLeads.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>opgaver</span></p>
+                                                                        </div>
+
+                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
+                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                                                                <Briefcase size={16} color="#f59e0b" />
+                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Aktive Opgaver</h5>
+                                                                            </div>
+                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b', margin: 0 }}>{workerActive.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>i gang</span></p>
+                                                                        </div>
+
+                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
+                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                                                                <TrendingUp size={16} color="#10b981" />
+                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Gennemført</h5>
+                                                                            </div>
+                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981', margin: 0 }}>{workerCompleted.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>afsluttet</span></p>
+                                                                        </div>
+                                                                    </>
+                                                                )}
                                                             </div>
 
                                                             {/* ROLLE (kun admin/Mester kan ændre) */}
@@ -670,44 +724,74 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                                 )}
                                                                             </AnimatePresence>
                                                                         </div>
+                                                                        <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(124, 58, 237, 0.05)', border: '1px solid rgba(124, 58, 237, 0.2)', borderRadius: '12px' }}>
+                                                                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                                                                                <strong>Adgang:</strong> {roles.find(r => r.value === member.role)?.desc}
+                                                                            </p>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             )}
 
-                                                            {/* INDIVIDUELLE RETTIGHEDER */}
-                                                            <div className="px-6 pb-6">
-                                                                <div className="glass-panel" style={{ padding: '24px' }}>
-                                                                    <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
-                                                                        <Shield size={18} color="#3b82f6" />
-                                                                        <h5 style={{ fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Individuelle Adgangsrettigheder</h5>
-                                                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>(Overskriver standard-rolle)</span>
-                                                                    </div>
-                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                        {[
-                                                                            { key: 'view_all_leads', label: 'Se ALLE firmaets leads', desc: 'Hvis slået fra, ser projektledere kun egne, og bogholdere kun bekræftede.' },
-                                                                            { key: 'view_pricing', label: 'Adgang til Prisberegner', desc: 'Giver adgang til avancerede indstillinger og avancer.' },
-                                                                            { key: 'view_materials', label: 'Adgang til Materialer', desc: 'Kan oprette og redigere materialer og priser.' },
-                                                                            { key: 'view_integrations', label: 'Integrationer', desc: 'Må opsætte og bruge e-conomic / Dinero integrationer.' }
-                                                                        ].map(perm => {
-                                                                            const isEnabled = !!member.permissions?.[perm.key];
-                                                                            return (
-                                                                                <div key={perm.key} className="flex items-start gap-3">
-                                                                                    <div 
-                                                                                        onClick={(e) => { e.stopPropagation(); handlePermissionToggle(member.id, member.permissions || {}, perm.key); }}
-                                                                                        style={{ width: '40px', height: '20px', borderRadius: '9999px', padding: '2px', cursor: 'pointer', transition: 'background 0.2s', background: isEnabled ? '#3b82f6' : 'var(--border-light)', flexShrink: 0, marginTop: '2px' }}
-                                                                                    >
-                                                                                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', transform: isEnabled ? 'translateX(20px)' : 'translateX(0)', transition: 'transform 0.2s' }} />
+                                                            {/* HR & MUS NOTER */}
+                                                            {isAdmin && (
+                                                                <div className="px-6 pb-6">
+                                                                    <div className="glass-panel" style={{ padding: '24px' }}>
+                                                                        <div className="flex items-center justify-between gap-2 mb-4" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Briefcase size={18} color="#10b981" />
+                                                                                <h5 style={{ fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Mesterens Noter (HR & MUS)</h5>
+                                                                            </div>
+                                                                            <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontWeight: '600' }}>Skjult for medarbejder</span>
+                                                                        </div>
+                                                                        
+                                                                        <div className="flex flex-col gap-3 mb-4">
+                                                                            {(member.raw_data?.hr_notes || []).length === 0 ? (
+                                                                                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>Ingen noter endnu.</p>
+                                                                            ) : (
+                                                                                (member.raw_data?.hr_notes || []).map(note => (
+                                                                                    <div key={note.id} style={{ padding: '12px', background: 'rgba(255,255,255,0.6)', borderRadius: '12px', border: '1px solid var(--border-light)', position: 'relative', group: 'true' }} className="group hover:border-gray-300 transition-colors">
+                                                                                        <div className="flex justify-between items-start gap-4">
+                                                                                            <div>
+                                                                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0 0 4px', fontWeight: '500' }}>
+                                                                                                    {new Date(note.date).toLocaleDateString('da-DK', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                                                                </p>
+                                                                                                <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0, whiteSpace: 'pre-wrap' }}>{note.text}</p>
+                                                                                            </div>
+                                                                                            <button 
+                                                                                                onClick={(e) => { e.stopPropagation(); handleDeleteNote(member.id, member.raw_data || {}, note.id); }}
+                                                                                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                                style={{ padding: '6px', color: '#ef4444', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)' }}
+                                                                                                title="Slet note"
+                                                                                            >
+                                                                                                <Trash2 size={14} />
+                                                                                            </button>
+                                                                                        </div>
                                                                                     </div>
-                                                                                    <div>
-                                                                                        <p style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-primary)', margin: '0 0 2px' }}>{perm.label}</p>
-                                                                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>{perm.desc}</p>
-                                                                                    </div>
-                                                                                </div>
-                                                                            );
-                                                                        })}
+                                                                                ))
+                                                                            )}
+                                                                        </div>
+
+                                                                        <div className="flex gap-2">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={newNoteText}
+                                                                                onChange={(e) => setNewNoteText(e.target.value)}
+                                                                                onKeyDown={(e) => { if (e.key === 'Enter') handleAddNote(member.id, member.raw_data || {}); }}
+                                                                                placeholder="Skriv en ny note..."
+                                                                                style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-bg)', outline: 'none', fontSize: '0.9rem' }}
+                                                                            />
+                                                                            <button 
+                                                                                onClick={() => handleAddNote(member.id, member.raw_data || {})}
+                                                                                disabled={!newNoteText.trim()}
+                                                                                style={{ padding: '10px 16px', borderRadius: '10px', background: newNoteText.trim() ? '#10b981' : 'var(--border-light)', color: newNoteText.trim() ? '#fff' : 'var(--text-muted)', border: 'none', fontWeight: '600', cursor: newNoteText.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}
+                                                                            >
+                                                                                Tilføj
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
+                                                            )}
 
                                                             {/* PERSONALE ADMINISTRATION */}
                                                             <div className="px-6 pb-6">
