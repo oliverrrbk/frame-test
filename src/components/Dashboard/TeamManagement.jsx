@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
-import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin, X, Clock } from 'lucide-react';
+import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin, X, Clock, Hash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
@@ -626,8 +626,14 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                 </span>
                                                             </h4>
                                                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                                                                <span className="flex items-center gap-1"><Mail size={14} /> {member.email}</span>
-                                                                {member.phone && <span className="flex items-center gap-1"><Phone size={14} /> {member.phone}</span>}
+                                                                <a href={`mailto:${member.email}`} onClick={e => e.stopPropagation()} className="flex items-center gap-2 hover:text-blue-500 transition-colors" style={{ padding: '6px 12px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '8px', width: 'fit-content' }}>
+                                                                    <Mail size={14} color="#3b82f6" /> {member.email}
+                                                                </a>
+                                                                {member.phone && (
+                                                                    <a href={`tel:${member.phone}`} onClick={e => e.stopPropagation()} className="flex items-center gap-2 hover:text-green-600 transition-colors" style={{ padding: '6px 12px', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '8px', width: 'fit-content' }}>
+                                                                        <Phone size={14} color="#10b981" /> {member.phone}
+                                                                    </a>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -639,16 +645,6 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                         </div>
                                                         
                                                         <div className="flex items-center gap-2">
-                                                            {isAdmin && (
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); setRemoveTarget(member); }}
-                                                                    style={{ padding: '8px', borderRadius: '8px', color: '#ef4444', transition: 'background 0.2s' }}
-                                                                    className="hover:bg-red-50"
-                                                                    title="Fjern medarbejder"
-                                                                >
-                                                                    <Trash2 size={20} />
-                                                                </button>
-                                                            )}
                                                             <div style={{ padding: '8px', color: 'var(--text-muted)' }}>
                                                                 {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                                             </div>
@@ -664,120 +660,106 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                             exit={{ height: 0, opacity: 0 }}
                                                             style={{ overflow: roleMenuFor === member.id ? 'visible' : 'hidden', background: 'var(--surface-bg)', borderTop: '1px solid var(--border-light)' }}
                                                         >
-                                                            <div className="p-6 pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                            <div className="p-4 sm:p-6 pt-4 flex flex-col gap-4">
+                                                                
+                                                                {/* 1. Kompakt 2x2 Statistik-grid */}
                                                                 {isAdminOnly ? (
-                                                                    <>
-                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                                <Target size={16} color="#3b82f6" />
-                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Samlet Tildelt</h5>
+                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                            <Target size={18} color="#3b82f6" />
+                                                                            <div>
+                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0, lineHeight: 1 }}>{assignedLeads.length}</p>
+                                                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Tildelt</p>
                                                                             </div>
-                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{assignedLeads.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>leads</span></p>
                                                                         </div>
-
-                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                                <TrendingUp size={16} color="#10b981" />
-                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Lukkerate</h5>
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                            <TrendingUp size={18} color="#10b981" />
+                                                                            <div>
+                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#10b981', margin: 0, lineHeight: 1 }}>{wonLeads.length}</p>
+                                                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Vundne</p>
                                                                             </div>
-                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981', margin: 0 }}>
-                                                                                {wonLeads.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>vundne</span>
-                                                                            </p>
-                                                                            <p style={{ fontSize: '0.75rem', color: '#ef4444', margin: '4px 0 0' }}>{lostLeads.length} tabte</p>
                                                                         </div>
-
-                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                                <DollarSign size={16} color="#8b5cf6" />
-                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Vundet Omsætning</h5>
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                            <DollarSign size={18} color="#8b5cf6" />
+                                                                            <div>
+                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#8b5cf6', margin: 0, lineHeight: 1 }}>{revenueWon > 1000000 ? (revenueWon/1000000).toFixed(1) + 'M' : revenueWon > 1000 ? (revenueWon/1000).toFixed(0) + 'k' : revenueWon}</p>
+                                                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Omsat</p>
                                                                             </div>
-                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#8b5cf6', margin: 0 }}>
-                                                                                {revenueWon.toLocaleString('da-DK')} <span style={{ fontSize: '0.875rem', fontWeight: 'normal' }}>kr.</span>
-                                                                            </p>
                                                                         </div>
-
-                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                                <Briefcase size={16} color="#f59e0b" />
-                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Aktive Tilbud</h5>
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                            <Briefcase size={18} color="#f59e0b" />
+                                                                            <div>
+                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#f59e0b', margin: 0, lineHeight: 1 }}>{activeLeads.length}</p>
+                                                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Tilbud</p>
                                                                             </div>
-                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b', margin: 0 }}>
-                                                                                {revenueActive.toLocaleString('da-DK')} <span style={{ fontSize: '0.875rem', fontWeight: 'normal' }}>kr.</span>
-                                                                            </p>
-                                                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>{activeLeads.length} afventende</p>
                                                                         </div>
-                                                                    </>
+                                                                    </div>
                                                                 ) : (
-                                                                    <>
-                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                                <Target size={16} color="#3b82f6" />
-                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Samlet Tildelt</h5>
+                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                            <Target size={18} color="#3b82f6" />
+                                                                            <div>
+                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0, lineHeight: 1 }}>{assignedLeads.length}</p>
+                                                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Opgaver</p>
                                                                             </div>
-                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{assignedLeads.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>opgaver</span></p>
                                                                         </div>
-
-                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                                <Briefcase size={16} color="#f59e0b" />
-                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Aktive Opgaver</h5>
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                            <Briefcase size={18} color="#f59e0b" />
+                                                                            <div>
+                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#f59e0b', margin: 0, lineHeight: 1 }}>{workerActive.length}</p>
+                                                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>I gang</p>
                                                                             </div>
-                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b', margin: 0 }}>{workerActive.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>i gang</span></p>
                                                                         </div>
-
-                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                                <TrendingUp size={16} color="#10b981" />
-                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Gennemført</h5>
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                            <TrendingUp size={18} color="#10b981" />
+                                                                            <div>
+                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#10b981', margin: 0, lineHeight: 1 }}>{workerCompleted.length}</p>
+                                                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Færdige</p>
                                                                             </div>
-                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981', margin: 0 }}>{workerCompleted.length} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>afsluttet</span></p>
                                                                         </div>
-
-                                                                        <div className="glass-panel" style={{ padding: '16px' }}>
-                                                                            <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                                                                <Clock size={16} color="#8b5cf6" />
-                                                                                <h5 style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Timer denne md.</h5>
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                            <Clock size={18} color="#8b5cf6" />
+                                                                            <div>
+                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#8b5cf6', margin: 0, lineHeight: 1 }}>{monthHours.toFixed(0)}</p>
+                                                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Timer (md)</p>
                                                                             </div>
-                                                                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#8b5cf6', margin: 0 }}>
-                                                                                {monthHours.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>timer</span>
-                                                                            </p>
                                                                         </div>
-                                                                    </>
+                                                                    </div>
                                                                 )}
-                                                            </div>
 
-                                                            {/* ROLLE (kun admin/Mester kan ændre) */}
-                                                            {isAdmin && (
-                                                                <div className="px-6 pb-2" style={{ position: 'relative', zIndex: roleMenuFor === member.id ? 50 : 1 }}>
-                                                                    <div className="glass-panel" style={{ padding: '24px', overflow: 'visible' }}>
-                                                                        <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
-                                                                            <Shield size={18} color="#7c3aed" />
-                                                                            <h5 style={{ fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Rolle</h5>
-                                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>Bestemmer personens adgang i systemet</span>
-                                                                        </div>
-                                                                        <div style={{ position: 'relative', maxWidth: '380px' }}>
-                                                                            <div onClick={() => setRoleMenuFor(roleMenuFor === member.id ? null : member.id)}
-                                                                                style={{ padding: '12px 16px', border: '1px solid var(--border)', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.7)', transition: 'all 0.2s' }}>
-                                                                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                                    {member.role === 'admin' && <Shield size={15} color="#7c3aed" />}{getRoleLabel(member.role)}
-                                                                                </span>
-                                                                                <ChevronDown size={18} style={{ transform: roleMenuFor === member.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--text-secondary)' }} />
+                                                                {/* 2 & 3. Rolle og HR side-om-side komprimeret */}
+                                                                {isAdmin && (
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ position: 'relative', zIndex: roleMenuFor === member.id ? 50 : 1 }}>
+                                                                        {/* Rolle */}
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', overflow: 'visible', zIndex: roleMenuFor === member.id ? 100 : 1, transition: 'all 0.2s', borderRadius: '16px' }}>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Shield size={16} color="#7c3aed" />
+                                                                                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>Rolle</span>
                                                                             </div>
+                                                                            <div onClick={() => setRoleMenuFor(roleMenuFor === member.id ? null : member.id)}
+                                                                                style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', transition: 'all 0.2s' }}
+                                                                                onMouseEnter={(e) => e.currentTarget.style.background = '#fff'}
+                                                                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.7)'}>
+                                                                                {getRoleLabel(member.role)}
+                                                                                <ChevronDown size={14} style={{ transform: roleMenuFor === member.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                                                                            </div>
+                                                                            
                                                                             <AnimatePresence>
                                                                                 {roleMenuFor === member.id && (
-                                                                                    <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.15 }}
-                                                                                        style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, background: '#ffffff', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)', zIndex: 40, overflow: 'hidden', padding: '8px' }}>
+                                                                                    <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                                                                                        style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, width: '280px', background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, padding: '6px' }}>
                                                                                         {roles.map(r => {
                                                                                             const selected = member.role === r.value;
                                                                                             return (
-                                                                                                <div key={r.value} onClick={() => handleRoleSelect(member, r.value)}
-                                                                                                    style={{ padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', background: selected ? '#f5f3ff' : 'transparent', display: 'flex', flexDirection: 'column', gap: '2px', transition: 'background 0.12s' }}
-                                                                                                    onMouseEnter={(e) => { if (!selected) e.currentTarget.style.background = '#f8fafc'; }}
-                                                                                                    onMouseLeave={(e) => { if (!selected) e.currentTarget.style.background = 'transparent'; }}>
-                                                                                                    <span style={{ fontWeight: selected ? 700 : 600, color: selected ? '#6d28d9' : 'var(--text-primary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                                                        {r.value === 'admin' && <Shield size={13} />}{r.label}{selected && ' ✓'}
-                                                                                                    </span>
-                                                                                                    <span style={{ fontSize: '0.75rem', color: selected ? 'rgba(109,40,217,0.8)' : 'var(--text-secondary)' }}>{r.desc}</span>
+                                                                                                <div key={r.value} onClick={() => handleRoleSelect(member, r.value)} className="group"
+                                                                                                    style={{ padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', background: selected ? '#f5f3ff' : 'transparent', display: 'flex', flexDirection: 'column', gap: '2px', transition: 'background 0.2s' }}>
+                                                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                                                        <span style={{ fontSize: '0.85rem', fontWeight: selected ? '700' : '600', color: selected ? '#6d28d9' : 'var(--text-primary)' }}>{r.label}</span>
+                                                                                                        {selected && <span style={{ color: '#6d28d9', fontSize: '0.8rem' }}>✓</span>}
+                                                                                                    </div>
+                                                                                                    {r.desc && (
+                                                                                                        <span style={{ fontSize: '0.7rem', color: selected ? '#8b5cf6' : 'var(--text-muted)', lineHeight: '1.3' }}>{r.desc}</span>
+                                                                                                    )}
                                                                                                 </div>
                                                                                             );
                                                                                         })}
@@ -785,177 +767,106 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                                 )}
                                                                             </AnimatePresence>
                                                                         </div>
-                                                                        {roleMenuFor !== member.id && (
-                                                                            <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(124, 58, 237, 0.05)', border: '1px solid rgba(124, 58, 237, 0.2)', borderRadius: '12px' }}>
-                                                                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                                                                                    <strong>Adgang:</strong> {roles.find(r => r.value === member.role)?.desc}
-                                                                                </p>
+
+                                                                        {/* Indstillinger (Ferie & Lønnummer) */}
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center' }}>
+                                                                            <div className="flex flex-col gap-2 w-full">
+                                                                                <div className="flex items-center justify-between w-full">
+                                                                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600"><Briefcase size={12}/> Feriedage</div>
+                                                                                    <input type="number" min="0" max="100" value={member.raw_data?.vacation_quota ?? 30} onChange={(e) => handleVacationQuotaUpdate(member.id, member.raw_data || {}, e.target.value)}
+                                                                                        style={{ width: '60px', padding: '2px 4px', borderRadius: '6px', border: '1px solid var(--border)', background: '#fff', fontSize: '0.85rem', textAlign: 'center', fontWeight: 'bold', outline: 'none' }} />
+                                                                                </div>
+                                                                                <div className="flex items-center justify-between w-full">
+                                                                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600"><Hash size={12}/> Lønnummer</div>
+                                                                                    <input type="text" placeholder="Eks. 1001" value={member.raw_data?.lonnummer ?? ''} onChange={(e) => handleLonnummerInput(member.id, e.target.value)} onBlur={(e) => handleLonnummerBlur(member)}
+                                                                                        style={{ width: '80px', padding: '2px 4px', borderRadius: '6px', border: '1px solid var(--border)', background: '#fff', fontSize: '0.85rem', textAlign: 'center', fontWeight: 'bold', outline: 'none' }} />
+                                                                                </div>
                                                                             </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* 4. Noter og Privatinfo */}
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                    {/* Private oplysninger */}
+                                                                    <div className="glass-panel" style={{ padding: '12px' }}>
+                                                                        <div className="flex items-center gap-2 mb-2 border-b border-gray-100 pb-2">
+                                                                            <MapPin size={14} color="#3b82f6" />
+                                                                            <span style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Privat Data</span>
+                                                                        </div>
+                                                                        {(member.raw_data?.home_address || member.raw_data?.home_zip || member.raw_data?.home_city || member.raw_data?.next_of_kin) ? (
+                                                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                                {member.raw_data?.home_address && <span>{member.raw_data.home_address}, {[member.raw_data?.home_zip, member.raw_data?.home_city].filter(Boolean).join(' ')}</span>}
+                                                                                {member.raw_data?.next_of_kin && <span style={{ color: 'var(--text-muted)' }}>Pårørende: {member.raw_data.next_of_kin}</span>}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Ikke udfyldt endnu.</span>
                                                                         )}
                                                                     </div>
-                                                                </div>
-                                                            )}
 
-                                                            {/* HR & MUS NOTER */}
-                                                            {isAdmin && (
-                                                                <div className="px-6 pb-6">
-                                                                    <div className="glass-panel" style={{ padding: '24px' }}>
-                                                                        <div className="flex items-center justify-between gap-2 mb-4" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
-                                                                            <div className="flex items-center gap-2">
-                                                                                <Briefcase size={18} color="#10b981" />
-                                                                                <h5 style={{ fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Mesterens Noter (HR & MUS)</h5>
+                                                                    {/* Noter (Mester kun) */}
+                                                                    {isAdmin && (
+                                                                        <div className="glass-panel" style={{ padding: '12px', display: 'flex', flexDirection: 'column', borderRadius: '16px' }}>
+                                                                            <div className="flex items-center justify-between mb-2 border-b border-gray-100 pb-2">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <Shield size={14} color="#10b981" />
+                                                                                    <span style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Leder-Noter</span>
+                                                                                </div>
+                                                                                <span style={{ fontSize: '0.6rem', background: 'rgba(16,185,129,0.1)', color: '#10b981', padding: '2px 6px', borderRadius: '4px' }}>Skjult</span>
                                                                             </div>
-                                                                            <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontWeight: '600' }}>Skjult for medarbejder</span>
-                                                                        </div>
-                                                                        
-                                                                        <div className="flex flex-col gap-3 mb-4">
-                                                                            {(member.raw_data?.hr_notes || []).length === 0 ? (
-                                                                                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>Ingen noter endnu.</p>
-                                                                            ) : (
-                                                                                (member.raw_data?.hr_notes || []).map(note => (
-                                                                                    <div key={note.id} style={{ padding: '12px', background: 'rgba(255,255,255,0.6)', borderRadius: '12px', border: '1px solid var(--border-light)', position: 'relative', group: 'true' }} className="group hover:border-gray-300 transition-colors">
-                                                                                        <div className="flex justify-between items-start gap-4">
-                                                                                            <div>
-                                                                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0 0 4px', fontWeight: '500' }}>
-                                                                                                    {new Date(note.date).toLocaleDateString('da-DK', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                                                                </p>
-                                                                                                <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0, whiteSpace: 'pre-wrap' }}>{note.text}</p>
-                                                                                            </div>
-                                                                                            <button 
-                                                                                                onClick={(e) => { e.stopPropagation(); handleDeleteNote(member.id, member.raw_data || {}, note.id); }}
-                                                                                                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                                                style={{ padding: '6px', color: '#ef4444', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)' }}
-                                                                                                title="Slet note"
-                                                                                            >
-                                                                                                <Trash2 size={14} />
-                                                                                            </button>
+                                                                            <div style={{ maxHeight: '100px', overflowY: 'auto', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                                {(member.raw_data?.hr_notes || []).length === 0 ? (
+                                                                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Ingen noter.</span>
+                                                                                ) : (
+                                                                                    (member.raw_data?.hr_notes || []).map(note => (
+                                                                                        <div key={note.id} className="group" style={{ fontSize: '0.8rem', padding: '6px 8px', background: 'rgba(0,0,0,0.03)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                                                                                            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, lineHeight: '1.4' }}>{note.text}</span>
+                                                                                            <Trash2 size={14} className="opacity-0 group-hover:opacity-100 cursor-pointer text-red-500 flex-shrink-0 mt-0.5 transition-opacity" onClick={(e) => { e.stopPropagation(); handleDeleteNote(member.id, member.raw_data || {}, note.id); }} />
                                                                                         </div>
-                                                                                    </div>
-                                                                                ))
-                                                                            )}
-                                                                        </div>
-
-                                                                        <div className="flex gap-2">
-                                                                            <input
-                                                                                type="text"
-                                                                                value={newNoteText}
-                                                                                onChange={(e) => setNewNoteText(e.target.value)}
-                                                                                onKeyDown={(e) => { if (e.key === 'Enter') handleAddNote(member.id, member.raw_data || {}); }}
-                                                                                placeholder="Skriv en ny note..."
-                                                                                style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-bg)', outline: 'none', fontSize: '0.9rem' }}
-                                                                            />
-                                                                            <button 
-                                                                                onClick={() => handleAddNote(member.id, member.raw_data || {})}
-                                                                                disabled={!newNoteText.trim()}
-                                                                                style={{ padding: '10px 16px', borderRadius: '10px', background: newNoteText.trim() ? '#10b981' : 'var(--border-light)', color: newNoteText.trim() ? '#fff' : 'var(--text-muted)', border: 'none', fontWeight: '600', cursor: newNoteText.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}
-                                                                            >
-                                                                                Tilføj
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {/* PERSONALE ADMINISTRATION */}
-                                                            <div className="px-6 pb-6">
-                                                                <div className="glass-panel" style={{ padding: '24px' }}>
-                                                                    <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
-                                                                        <Briefcase size={18} color="#f59e0b" />
-                                                                        <h5 style={{ fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Personale & HR Indstillinger</h5>
-                                                                    </div>
-                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                        <div className="flex items-center justify-between gap-4 p-3 rounded-2xl" style={{ border: '1px solid var(--border-light)', background: 'rgba(255, 255, 255, 0.5)' }}>
-                                                                            <div style={{ flex: 1 }}>
-                                                                                <p style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 4px' }}>Årlig Feriesaldo (Dage)</p>
-                                                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Hvor mange betalte feriedage har personen ret til?</p>
+                                                                                    ))
+                                                                                )}
                                                                             </div>
-                                                                            <div style={{ position: 'relative' }}>
-                                                                                <input 
-                                                                                    type="number" 
-                                                                                    min="0"
-                                                                                    max="100"
-                                                                                    value={member.raw_data?.vacation_quota ?? 30}
-                                                                                    onChange={(e) => handleVacationQuotaUpdate(member.id, member.raw_data || {}, e.target.value)}
-                                                                                    style={{
-                                                                                        width: '80px',
-                                                                                        padding: '10px 12px',
-                                                                                        borderRadius: '12px',
-                                                                                        border: '2px solid transparent',
-                                                                                        background: 'var(--surface-bg)',
-                                                                                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05)',
-                                                                                        fontSize: '1.05rem',
-                                                                                        fontWeight: '700',
-                                                                                        color: '#3b82f6',
-                                                                                        textAlign: 'center',
-                                                                                        transition: 'all 0.2s ease',
-                                                                                        outline: 'none'
-                                                                                    }}
-                                                                                    onFocus={(e) => {
-                                                                                        e.target.style.borderColor = '#3b82f6';
-                                                                                        e.target.style.background = '#fff';
-                                                                                        e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                                                                                    }}
-                                                                                    onBlur={(e) => {
-                                                                                        e.target.style.borderColor = 'transparent';
-                                                                                        e.target.style.background = 'var(--surface-bg)';
-                                                                                        e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05)';
-                                                                                    }}
+                                                                            <div className="flex gap-2 mt-auto items-end">
+                                                                                <textarea value={newNoteText} 
+                                                                                    onChange={(e) => {
+                                                                                        setNewNoteText(e.target.value);
+                                                                                        e.target.style.height = 'auto';
+                                                                                        e.target.style.height = (e.target.scrollHeight) + 'px';
+                                                                                    }} 
+                                                                                    onKeyDown={(e) => { 
+                                                                                        if (e.key === 'Enter' && !e.shiftKey) { 
+                                                                                            e.preventDefault(); 
+                                                                                            if (newNoteText.trim()) handleAddNote(member.id, member.raw_data || {}); 
+                                                                                        } 
+                                                                                    }} 
+                                                                                    placeholder="Skriv note (Enter for at gemme)..."
+                                                                                    rows={1}
+                                                                                    style={{ flex: 1, padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '0.8rem', outline: 'none', resize: 'none', overflow: 'hidden', minHeight: '34px', lineHeight: '1.4', background: '#f8fafc', transition: 'border-color 0.2s' }} 
+                                                                                    onFocus={(e) => e.currentTarget.style.borderColor = '#10b981'}
+                                                                                    onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                                                                                 />
+                                                                                <button onClick={() => handleAddNote(member.id, member.raw_data || {})} disabled={!newNoteText.trim()} style={{ padding: '8px 12px', height: '34px', borderRadius: '10px', background: newNoteText.trim() ? '#10b981' : 'var(--border-light)', color: '#fff', border: 'none', fontSize: '0.85rem', fontWeight: 'bold', cursor: newNoteText.trim() ? 'pointer' : 'default', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                                                                             </div>
-                                                                        </div>
-
-                                                                        <div className="flex items-center justify-between gap-4 p-3 rounded-2xl" style={{ border: '1px solid var(--border-light)', background: 'rgba(255, 255, 255, 0.5)' }}>
-                                                                            <div style={{ flex: 1 }}>
-                                                                                <p style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 4px' }}>Lønnummer / Medarbejdernr.</p>
-                                                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Bruges i løneksporten til lønsystemet.</p>
-                                                                            </div>
-                                                                            <input
-                                                                                type="text"
-                                                                                value={member.raw_data?.lonnummer ?? ''}
-                                                                                placeholder="f.eks. 1001"
-                                                                                inputMode="numeric"
-                                                                                onChange={(e) => handleLonnummerInput(member.id, e.target.value)}
-                                                                                style={{
-                                                                                    width: '110px',
-                                                                                    padding: '10px 12px',
-                                                                                    borderRadius: '12px',
-                                                                                    border: '2px solid transparent',
-                                                                                    background: 'var(--surface-bg)',
-                                                                                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05)',
-                                                                                    fontSize: '1.05rem',
-                                                                                    fontWeight: '700',
-                                                                                    color: '#7c3aed',
-                                                                                    textAlign: 'center',
-                                                                                    transition: 'all 0.2s ease',
-                                                                                    outline: 'none'
-                                                                                }}
-                                                                                onFocus={(e) => { e.target.style.borderColor = '#7c3aed'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)'; }}
-                                                                                onBlur={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.background = 'var(--surface-bg)'; e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05)'; handleLonnummerBlur(member); }}
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {/* Private oplysninger — selv-indtastet af medarbejderen under "Min Profil" */}
-                                                                    {(member.raw_data?.home_address || member.raw_data?.home_zip || member.raw_data?.home_city || member.raw_data?.next_of_kin) ? (
-                                                                        <div style={{ marginTop: '16px', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)', background: 'rgba(255,255,255,0.5)' }}>
-                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                                                                                <MapPin size={15} style={{ color: '#7c3aed' }} />
-                                                                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Private oplysninger</span>
-                                                                            </div>
-                                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                                                                {member.raw_data?.home_address && <div><span style={{ color: 'var(--text-muted)' }}>Adresse:</span> {member.raw_data.home_address}</div>}
-                                                                                {(member.raw_data?.home_zip || member.raw_data?.home_city) && <div><span style={{ color: 'var(--text-muted)' }}>By:</span> {[member.raw_data?.home_zip, member.raw_data?.home_city].filter(Boolean).join(' ')}</div>}
-                                                                                {member.raw_data?.next_of_kin && <div style={{ gridColumn: '1 / -1' }}><span style={{ color: 'var(--text-muted)' }}>Nærmeste pårørende:</span> {member.raw_data.next_of_kin}</div>}
-                                                                            </div>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div style={{ marginTop: '16px', padding: '12px 16px', borderRadius: '12px', border: '1px dashed var(--border-light)', fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                                                                            Medarbejderen har endnu ikke udfyldt sine private oplysninger (adresse, pårørende) under "Min Profil".
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                            </div>
 
+                                                                {/* 5. Slet/Deaktiver (Skraldespand) */}
+                                                                {isAdmin && (
+                                                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                                                                        <button 
+                                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setRemoveTarget(member); }}
+                                                                            style={{ padding: '14px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                                                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)'; }}
+                                                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'; e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.transform = 'none'; }}
+                                                                            onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.95)'; }}
+                                                                            onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)'; }}
+                                                                            title="Slet eller deaktiver medarbejder">
+                                                                            <Trash2 size={20} style={{ pointerEvents: 'none' }} />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </motion.div>
                                                     )}
                                                 </AnimatePresence>
@@ -973,75 +884,69 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             <SubcontractorManager profile={profile} isMobile={isMobile} />
 
             {/* ---- BEKRÆFT ADMIN-FORFREMMELSE ---- */}
-            {typeof document !== 'undefined' && createPortal(
+            {pendingPromo && createPortal(
                 <AnimatePresence>
-                    {pendingPromo && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPendingPromo(null)}
-                            style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                            <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
-                                style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
-                                <div style={{ padding: '28px', textAlign: 'center' }}>
-                                    <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
-                                        <Shield size={30} />
-                                    </div>
-                                    <h3 style={{ margin: '0 0 10px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Gør til Mester (Admin)?</h3>
-                                    <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', lineHeight: 1.5 }}>
-                                        <strong>{pendingPromo.member.owner_name || 'Medarbejderen'}</strong> får <strong>fuld adgang</strong> til priser, økonomi, systemindstillinger og kan selv administrere andre medarbejdere. Er du sikker?
-                                    </p>
-                                    <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                                        <button onClick={() => setPendingPromo(null)} disabled={actionBusy}
-                                            style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
-                                        <button onClick={() => doRoleChange(pendingPromo.member, pendingPromo.role)} disabled={actionBusy}
-                                            style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', fontWeight: 700, cursor: actionBusy ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                            {actionBusy ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />} Ja, gør til Mester
-                                        </button>
-                                    </div>
+                    <motion.div key="promo-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPendingPromo(null)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                        <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
+                            style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+                            <div style={{ padding: '28px', textAlign: 'center' }}>
+                                <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+                                    <Shield size={30} />
                                 </div>
-                            </motion.div>
+                                <h3 style={{ margin: '0 0 10px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Gør til Mester (Admin)?</h3>
+                                <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                                    <strong>{pendingPromo.member.owner_name || 'Medarbejderen'}</strong> får <strong>fuld adgang</strong> til priser, økonomi, systemindstillinger og kan selv administrere andre medarbejdere. Er du sikker?
+                                </p>
+                                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                                    <button onClick={() => setPendingPromo(null)} disabled={actionBusy}
+                                        style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
+                                    <button onClick={() => doRoleChange(pendingPromo.member, pendingPromo.role)} disabled={actionBusy}
+                                        style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', fontWeight: 700, cursor: actionBusy ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        {actionBusy ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />} Ja, gør til Mester
+                                    </button>
+                                </div>
+                            </div>
                         </motion.div>
-                    )}
-                </AnimatePresence>,
-                document.body
+                    </motion.div>
+                </AnimatePresence>, document.body
             )}
 
             {/* ---- FJERN MEDARBEJDER (deaktivér / slet) ---- */}
-            {typeof document !== 'undefined' && createPortal(
+            {removeTarget && createPortal(
                 <AnimatePresence>
-                    {removeTarget && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !actionBusy && setRemoveTarget(null)}
-                            style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                            <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
-                                style={{ width: '100%', maxWidth: '460px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
-                                <div style={{ padding: '28px' }}>
-                                    <h3 style={{ margin: '0 0 8px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Fjern {removeTarget.owner_name || 'medarbejder'}?</h3>
-                                    <p style={{ margin: '0 0 20px', color: '#475569', fontSize: '0.92rem', lineHeight: 1.5 }}>Vælg hvordan medarbejderen skal fjernes:</p>
+                    <motion.div key="remove-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !actionBusy && setRemoveTarget(null)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                        <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.97 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
+                            style={{ width: '100%', maxWidth: '460px', background: '#fff', borderRadius: '20px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+                            <div style={{ padding: '28px' }}>
+                                <h3 style={{ margin: '0 0 8px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Fjern {removeTarget.owner_name || 'medarbejder'}?</h3>
+                                <p style={{ margin: '0 0 20px', color: '#475569', fontSize: '0.92rem', lineHeight: 1.5 }}>Vælg hvordan medarbejderen skal fjernes:</p>
 
-                                    <button onClick={() => doRemove('deactivate')} disabled={actionBusy}
-                                        style={{ width: '100%', textAlign: 'left', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: actionBusy ? 'wait' : 'pointer', marginBottom: '12px', transition: 'all 0.2s' }}
-                                        onMouseEnter={(e) => { if (!actionBusy) { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; } }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}>
-                                        <div style={{ fontWeight: 700, color: '#0f172a' }}>Deaktivér (anbefalet)</div>
-                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Fjerner login-adgang, men beholder profil og historik til genansættelse.</div>
-                                    </button>
+                                <button onClick={() => doRemove('deactivate')} disabled={actionBusy}
+                                    style={{ width: '100%', textAlign: 'left', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: actionBusy ? 'wait' : 'pointer', marginBottom: '12px', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => { if (!actionBusy) { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; } }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}>
+                                    <div style={{ fontWeight: 700, color: '#0f172a' }}>Deaktivér (anbefalet)</div>
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Fjerner login-adgang, men beholder profil og historik til genansættelse.</div>
+                                </button>
 
-                                    <button onClick={() => doRemove('delete')} disabled={actionBusy}
-                                        style={{ width: '100%', textAlign: 'left', padding: '16px', borderRadius: '14px', border: '1px solid #fee2e2', background: '#fff', cursor: actionBusy ? 'wait' : 'pointer', transition: 'all 0.2s' }}
-                                        onMouseEnter={(e) => { if (!actionBusy) { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.background = '#fef2f2'; } }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#fee2e2'; e.currentTarget.style.background = '#fff'; }}>
-                                        <div style={{ fontWeight: 700, color: '#b91c1c' }}>Slet helt (GDPR)</div>
-                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Sletter login og persondata (adresse, pårørende). Løn-/timehistorik bevares lovpligtigt.</div>
-                                    </button>
+                                <button onClick={() => doRemove('delete')} disabled={actionBusy}
+                                    style={{ width: '100%', textAlign: 'left', padding: '16px', borderRadius: '14px', border: '1px solid #fee2e2', background: '#fff', cursor: actionBusy ? 'wait' : 'pointer', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => { if (!actionBusy) { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.background = '#fef2f2'; } }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#fee2e2'; e.currentTarget.style.background = '#fff'; }}>
+                                    <div style={{ fontWeight: 700, color: '#b91c1c' }}>Slet helt (GDPR)</div>
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Sletter login og persondata (adresse, pårørende). Løn-/timehistorik bevares lovpligtigt.</div>
+                                </button>
 
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-                                        <button onClick={() => setRemoveTarget(null)} disabled={actionBusy}
-                                            style={{ padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
-                                    </div>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+                                    <button onClick={() => setRemoveTarget(null)} disabled={actionBusy}
+                                        style={{ padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
                                 </div>
-                            </motion.div>
+                            </div>
                         </motion.div>
-                    )}
-                </AnimatePresence>,
-                document.body
+                    </motion.div>
+                </AnimatePresence>, document.body
             )}
         </div>
     );
