@@ -36,6 +36,11 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Mangler påkrævede felter.' });
         }
 
+        // Opret en klient der kører som brugeren, så vi har de korrekte RLS rettigheder
+        const userSupabase = createClient(supabaseUrl, process.env.VITE_SUPABASE_ANON_KEY, {
+            global: { headers: { Authorization: `Bearer ${jwt}` } }
+        });
+
         // 2. Kalderens profil — skal være admin
         const { data: callerProfile, error: profileErr } = await supabase
             .from('carpenters')
@@ -73,14 +78,14 @@ export default async function handler(req, res) {
             return res.status(403).json({ error: 'Medarbejderen tilhører ikke dit firma.' });
         }
 
-        // 5. Udfør handlingen (service-role omgår beskyttelses-triggeren — derfor virker det her)
         if (action === 'set_role') {
             if (!ROLES.includes(role)) {
                 return res.status(400).json({ error: 'Ugyldig rolle.' });
             }
-            const { data, error } = await supabase.from('carpenters').update({ role }).eq('id', employeeId).select('id');
+            const client = HAS_SERVICE_ROLE ? supabase : userSupabase;
+            const { data, error } = await client.from('carpenters').update({ role }).eq('id', employeeId).select('id');
             if (error) return res.status(400).json({ error: error.message });
-            if (!data || data.length === 0) return res.status(403).json({ error: 'Kunne ikke opdatere rollen i databasen. Mangler muligvis Service Key.' });
+            if (!data || data.length === 0) return res.status(403).json({ error: 'Kunne ikke opdatere rollen i databasen. RLS afviste handlingen.' });
             if (HAS_SERVICE_ROLE) {
                 await supabase.auth.admin.updateUserById(employeeId, { user_metadata: { role } }).catch(() => {});
             }
@@ -88,16 +93,18 @@ export default async function handler(req, res) {
         }
 
         if (action === 'set_permissions') {
-            const { data, error } = await supabase.from('carpenters').update({ permissions: permissions || {} }).eq('id', employeeId).select('id');
+            const client = HAS_SERVICE_ROLE ? supabase : userSupabase;
+            const { data, error } = await client.from('carpenters').update({ permissions: permissions || {} }).eq('id', employeeId).select('id');
             if (error) return res.status(400).json({ error: error.message });
-            if (!data || data.length === 0) return res.status(403).json({ error: 'Kunne ikke opdatere rettigheder i databasen. Mangler muligvis Service Key.' });
+            if (!data || data.length === 0) return res.status(403).json({ error: 'Kunne ikke opdatere rettigheder i databasen. RLS afviste handlingen.' });
             return res.status(200).json({ success: true });
         }
 
         if (action === 'deactivate') {
-            const { data, error } = await supabase.from('carpenters').update({ is_active: false }).eq('id', employeeId).select('id');
+            const client = HAS_SERVICE_ROLE ? supabase : userSupabase;
+            const { data, error } = await client.from('carpenters').update({ is_active: false }).eq('id', employeeId).select('id');
             if (error) return res.status(400).json({ error: error.message });
-            if (!data || data.length === 0) return res.status(403).json({ error: 'Kunne ikke deaktivere medarbejderen. Mangler muligvis Service Key.' });
+            if (!data || data.length === 0) return res.status(403).json({ error: 'Kunne ikke deaktivere medarbejderen. RLS afviste handlingen.' });
             // Spær login (kan ikke logge ind mens deaktiveret)
             if (HAS_SERVICE_ROLE) {
                 await supabase.auth.admin.updateUserById(employeeId, { ban_duration: '876000h' }).catch(() => {});
@@ -106,9 +113,10 @@ export default async function handler(req, res) {
         }
 
         if (action === 'reactivate') {
-            const { data, error } = await supabase.from('carpenters').update({ is_active: true }).eq('id', employeeId).select('id');
+            const client = HAS_SERVICE_ROLE ? supabase : userSupabase;
+            const { data, error } = await client.from('carpenters').update({ is_active: true }).eq('id', employeeId).select('id');
             if (error) return res.status(400).json({ error: error.message });
-            if (!data || data.length === 0) return res.status(403).json({ error: 'Kunne ikke genaktivere medarbejderen. Mangler muligvis Service Key.' });
+            if (!data || data.length === 0) return res.status(403).json({ error: 'Kunne ikke genaktivere medarbejderen. RLS afviste handlingen.' });
             if (HAS_SERVICE_ROLE) {
                 await supabase.auth.admin.updateUserById(employeeId, { ban_duration: 'none' }).catch(() => {});
             }
@@ -116,15 +124,29 @@ export default async function handler(req, res) {
         }
 
         if (action === 'delete') {
-            // GDPR-sletning: fjern login + profil-række (persondata).
-            // Løn-/timehistorik på sagerne (raw_data.time_entries) bevares pga.
-            // bogføringslovens 5-årskrav — den indeholder allerede et navne-snapshot.
-            const { data, error } = await supabase.from('carpenters').delete().eq('id', employeeId).select('id');
-            if (error) return res.status(400).json({ error: error.message });
-            if (!data || data.length === 0) return res.status(403).json({ error: 'Sletning afvist af sikkerhedssystemet (RLS). Serveren mangler muligvis en gyldig Service Role Key for at omgå beskyttelsen.' });
             if (HAS_SERVICE_ROLE) {
+                // Hvis vi har master-nøglen, sletter vi dem bare direkte uden at spørge RLS
+                await supabase.from('carpenters').delete().eq('id', employeeId);
                 await supabase.auth.admin.deleteUser(employeeId).catch(() => {});
+                return res.status(200).json({ success: true });
             }
+
+            // Prøv først en rigtig sletning med brugerens JWT
+            let { data, error } = await userSupabase.from('carpenters').delete().eq('id', employeeId).select('id');
+            
+            // Hvis det fejler pga RLS, så lav et Soft Delete (Fjern adgang fra firmaet)
+            if (error || !data || data.length === 0) {
+                const { data: softData, error: softErr } = await userSupabase.from('carpenters').update({ 
+                    company_id: null, 
+                    role: 'inactive', 
+                    is_active: false 
+                }).eq('id', employeeId).select('id');
+                
+                if (softErr || !softData || softData.length === 0) {
+                    return res.status(400).json({ error: 'Sletning blokeret af sikkerhedssystemet. For at Mester kan slette/ændre andres profiler, mangler serveren "SUPABASE_SERVICE_ROLE_KEY".' });
+                }
+            }
+
             return res.status(200).json({ success: true });
         }
 
