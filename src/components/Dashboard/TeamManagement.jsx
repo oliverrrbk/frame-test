@@ -127,7 +127,18 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
         if (!removeTarget) return;
         setActionBusy(true);
         try {
-            await callManage(mode === 'delete' ? 'delete' : 'deactivate', { employeeId: removeTarget.id });
+            if (mode === 'delete') {
+                // Sletning går via Supabase edge-funktion, hvor service-role-nøglen altid er
+                // til stede (uafhængig af Vercel-opsætning). Sletter login + persondata (GDPR).
+                const { data, error } = await supabase.functions.invoke('delete-employee', {
+                    body: { employeeId: removeTarget.id }
+                });
+                if (error || (data && data.error) || !data?.success) {
+                    throw new Error(data?.error || error?.message || 'Sletningen mislykkedes.');
+                }
+            } else {
+                await callManage('deactivate', { employeeId: removeTarget.id });
+            }
             setTeam(prev => prev.filter(m => m.id !== removeTarget.id));
             toast.success(mode === 'delete' ? 'Medarbejderen er slettet.' : 'Medarbejderen er deaktiveret.');
         } catch (err) {
