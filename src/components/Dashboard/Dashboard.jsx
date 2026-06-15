@@ -34,6 +34,7 @@ import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { getRoleLabel } from '../../utils/roles';
 import CustomProjectCreator from './CustomProjectCreator';
 import DrawingsGallery from '../Drawings/DrawingsGallery';
 import CalendarView from './CalendarView';
@@ -3264,7 +3265,7 @@ const Dashboard = () => {
                                                                     { value: "", label: "Ikke tildelt" },
                                                                     ...teamMembers.map(member => ({
                                                                         value: member.id,
-                                                                        label: `${member.owner_name || member.company_name || member.email || 'Ukendt'} (${member.role})`
+                                                                        label: `${member.owner_name || member.company_name || member.email || 'Ukendt'} (${getRoleLabel(member.role)})`
                                                                     }))
                                                                 ]}
                                                             />

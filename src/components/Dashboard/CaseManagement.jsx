@@ -11,6 +11,7 @@ import { SubcontractorModal } from './Subcontractors';
 import ProfileCard from './ProfileCard';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { getRoleLabel } from '../../utils/roles';
 
 import toast from 'react-hot-toast';
 
@@ -3205,11 +3206,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             <p style={{ color: '#6b7280', fontSize: '0.9rem', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>Ingen log-opdateringer endnu.</p>
                                         ) : (
                                             logsList.map(log => {
-                                                const displayRole = log.authorRole === 'admin' ? 'Mester' : 
-                                                                  log.authorRole === 'lead' ? 'Projektleder' : 
-                                                                  log.authorRole === 'worker' ? 'Svend' : 
-                                                                  log.authorRole === 'apprentice' ? 'Lærling' : 
-                                                                  log.authorRole || 'System';
+                                                const displayRole = getRoleLabel(log.authorRole);
                                                                   
                                                 return (
                                                 <div key={log.id} style={{ display: 'flex', gap: '16px' }}>

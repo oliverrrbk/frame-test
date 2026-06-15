@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Phone, Mail, Briefcase } from 'lucide-react';
+import { getRoleLabel } from '../../utils/roles';
 
 /*
  * Lille, lækkert profil-kort til "Holdet på sagen".
@@ -36,7 +37,7 @@ export default function ProfileCard({ open, onClose, person }) {
                             <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>{name}</h3>
                             {p.role && (
                                 <span style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '5px 14px', borderRadius: '999px' }}>
-                                    <Briefcase size={13} /> {p.role}
+                                    <Briefcase size={13} /> {getRoleLabel(p.role)}
                                 </span>
                             )}
                         </div>

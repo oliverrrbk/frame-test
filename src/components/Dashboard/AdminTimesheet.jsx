@@ -11,6 +11,7 @@ import {
     lastCompletedPeriodRange, aggregatePayroll, buildSummaryCSV, buildLonartCSV, downloadCSV, toDateKey
 } from '../../utils/payroll';
 import { mutateTimeEntries } from '../../utils/timeEntries';
+import { getRoleLabel } from '../../utils/roles';
 import { Lock, FileSpreadsheet, RotateCcw } from 'lucide-react';
 
 const CustomSelect = ({ value, onChange, options, placeholder }) => {
@@ -850,7 +851,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
                         onChange={setSelectedUser}
                         options={[
                             { value: 'all', label: 'Alle medarbejdere' },
-                            ...teamMembers.map(m => ({ value: m.id, label: `${m.owner_name || m.company_name} (${m.role})` }))
+                            ...teamMembers.map(m => ({ value: m.id, label: `${m.owner_name || m.company_name} (${getRoleLabel(m.role)})` }))
                         ]}
                     />
                     
