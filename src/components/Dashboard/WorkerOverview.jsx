@@ -20,12 +20,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             const isAssignedSales = pms.includes(myProfile?.id) || lead.assigned_to === myProfile?.id;
             const isAssignedWorker = workers.includes(myProfile?.id);
             
-            let isAssigned = false;
-            if (role === 'sales') {
-                isAssigned = isAssignedSales || isAssignedWorker;
-            } else {
-                isAssigned = isAssignedWorker;
-            }
+            const isAssigned = isAssignedSales || isAssignedWorker;
 
             if (simulatedRole && ['worker', 'apprentice', 'sales'].includes(role)) {
                 return ['Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag'].includes(lead.status);
