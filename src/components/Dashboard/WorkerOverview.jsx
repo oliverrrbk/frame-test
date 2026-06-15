@@ -26,7 +26,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                 return ['Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag'].includes(lead.status);
             }
 
-            return isAssigned && ['Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag'].includes(lead.status || '');
+            return isAssigned;
         });
     }, [leadsData, myProfile, simulatedRole]);
 

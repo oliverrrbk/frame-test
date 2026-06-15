@@ -6,10 +6,8 @@ const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SU
 async function checkData() {
     const { data: profiles, error: err1 } = await supabase
         .from('carpenters')
-        .select('id, owner_name, email, role, company_id')
-        .order('created_at', { ascending: false });
+        .select('id, owner_name, email, role, company_id');
     
-    console.log("All Carpenters:");
     profiles?.forEach(p => console.log(JSON.stringify(p)));
 }
 
