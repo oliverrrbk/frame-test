@@ -40,6 +40,7 @@ import DrawingsGallery from '../Drawings/DrawingsGallery';
 import CalendarView from './CalendarView';
 import PwaOnboarding from './PwaOnboarding';
 import AccountSettingsView from './AccountSettingsView';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 // Konfiguration til det nye Google Map
 const MAP_LIBRARIES = ['places'];
@@ -968,6 +969,44 @@ const Dashboard = () => {
         setLeadsData(updatedLeads);
     };
 
+    const refreshData = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            await initProfileAndData(session.user);
+        }
+    };
+    
+    const { isRefreshing, pullProgress } = usePullToRefresh(refreshData);
+
+    useEffect(() => {
+        if (!myProfile) return;
+        
+        let targetId = myProfile.company_id || myProfile.id;
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const impId = urlParams ? urlParams.get('impersonate') : null;
+        if (impId && myProfile.email === 'team@bisoncompany.dk') {
+            targetId = impId;
+        }
+
+        const subscription = supabase
+            .channel('dashboard_leads_changes')
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'leads'
+            }, (payload) => {
+                // For a simpler approach, just refresh when ANY lead changes that we have access to
+                // In a production app with thousands of users, you'd want to add filter: `carpenter_id=eq.${targetId}`
+                // but since we have "stranded leads" logic, we just trigger a refresh and let fetchLeads do the filtering.
+                refreshData();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(subscription);
+        };
+    }, [myProfile]);
+
 
     const initProfileAndData = async (authUser) => {
         const userId = authUser.id;
@@ -1402,6 +1441,13 @@ const Dashboard = () => {
         }
         
         setLeadsData(workingLeads);
+        setSelectedLead(prev => {
+            if (prev) {
+                const updated = workingLeads.find(l => l.id === prev.id);
+                return updated || prev;
+            }
+            return prev;
+        });
         if (activeTab === 'leads') setIsLeadsLoading(false);
         setIsDashboardLoaded(true);
     };
@@ -2260,6 +2306,30 @@ const Dashboard = () => {
 
     return (
         <div className={`dashboard-layout dashboard-tab-${activeTab} ${['worker', 'apprentice', 'sales'].includes(effectiveRole) && activeTab === 'overview' ? 'worker-overview-active' : ''}`}>
+            {/* Pull to Refresh Indicator */}
+            <div 
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '60px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: `translateY(${isRefreshing ? '0' : (pullProgress > 0 ? (pullProgress * 60 - 60) + 'px' : '-60px')})`,
+                    opacity: isRefreshing ? 1 : pullProgress,
+                    transition: isRefreshing ? 'transform 0.3s' : 'none',
+                    zIndex: 9999,
+                    pointerEvents: 'none'
+                }}
+            >
+                <div style={{ background: 'white', padding: '8px 16px', borderRadius: '24px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 'bold', color: '#0f172a' }}>
+                    <RefreshCw size={16} className={isRefreshing ? 'spinner' : ''} style={{ transform: `rotate(${pullProgress * 360}deg)` }} />
+                    {isRefreshing ? 'Opdaterer...' : 'Træk ned for at opdatere'}
+                </div>
+            </div>
+
             {showOnboarding && carpenterProfile && (
                 <OnboardingModal 
                     profile={carpenterProfile} 
