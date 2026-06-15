@@ -10,6 +10,7 @@ import BilagManager from './BilagManager';
 import { SubcontractorModal } from './Subcontractors';
 import ProfileCard from './ProfileCard';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
 import toast from 'react-hot-toast';
 
@@ -167,6 +168,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [pmDropdownOpen, setPmDropdownOpen] = useState(false);
     const [workerDropdownOpen, setWorkerDropdownOpen] = useState(false);
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+    // Luk "Skift Status"-dropdown'en ved klik/tap udenfor eller Escape.
+    // (PM-/medarbejder-vælgerne er portal-modaler og lukker allerede på baggrunds-klik.)
+    const statusDropdownRef = useRef(null);
+    useClickOutside(statusDropdownRef, () => setIsStatusDropdownOpen(false), isStatusDropdownOpen);
     const [isSavingTeam, setIsSavingTeam] = useState(false);
     const [isSavedTeam, setIsSavedTeam] = useState(false);
     const [showAbortConfirmModal, setShowAbortConfirmModal] = useState(false);
@@ -2238,8 +2243,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 </button>
                             )}
                             {['admin', 'sales'].includes(profile?.role) && (
-                                <div style={{ position: 'relative' }}>
-                                    <button 
+                                <div ref={statusDropdownRef} style={{ position: 'relative' }}>
+                                    <button
                                         onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                                         style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', fontSize: '0.85rem', fontWeight: '600', color: '#1e293b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                                     >
