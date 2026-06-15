@@ -1381,9 +1381,21 @@ const Dashboard = () => {
                     const confirmedStatuses = ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'];
                     workingLeads = workingLeads.filter(l => confirmedStatuses.includes(l.status));
                 } else if (userRole === 'sales') {
-                    workingLeads = workingLeads.filter(l => (l.raw_data?.assigned_pm || []).includes(userId) || (l.raw_data?.assigned_workers || []).includes(userId) || l.assigned_to === userId || l.raw_data?.created_by === userId || l.raw_data?.draft_mode === true);
+                    workingLeads = workingLeads.filter(l => {
+                        const pmData = l.raw_data?.assigned_pm;
+                        const pmArray = Array.isArray(pmData) ? pmData : (pmData ? [pmData] : []);
+                        const workerData = l.raw_data?.assigned_workers;
+                        const workerArray = Array.isArray(workerData) ? workerData : (workerData ? [workerData] : []);
+                        return pmArray.includes(userId) || workerArray.includes(userId) || l.assigned_to === userId || l.raw_data?.created_by === userId || l.raw_data?.draft_mode === true;
+                    });
                 } else if (userRole === 'worker' || userRole === 'apprentice') {
-                    workingLeads = workingLeads.filter(l => (l.raw_data?.assigned_workers || []).includes(userId) || (l.raw_data?.assigned_pm || []).includes(userId) || l.raw_data?.created_by === userId || l.raw_data?.draft_mode === true);
+                    workingLeads = workingLeads.filter(l => {
+                        const pmData = l.raw_data?.assigned_pm;
+                        const pmArray = Array.isArray(pmData) ? pmData : (pmData ? [pmData] : []);
+                        const workerData = l.raw_data?.assigned_workers;
+                        const workerArray = Array.isArray(workerData) ? workerData : (workerData ? [workerData] : []);
+                        return pmArray.includes(userId) || workerArray.includes(userId) || l.raw_data?.created_by === userId || l.raw_data?.draft_mode === true;
+                    });
                 }
             }
         }
