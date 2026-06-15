@@ -370,40 +370,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                             </div>
 
                             {/* Fravær/Manglende Registrering Logik */}
-                            {selectedMissingDate ? (
-                                <div style={{ background: '#fff', borderRadius: '20px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                        <div>
-                                            <h3 style={{ margin: '0 0 4px', fontSize: '1.2rem', color: '#0f172a', fontWeight: 'bold' }}>Registrér Fravær</h3>
-                                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>For {format(selectedMissingDate, 'EEEE d. MMMM', { locale: da })}</p>
-                                        </div>
-                                        <button onClick={() => setSelectedMissingDate(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={20} /></button>
-                                    </div>
-                                    
-                                    <label style={{ display: 'block', fontSize: '0.9rem', color: '#475569', fontWeight: '600', marginBottom: '8px' }}>Årsag</label>
-                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                                        {['Syg', 'Ferie', 'Afspadsering'].map(type => (
-                                            <button
-                                                key={type}
-                                                onClick={() => setAbsenceType(type)}
-                                                style={{ flex: 1, padding: '10px 0', border: '1px solid #e2e8f0', background: absenceType === type ? '#0f172a' : '#f8fafc', color: absenceType === type ? '#fff' : '#64748b', borderRadius: '10px', fontWeight: absenceType === type ? 'bold' : '600', cursor: 'pointer', transition: 'all 0.2s' }}
-                                            >
-                                                {type}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    <label style={{ display: 'block', fontSize: '0.9rem', color: '#475569', fontWeight: '600', marginBottom: '8px' }}>Antal Timer</label>
-                                    <input 
-                                        type="number" step="0.25" value={absenceHours} onChange={e => setAbsenceHours(e.target.value)} 
-                                        style={{ width: '100%', padding: '14px', border: '1px solid #cbd5e1', borderRadius: '12px', fontSize: '1rem', outline: 'none', marginBottom: '20px' }}
-                                    />
-                                    
-                                    <button onClick={handleLogAbsence} style={{ width: '100%', padding: '16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer' }}>
-                                        Gem Fravær
-                                    </button>
-                                </div>
-                            ) : (
+                            (
                                 <div style={{ background: hasMissingPastDays ? '#fef2f2' : '#f8fafc', padding: '24px', borderRadius: '20px', border: `1px solid ${hasMissingPastDays ? '#fecaca' : '#e2e8f0'}` }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                                         {hasMissingPastDays ? <AlertCircle size={24} color="#ef4444" /> : <CheckCircle2 size={24} color="#10b981" />}
@@ -420,7 +387,14 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                                             return (
                                                 <div 
                                                     key={idx} 
-                                                    onClick={() => { if (isRed) setSelectedMissingDate(day.date); }}
+                                                    onClick={() => { 
+                                                        if (isRed) {
+                                                            if (setActiveTab) setActiveTab('worker_timesheet');
+                                                            setTimeout(() => {
+                                                                window.dispatchEvent(new CustomEvent('open-add-timesheet', { detail: { date: format(day.date, 'yyyy-MM-dd') } }));
+                                                            }, 100);
+                                                        } 
+                                                    }}
                                                     style={{ 
                                                         padding: '12px 4px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
                                                         background: isGreen ? '#ecfdf5' : isRed ? '#fff' : '#f1f5f9',

@@ -118,6 +118,30 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
         if (cid) fetchPayrollSettings(cid).then(setPayrollSettings);
     }, [myProfile]);
     
+    useEffect(() => {
+        const handleOpenAdd = (e) => {
+            const date = e.detail?.date || new Date().toISOString().substring(0, 10);
+            setFormData({ 
+                date: date, 
+                endDate: date,
+                regType: 'project',
+                leadId: '', 
+                absenceType: 'Sygdom',
+                desc: '', 
+                hours: '', 
+                km: '', 
+                startTime: '07:00', 
+                endTime: '15:00',
+                pauseMinutes: '30'
+            });
+            setIsAdding(true);
+            setEditingEntry(null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        window.addEventListener('open-add-timesheet', handleOpenAdd);
+        return () => window.removeEventListener('open-add-timesheet', handleOpenAdd);
+    }, []);
+    
     // CRUD States
     const [isAdding, setIsAdding] = useState(false);
     const [editingEntry, setEditingEntry] = useState(null);

@@ -1699,11 +1699,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569' }}>{(selectedCase.raw_data?.assigned_workers?.length || 0) + (selectedCase.raw_data?.assigned_pm ? 1 : 0)} mand</span>
                                 </div>
 
-                                {/* Finance Bubble */}
+                                {/* Material Budget Bubble */}
                                 {!['worker', 'apprentice'].includes(profile?.role) && (
                                     <div onClick={() => setInfoSheetType('finance')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                                         <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                                            <DollarSign size={20} />
+                                            <Package size={20} />
                                         </div>
                                         <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569' }}>{(originalBudget/1000).toFixed(0)}k</span>
                                     </div>
@@ -1762,7 +1762,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', color: '#0f172a', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             {infoSheetType === 'time' && <><span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Clock color="#d97706" /> Timer</span></>}
                                             {infoSheetType === 'materials' && <><span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><PackageCheck color="#2563eb" /> Materialer & Indkøb</span></>}
-                                            {infoSheetType === 'finance' && <><span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><DollarSign color="#059669" /> Økonomi & Budget</span></>}
+                                            {infoSheetType === 'finance' && <><span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Package color="#059669" /> Materialer</span></>}
                                             <button onClick={() => setInfoSheetType(null)} style={{ background: 'none', border: 'none', color: '#94a3b8' }}><X size={20}/></button>
                                         </h3>
                                         
@@ -1848,8 +1848,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         {infoSheetType === 'finance' && (
                                             <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center' }}>
                                                 <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{(originalBudget/1000).toFixed(0)}k <span style={{ fontSize: '1rem', color: '#94a3b8' }}>DKK</span></h1>
-                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Estimeret sagsbudget</p>
-                                                <button onClick={() => { setInfoSheetType(null); setActiveSubTab('invoices'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#059669', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Økonomi</button>
+                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Estimeret materialebudget</p>
+                                                <button onClick={() => { setInfoSheetType(null); setActiveSubTab('materials'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#059669', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Materialer</button>
                                             </div>
                                         )}
                                     </div>

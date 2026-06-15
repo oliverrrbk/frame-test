@@ -205,13 +205,15 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
                                 }}
                                 onClick={() => {
                                     if (isRed) {
-                                        setSelectedMissingDate(day.date);
-                                        setShowMissingModal(true);
+                                        if (setActiveTab) setActiveTab('worker_timesheet');
+                                        setTimeout(() => {
+                                            window.dispatchEvent(new CustomEvent('open-add-timesheet', { detail: { date: format(day.date, 'yyyy-MM-dd') } }));
+                                        }, 100);
                                     }
                                 }}
                                 onMouseEnter={(e) => { if (isRed) e.currentTarget.style.transform = 'scale(1.05)' }}
                                 onMouseLeave={(e) => { if (isRed) e.currentTarget.style.transform = 'scale(1)' }}
-                                title={isRed ? "Klik for at melde fravær" : ""}
+                                title={isRed ? "Klik for at registrere timer" : ""}
                             >
                                 <span style={{ fontSize: isMobile ? '0.65rem' : '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: isMobile ? '0.02em' : 'normal', color: isGreen ? '#059669' : isRed ? '#dc2626' : '#64748b' }}>
                                     {dayLabel}
@@ -262,9 +264,11 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
                             </button>
                             <button 
                                 onClick={() => {
-                                    setSelectedMissingDate(new Date());
                                     setShowDailyReminder(false);
-                                    setShowMissingModal(true);
+                                    if (setActiveTab) setActiveTab('worker_timesheet');
+                                    setTimeout(() => {
+                                        window.dispatchEvent(new CustomEvent('open-add-timesheet', { detail: { date: format(new Date(), 'yyyy-MM-dd') } }));
+                                    }, 100);
                                 }}
                                 style={{ width: '100%', padding: '16px', background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '14px', fontSize: '1.05rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
                                 onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
@@ -284,62 +288,7 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
                 document.body
             )}
 
-            {/* Modal til at melde fravær på en specifik dag */}
-            {showMissingModal && selectedMissingDate && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
-                    <div style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '20px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                                <h3 style={{ margin: '0 0 4px', fontSize: '1.3rem', color: '#0f172a', fontWeight: '800' }}>Registrér Fravær</h3>
-                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem' }}>For {format(selectedMissingDate, 'EEEE d. MMMM', { locale: da })}</p>
-                            </div>
-                            <button onClick={() => setShowMissingModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={24} /></button>
-                        </div>
 
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.9rem', color: '#475569', fontWeight: '600', marginBottom: '8px' }}>Årsag</label>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                {['Syg', 'Ferie', 'Afspadsering'].map(type => (
-                                    <button
-                                        key={type}
-                                        onClick={() => setAbsenceType(type)}
-                                        style={{ flex: 1, padding: '10px 0', border: '1px solid #e2e8f0', background: absenceType === type ? '#f1f5f9' : '#fff', color: absenceType === type ? '#0f172a' : '#64748b', borderRadius: '8px', fontWeight: absenceType === type ? 'bold' : 'normal', cursor: 'pointer', transition: 'all 0.2s' }}
-                                    >
-                                        {type}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.9rem', color: '#475569', fontWeight: '600', marginBottom: '8px' }}>Antal Timer</label>
-                            <input 
-                                type="number" 
-                                step="0.25"
-                                value={absenceHours} 
-                                onChange={e => setAbsenceHours(e.target.value)} 
-                                style={{ width: '100%', padding: '12px', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: '1rem', outline: 'none' }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                            <button 
-                                onClick={() => setShowMissingModal(false)}
-                                style={{ flex: 1, padding: '14px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}
-                            >
-                                Annuller
-                            </button>
-                            <button 
-                                onClick={handleLogAbsence}
-                                style={{ flex: 1, padding: '14px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-                            >
-                                Gem Fravær
-                            </button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
         </div>
     );
 }
