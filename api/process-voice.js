@@ -85,6 +85,7 @@ Instrukser:
 2. Prøv at matche de materialer, håndværkeren nævner, PÅ EKSAGT NAVN OG PRIS fra databasen for hver etape.
 3. Hvis han nævner et materiale, som ikke findes i databasen, så opret det som et nyt frit materiale og gæt en realistisk markedspris.
 4. Estimer antallet af timer (hours) FOR HVER ETAPE. Hvis han nævner specifikke timer for en opgave, brug dem. Hvis ikke, så brug WORK_FORMULAS til at estimere det.
+5. VIGTIGT: Tænk som en ægte, erfaren tømrer. Vær lige så detaljeret som en standard-beregner. Tilføj altid automatisk de nødvendige små-materialer, selvom de ikke nævnes eksplicit. Det inkluderer f.eks. fugleklodser, dampspærretape, fuge, beslag, kiler, skruer og lim, der kræves for at udføre det beskrevne arbejde professionelt.
 
 Struktur krav til dit JSON output:
 {

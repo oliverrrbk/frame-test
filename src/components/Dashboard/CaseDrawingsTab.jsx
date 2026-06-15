@@ -26,14 +26,22 @@ export default function CaseDrawingsTab({ selectedCase, profile, isMobile = fals
         try {
             const { data, error } = await supabase
                 .from('drawings')
-                .select('*')
+                .select('id, name, created_at, type, image_url, lead_id, user_id, updated_at, document_data->url, document_data->fileType, document_data->thumbnail_svg')
                 .eq('lead_id', selectedCase.id)
                 .order('created_at', { ascending: false });
 
             if (error) {
                 if (error.code !== '42P01') throw error;
             } else {
-                setDrawings(data || []);
+                const mappedData = (data || []).map(d => ({
+                    ...d,
+                    document_data: {
+                        url: d.url,
+                        fileType: d.fileType,
+                        thumbnail_svg: d.thumbnail_svg
+                    }
+                }));
+                setDrawings(mappedData);
             }
         } catch (err) {
             console.error("Fejl ved hentning af tegninger:", err);

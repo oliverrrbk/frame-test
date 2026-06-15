@@ -33,6 +33,7 @@ import WorkerOverview from './WorkerOverview';
 import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
+import { useClickOutside } from '../../hooks/useClickOutside';
 import CustomProjectCreator from './CustomProjectCreator';
 import DrawingsGallery from '../Drawings/DrawingsGallery';
 import CalendarView from './CalendarView';
@@ -614,7 +615,10 @@ const Dashboard = () => {
     // Auth & Profile
     const [session, setSession] = useState(null);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-    
+    const profileMenuRef = useRef(null);
+    // Luk profil-menuen ved klik/tap udenfor eller Escape.
+    useClickOutside(profileMenuRef, () => setIsProfileMenuOpen(false), isProfileMenuOpen);
+
     // Close profile menu when navigating
     useEffect(() => {
         setIsProfileMenuOpen(false);
@@ -2439,7 +2443,7 @@ const Dashboard = () => {
                         </div>
                     )}
 
-                    <div className="user-profile flex items-center gap-3 relative" style={{ marginLeft: 'auto' }}>
+                    <div ref={profileMenuRef} className="user-profile flex items-center gap-3 relative" style={{ marginLeft: 'auto' }}>
                         
                         {(isDev || ['team@bisoncompany.dk', 'mbc@bisoncompany.dk'].includes(myProfile?.email) || myProfile?.email?.toLowerCase().includes('madsbyg') || myProfile?.company_name?.toLowerCase().includes('mads') || myProfile?.company_name?.toLowerCase().includes('massbyg')) && (
                             <div style={{ marginRight: '16px', position: 'relative' }}>
@@ -2562,19 +2566,16 @@ const Dashboard = () => {
                         </button>
 
                         {isProfileMenuOpen && (
-                            <>
-                                <div 
-                                    style={{ position: 'fixed', inset: 0, zIndex: 40 }} 
-                                    onClick={() => setIsProfileMenuOpen(false)}
-                                ></div>
-                                <div 
-                                    style={{ 
+                                <div
+                                    style={{
                                         position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 9999,
                                         width: '240px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px',
                                         boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
                                         background: '#ffffff',
                                         border: '1px solid #e2e8f0',
-                                        borderRadius: '16px'
+                                        borderRadius: '16px',
+                                        transformOrigin: 'top right',
+                                        animation: 'fadeUp 0.18s ease-out'
                                     }}
                                 >
                                     <button 
@@ -2611,7 +2612,6 @@ const Dashboard = () => {
                                         Log ud
                                     </button>
                                 </div>
-                            </>
                         )}
                     </div>
                 </header>
