@@ -297,7 +297,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     if (c.status === 'Afbrudt Sag' && profile.role !== 'sales') return false;
                     const workers = c.raw_data?.assigned_workers || [];
                     const pm = c.raw_data?.assigned_pm;
-                    return workers.includes(profile.id) || pm === profile.id;
+                    const pmArray = Array.isArray(pm) ? pm : (pm ? [pm] : []);
+                    return workers.includes(profile.id) || pmArray.includes(profile.id);
                 });
                 setActiveCases(filtered);
             }
