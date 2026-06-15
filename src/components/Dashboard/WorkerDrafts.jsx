@@ -149,6 +149,8 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
 
             {/* Filter and Search Bar */}
             <div style={{ 
+                position: 'relative',
+                zIndex: 50,
                 display: 'flex', 
                 flexDirection: isMobile ? 'column' : 'row', 
                 justifyContent: 'space-between', 
