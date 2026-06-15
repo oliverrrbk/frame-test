@@ -334,12 +334,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             clearTargetCase();
         }
     }, [targetCaseId, activeCases, isModalView, clearTargetCase]);
-    // Indlæs sags-data når en sag vælges
+    // Indlæs sags-data når en sag vælges eller opdateres via Realtime
     useEffect(() => {
-        if (selectedCaseIdState) {
+        if (selectedCaseIdState && selectedCase) {
             loadCaseData();
         }
-    }, [selectedCaseIdState]);
+    }, [selectedCaseIdState, selectedCase]);
     const fetchTeam = async () => {
         try {
             const companyId = profile.company_id || profile.id;
@@ -397,7 +397,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         }
     };
 
-    const loadCaseData = async () => {
+    const loadCaseData = () => {
+        if (!selectedCase) return;
         const caseId = selectedCase.id;
 
         // 1. Indlæs Delegering (PM og Workers)
@@ -420,11 +421,19 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                 }];
                 setTodoList(legacyNested);
             } else {
-                setTodoList(savedTodo.map(t => ({...t, isExpanded: false})));
+                setTodoList(prev => {
+                    return savedTodo.map(t => {
+                        const existing = prev.find(p => p.id === t.id);
+                        return { ...t, isExpanded: existing ? existing.isExpanded : false };
+                    });
+                });
             }
         } else {
             const defaultTodo = getDefaultChecklist(selectedCase);
-            setTodoList(defaultTodo.map(t => ({...t, isExpanded: false})));
+            setTodoList(prev => {
+                if (prev.length > 0 && prev[0].id !== 'legacy-step-1') return prev; 
+                return defaultTodo.map(t => ({...t, isExpanded: false}));
+            });
         }
 
         // 3. Indlæs Logbog
