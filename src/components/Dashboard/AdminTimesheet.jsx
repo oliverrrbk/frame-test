@@ -952,12 +952,30 @@ export default function AdminTimesheet({ leadsData, profile }) {
                         </button>
 
                         {exportMenuOpen && (
-                            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: '300px', background: '#fff', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 16px 32px -8px rgba(15,23,42,0.18)', zIndex: 100000, overflow: 'hidden', padding: '6px', animation: 'fadeIn 0.15s ease-out' }}>
-                                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '8px 12px 4px' }}>Til lønsystem — seneste periode</div>
-                                <ExportMenuItem title="Lønart-fil (universal)" desc="Medarbejdernr · lønart · antal — importeres direkte" onClick={() => exportPayroll('lonart')} />
+                            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: '320px', background: '#fff', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 16px 32px -8px rgba(15,23,42,0.18)', zIndex: 100000, overflow: 'hidden', padding: '8px', animation: 'fadeIn 0.15s ease-out' }}>
+                                {/* PRIMÆR: filen man importerer i lønsystemet */}
+                                <div
+                                    onClick={() => exportPayroll('lonart')}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px', cursor: 'pointer', background: '#eff6ff', border: '1px solid #bfdbfe', transition: 'all 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.transform = 'none'; }}
+                                >
+                                    <div style={{ width: '40px', height: '40px', flexShrink: 0, borderRadius: '10px', background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Download size={20} />
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>Lønfil til lønsystem</span>
+                                            <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#1d4ed8', background: '#dbeafe', border: '1px solid #bfdbfe', padding: '2px 7px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Anbefalet</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.78rem', color: '#3b82f6', marginTop: '2px' }}>Den du importerer direkte i lønsystemet · seneste lønperiode</div>
+                                    </div>
+                                </div>
+
+                                {/* SEKUNDÆR: til at dobbelttjekke perioden */}
+                                <div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '12px 10px 4px' }}>Til at dobbelttjekke perioden:</div>
                                 <ExportMenuItem title="Opsummering" desc="Normaltimer, ferie, sygdom, kørsel pr. medarbejder" onClick={() => exportPayroll('summary')} />
-                                <div style={{ height: '1px', background: '#f1f5f9', margin: '6px 0' }} />
-                                <ExportMenuItem title="Kontrol-CSV (valgt periode)" desc="Alle rå linjer til internt overblik" onClick={() => { handleExportCSV(); setExportMenuOpen(false); }} />
+                                <ExportMenuItem title="Kontrol-CSV" desc="Alle rå linjer · valgt periode" onClick={() => { handleExportCSV(); setExportMenuOpen(false); }} />
                             </div>
                         )}
                     </div>
@@ -1462,9 +1480,9 @@ export default function AdminTimesheet({ leadsData, profile }) {
 
             {/* Stamdata & Ferie Modal */}
             {createPortal(
-                <AnimatePresence>
+                <>
                     {isStamdataModalOpen && (
-                        <motion.div key="stamdata-modal" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
                         <motion.div 
                             initial={{ opacity: 0 }} 
                             animate={{ opacity: 1 }} 
@@ -1583,9 +1601,9 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                 </div>
                             </div>
                         </motion.div>
-                    </motion.div>
+                        </div>
                     )}
-                </AnimatePresence>
+                </>
             , document.body)}
         </div>
     );
