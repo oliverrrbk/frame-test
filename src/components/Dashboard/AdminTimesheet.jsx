@@ -1459,9 +1459,10 @@ export default function AdminTimesheet({ leadsData, profile }) {
             , document.body)}
 
             {/* Stamdata & Ferie Modal */}
-            <AnimatePresence>
-                {isStamdataModalOpen && createPortal(
-                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            {createPortal(
+                <AnimatePresence>
+                    {isStamdataModalOpen && (
+                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
                         <motion.div 
                             initial={{ opacity: 0 }} 
                             animate={{ opacity: 1 }} 
@@ -1581,8 +1582,9 @@ export default function AdminTimesheet({ leadsData, profile }) {
                             </div>
                         </motion.div>
                     </div>
-                , document.body)}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>
+            , document.body)}
         </div>
     );
 }

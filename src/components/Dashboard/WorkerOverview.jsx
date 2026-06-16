@@ -564,8 +564,12 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                         <div style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', padding: '12px 20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.5)', textAlign: 'center', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
                             <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>I gang med</p>
                             <h4 style={{ margin: '4px 0 0', color: '#0f172a', fontSize: '1.1rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {activeCheckInInfo.lead.customer_name}
+                                Sag {activeCheckInInfo.lead.case_number || String(activeCheckInInfo.lead.id).substring(0, 6)}
+                                {(activeCheckInInfo.lead.raw_data?.project_title || activeCheckInInfo.lead.project_category) ? ` · ${activeCheckInInfo.lead.raw_data?.project_title || activeCheckInInfo.lead.project_category}` : ''}
                             </h4>
+                            <div style={{ margin: '2px 0 0', color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {activeCheckInInfo.lead.customer_name}
+                            </div>
                         </div>
                     </>
                 ) : (
