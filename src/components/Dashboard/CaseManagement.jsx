@@ -142,7 +142,9 @@ const CustomSelect = function({ value, onChange, options, placeholder }) {
     );
 };
 // --- DND KIT SORTABLE COMPONENT ---
-function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDeleteSubTask, profile }) {
+function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDeleteSubTask, handleEditSubTaskText, profile }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editText, setEditText] = useState(sub.text);
     const {
         attributes,
         listeners,
@@ -150,7 +152,7 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: sub.id });
+    } = useSortable({ id: sub.id, data: { type: 'SubTask', stepId } });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -219,20 +221,60 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
                 >
                     {sub.done && <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}>✓</span>}
                 </div>
-                <span 
-                    onClick={(e) => { e.stopPropagation(); handleTodoToggle(stepId, sub.id); }}
-                    style={{ 
-                        fontSize: '0.95rem', 
-                        color: sub.done ? '#64748b' : '#1e293b', 
-                        textDecoration: sub.done ? 'line-through' : 'none', 
-                        cursor: 'pointer', 
-                        flex: 1, 
-                        lineHeight: '1.5',
-                        transition: 'color 0.2s'
-                    }}
-                >
-                    {sub.text}
-                </span>
+                {isEditing ? (
+                    <input 
+                        autoFocus
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        onBlur={() => {
+                            setIsEditing(false);
+                            if (editText.trim() !== '' && editText !== sub.text) {
+                                handleEditSubTaskText(stepId, sub.id, editText.trim());
+                            } else {
+                                setEditText(sub.text);
+                            }
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                setIsEditing(false);
+                                if (editText.trim() !== '' && editText !== sub.text) {
+                                    handleEditSubTaskText(stepId, sub.id, editText.trim());
+                                } else {
+                                    setEditText(sub.text);
+                                }
+                            }
+                            if (e.key === 'Escape') {
+                                setIsEditing(false);
+                                setEditText(sub.text);
+                            }
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()} // Prevent drag when clicking input
+                        style={{
+                            flex: 1,
+                            padding: '4px 8px',
+                            border: '1px solid #3b82f6',
+                            borderRadius: '4px',
+                            fontSize: '0.95rem',
+                            outline: 'none',
+                            fontFamily: 'inherit'
+                        }}
+                    />
+                ) : (
+                    <span 
+                        onClick={(e) => { e.stopPropagation(); handleTodoToggle(stepId, sub.id); }}
+                        style={{ 
+                            fontSize: '0.95rem', 
+                            color: sub.done ? '#64748b' : '#1e293b', 
+                            textDecoration: sub.done ? 'line-through' : 'none', 
+                            cursor: 'pointer', 
+                            flex: 1, 
+                            lineHeight: '1.5',
+                            transition: 'color 0.2s'
+                        }}
+                    >
+                        {sub.text}
+                    </span>
+                )}
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, marginLeft: '12px' }}>
@@ -247,20 +289,214 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
                 </button>
                 
                 {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteSubTask(stepId, sub.id); }}
-                        title="Slet"
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                        <Trash2 size={16} />
-                    </button>
+                    <>
+                        <button 
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setIsEditing(true); 
+                            }}
+                            title="Rediger"
+                            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                            <Edit2 size={16} />
+                        </button>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteSubTask(stepId, sub.id); }}
+                            title="Slet"
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </>
                 )}
             </div>
         </div>
     );
 }
+function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, profile, children }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editText, setEditText] = useState(step.text);
+    
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: step.id, data: { type: 'Step' } });
+
+    const subs = step.subTasks || [];
+    const completedSub = subs.filter(s => s.done).length;
+    const totalSub = subs.length;
+    const isAllDone = totalSub > 0 && completedSub === totalSub;
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 1,
+        position: 'relative',
+        display: 'flex', 
+        flexDirection: 'column', 
+        backgroundColor: isAllDone ? 'rgba(240, 253, 244, 0.5)' : '#ffffff', 
+        border: isAllDone ? '1px solid #6ee7b7' : '1px solid #e2e8f0', 
+        borderRadius: '16px', 
+        overflow: 'hidden',
+        boxShadow: isDragging ? '0 10px 30px rgba(0,0,0,0.15)' : (isAllDone ? '0 4px 14px rgba(16, 185, 129, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.03)'),
+        opacity: isDragging ? 0.6 : 1,
+        touchAction: 'none'
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            {/* Header / Accordion trigger */}
+            <div 
+                onClick={() => { if (!isEditing) handleToggleExpand(step.id); }}
+                onMouseEnter={(e) => {
+                    if (!isAllDone && !isDragging) e.currentTarget.style.backgroundColor = '#f8fafc';
+                }}
+                onMouseLeave={(e) => {
+                    if (!isAllDone && !isDragging) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '18px 24px', 
+                    backgroundColor: isAllDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent', 
+                    cursor: isDragging ? 'grabbing' : 'pointer', 
+                    transition: 'background-color 0.2s ease',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+                    {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                        <div style={{ color: '#cbd5e1', display: 'flex', alignItems: 'center', marginLeft: '-8px' }}>
+                            <GripVertical size={20} />
+                        </div>
+                    )}
+                    <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        width: '28px', 
+                        height: '28px', 
+                        borderRadius: '50%', 
+                        backgroundColor: isAllDone ? '#10b981' : '#f1f5f9', 
+                        color: isAllDone ? '#fff' : '#475569', 
+                        fontSize: '0.85rem', 
+                        fontWeight: 'bold',
+                        boxShadow: isAllDone ? '0 2px 8px rgba(16, 185, 129, 0.4)' : 'inset 0 1px 3px rgba(0,0,0,0.05)',
+                        transition: 'all 0.3s',
+                        flexShrink: 0
+                    }}>
+                        {isAllDone ? '✓' : (idx + 1)}
+                    </div>
+                    
+                    {isEditing ? (
+                        <input 
+                            autoFocus
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            onBlur={() => {
+                                setIsEditing(false);
+                                if (editText.trim() !== '' && editText !== step.text) {
+                                    handleEditStepText(step.id, editText.trim());
+                                } else {
+                                    setEditText(step.text);
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    setIsEditing(false);
+                                    if (editText.trim() !== '' && editText !== step.text) {
+                                        handleEditStepText(step.id, editText.trim());
+                                    } else {
+                                        setEditText(step.text);
+                                    }
+                                }
+                                if (e.key === 'Escape') {
+                                    setIsEditing(false);
+                                    setEditText(step.text);
+                                }
+                            }}
+                            onPointerDown={(e) => e.stopPropagation()} // Prevent drag when interacting
+                            style={{
+                                flex: 1,
+                                padding: '4px 8px',
+                                border: '1px solid #3b82f6',
+                                borderRadius: '6px',
+                                fontSize: '1.1rem',
+                                fontWeight: '700',
+                                outline: 'none',
+                                fontFamily: 'inherit'
+                            }}
+                        />
+                    ) : (
+                        <h5 style={{ margin: 0, fontSize: '1.1rem', color: isAllDone ? '#065f46' : '#0f172a', fontWeight: '700', letterSpacing: '-0.01em' }}>
+                            {step.text}
+                        </h5>
+                    )}
+                    
+                    <span style={{ 
+                        fontSize: '0.8rem', 
+                        color: isAllDone ? '#059669' : '#64748b', 
+                        marginLeft: '4px',
+                        backgroundColor: isAllDone ? '#d1fae5' : '#f1f5f9',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontWeight: '600',
+                        flexShrink: 0
+                    }}>
+                        {completedSub} / {totalSub}
+                    </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px' }}>
+                    {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                        <button 
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setIsEditing(true); 
+                            }}
+                            title="Rediger Trin"
+                            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                            <Edit2 size={18} />
+                        </button>
+                    )}
+                    <ChevronDown 
+                        size={20} 
+                        style={{ 
+                            color: isAllDone ? '#10b981' : '#94a3b8', 
+                            transform: step.isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', 
+                            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
+                        }} 
+                    />
+                </div>
+            </div>
+            
+            {/* Udklappet indhold */}
+            <div 
+                onPointerDown={(e) => e.stopPropagation()} // Stop drag for the expanded content
+                style={{ 
+                    maxHeight: step.isExpanded ? '2000px' : '0', 
+                    opacity: step.isExpanded ? 1 : 0, 
+                    overflow: 'hidden', 
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
+                }}
+            >
+                {children}
+            </div>
+        </div>
+    );
+}
+
 export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile }) {
     const [activeCases, setActiveCases] = useState([]);
     const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
@@ -283,22 +519,37 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         })
     );
 
-    const handleDragEnd = (event, stepId) => {
+    const handleDragEndGlobal = (event) => {
         const { active, over } = event;
         if (!over || active.id === over.id) return;
 
-        const updatedTodoList = [...todoList];
-        const stepIndex = updatedTodoList.findIndex(s => s.id === stepId);
-        if (stepIndex === -1) return;
+        const type = active.data.current?.type;
 
-        const subs = updatedTodoList[stepIndex].subTasks || [];
-        const oldIndex = subs.findIndex(s => s.id === active.id);
-        const newIndex = subs.findIndex(s => s.id === over.id);
+        if (type === 'Step') {
+            const oldIndex = todoList.findIndex(s => s.id === active.id);
+            const newIndex = todoList.findIndex(s => s.id === over.id);
+            if (oldIndex !== -1 && newIndex !== -1) {
+                const updatedTodoList = arrayMove(todoList, oldIndex, newIndex);
+                setTodoList(updatedTodoList);
+                saveCaseDataToDb({ checklist: updatedTodoList });
+            }
+        } else if (type === 'SubTask') {
+            const stepId = active.data.current?.stepId;
+            if (!stepId) return;
 
-        updatedTodoList[stepIndex].subTasks = arrayMove(subs, oldIndex, newIndex);
-        
-        setTodoList(updatedTodoList);
-        saveCaseDataToDb({ checklist: updatedTodoList });
+            const updatedTodoList = [...todoList];
+            const stepIndex = updatedTodoList.findIndex(s => s.id === stepId);
+            if (stepIndex === -1) return;
+
+            const subs = updatedTodoList[stepIndex].subTasks || [];
+            const oldIndex = subs.findIndex(s => s.id === active.id);
+            const newIndex = subs.findIndex(s => s.id === over.id);
+
+            updatedTodoList[stepIndex].subTasks = arrayMove(subs, oldIndex, newIndex);
+            
+            setTodoList(updatedTodoList);
+            saveCaseDataToDb({ checklist: updatedTodoList });
+        }
     };
     // ------------------------------------
 
@@ -1080,6 +1331,31 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         setTodoList(updated);
         saveCaseDataToDb({ checklist: updated });
         toast.success('Underpunkt slettet');
+    };
+    const handleEditSubTaskText = (mainId, subId, newText) => {
+        const updated = todoList.map(step => {
+            if (step.id === mainId) {
+                return {
+                    ...step,
+                    subTasks: step.subTasks.map(sub => 
+                        sub.id === subId ? { ...sub, text: newText } : sub
+                    )
+                };
+            }
+            return step;
+        });
+        setTodoList(updated);
+        saveCaseDataToDb({ checklist: updated });
+        toast.success('Underpunkt opdateret');
+    };
+
+    const handleEditStepText = (stepId, newText) => {
+        const updated = todoList.map(step => 
+            step.id === stepId ? { ...step, text: newText } : step
+        );
+        setTodoList(updated);
+        saveCaseDataToDb({ checklist: updated });
+        toast.success('Byggetrin opdateret');
     };
 
     const handleToggleExpand = (mainId) => {
@@ -3148,101 +3424,23 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     </div>
                                 )}
 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {todoList.map((step, idx) => {
-                                        const subs = step.subTasks || [];
-                                        const completedSub = subs.filter(s => s.done).length;
-                                        const totalSub = subs.length;
-                                        const isAllDone = totalSub > 0 && completedSub === totalSub;
-                                        
-                                        return (
-                                            <div 
-                                                key={step.id} 
-                                                style={{ 
-                                                    display: 'flex', 
-                                                    flexDirection: 'column', 
-                                                    backgroundColor: isAllDone ? 'rgba(240, 253, 244, 0.5)' : '#ffffff', 
-                                                    border: isAllDone ? '1px solid #6ee7b7' : '1px solid #e2e8f0', 
-                                                    borderRadius: '16px', 
-                                                    overflow: 'hidden',
-                                                    boxShadow: isAllDone ? '0 4px 14px rgba(16, 185, 129, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.03)',
-                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                    transform: 'translateZ(0)'
-                                                }}
-                                            >
-                                                {/* Header / Accordion trigger */}
-                                                <div 
-                                                    onClick={() => handleToggleExpand(step.id)}
-                                                    onMouseEnter={(e) => {
-                                                        if (!isAllDone) e.currentTarget.style.backgroundColor = '#f8fafc';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        if (!isAllDone) e.currentTarget.style.backgroundColor = 'transparent';
-                                                    }}
-                                                    style={{ 
-                                                        display: 'flex', 
-                                                        justifyContent: 'space-between', 
-                                                        alignItems: 'center', 
-                                                        padding: '18px 24px', 
-                                                        backgroundColor: isAllDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent', 
-                                                        cursor: 'pointer', 
-                                                        transition: 'background-color 0.2s ease',
-                                                    }}
-                                                >
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                        <div style={{ 
-                                                            display: 'flex', 
-                                                            alignItems: 'center', 
-                                                            justifyContent: 'center', 
-                                                            width: '28px', 
-                                                            height: '28px', 
-                                                            borderRadius: '50%', 
-                                                            backgroundColor: isAllDone ? '#10b981' : '#f1f5f9', 
-                                                            color: isAllDone ? '#fff' : '#475569', 
-                                                            fontSize: '0.85rem', 
-                                                            fontWeight: 'bold',
-                                                            boxShadow: isAllDone ? '0 2px 8px rgba(16, 185, 129, 0.4)' : 'inset 0 1px 3px rgba(0,0,0,0.05)',
-                                                            transition: 'all 0.3s'
-                                                        }}>
-                                                            {isAllDone ? '✓' : (idx + 1)}
-                                                        </div>
-                                                        <h5 style={{ margin: 0, fontSize: '1.1rem', color: isAllDone ? '#065f46' : '#0f172a', fontWeight: '700', letterSpacing: '-0.01em' }}>
-                                                            {step.text}
-                                                        </h5>
-                                                        <span style={{ 
-                                                            fontSize: '0.8rem', 
-                                                            color: isAllDone ? '#059669' : '#64748b', 
-                                                            marginLeft: '4px',
-                                                            backgroundColor: isAllDone ? '#d1fae5' : '#f1f5f9',
-                                                            padding: '2px 8px',
-                                                            borderRadius: '12px',
-                                                            fontWeight: '600'
-                                                        }}>
-                                                            {completedSub} / {totalSub}
-                                                        </span>
-                                                    </div>
-                                                    <ChevronDown 
-                                                        size={20} 
-                                                        style={{ 
-                                                            color: isAllDone ? '#10b981' : '#94a3b8', 
-                                                            transform: step.isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', 
-                                                            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
-                                                        }} 
-                                                    />
-                                                </div>
+                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndGlobal}>
+                                    <SortableContext items={todoList.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            {todoList.map((step, idx) => {
+                                                const subs = step.subTasks || [];
                                                 
-                                                {/* Udklappet indhold */}
-                                                <div 
-                                                    style={{ 
-                                                        maxHeight: step.isExpanded ? '2000px' : '0', 
-                                                        opacity: step.isExpanded ? 1 : 0, 
-                                                        overflow: 'hidden', 
-                                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
-                                                    }}
-                                                >
-                                                    <div style={{ padding: '0 24px 20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                        <div style={{ height: '1px', backgroundColor: isAllDone ? 'rgba(16, 185, 129, 0.2)' : '#f1f5f9', marginBottom: '8px' }}></div>
-                                                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, step.id)}>
+                                                return (
+                                                    <SortableStep 
+                                                        key={step.id} 
+                                                        step={step} 
+                                                        idx={idx} 
+                                                        handleToggleExpand={handleToggleExpand}
+                                                        handleEditStepText={handleEditStepText}
+                                                        profile={profile}
+                                                    >
+                                                        <div style={{ padding: '0 24px 20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                            <div style={{ height: '1px', backgroundColor: (subs.length > 0 && subs.filter(s => s.done).length === subs.length) ? 'rgba(16, 185, 129, 0.2)' : '#f1f5f9', marginBottom: '8px' }}></div>
                                                             <SortableContext items={subs.map(s => s.id)} strategy={verticalListSortingStrategy}>
                                                                 {subs.map((sub) => (
                                                                     <SortableSubTask 
@@ -3252,35 +3450,37 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                                         handleTodoToggle={handleTodoToggle} 
                                                                         speakText={speakText} 
                                                                         handleDeleteSubTask={handleDeleteSubTask} 
+                                                                        handleEditSubTaskText={handleEditSubTaskText}
                                                                         profile={profile} 
                                                                     />
                                                                 ))}
                                                             </SortableContext>
-                                                        </DndContext>
-                                                        
-                                                        {/* Tilføj underpunkt knap (kun for admin/mester) */}
-                                                        {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                                                            <div style={{ marginTop: '8px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0' }}>
-                                                                <input 
-                                                                    type="text"
-                                                                    placeholder="+ Tilføj et underpunkt (tryk Enter for at gemme)..."
-                                                                    style={{ width: '100%', border: '1px solid #e2e8f0', padding: '10px 14px', borderRadius: '6px', fontSize: '0.9rem', backgroundColor: '#f8fafc' }}
-                                                                    onKeyDown={(e) => {
-                                                                        if (e.key === 'Enter') {
-                                                                            e.preventDefault();
-                                                                            handleAddSubTask(step.id, e.target.value);
-                                                                            e.target.value = '';
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                                            
+                                                            {/* Tilføj underpunkt knap (kun for admin/mester) */}
+                                                            {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                                                                <div style={{ marginTop: '8px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0' }}>
+                                                                    <input 
+                                                                        type="text"
+                                                                        placeholder="+ Tilføj et underpunkt (tryk Enter for at gemme)..."
+                                                                        style={{ width: '100%', border: '1px solid #e2e8f0', padding: '10px 14px', borderRadius: '6px', fontSize: '0.9rem', backgroundColor: '#f8fafc' }}
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                e.preventDefault();
+                                                                                handleAddSubTask(step.id, e.target.value);
+                                                                                e.target.value = '';
+                                                                            }
+                                                                        }}
+                                                                        onPointerDown={(e) => e.stopPropagation()} // Prevent drag when focusing input
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </SortableStep>
+                                                );
+                                            })}
+                                        </div>
+                                    </SortableContext>
+                                </DndContext>
 
                                 {/* TILFØJ CUSTOM HOVEDTRIN */}
                                 {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
