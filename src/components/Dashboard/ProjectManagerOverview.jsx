@@ -69,18 +69,21 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
         if (!activeCheckInInfo) return;
 
         const { lead, activeEntry } = activeCheckInInfo;
-        const nowTime = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+        const now = new Date();
 
         const entry = { ...activeEntry };
-        entry.endTime = nowTime;
+        entry.endTime = toHHMM(now);
 
-        const start = new Date(`${entry.date}T${entry.startTime}`);
-        const end = new Date(`${entry.date}T${entry.endTime}`);
-        let diffHours = (end - start) / (1000 * 60 * 60);
-        if (diffHours < 0) diffHours = 0;
+        // Brutto-tid fra det robuste tidsstempel (falder tilbage på dato+klokkeslæt, kolon-sikret).
+        const startMs = activeEntry.startedAt
+            ? new Date(activeEntry.startedAt).getTime()
+            : new Date(`${activeEntry.date}T${String(activeEntry.startTime || '').replace('.', ':')}`).getTime();
+        let grossHours = (now.getTime() - startMs) / (1000 * 60 * 60);
+        if (!isFinite(grossHours) || grossHours < 0) grossHours = 0;
 
-        // Afrund til nærmeste kvarter
-        entry.hours = Math.round(diffHours * 4) / 4;
+        // Træk automatisk pause fra (firmaets regel) og afrund til kvarter.
+        entry.pauseMinutes = suggestedBreakMinutes(grossHours, payrollCfg);
+        entry.hours = computeNetHours(grossHours, payrollCfg);
         entry.desc = 'Arbejde udført (Tjek-ud)';
 
         try {
