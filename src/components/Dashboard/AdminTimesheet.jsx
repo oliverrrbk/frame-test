@@ -794,6 +794,16 @@ export default function AdminTimesheet({ leadsData, profile }) {
         setEditingEntry(null);
     };
 
+    const computeHours = (start, end, pauseStr) => {
+        if (!start || !end) return '';
+        const s = new Date(`2000-01-01T${start}`);
+        const e = new Date(`2000-01-01T${end}`);
+        let diffMs = e - s;
+        if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000;
+        const diffMin = (diffMs / (1000 * 60)) - (parseInt(pauseStr) || 0);
+        return diffMin > 0 ? (Math.round((diffMin / 60) * 4) / 4) : 0;
+    };
+
     // "Som i går": udfyld med den valgte medarbejders seneste registrering, på dags dato
     const fillFromLast = () => {
         if (!formData.employeeId) { toast.error('Vælg en medarbejder først.'); return; }
@@ -1301,20 +1311,22 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                 <>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Start tid (valgfri)</label>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Start tid *</label>
                                             <input 
                                                 type="time" 
+                                                required
                                                 value={formData.startTime}
-                                                onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                                                onChange={(e) => setFormData({...formData, startTime: e.target.value, hours: computeHours(e.target.value, formData.endTime, formData.pauseMinutes)})}
                                                 style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
                                             />
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Slut tid (valgfri)</label>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Slut tid *</label>
                                             <input 
                                                 type="time" 
+                                                required
                                                 value={formData.endTime}
-                                                onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                                                onChange={(e) => setFormData({...formData, endTime: e.target.value, hours: computeHours(formData.startTime, e.target.value, formData.pauseMinutes)})}
                                                 style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
                                             />
                                         </div>
@@ -1325,23 +1337,20 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                                 min="0"
                                                 placeholder="F.eks. 30"
                                                 value={formData.pauseMinutes}
-                                                onChange={(e) => setFormData({...formData, pauseMinutes: e.target.value})}
+                                                onChange={(e) => setFormData({...formData, pauseMinutes: e.target.value, hours: computeHours(formData.startTime, formData.endTime, e.target.value)})}
                                                 style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
                                             />
                                         </div>
                                     </div>
 
                                     <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <label style={{ fontSize: '1rem', fontWeight: '700', color: '#334155', margin: 0 }}>Timer i alt (Totalt) *</label>
+                                        <label style={{ fontSize: '1rem', fontWeight: '700', color: '#64748b', margin: 0 }}>Timer i alt (Beregnet automatisk)</label>
                                         <input 
                                             type="number" 
-                                            required
-                                            step="0.25"
-                                            min="0"
-                                            placeholder="F.eks. 7.5"
+                                            readOnly
+                                            placeholder="-"
                                             value={formData.hours}
-                                            onChange={(e) => setFormData({...formData, hours: e.target.value})}
-                                            style={{ padding: '10px 16px', borderRadius: '8px', border: '2px solid #3b82f6', outline: 'none', fontSize: '1.25rem', color: '#1e293b', backgroundColor: '#fff', fontWeight: '900', width: '120px', textAlign: 'center' }}
+                                            style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '1.25rem', color: '#64748b', backgroundColor: '#e2e8f0', fontWeight: '900', width: '120px', textAlign: 'center', cursor: 'not-allowed' }}
                                         />
                                     </div>
 

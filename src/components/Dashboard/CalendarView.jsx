@@ -272,7 +272,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     };
 
     // Tjek overlaps for en given dag
-    const getItemsForDay = (checkDate) => {
+    const getItemsForDay = (checkDate, { ignoreSearch = false } = {}) => {
         checkDate.setHours(0,0,0,0);
         
         // Fix timezone offset issue for toISOString locally
@@ -305,7 +305,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             return checkDate >= start && checkDate <= end;
         });
 
-        if (searchTerm.trim() !== '') {
+        if (!ignoreSearch && searchTerm.trim() !== '') {
             const term = searchTerm.toLowerCase();
             leads = leads.filter(l => (l.case_number?.toLowerCase().includes(term) || l.project_category?.toLowerCase().includes(term) || l.raw_data?.project_title?.toLowerCase().includes(term)));
             absences = absences.filter(a => a.employeeName?.toLowerCase().includes(term) || a.absenceType?.toLowerCase().includes(term));
@@ -350,7 +350,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         const conflicts = [];
 
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const items = getItemsForDay(new Date(d));
+            const items = getItemsForDay(new Date(d), { ignoreSearch: true });
             const dayLabel = format(new Date(d), 'd. MMM', { locale: da });
             const otherEvents = items.events.filter(event => {
                 if (event.id === formData.id) return false;
@@ -849,7 +849,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                         <div key={e.id} onClick={() => openModalForDate(null, e)} style={{ padding: '16px', background: '#ecfdf5', borderLeft: '4px solid #10b981', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                                             <div>
                                                 <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#065f46' }}>{e.title}</h4>
-                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#059669' }}>{format(new Date(e.startDate || e.date), 'd. MMM yyyy', { locale: da })} - {e.type}</p>
+                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#059669' }}>{format(new Date(e.startDate || e.date), 'd. MMM yyyy', { locale: da })} · {eventTimeLabel(e)} · {e.type}</p>
+                                                {e.location && <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: '#047857' }}>{e.location}</p>}
                                             </div>
                                         </div>
                                     ))}
@@ -1058,9 +1059,14 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                                     <div style={{ flex: 1 }}>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                             <div style={{ fontWeight: 'bold', color: style.text, fontSize: '0.95rem' }}>{e.type}</div>
-                                                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b' }}>{e.startTime} - {e.endTime}</div>
+                                                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b' }}>{eventTimeLabel(e)}</div>
                                                         </div>
                                                         <div style={{ fontWeight: 600, color: '#0f172a', marginTop: '2px', fontSize: '0.95rem' }}>{e.title}</div>
+                                                        {e.location && (
+                                                            <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', color: '#64748b' }}>
+                                                                <MapPin size={12} /> {e.location}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )
@@ -1244,7 +1250,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                                             onDragEnd={() => setDraggedEvent(null)}
                                                             onClick={(evt) => { evt.stopPropagation(); openModalForDate(null, e); }} 
                                                             style={{ background: style.bg, borderLeft: `3px solid ${style.leftBorder}`, borderRadius: '2px 4px 4px 2px', padding: '4px', fontSize: '0.75rem', cursor: isManager ? 'grab' : 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                            {e.startTime} {e.title}
+                                                            {eventTimeLabel(e)} {e.title}
                                                         </div>
                                                     )
                                                 })}
@@ -1334,7 +1340,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                                 title={ev.title}
                                             >
                                                 <evStyle.icon size={12}/>
-                                                {ev.startTime} - {ev.title}
+                                                {eventTimeLabel(ev)} - {ev.title}
                                             </div>
                                         )
                                     })}
@@ -1458,7 +1464,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                             onDragEnd={() => setDraggedEvent(null)}
                                             onClick={(evt) => { evt.stopPropagation(); openModalForDate(null, e); }} 
                                             style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, borderRadius: '0 8px 8px 0', padding: '8px', fontSize: '0.8rem', cursor: isManager ? 'grab' : 'pointer' }}>
-                                            <strong>{e.startTime} - {e.endTime}</strong><br/>{e.title}
+                                            <strong>{eventTimeLabel(e)}</strong><br/>{e.title}
+                                            {e.location && <div style={{ marginTop: '4px', color: '#64748b' }}>{e.location}</div>}
                                         </div>
                                     )
                                 })}
@@ -1668,8 +1675,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
             {/* MODAL: NY AFTALE */}
             {showEventModal && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000 }}>
-                    <div style={{ width: '100%', maxWidth: '500px', background: '#fff', borderRadius: '16px', padding: '32px' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'flex-end' : 'center', zIndex: 100000, padding: isMobile ? 0 : '20px' }}>
+                    <div style={{ width: '100%', maxWidth: isMobile ? '100%' : '500px', maxHeight: isMobile ? '92dvh' : '90vh', overflowY: 'auto', background: '#fff', borderRadius: isMobile ? '24px 24px 0 0' : '16px', padding: isMobile ? '24px 20px calc(env(safe-area-inset-bottom) + 24px)' : '32px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
                             <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{eventFormData.id ? 'Rediger Aftale' : 'Opret Kalenderaftale'}</h3>
                             <button onClick={() => setShowEventModal(false)} style={{ background:'none', border:'none', cursor:'pointer' }}><X/></button>
@@ -1686,6 +1693,29 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 />
                             </div>
 
+                            <button
+                                type="button"
+                                onClick={() => setEventFormData(prev => ({ ...prev, allDay: !prev.allDay }))}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '12px',
+                                    padding: '12px 14px',
+                                    borderRadius: '12px',
+                                    border: eventFormData.allDay ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                                    background: eventFormData.allDay ? '#eff6ff' : '#fff',
+                                    color: eventFormData.allDay ? '#1d4ed8' : '#475569',
+                                    fontWeight: 800,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Clock size={18} /> Heldagsaftale</span>
+                                <span style={{ width: '44px', height: '24px', borderRadius: '999px', background: eventFormData.allDay ? '#2563eb' : '#cbd5e1', padding: '3px', boxSizing: 'border-box', display: 'flex', justifyContent: eventFormData.allDay ? 'flex-end' : 'flex-start', transition: 'all 0.2s' }}>
+                                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#fff', display: 'block' }} />
+                                </span>
+                            </button>
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Start</label>
@@ -1698,7 +1728,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                                 endDate: prev.endDate < newStart ? newStart : prev.endDate
                                             }))
                                         }} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
-                                        <input type="time" required value={eventFormData.startTime} onChange={e=> {
+                                        {!eventFormData.allDay && <input type="time" required value={eventFormData.startTime} onChange={e=> {
                                             const newTime = e.target.value;
                                             setEventFormData(prev => {
                                                 if (prev.startDate === prev.endDate && prev.endTime < newTime) {
@@ -1706,16 +1736,29 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                                 }
                                                 return {...prev, startTime: newTime};
                                             })
-                                        }} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
+                                        }} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />}
                                     </div>
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Slut</label>
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         <input type="date" required value={eventFormData.endDate} min={eventFormData.startDate} onChange={e=>setEventFormData({...eventFormData, endDate: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
-                                        <input type="time" required value={eventFormData.endTime} onChange={e=>setEventFormData({...eventFormData, endTime: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
+                                        {!eventFormData.allDay && <input type="time" required value={eventFormData.endTime} onChange={e=>setEventFormData({...eventFormData, endTime: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />}
                                     </div>
                                 </div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Adresse / lokation</label>
+                                <div style={{ position: 'relative' }}>
+                                    <MapPin size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                                    <input placeholder="Fx byggeplads, leveringsadresse eller mødelokale" value={eventFormData.location} onChange={e=>setEventFormData({...eventFormData, location: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', padding: '12px 12px 12px 36px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Note</label>
+                                <textarea placeholder="Fx ring før levering, parkering, nøgleboks, kunden er hjemme efter 12..." value={eventFormData.notes} onChange={e=>setEventFormData({...eventFormData, notes: e.target.value})} rows={3} style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', resize: 'vertical', fontFamily: 'inherit' }} />
                             </div>
                             
                             <div style={{ zIndex: 1900, position: 'relative' }}>
@@ -1738,7 +1781,14 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                                 name: `${lead.case_number || String(lead.id).substring(0,6)} - ${lead.raw_data?.project_title || lead.project_category}`
                                             }))}
                                             selectedId={eventFormData.selectedLeadId}
-                                            onChange={(newId) => setEventFormData({...eventFormData, selectedLeadId: newId})}
+                                            onChange={(newId) => {
+                                                const lead = relevantLeads.find(l => String(l.id) === String(newId));
+                                                setEventFormData({
+                                                    ...eventFormData,
+                                                    selectedLeadId: newId,
+                                                    location: eventFormData.location || getLeadLocation(lead)
+                                                });
+                                            }}
                                             placeholder="-- Vælg en sag --"
                                             showSearch={true}
                                         />
@@ -1765,6 +1815,21 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     />
                                 </div>
                             )}
+
+                            {(() => {
+                                const conflicts = getEventConflictSummary(eventFormData);
+                                if (conflicts.length === 0) return null;
+                                return (
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '12px', color: '#92400e', fontSize: '0.85rem', lineHeight: 1.45 }}>
+                                        <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                        <div>
+                                            <strong style={{ display: 'block', marginBottom: '3px' }}>Mulig konflikt i kalenderen</strong>
+                                            {conflicts.map((item, index) => <div key={index}>{item}</div>)}
+                                            {conflicts.length >= 4 && <div>Der kan være flere konflikter i perioden.</div>}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                                 {eventFormData.id && canModifyCurrentEvent && (
