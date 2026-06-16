@@ -537,14 +537,12 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                                                 if (l.status === 'Slettet') return false;
                                                 if (profile.role === 'admin') return true;
                                                 const assignedWorkers = l.raw_data?.assigned_workers || [];
-                                                const assignedPM = l.raw_data?.assigned_pm;
+                                                const pmData = l.raw_data?.assigned_pm;
+                                                const pms = Array.isArray(pmData) ? pmData : (pmData ? [pmData] : []);
                                                 const createdBy = l.raw_data?.created_by;
                                                 
-                                                if (profile.role === 'worker' || profile.role === 'apprentice') {
-                                                    return assignedWorkers.includes(profile.id) || createdBy === profile.id;
-                                                }
-                                                if (profile.role === 'sales') {
-                                                    return assignedPM === profile.id || createdBy === profile.id;
+                                                if (profile.role === 'worker' || profile.role === 'apprentice' || profile.role === 'sales') {
+                                                    return assignedWorkers.includes(profile.id) || pms.includes(profile.id) || createdBy === profile.id;
                                                 }
                                                 return true;
                                             });
@@ -576,14 +574,12 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                                                 if (l.status === 'Slettet') return false;
                                                 if (profile.role === 'admin') return true;
                                                 const assignedWorkers = l.raw_data?.assigned_workers || [];
-                                                const assignedPM = l.raw_data?.assigned_pm;
+                                                const pmData = l.raw_data?.assigned_pm;
+                                                const pms = Array.isArray(pmData) ? pmData : (pmData ? [pmData] : []);
                                                 const createdBy = l.raw_data?.created_by;
                                                 
-                                                if (profile.role === 'worker' || profile.role === 'apprentice') {
-                                                    return assignedWorkers.includes(profile.id) || createdBy === profile.id;
-                                                }
-                                                if (profile.role === 'sales') {
-                                                    return assignedPM === profile.id || createdBy === profile.id;
+                                                if (profile.role === 'worker' || profile.role === 'apprentice' || profile.role === 'sales') {
+                                                    return assignedWorkers.includes(profile.id) || pms.includes(profile.id) || createdBy === profile.id;
                                                 }
                                                 return true;
                                             });

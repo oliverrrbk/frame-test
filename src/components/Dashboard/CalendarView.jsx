@@ -18,7 +18,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
     // Åben firmakalender: alle roller må se folk-/tidslinje-visningen.
     const canViewTimeline = ['admin', 'boss', 'accountant', 'sales', 'worker', 'apprentice'].includes(effectiveRole);
-    const canEditLead = (lead) => isManager || (effectiveRole === 'sales' && (lead?.raw_data?.assigned_pm || []).includes(userId));
+    const canEditLead = (lead) => isManager || (lead?.raw_data?.assigned_pm || []).includes(userId);
     const canClickLead = (lead) => canEditLead(lead) || (lead?.raw_data?.assigned_workers || []).includes(userId);
     // Alle kan oprette events; rediger/slet kun på egne events (eller som mester/leder).
     const canEditEvent = (ev) => !ev || isManager || (ev.createdById && ev.createdById === userId);
@@ -162,7 +162,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 // Projektlederen skal se andres sager for at bedømme belægning i kalenderen.
                 // Redigeringsadgang styres individuelt af canEditLead() og canClickLead()
             } else if (!isManager) {
-                if (!(lead.raw_data?.assigned_workers || []).includes(userId)) return false;
+                const workers = lead.raw_data?.assigned_workers || [];
+                const pms = Array.isArray(lead.raw_data?.assigned_pm) ? lead.raw_data.assigned_pm : (lead.raw_data?.assigned_pm ? [lead.raw_data.assigned_pm] : []);
+                if (!workers.includes(userId) && !pms.includes(userId)) return false;
             }
 
             // Dropdown Filter (Hold)

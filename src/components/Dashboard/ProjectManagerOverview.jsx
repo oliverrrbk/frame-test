@@ -12,7 +12,14 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
     const activeManagerCases = useMemo(() => {
         return leadsData.filter(lead => {
             const workers = lead.raw_data?.assigned_workers || [];
-            return workers.includes(myProfile?.id) && ['Sendt tilbud', 'Bekræftet opgave', 'Historik', 'Afbrudt Sag'].includes(lead.status || '');
+            const pmData = lead.raw_data?.assigned_pm;
+            const pms = Array.isArray(pmData) ? pmData : (pmData ? [pmData] : []);
+            
+            const isAssignedSales = pms.includes(myProfile?.id) || lead.assigned_to === myProfile?.id;
+            const isAssignedWorker = workers.includes(myProfile?.id);
+            const isAssigned = isAssignedSales || isAssignedWorker;
+
+            return isAssigned && ['Sendt tilbud', 'Bekræftet opgave', 'Historik', 'Afbrudt Sag'].includes(lead.status || '');
         });
     }, [leadsData, myProfile]);
 
