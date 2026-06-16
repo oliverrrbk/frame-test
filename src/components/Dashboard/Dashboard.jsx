@@ -2226,7 +2226,7 @@ const Dashboard = () => {
             case 'integrations':
                 return { title: 'Integrationer', desc: 'Forbind din profil automatisk til dit foretrukne regnskabsprogram for let overførsel.' };
             case 'team':
-                return { title: 'Bison Team', desc: 'Administrer dine medarbejdere og deres adgangsniveau.' };
+                return { title: 'Dit Team', desc: 'Administrer dine medarbejdere og deres adgangsniveau.' };
             case 'superadmin':
                 return { title: 'Bizon Admin', desc: 'Håndter alle systemets brugere og konfiguration.' };
             case 'profile':
