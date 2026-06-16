@@ -645,7 +645,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                                 </div>
                                                 {listHasInvoices ? (
                                                     <div style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 'bold', textAlign: 'right', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px' }}>
-                                                        <CheckCircle2 size={10} /> {listInvoices.length} bilag tilknyttet
+                                                        <CheckCircle size={10} /> {listInvoices.length} bilag tilknyttet
                                                     </div>
                                                 ) : (
                                                     <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontStyle: 'italic', textAlign: 'right', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px' }}>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Clock, Briefcase, Calendar, MapPin, ChevronDown, Phone, X, Play, Square, Users, MessageSquare, AlertCircle, CheckCircle2, Navigation } from 'lucide-react';
 import { startOfWeek, startOfMonth, isAfter, isSameDay, eachDayOfInterval, subDays, isWeekend, isToday, format } from 'date-fns';
 import { da } from 'date-fns/locale';
@@ -6,6 +6,8 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { mutateTimeEntries } from '../../utils/timeEntries';
+import { getTodaysMessagesForUser, getSeenSet, markSeen, countUnseen } from '../../utils/caseMessages';
+import { getRoleLabel } from '../../utils/roles';
 
 export default function WorkerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId, simulatedRole }) {
     // ---- EKSISTERENDE LOGIK (Beholdt for funktionel integritet) ----
@@ -171,6 +173,26 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
 
     // Modal States
     const [activeModal, setActiveModal] = useState(null); // 'team', 'messages', 'cases', 'time'
+
+    // --- Sags-beskeder (dagens huske-ting fra mester/projektleder) ---
+    const [seenTick, setSeenTick] = useState(0);
+    const myMessages = useMemo(() => getTodaysMessagesForUser(leadsData, myProfile?.id), [leadsData, myProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const unseenMsgCount = useMemo(() => countUnseen(myMessages, getSeenSet()), [myMessages, seenTick]);
+    const [showMsgPopup, setShowMsgPopup] = useState(false);
+    const didAutoOpenRef = useRef(false);
+
+    const markMyMessagesSeen = () => {
+        markSeen(myMessages.map(m => m.id));
+        setSeenTick(t => t + 1);
+    };
+
+    // Popper op ved første gang der er ulæste beskeder for i dag.
+    useEffect(() => {
+        if (didAutoOpenRef.current || !myMessages.length) return;
+        didAutoOpenRef.current = true;
+        if (countUnseen(myMessages, getSeenSet()) > 0) setShowMsgPopup(true);
+    }, [myMessages]);
 
     // Fravær Logik
     const [selectedMissingDate, setSelectedMissingDate] = useState(null);

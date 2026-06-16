@@ -12,6 +12,7 @@ import ProfileCard from './ProfileCard';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { getRoleLabel } from '../../utils/roles';
+import { buildCaseMessage, mutateCaseMessages } from '../../utils/caseMessages';
 
 import toast from 'react-hot-toast';
 
@@ -253,6 +254,39 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         toast.success("Dagens besked gemt!");
         
         await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', selectedCase.id);
+    };
+
+    // --- Sags-beskeder (dagens huske-ting til hele holdet eller en bestemt person) ---
+    const [msgRecipient, setMsgRecipient] = useState('all');
+    const canSendMessage = ['admin', 'boss', 'sales'].includes(profile?.role);
+
+    // Personer på sagen (projektledere + svende), til modtager-vælgeren.
+    const caseRecipients = (() => {
+        const pm = selectedCase?.raw_data?.assigned_pm;
+        const pmArr = Array.isArray(pm) ? pm : (pm ? [pm] : []);
+        const ids = [...new Set([...pmArr, ...((selectedCase?.raw_data?.assigned_workers) || [])].map(String))];
+        return ids.map(id => {
+            const m = team.find(t => String(t.id) === id);
+            return { id, name: m?.owner_name || m?.company_name || 'Medarbejder', role: m?.role };
+        });
+    })();
+
+    const handleSendCaseMessage = async () => {
+        if (!newDailyMessage.trim() || !selectedCase) return;
+        const author = { name: profile?.owner_name || profile?.name || profile?.company_name || 'Mester', role: profile?.role };
+        const msg = buildCaseMessage({ text: newDailyMessage, forId: msgRecipient === 'all' ? null : msgRecipient, author });
+        try {
+            await mutateCaseMessages({ leadId: selectedCase.id, add: [msg] });
+            const updatedRawData = { ...(selectedCase.raw_data || {}), case_messages: [ ...((selectedCase.raw_data?.case_messages) || []), msg ] };
+            if (onUpdateLead) onUpdateLead({ ...selectedCase, raw_data: updatedRawData });
+            setNewDailyMessage('');
+            setMsgRecipient('all');
+            setIsDailyMessageOpen(false);
+            toast.success(msg.forId ? 'Besked sendt til medarbejderen!' : 'Besked sendt til holdet!');
+        } catch (e) {
+            console.error('Send besked fejl:', e);
+            toast.error('Kunne ikke sende besked.');
+        }
     };
 
     const [invoiceLines, setInvoiceLines] = useState([]);
@@ -2058,19 +2092,23 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     
                                                     {canWrite && (
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-                                                            <label style={{ fontSize: '0.9rem', fontWeight: '600', color: '#475569' }}>{isToday ? 'Overskriv besked' : 'Skriv ny besked for i dag'}</label>
-                                                            <textarea 
+                                                            <label style={{ fontSize: '0.9rem', fontWeight: '600', color: '#475569' }}>Send besked for i dag</label>
+                                                            <select value={msgRecipient} onChange={(e) => setMsgRecipient(e.target.value)} style={{ padding: '12px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '0.95rem', background: '#fff', color: '#1e293b', fontWeight: 600, cursor: 'pointer' }}>
+                                                                <option value="all">📣 Hele holdet på sagen</option>
+                                                                {caseRecipients.map(r => <option key={r.id} value={r.id}>{r.name}{r.role ? ` · ${getRoleLabel(r.role)}` : ''}</option>)}
+                                                            </select>
+                                                            <textarea
                                                                 value={newDailyMessage}
                                                                 onChange={(e) => setNewDailyMessage(e.target.value)}
                                                                 placeholder="F.eks. Husk fugepistol..."
                                                                 rows={3}
                                                                 style={{ padding: '12px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '1rem', resize: 'none' }}
                                                             />
-                                                            <button 
-                                                                onClick={() => { handleSaveDailyMessage(); setIsDailyMessageOpen(false); }}
+                                                            <button
+                                                                onClick={handleSendCaseMessage}
                                                                 style={{ padding: '14px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer' }}
                                                             >
-                                                                Gem Besked
+                                                                {msgRecipient === 'all' ? 'Send til holdet' : 'Send besked'}
                                                             </button>
                                                         </div>
                                                     )}
@@ -2220,19 +2258,23 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     
                                                     {canWrite && (
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: isToday ? '8px' : '0' }}>
-                                                            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b' }}>{isToday ? 'Overskriv besked' : 'Skriv ny besked for i dag'}</label>
-                                                            <textarea 
+                                                            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b' }}>Send besked for i dag</label>
+                                                            <select value={msgRecipient} onChange={(e) => setMsgRecipient(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', background: '#fff', color: '#1e293b', fontWeight: 600 }}>
+                                                                <option value="all">📣 Hele holdet på sagen</option>
+                                                                {caseRecipients.map(r => <option key={r.id} value={r.id}>{r.name}{r.role ? ` · ${getRoleLabel(r.role)}` : ''}</option>)}
+                                                            </select>
+                                                            <textarea
                                                                 value={newDailyMessage}
                                                                 onChange={(e) => setNewDailyMessage(e.target.value)}
                                                                 placeholder="F.eks. Husk fugepistol..."
                                                                 rows={3}
                                                                 style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', resize: 'none' }}
                                                             />
-                                                            <button 
-                                                                onClick={handleSaveDailyMessage}
+                                                            <button
+                                                                onClick={handleSendCaseMessage}
                                                                 style={{ padding: '8px', background: '#1e293b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
                                                             >
-                                                                Gem Besked
+                                                                {msgRecipient === 'all' ? 'Send til holdet' : 'Send besked'}
                                                             </button>
                                                         </div>
                                                     )}
