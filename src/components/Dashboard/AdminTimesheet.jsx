@@ -863,6 +863,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
             .some(m => m.id !== member.id && v && String(m.raw_data?.lonnummer ?? '').trim() === v);
         if (dup) {
             toast.error('Lønnummeret er allerede i brug af en anden.');
+            setTeamMembers(teamMembers.map(m => m.id === member.id ? { ...m, raw_data: { ...(m.raw_data || {}), lonnummer: '' } } : m));
             return;
         }
         const newRawData = { ...(member.raw_data || {}), lonnummer: v };
@@ -1554,7 +1555,12 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                         const remaining = quota - used;
                                         
                                         return (
-                                            <div key={member.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr', gap: '16px', alignItems: 'center', padding: '12px 16px', background: 'rgba(255,255,255,0.6)', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                            <div 
+                                                key={member.id} 
+                                                style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr', gap: '16px', alignItems: 'center', padding: '12px 16px', background: 'rgba(255,255,255,0.6)', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = '0 8px 24px -8px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.2)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.6)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.05)'; }}
+                                            >
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(15, 23, 42, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#334155', fontSize: '0.9rem' }}>
                                                         {member.owner_name?.charAt(0).toUpperCase() || 'M'}
@@ -1584,16 +1590,39 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                                         <span style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginTop: '2px' }}>Rest</span>
                                                     </div>
                                                     <div style={{ width: '1px', height: '24px', background: 'rgba(0,0,0,0.1)' }} />
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.03)', padding: '3px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                                        <button 
+                                                            onClick={() => handleVacationQuotaUpdate(member.id, member.raw_data || {}, String(Math.max(0, quota - 1)))}
+                                                            style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#fff', borderRadius: '8px', cursor: 'pointer', color: '#64748b', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', transition: 'all 0.15s', fontWeight: 'bold', fontSize: '1rem' }}
+                                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#334155'; }}
+                                                            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#64748b'; }}
+                                                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.92)'}
+                                                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                        >
+                                                            -
+                                                        </button>
                                                         <input 
-                                                            type="number" 
-                                                            min="0" 
+                                                            type="text" 
+                                                            inputMode="numeric"
                                                             value={quota} 
-                                                            onChange={(e) => handleVacationQuotaUpdate(member.id, member.raw_data || {}, e.target.value)}
-                                                            style={{ width: '50px', padding: '4px', borderRadius: '6px', border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600, outline: 'none' }} 
+                                                            onChange={(e) => {
+                                                                const val = e.target.value.replace(/\D/g, '');
+                                                                handleVacationQuotaUpdate(member.id, member.raw_data || {}, val);
+                                                            }}
+                                                            style={{ width: '36px', padding: '0', border: 'none', background: 'transparent', fontSize: '0.9rem', textAlign: 'center', fontWeight: 700, color: '#334155', outline: 'none' }} 
                                                         />
-                                                        <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'none', '@media (min-width: 640px)': { display: 'inline' } }}>dage</span>
+                                                        <button 
+                                                            onClick={() => handleVacationQuotaUpdate(member.id, member.raw_data || {}, String(quota + 1))}
+                                                            style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#fff', borderRadius: '8px', cursor: 'pointer', color: '#64748b', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', transition: 'all 0.15s', fontWeight: 'bold', fontSize: '1.1rem' }}
+                                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#334155'; }}
+                                                            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#64748b'; }}
+                                                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.92)'}
+                                                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                        >
+                                                            +
+                                                        </button>
                                                     </div>
+                                                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, display: 'none', '@media (min-width: 640px)': { display: 'inline' } }}>dage</span>
                                                 </div>
                                             </div>
                                         );
