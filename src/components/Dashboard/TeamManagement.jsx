@@ -539,7 +539,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
 
                 {/* Team Liste */}
                 <div className="team-list-column lg:col-span-2">
-                    <div className="settings-card">
+                    <div className="settings-card" style={{ overflow: 'visible' }}>
                         <div className="card-header">
                             <div className="icon-wrapper">
                                 <HardHat size={24} />
