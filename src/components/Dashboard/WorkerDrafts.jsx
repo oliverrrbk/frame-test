@@ -340,7 +340,7 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
                     {myDrafts.map(draft => {
-                        const isSent = draft.status === 'Ny forespørgsel';
+                        const isSent = draft.status === 'Sendt Kladde';
                         
                         return (
                             <div 
@@ -350,10 +350,10 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.08)'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
                                 onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.03)'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
                             >
-                                <div style={{ position: 'absolute', top: 0, left: 0, width: '6px', height: '100%', backgroundColor: isSent ? '#10b981' : '#f59e0b' }}></div>
+                                <div style={{ position: 'absolute', top: 0, left: 0, width: '6px', height: '100%', backgroundColor: isSent ? '#3b82f6' : '#f59e0b' }}></div>
                                 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                                    <span style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold', backgroundColor: isSent ? '#ecfdf5' : '#fef3c7', color: isSent ? '#059669' : '#d97706', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold', backgroundColor: isSent ? '#eff6ff' : '#fef3c7', color: isSent ? '#3b82f6' : '#d97706', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         {isSent ? <CheckCircle size={14} /> : <Clock size={14} />}
                                         {isSent ? 'Sendt til Mester' : 'Kladde'}
                                     </span>
@@ -414,12 +414,14 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                                 </div>
                             </div>
 
-                            {selectedDraft.status === 'Ny forespørgsel' && (
-                                <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '16px', padding: '20px', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                                    <div style={{ color: '#3b82f6', marginTop: '2px' }}><CheckCircle size={24} /></div>
+                            {selectedDraft.status === 'Sendt Kladde' && (
+                                <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '16px', display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px' }}>
+                                    <div style={{ backgroundColor: '#fff', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                        <CheckCircle size={20} color="#3b82f6" />
+                                    </div>
                                     <div>
-                                        <h4 style={{ margin: '0 0 6px 0', color: '#1e3a8a', fontSize: '1.05rem' }}>Sendt til Mester</h4>
-                                        <p style={{ margin: 0, color: '#1e40af', fontSize: '0.95rem', lineHeight: '1.5' }}>Denne kladde er afleveret og behandles nu af mester. Du kan stadig se overslaget, men det er ikke længere muligt at ændre i detaljerne.</p>
+                                        <h4 style={{ margin: '0 0 4px 0', color: '#1e3a8a', fontSize: '0.95rem' }}>Tilbuddet er sendt</h4>
+                                        <p style={{ margin: 0, color: '#2563eb', fontSize: '0.85rem' }}>Denne kladde er sendt til Mester. Den ligger nu som en 'Ny forespørgsel' i hans system.</p>
                                     </div>
                                 </div>
                             )}
