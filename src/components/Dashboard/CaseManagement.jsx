@@ -134,25 +134,7 @@ const CustomSelect = function({ value, onChange, options, placeholder }) {
                 </div>
             )}
 
-            {/* SLET LOG MODAL (Bison Frame Design) */}
-            {logToDelete && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out', padding: '20px' }}>
-                    <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', textAlign: 'center' }}>
-                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px auto' }}>
-                            <AlertTriangle size={32} />
-                        </div>
-                        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.4rem', color: '#0f172a', fontWeight: '800' }}>Slet status?</h3>
-                        <p style={{ margin: '0 0 32px 0', color: '#64748b', fontSize: '1rem', lineHeight: '1.5' }}>
-                            Er du sikker på, at du vil slette denne statusopdatering? Handlingen kan ikke fortrydes.
-                        </p>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={() => setLogToDelete(null)} style={{ flex: 1, padding: '14px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#ffffff', color: '#475569', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>Annuller</button>
-                            <button onClick={confirmDeleteLog} style={{ flex: 1, padding: '14px', borderRadius: '16px', border: 'none', background: '#ef4444', color: '#ffffff', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}>Slet</button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
+
         </div>
     );
 };
