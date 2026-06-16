@@ -902,9 +902,12 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                                             {isMobile ? (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                     {phase.materials.map((mat, matIndex) => (
-                                                        <div key={matIndex} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        <div key={matIndex} style={{ background: mat.autoSuggested ? '#f0fdf4' : '#f8fafc', border: mat.autoSuggested ? '1px solid #6ee7b7' : '1px solid #e2e8f0', borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                             <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                                                                 <div style={{ position: 'relative', flex: 1 }}>
+                                                                    {mat.autoSuggested && (
+                                                                        <span title="Foreslået ud fra beregner-viden — tjek og juster frit" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', color: '#047857', border: '1px solid #6ee7b7', padding: '2px 8px', borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700, marginBottom: '6px' }}>✨ Foreslået</span>
+                                                                    )}
                                                                     <input
                                                                         type="text"
                                                                         value={mat.name}
@@ -970,12 +973,17 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                                             </thead>
                                             <tbody>
                                                 {phase.materials.map((mat, matIndex) => (
-                                                    <tr key={matIndex} className="material-row">
+                                                    <tr key={matIndex} className="material-row" style={mat.autoSuggested ? { background: '#f0fdf4' } : undefined}>
                                                         <td style={{ padding: '6px 8px' }}>
                                                             <div style={{ position: 'relative' }}>
-                                                                <input 
-                                                                    type="text" 
-                                                                    value={mat.name} 
+                                                                {mat.autoSuggested && (
+                                                                    <div style={{ marginBottom: '4px' }}>
+                                                                        <span title="Foreslået ud fra beregner-viden — tjek og juster frit" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', color: '#047857', border: '1px solid #6ee7b7', padding: '1px 7px', borderRadius: '999px', fontSize: '0.62rem', fontWeight: 700 }}>✨ Foreslået</span>
+                                                                    </div>
+                                                                )}
+                                                                <input
+                                                                    type="text"
+                                                                    value={mat.name}
                                                                     onChange={e => updateMaterial(pIndex, matIndex, 'name', e.target.value)}
                                                                     onFocus={() => setShowSuggestions({ pIndex, matIndex })}
                                                                     onBlur={() => setTimeout(() => setShowSuggestions(null), 200)}
