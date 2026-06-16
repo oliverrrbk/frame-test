@@ -167,7 +167,9 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
         borderRadius: '10px', 
         opacity: isDragging ? 0.5 : (sub.done ? 0.75 : 1), 
         boxShadow: isDragging ? '0 10px 25px rgba(0,0,0,0.1)' : (sub.done ? 'none' : '0 2px 6px rgba(0,0,0,0.02)'),
-        marginBottom: '8px'
+        marginBottom: '8px',
+        touchAction: 'none', // Critical for TouchSensor to work correctly without scrolling the page
+        cursor: isDragging ? 'grabbing' : 'grab'
     };
 
     return (
@@ -175,6 +177,7 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
             ref={setNodeRef} 
             style={style}
             {...attributes}
+            {...listeners}
             onMouseEnter={(e) => {
                 if (!sub.done && !isDragging) {
                     e.currentTarget.style.backgroundColor = '#f8fafc';
@@ -192,15 +195,12 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
         >
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1 }}>
                 <div 
-                    {...listeners} 
-                    style={{ cursor: 'grab', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', marginTop: '-2px', marginLeft: '-8px' }}
-                    onPointerDown={(e) => { e.currentTarget.style.cursor = 'grabbing'; }}
-                    onPointerUp={(e) => { e.currentTarget.style.cursor = 'grab'; }}
+                    style={{ padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', marginTop: '-2px', marginLeft: '-8px' }}
                 >
                     <GripVertical size={18} />
                 </div>
                 <div 
-                    onClick={() => handleTodoToggle(stepId, sub.id)}
+                    onClick={(e) => { e.stopPropagation(); handleTodoToggle(stepId, sub.id); }}
                     style={{ 
                         width: '24px', 
                         height: '24px', 
@@ -220,7 +220,7 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
                     {sub.done && <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}>✓</span>}
                 </div>
                 <span 
-                    onClick={() => handleTodoToggle(stepId, sub.id)}
+                    onClick={(e) => { e.stopPropagation(); handleTodoToggle(stepId, sub.id); }}
                     style={{ 
                         fontSize: '0.95rem', 
                         color: sub.done ? '#64748b' : '#1e293b', 
