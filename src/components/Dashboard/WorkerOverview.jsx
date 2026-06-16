@@ -302,13 +302,32 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
 
                     {/* MESSAGES MODAL */}
                     {activeModal === 'messages' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', textAlign: 'center' }}>
-                            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-                                <MessageSquare size={32} color="#cbd5e1" />
+                        myMessages.length === 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', textAlign: 'center' }}>
+                                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+                                    <MessageSquare size={32} color="#cbd5e1" />
+                                </div>
+                                <h3 style={{ margin: '0 0 8px', color: '#334155', fontSize: '1.2rem' }}>Ingen nye beskeder</h3>
+                                <p style={{ margin: 0, maxWidth: '250px' }}>Du har læst alle interne beskeder. Tag en kop kaffe!</p>
                             </div>
-                            <h3 style={{ margin: '0 0 8px', color: '#334155', fontSize: '1.2rem' }}>Ingen nye beskeder</h3>
-                            <p style={{ margin: 0, maxWidth: '250px' }}>Du har læst alle interne beskeder. Tag en kop kaffe!</p>
-                        </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {myMessages.map(m => (
+                                    <div key={m.id} style={{ background: m.forId ? '#fffbeb' : '#eff6ff', border: `1px solid ${m.forId ? '#fde68a' : '#bfdbfe'}`, borderRadius: '16px', padding: '16px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: m.forId ? '#b45309' : '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                                {m.forId ? 'Til dig' : 'Til holdet'} · {m.leadTitle}
+                                            </span>
+                                            {m.forId && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '2px 8px', borderRadius: '999px' }}>Personlig</span>}
+                                        </div>
+                                        <p style={{ margin: '0 0 8px', fontSize: '1rem', color: '#0f172a', lineHeight: 1.5 }}>{m.text}</p>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                            Fra {m.authorName}{m.authorRole ? ` · ${getRoleLabel(m.authorRole)}` : ''}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )
                     )}
 
                     {/* CASES MODAL */}
@@ -486,9 +505,14 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                 </div>
 
                 {/* Top Right: Messages */}
-                <div onClick={() => setActiveModal('messages')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <div onClick={() => { setActiveModal('messages'); markMyMessagesSeen(); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                     <div style={{ width: '56px', height: '56px', borderRadius: '20px', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(0,0,0,0.05)', position: 'relative' }}>
                         <MessageSquare size={24} color="#8b5cf6" />
+                        {unseenMsgCount > 0 && (
+                            <span style={{ position: 'absolute', top: '-4px', right: '-4px', minWidth: '20px', height: '20px', padding: '0 5px', borderRadius: '10px', background: '#ef4444', color: '#fff', fontSize: '0.7rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff', boxShadow: '0 2px 6px rgba(239,68,68,0.4)' }}>
+                                {unseenMsgCount}
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
@@ -619,6 +643,31 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
 
             {/* Modals are rendered here via portal */}
             {renderModal()}
+
+            {/* Pop-up ved første åbning: dagens beskeder */}
+            {showMsgPopup && myMessages.length > 0 && createPortal(
+                <div onClick={() => { markMyMessagesSeen(); setShowMsgPopup(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 100002, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+                    <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)', overflow: 'hidden', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MessageSquare size={20} /></div>
+                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Beskeder til i dag</h3>
+                        </div>
+                        <div style={{ padding: '16px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {myMessages.map(m => (
+                                <div key={m.id} style={{ background: m.forId ? '#fffbeb' : '#eff6ff', border: `1px solid ${m.forId ? '#fde68a' : '#bfdbfe'}`, borderRadius: '14px', padding: '14px' }}>
+                                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: m.forId ? '#b45309' : '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>{m.forId ? 'Til dig' : 'Til holdet'} · {m.leadTitle}</div>
+                                    <p style={{ margin: '0 0 6px', fontSize: '1rem', color: '#0f172a', lineHeight: 1.5 }}>{m.text}</p>
+                                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Fra {m.authorName}{m.authorRole ? ` · ${getRoleLabel(m.authorRole)}` : ''}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9' }}>
+                            <button onClick={() => { markMyMessagesSeen(); setShowMsgPopup(false); }} style={{ width: '100%', padding: '14px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer' }}>Forstået</button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
 
             <style>{`
                 @keyframes pulseRed {
