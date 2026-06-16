@@ -1,7 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { mutateTimeEntries } from '../../utils/timeEntries';
+import { fetchPayrollSettings, getConfig, computeNetHours, suggestedBreakMinutes, DEFAULT_PAYROLL_CONFIG } from '../../utils/payroll';
+
+// Klokkeslæt som "HH:MM" (kolon — kan altid læses, modsat dansk locale "HH.MM").
+const toHHMM = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
 export default function ProjectManagerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId }) {
     // Filtrer sager, som projektlederen er tilknyttet
@@ -14,6 +18,13 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
 
     const [selectedCheckInProject, setSelectedCheckInProject] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    // Firmaets løn-regler (auto-pause m.m.) — bruges ved tjek-ud.
+    const [payrollCfg, setPayrollCfg] = useState(DEFAULT_PAYROLL_CONFIG);
+    useEffect(() => {
+        const cid = myProfile?.company_id || myProfile?.id;
+        if (cid) fetchPayrollSettings(cid).then(s => setPayrollCfg(getConfig(s))).catch(() => {});
+    }, [myProfile]);
 
     const activeCheckInInfo = useMemo(() => {
         for (const lead of activeManagerCases) {
@@ -32,12 +43,14 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
         const leadToUpdate = activeManagerCases.find(l => String(l.id) === String(selectedCheckInProject));
         if (!leadToUpdate) return;
         
+        const now = new Date();
         const entry = {
             id: `time-${Date.now()}`,
-            startTime: new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' }),
+            startTime: toHHMM(now),
+            startedAt: now.toISOString(),   // robust tidsstempel — bruges til timeberegning
             endTime: null,
             hours: 0,
-            date: new Date().toISOString().substring(0, 10),
+            date: now.toISOString().substring(0, 10),
             desc: 'Aktiv tjek-ind (auto)',
             employeeId: myProfile?.id,
             employeeName: myProfile?.owner_name || myProfile?.company_name || 'Ukendt medarbejder'

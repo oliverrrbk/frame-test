@@ -89,17 +89,21 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         if (!activeCheckInInfo) return;
 
         const { lead, activeEntry } = activeCheckInInfo;
-        const nowTime = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+        const now = new Date();
 
         const entry = { ...activeEntry };
-        entry.endTime = nowTime;
+        entry.endTime = toHHMM(now);
 
-        const start = new Date(`${entry.date}T${entry.startTime}`);
-        const end = new Date(`${entry.date}T${entry.endTime}`);
-        let diffHours = (end - start) / (1000 * 60 * 60);
-        if (diffHours < 0) diffHours = 0;
+        // Brutto-tid fra det robuste tidsstempel (falder tilbage på dato+klokkeslæt, kolon-sikret).
+        const startMs = activeEntry.startedAt
+            ? new Date(activeEntry.startedAt).getTime()
+            : new Date(`${activeEntry.date}T${String(activeEntry.startTime || '').replace('.', ':')}`).getTime();
+        let grossHours = (now.getTime() - startMs) / (1000 * 60 * 60);
+        if (!isFinite(grossHours) || grossHours < 0) grossHours = 0;
 
-        entry.hours = Math.round(diffHours * 4) / 4;
+        // Træk automatisk pause fra (firmaets regel) og afrund til kvarter.
+        entry.pauseMinutes = suggestedBreakMinutes(grossHours, payrollCfg);
+        entry.hours = computeNetHours(grossHours, payrollCfg);
         entry.desc = 'Arbejde udført (Tjek-ud)';
 
         try {
@@ -249,9 +253,13 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
     const [activeTimerStr, setActiveTimerStr] = useState('00:00:00');
     useEffect(() => {
         if (!activeCheckInInfo) return;
-        const startStr = `${activeCheckInInfo.activeEntry.date}T${activeCheckInInfo.activeEntry.startTime}`;
-        const startTime = new Date(startStr).getTime();
-        
+        const ae = activeCheckInInfo.activeEntry;
+        // Brug det robuste tidsstempel; fald tilbage på dato+klokkeslæt (kolon-sikret) for ældre stemplinger.
+        const startTime = ae.startedAt
+            ? new Date(ae.startedAt).getTime()
+            : new Date(`${ae.date}T${String(ae.startTime || '').replace('.', ':')}`).getTime();
+        if (!isFinite(startTime)) { setActiveTimerStr('00:00:00'); return; }
+
         const interval = setInterval(() => {
             const now = new Date().getTime();
             const diff = now - startTime;
