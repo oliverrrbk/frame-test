@@ -61,7 +61,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         return () => window.removeEventListener('resize', handleResize);
     }, []); // 'month', 'week', 'year'
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedEmployeeIds, setSelectedEmployeeIds] = useState(['all']);
+    const [selectedEmployeeIds, setSelectedEmployeeIds] = useState(userId ? [String(userId)] : ['all']);
 
 
     
