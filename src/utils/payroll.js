@@ -83,12 +83,35 @@ export const DEFAULT_PAYROLL_CONFIG = {
     grace_days: 2,          // antal dages frist efter periodeslut før lås
     daily_hours: 7.4,       // standard arbejdsdag (bruges til ferie/fravær)
     absence_unit: 'days',   // 'days' eller 'hours' — hvordan ferie/fravær eksporteres
+    auto_break_minutes: 30,         // pause der trækkes fra automatisk
+    auto_break_threshold_hours: 5,  // arbejdsdagen skal være over dette (timer) før pausen trækkes
     lonart: { normal: '', vacation: '', sick: '', other_absence: '', mileage: '' }
 };
 
 export function getConfig(settings) {
     const cfg = settings?.config || {};
     return { ...DEFAULT_PAYROLL_CONFIG, ...cfg, lonart: { ...DEFAULT_PAYROLL_CONFIG.lonart, ...(cfg.lonart || {}) } };
+}
+
+// Afrund timer til nærmeste kvarter (15 min). Aldrig negativt.
+export function roundToQuarter(hours) {
+    return Math.max(0, Math.round((Number(hours) || 0) * 4) / 4);
+}
+
+// Foreslået pause (minutter) ud fra arbejdsdagens brutto-timer og firmaets regel.
+export function suggestedBreakMinutes(grossHours, cfg) {
+    const threshold = Number(cfg?.auto_break_threshold_hours ?? 5);
+    const mins = Number(cfg?.auto_break_minutes ?? 30);
+    return (Number(grossHours) || 0) > threshold ? mins : 0;
+}
+
+// Netto arbejdstimer: brutto minus pause, afrundet til kvarter.
+// Hvis en manuel pause er angivet bruges den; ellers bruges auto-reglen.
+export function computeNetHours(grossHours, cfg, manualPauseMinutes = null) {
+    const pause = (manualPauseMinutes !== null && manualPauseMinutes !== undefined && manualPauseMinutes !== '')
+        ? Number(manualPauseMinutes)
+        : suggestedBreakMinutes(grossHours, cfg);
+    return roundToQuarter((Number(grossHours) || 0) - (pause / 60));
 }
 
 // Den reelle låsedato — automatisk (rullende) eller manuel, inkl. genåbning.

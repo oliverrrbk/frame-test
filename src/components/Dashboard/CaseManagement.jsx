@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle, MessageSquare, Users, Download, Search, Bell, LogOut, Link2, Filter, Image as ImageIcon, Video, Mail, UploadCloud, Link as LinkIcon, ExternalLink, Settings, MoreHorizontal, Pause, RotateCcw } from 'lucide-react';
+import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle, MessageSquare, Users, Download, Search, Bell, LogOut, Link2, Filter, Image as ImageIcon, Video, Mail, UploadCloud, Link as LinkIcon, ExternalLink, Settings, MoreHorizontal, Pause, RotateCcw, Megaphone } from 'lucide-react';
 import MaterialList from './MaterialList';
 import AftalesedlerTab from './AftalesedlerTab';
 import CaseDrawingsTab from './CaseDrawingsTab';
@@ -2093,10 +2093,21 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     {canWrite && (
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
                                                             <label style={{ fontSize: '0.9rem', fontWeight: '600', color: '#475569' }}>Send besked for i dag</label>
-                                                            <select value={msgRecipient} onChange={(e) => setMsgRecipient(e.target.value)} style={{ padding: '12px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '0.95rem', background: '#fff', color: '#1e293b', fontWeight: 600, cursor: 'pointer' }}>
-                                                                <option value="all">📣 Hele holdet på sagen</option>
-                                                                {caseRecipients.map(r => <option key={r.id} value={r.id}>{r.name}{r.role ? ` · ${getRoleLabel(r.role)}` : ''}</option>)}
-                                                            </select>
+                                                            <CustomSelect
+                                                                value={msgRecipient}
+                                                                onChange={setMsgRecipient}
+                                                                placeholder="Vælg modtager..."
+                                                                options={[
+                                                                    { value: 'all', label: 'Hele holdet på sagen', icon: <Megaphone size={16} />, color: '#d97706', activeBg: '#fef3c7' },
+                                                                    ...caseRecipients.map(r => ({
+                                                                        value: r.id,
+                                                                        label: `${r.name}${r.role ? ` · ${getRoleLabel(r.role)}` : ''}`,
+                                                                        icon: <User size={16} />,
+                                                                        color: '#3b82f6',
+                                                                        activeBg: '#eff6ff'
+                                                                    }))
+                                                                ]}
+                                                            />
                                                             <textarea
                                                                 value={newDailyMessage}
                                                                 onChange={(e) => setNewDailyMessage(e.target.value)}
@@ -2259,10 +2270,21 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     {canWrite && (
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: isToday ? '8px' : '0' }}>
                                                             <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b' }}>Send besked for i dag</label>
-                                                            <select value={msgRecipient} onChange={(e) => setMsgRecipient(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', background: '#fff', color: '#1e293b', fontWeight: 600 }}>
-                                                                <option value="all">📣 Hele holdet på sagen</option>
-                                                                {caseRecipients.map(r => <option key={r.id} value={r.id}>{r.name}{r.role ? ` · ${getRoleLabel(r.role)}` : ''}</option>)}
-                                                            </select>
+                                                            <CustomSelect
+                                                                value={msgRecipient}
+                                                                onChange={setMsgRecipient}
+                                                                placeholder="Vælg modtager..."
+                                                                options={[
+                                                                    { value: 'all', label: 'Hele holdet på sagen', icon: <Megaphone size={16} />, color: '#d97706', activeBg: '#fef3c7' },
+                                                                    ...caseRecipients.map(r => ({
+                                                                        value: r.id,
+                                                                        label: `${r.name}${r.role ? ` · ${getRoleLabel(r.role)}` : ''}`,
+                                                                        icon: <User size={16} />,
+                                                                        color: '#3b82f6',
+                                                                        activeBg: '#eff6ff'
+                                                                    }))
+                                                                ]}
+                                                            />
                                                             <textarea
                                                                 value={newDailyMessage}
                                                                 onChange={(e) => setNewDailyMessage(e.target.value)}
