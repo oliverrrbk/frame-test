@@ -563,7 +563,11 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                         const isExpanded = expandedEmployee === member.id;
                                         
                                         // Beregn Projektleder-Statistikker
-                                        const assignedLeads = leadsData.filter(l => l.assigned_to === member.id);
+                                        const assignedLeads = leadsData.filter(l => 
+                                            l.assigned_to === member.id || 
+                                            (l.raw_data?.assigned_workers || []).includes(member.id) ||
+                                            (l.raw_data?.assigned_pm || []).includes(member.id)
+                                        );
                                         const wonLeads = assignedLeads.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status));
                                         const lostLeads = assignedLeads.filter(l => ['Afvist', 'Fortrudt', 'Afbrudt Sag'].includes(l.status));
                                         const activeLeads = assignedLeads.filter(l => l.status === 'Sendt tilbud');
@@ -588,7 +592,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                         const thisMonth = new Date().getMonth();
                                         const thisYear = new Date().getFullYear();
                                         let monthHours = 0;
-                                        assignedLeads.forEach(lead => {
+                                        leadsData.forEach(lead => {
                                             const entries = lead.raw_data?.time_entries || [];
                                             entries.forEach(entry => {
                                                 if (entry.employeeId === member.id) {

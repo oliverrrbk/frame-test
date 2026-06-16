@@ -1750,29 +1750,6 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 </div>
                             </div>
 
-                            <div>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Adresse / lokation</label>
-                                <div style={{ position: 'relative' }}>
-                                    <MapPin size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                                    <input placeholder="Fx byggeplads, leveringsadresse eller mødelokale" value={eventFormData.location} onChange={e=>setEventFormData({...eventFormData, location: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', padding: '12px 12px 12px 36px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Note</label>
-                                <textarea placeholder="Fx ring før levering, parkering, nøgleboks, kunden er hjemme efter 12..." value={eventFormData.notes} onChange={e=>setEventFormData({...eventFormData, notes: e.target.value})} rows={3} style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', resize: 'vertical', fontFamily: 'inherit' }} />
-                            </div>
-                            
-                            <div style={{ zIndex: 1900, position: 'relative' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Påmindelse</label>
-                                <GorgeousSingleSelect
-                                    options={NOTIFICATION_PREFERENCES}
-                                    selectedId={eventFormData.notification_preference}
-                                    onChange={(newPref) => setEventFormData({...eventFormData, notification_preference: newPref})}
-                                    placeholder="Påmindelse"
-                                />
-                            </div>
-
                             {eventFormData.type === 'Materialelevering' ? (
                                 <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                                     <p style={{ margin: '0 0 8px', fontSize: '0.9rem', fontWeight: '700', color: '#0f172a' }}>Vælg Sag (Projekt):</p>
@@ -1803,7 +1780,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             ) : (
                                 <div>
                                     <p style={{ margin: '0 0 8px', fontSize: '0.9rem', fontWeight: '700', color: '#0f172a' }}>Deltagere:</p>
-                                    <GorgeousMultiSelect 
+                                    <GorgeousMultiSelect
                                         options={[
                                             { id: myProfile?.id, name: myProfile?.owner_name || myProfile?.company_name || 'Mig', isMe: true },
                                             ...teamMembers.filter(m => String(m.id) !== String(myProfile?.id)).map(m => ({
@@ -1817,6 +1794,40 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     />
                                 </div>
                             )}
+
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Adresse / lokation</label>
+                                <div style={{ position: 'relative' }}>
+                                    <MapPin size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                                    <input placeholder="Fx byggeplads, leveringsadresse eller mødelokale" value={eventFormData.location} onChange={e=>setEventFormData({...eventFormData, location: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', padding: '12px 12px 12px 36px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                                </div>
+                                {eventFormData.location?.trim() && (
+                                    <a
+                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventFormData.location)}`}
+                                        target="_blank" rel="noopener noreferrer"
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '8px', fontSize: '0.82rem', fontWeight: 700, color: '#2563eb', textDecoration: 'none' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                                        onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                                    >
+                                        <MapPin size={14} /> Åbn i Google Maps
+                                    </a>
+                                )}
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Note</label>
+                                <textarea placeholder="Fx ring før levering, parkering, nøgleboks, kunden er hjemme efter 12..." value={eventFormData.notes} onChange={e=>setEventFormData({...eventFormData, notes: e.target.value})} rows={3} style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', resize: 'vertical', fontFamily: 'inherit' }} />
+                            </div>
+                            
+                            <div style={{ zIndex: 1900, position: 'relative' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '4px', display: 'block' }}>Påmindelse</label>
+                                <GorgeousSingleSelect
+                                    options={NOTIFICATION_PREFERENCES}
+                                    selectedId={eventFormData.notification_preference}
+                                    onChange={(newPref) => setEventFormData({...eventFormData, notification_preference: newPref})}
+                                    placeholder="Påmindelse"
+                                />
+                            </div>
 
                             {(() => {
                                 const conflicts = getEventConflictSummary(eventFormData);
