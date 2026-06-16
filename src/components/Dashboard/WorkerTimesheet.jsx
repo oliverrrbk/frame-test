@@ -357,10 +357,22 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
     // Aktive sager som svenden har adgang til at registrere på
     const activeWorkerCases = useMemo(() => {
         return leadsData.filter(lead => {
+            const role = myProfile?.role;
             const workers = lead.raw_data?.assigned_workers || [];
-            return workers.includes(myProfile?.id) && ['Bekræftet opgave', 'Historik', 'Sæt i bero', 'Afbrudt Sag'].includes(lead.status || '');
+            const pmData = lead.raw_data?.assigned_pm;
+            const pms = Array.isArray(pmData) ? pmData : (pmData ? [pmData] : []);
+            
+            const isAssignedSales = pms.includes(myProfile?.id) || lead.assigned_to === myProfile?.id;
+            const isAssignedWorker = workers.includes(myProfile?.id);
+            const isAssigned = isAssignedSales || isAssignedWorker;
+
+            if (simulatedRole && ['worker', 'apprentice', 'sales'].includes(role)) {
+                return ['Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag', 'Historik'].includes(lead.status);
+            }
+
+            return isAssigned && ['Bekræftet opgave', 'Historik', 'Sæt i bero', 'Afbrudt Sag'].includes(lead.status || '');
         });
-    }, [leadsData, myProfile]);
+    }, [leadsData, myProfile, simulatedRole]);
 
     const handleDeleteEntry = (entry) => {
         setDeletingEntry(entry);
