@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, Loader2, Save, X, Plus, Search, Trash2, Cpu, FileText } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { MATERIAL_INDEX } from '../../prices';
+import { enrichPhasesWithStandardMaterials } from '../../utils/enrichMaterials';
 import toast from 'react-hot-toast';
 
 const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = null, isMobile = false, initialData = null }) => {
@@ -312,7 +313,14 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                 });
                 
                 const existingPhases = phases.filter(p => p.name !== 'Etape 1: Generelt' || p.hours !== '' || p.materials.length > 0);
-                setPhases([...existingPhases, ...mappedPhases]);
+                // Berig med de følge-materialer AI'en typisk glemmer (skruer, lim, underlag, forbrugsstoffer)
+                // ud fra den eksisterende beregner-viden. Defensiv: returnerer uændret hvis usikker.
+                const combinedPhases = enrichPhasesWithStandardMaterials([...existingPhases, ...mappedPhases], {
+                    title: result.title || projectTitle,
+                    notes: `${projectNotes} ${result.notes || ''} ${notepadText}`,
+                    markup: carpenter?.material_markup || 30
+                });
+                setPhases(combinedPhases);
             }
             
             if (result.global_costs) {
@@ -837,16 +845,21 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                                 
                                 {/* Phase Header */}
                                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '12px' : '0', margin: '0 0 20px 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
-                                    <div style={{ width: isMobile ? '100%' : '40%' }}>
+                                    <div style={{ width: isMobile ? '100%' : '40%', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                         <input
                                             type="text"
                                             value={phase.name}
                                             onChange={e => updatePhase(pIndex, 'name', e.target.value)}
                                             placeholder="Etapenavn (f.eks. Råhus)"
-                                            style={{ width: '100%', padding: '8px 12px', fontSize: '1.1rem', fontWeight: 'bold', border: isMobile ? '1px solid #e2e8f0' : '1px solid transparent', borderRadius: '6px', color: '#1e293b' }}
+                                            style={{ flex: 1, minWidth: '160px', padding: '8px 12px', fontSize: '1.1rem', fontWeight: 'bold', border: isMobile ? '1px solid #e2e8f0' : '1px solid transparent', borderRadius: '6px', color: '#1e293b' }}
                                             onFocus={e => e.target.style.border = '1px solid #e2e8f0'}
                                             onBlur={e => e.target.style.border = '1px solid transparent'}
                                         />
+                                        {phase.autoSuggested && (
+                                            <span title="Følge-materialer som beregneren ved skal med (skruer, lim, underlag m.m.) — tjek og juster frit" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', color: '#047857', border: '1px solid #6ee7b7', padding: '4px 10px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
+                                                ✨ Foreslået af AI
+                                            </span>
+                                        )}
                                     </div>
                                     
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>

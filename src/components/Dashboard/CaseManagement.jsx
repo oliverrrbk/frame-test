@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle, MessageSquare, Users, Download, Search, Bell, LogOut, Link2, Filter, Image as ImageIcon, Video, Mail, UploadCloud, Link as LinkIcon, ExternalLink, Settings, MoreHorizontal, Pause, RotateCcw, Megaphone } from 'lucide-react';
+import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle, MessageSquare, Users, Download, Search, Bell, LogOut, Link2, Filter, Image as ImageIcon, Video, Mail, UploadCloud, Link as LinkIcon, ExternalLink, Settings, MoreHorizontal, Pause, RotateCcw, Megaphone, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, TouchSensor, MouseSensor, useSensor, useSensors, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import MaterialList from './MaterialList';
 import AftalesedlerTab from './AftalesedlerTab';
 import CaseDrawingsTab from './CaseDrawingsTab';
@@ -138,12 +141,167 @@ const CustomSelect = function({ value, onChange, options, placeholder }) {
         </div>
     );
 };
+// --- DND KIT SORTABLE COMPONENT ---
+function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDeleteSubTask, profile }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: sub.id });
 
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 1,
+        position: 'relative',
+        display: 'flex', 
+        alignItems: 'flex-start', 
+        justifyContent: 'space-between', 
+        padding: '14px 16px', 
+        backgroundColor: sub.done ? 'rgba(248, 250, 252, 0.7)' : '#ffffff', 
+        border: '1px solid', 
+        borderColor: sub.done ? '#e2e8f0' : '#f1f5f9', 
+        borderRadius: '10px', 
+        opacity: isDragging ? 0.5 : (sub.done ? 0.75 : 1), 
+        boxShadow: isDragging ? '0 10px 25px rgba(0,0,0,0.1)' : (sub.done ? 'none' : '0 2px 6px rgba(0,0,0,0.02)'),
+        marginBottom: '8px'
+    };
+
+    return (
+        <div 
+            ref={setNodeRef} 
+            style={style}
+            {...attributes}
+            onMouseEnter={(e) => {
+                if (!sub.done && !isDragging) {
+                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.04)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                }
+            }}
+            onMouseLeave={(e) => {
+                if (!sub.done && !isDragging) {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                }
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1 }}>
+                <div 
+                    {...listeners} 
+                    style={{ cursor: 'grab', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', marginTop: '-2px', marginLeft: '-8px' }}
+                    onPointerDown={(e) => { e.currentTarget.style.cursor = 'grabbing'; }}
+                    onPointerUp={(e) => { e.currentTarget.style.cursor = 'grab'; }}
+                >
+                    <GripVertical size={18} />
+                </div>
+                <div 
+                    onClick={() => handleTodoToggle(stepId, sub.id)}
+                    style={{ 
+                        width: '24px', 
+                        height: '24px', 
+                        borderRadius: '6px', 
+                        border: sub.done ? 'none' : '2px solid #cbd5e1', 
+                        backgroundColor: sub.done ? '#10b981' : '#fff', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        transition: 'all 0.15s', 
+                        cursor: 'pointer', 
+                        flexShrink: 0, 
+                        marginTop: '1px',
+                        boxShadow: sub.done ? '0 2px 6px rgba(16, 185, 129, 0.4)' : 'inset 0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                >
+                    {sub.done && <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}>✓</span>}
+                </div>
+                <span 
+                    onClick={() => handleTodoToggle(stepId, sub.id)}
+                    style={{ 
+                        fontSize: '0.95rem', 
+                        color: sub.done ? '#64748b' : '#1e293b', 
+                        textDecoration: sub.done ? 'line-through' : 'none', 
+                        cursor: 'pointer', 
+                        flex: 1, 
+                        lineHeight: '1.5',
+                        transition: 'color 0.2s'
+                    }}
+                >
+                    {sub.text}
+                </span>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, marginLeft: '12px' }}>
+                <button 
+                    onClick={(e) => { e.stopPropagation(); speakText(sub.text); }}
+                    title="Læs op"
+                    style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                >
+                    🔊
+                </button>
+                
+                {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteSubTask(stepId, sub.id); }}
+                        title="Slet"
+                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
 export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile }) {
     const [activeCases, setActiveCases] = useState([]);
     const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
     const selectedCase = activeCases.find(c => c.id === selectedCaseIdState) || null;
+
     const [activeSubTab, setActiveSubTab] = useState(['worker', 'apprentice', 'sales'].includes(profile?.role) ? 'timesheet' : 'todo'); // 'todo', 'materials', 'logs', 'timesheet', 'finance'
+
+    // --- DND KIT SENSORS OG HANDLER ---
+    const sensors = useSensors(
+        useSensor(MouseSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 250,
+                tolerance: 5,
+            },
+        })
+    );
+
+    const handleDragEnd = (event, stepId) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const updatedTodoList = [...todoList];
+        const stepIndex = updatedTodoList.findIndex(s => s.id === stepId);
+        if (stepIndex === -1) return;
+
+        const subs = updatedTodoList[stepIndex].subTasks || [];
+        const oldIndex = subs.findIndex(s => s.id === active.id);
+        const newIndex = subs.findIndex(s => s.id === over.id);
+
+        updatedTodoList[stepIndex].subTasks = arrayMove(subs, oldIndex, newIndex);
+        
+        setTodoList(updatedTodoList);
+        saveCaseDataToDb({ checklist: updatedTodoList });
+    };
+    // ------------------------------------
+
     const [team, setTeam] = useState([]);
 
     // States til delegering
@@ -3084,99 +3242,21 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 >
                                                     <div style={{ padding: '0 24px 20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                         <div style={{ height: '1px', backgroundColor: isAllDone ? 'rgba(16, 185, 129, 0.2)' : '#f1f5f9', marginBottom: '8px' }}></div>
-                                                        {subs.map((sub, sIdx) => (
-                                                            <div 
-                                                                key={sub.id} 
-                                                                onMouseEnter={(e) => {
-                                                                    if (!sub.done) {
-                                                                        e.currentTarget.style.backgroundColor = '#f8fafc';
-                                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.04)';
-                                                                        e.currentTarget.style.transform = 'translateY(-1px)';
-                                                                    }
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    if (!sub.done) {
-                                                                        e.currentTarget.style.backgroundColor = '#ffffff';
-                                                                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)';
-                                                                        e.currentTarget.style.transform = 'translateY(0)';
-                                                                    }
-                                                                }}
-                                                                style={{ 
-                                                                    display: 'flex', 
-                                                                    alignItems: 'flex-start', 
-                                                                    justifyContent: 'space-between', 
-                                                                    padding: '14px 16px', 
-                                                                    backgroundColor: sub.done ? 'rgba(248, 250, 252, 0.7)' : '#ffffff', 
-                                                                    border: '1px solid', 
-                                                                    borderColor: sub.done ? '#e2e8f0' : '#f1f5f9', 
-                                                                    borderRadius: '10px', 
-                                                                    opacity: sub.done ? 0.75 : 1, 
-                                                                    boxShadow: sub.done ? 'none' : '0 2px 6px rgba(0,0,0,0.02)',
-                                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' 
-                                                                }}
-                                                            >
-                                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1 }}>
-                                                                    <div 
-                                                                        onClick={() => handleTodoToggle(step.id, sub.id)}
-                                                                        style={{ 
-                                                                            width: '24px', 
-                                                                            height: '24px', 
-                                                                            borderRadius: '6px', 
-                                                                            border: sub.done ? 'none' : '2px solid #cbd5e1', 
-                                                                            backgroundColor: sub.done ? '#10b981' : '#fff', 
-                                                                            display: 'flex', 
-                                                                            alignItems: 'center', 
-                                                                            justifyContent: 'center', 
-                                                                            transition: 'all 0.15s', 
-                                                                            cursor: 'pointer', 
-                                                                            flexShrink: 0, 
-                                                                            marginTop: '1px',
-                                                                            boxShadow: sub.done ? '0 2px 6px rgba(16, 185, 129, 0.4)' : 'inset 0 1px 2px rgba(0,0,0,0.05)'
-                                                                        }}
-                                                                    >
-                                                                        {sub.done && <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}>✓</span>}
-                                                                    </div>
-                                                                    <span 
-                                                                        onClick={() => handleTodoToggle(step.id, sub.id)}
-                                                                        style={{ 
-                                                                            fontSize: '0.95rem', 
-                                                                            color: sub.done ? '#64748b' : '#1e293b', 
-                                                                            textDecoration: sub.done ? 'line-through' : 'none', 
-                                                                            cursor: 'pointer', 
-                                                                            flex: 1, 
-                                                                            lineHeight: '1.5',
-                                                                            transition: 'color 0.2s'
-                                                                        }}
-                                                                    >
-                                                                        {sub.text}
-                                                                    </span>
-                                                                </div>
-                                                                
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, marginLeft: '12px' }}>
-                                                                    <button 
-                                                                        onClick={(e) => { e.stopPropagation(); speakText(sub.text); }}
-                                                                        title="Læs op"
-                                                                        style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
-                                                                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; e.currentTarget.style.transform = 'scale(1.05)'; }}
-                                                                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
-                                                                    >
-                                                                        🔊
-                                                                    </button>
-                                                                    
-                                                                    {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                                                                        <button 
-                                                                            onClick={(e) => { e.stopPropagation(); handleDeleteSubTask(step.id, sub.id); }}
-                                                                            title="Slet"
-                                                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                                                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                                        >
-                                                                            <Trash2 size={16} />
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
+                                                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, step.id)}>
+                                                            <SortableContext items={subs.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                                                                {subs.map((sub) => (
+                                                                    <SortableSubTask 
+                                                                        key={sub.id} 
+                                                                        sub={sub} 
+                                                                        stepId={step.id} 
+                                                                        handleTodoToggle={handleTodoToggle} 
+                                                                        speakText={speakText} 
+                                                                        handleDeleteSubTask={handleDeleteSubTask} 
+                                                                        profile={profile} 
+                                                                    />
+                                                                ))}
+                                                            </SortableContext>
+                                                        </DndContext>
                                                         
                                                         {/* Tilføj underpunkt knap (kun for admin/mester) */}
                                                         {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
