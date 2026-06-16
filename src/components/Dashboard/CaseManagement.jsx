@@ -1295,9 +1295,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         setShowInvoiceModal(true);
     };
     const handleCheckIn = () => {
+        const now = new Date();
         const entry = {
             id: `time-${Date.now()}`,
-            startTime: new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' }),
+            startTime: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
             endTime: null,
             hours: 0,
             date: new Date().toISOString().substring(0, 10),
@@ -1312,7 +1313,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     const handleCheckOut = () => {
-        const nowTime = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+        const now = new Date();
+        const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         const entryIndex = timeEntries.findIndex(t => t.employeeId === profile?.id && t.endTime === null);
         if (entryIndex === -1) return;
         

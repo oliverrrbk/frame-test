@@ -154,7 +154,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
                 {activeCheckInInfo ? (
                     <>
                         <div style={{ margin: 0, color: '#6b7280', fontSize: '0.95rem' }}>
-                            Du har været tjekket ind siden kl. <strong>{activeCheckInInfo.activeEntry.startTime}</strong> på sag: <em>{activeCheckInInfo.lead.customer_name}</em>
+                            Du har været tjekket ind siden kl. <strong>{activeCheckInInfo.activeEntry.startTime}</strong> på <strong>Sag {activeCheckInInfo.lead.case_number || String(activeCheckInInfo.lead.id).substring(0, 6)}</strong>{(activeCheckInInfo.lead.raw_data?.project_title || activeCheckInInfo.lead.project_category) ? ` · ${activeCheckInInfo.lead.raw_data?.project_title || activeCheckInInfo.lead.project_category}` : ''} <em>({activeCheckInInfo.lead.customer_name})</em>
                         </div>
                         <button 
                             onClick={handleGlobalCheckOut}

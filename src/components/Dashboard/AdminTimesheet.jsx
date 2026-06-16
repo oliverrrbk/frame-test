@@ -496,9 +496,10 @@ export default function AdminTimesheet({ leadsData, profile }) {
     
     const handleExportCSV = () => {
         let csvContent = "Dato,Medarbejder,Sag/Type,Beskrivelse,Starttid,Sluttid,Timer,Kilometer\n";
-        filteredEntries.forEach(e => {
+        // Udelad åbne stempler (tjek-ind uden tjek-ud) — de har 0 timer og er kun støj i eksporten.
+        filteredEntries.filter(e => e.endTime !== null).forEach(e => {
             const member = teamMembers.find(m => m.id === e.employeeId);
-            const name = member?.company_name || member?.owner_name || 'Slettet/Ukendt';
+            const name = member?.owner_name || member?.company_name || 'Slettet/Ukendt';
             const row = [
                 e.date,
                 `"${name}"`,
@@ -536,6 +537,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
         const cfg = getConfig(payrollSettings);
         const { start, end } = lastCompletedPeriodRange(cycle, anchor);
         const inRange = allEntries.filter(e => {
+            if (e.endTime === null) return false; // udelad åbne stempler (ikke tjekket ud endnu)
             const k = toDateKey(e.date);
             return k >= start && k <= end;
         });
@@ -780,8 +782,8 @@ export default function AdminTimesheet({ leadsData, profile }) {
             desc: entry.desc || '',
             hours: entry.hours !== undefined && entry.hours !== '' ? entry.hours : computeHours(entry.startTime || '', entry.endTime || '', entry.pauseMinutes !== undefined ? String(entry.pauseMinutes) : '0'),
             km: entry.km || '',
-            startTime: entry.startTime || '',
-            endTime: entry.endTime || '',
+            startTime: (entry.startTime || '').replace('.', ':'),
+            endTime: (entry.endTime || '').replace('.', ':'),
             pauseMinutes: entry.pauseMinutes !== undefined ? String(entry.pauseMinutes) : '0'
         });
         setEditingEntry(entry);
@@ -823,8 +825,8 @@ export default function AdminTimesheet({ leadsData, profile }) {
             desc: last.desc || '',
             hours: last.hours !== undefined && last.hours !== '' ? last.hours : computeHours(last.startTime || '07:00', last.endTime || '15:00', last.pauseMinutes !== undefined ? String(last.pauseMinutes) : '30'),
             km: last.km || '',
-            startTime: last.startTime || '07:00',
-            endTime: last.endTime || '15:00',
+            startTime: (last.startTime || '07:00').replace('.', ':'),
+            endTime: (last.endTime || '15:00').replace('.', ':'),
             pauseMinutes: last.pauseMinutes !== undefined ? String(last.pauseMinutes) : '30'
         });
         toast.success('Udfyldt som seneste registrering.');

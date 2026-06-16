@@ -558,8 +558,8 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
             desc: entry.desc || '',
             hours: entry.hours !== undefined && entry.hours !== '' ? entry.hours : computeHours(entry.startTime || '', entry.endTime || '', entry.pauseMinutes !== undefined ? String(entry.pauseMinutes) : '0'),
             km: entry.km || '',
-            startTime: entry.startTime || '',
-            endTime: entry.endTime || '',
+            startTime: (entry.startTime || '').replace('.', ':'),
+            endTime: (entry.endTime || '').replace('.', ':'),
             pauseMinutes: entry.pauseMinutes !== undefined ? String(entry.pauseMinutes) : '0'
         });
         setEditingEntry(entry);
@@ -599,8 +599,8 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
             desc: last.desc || '',
             hours: last.hours !== undefined && last.hours !== '' ? last.hours : computeHours(last.startTime || '07:00', last.endTime || '15:00', last.pauseMinutes !== undefined ? String(last.pauseMinutes) : '30'),
             km: last.km || '',
-            startTime: last.startTime || '07:00',
-            endTime: last.endTime || '15:00',
+            startTime: (last.startTime || '07:00').replace('.', ':'),
+            endTime: (last.endTime || '15:00').replace('.', ':'),
             pauseMinutes: last.pauseMinutes !== undefined ? String(last.pauseMinutes) : '30'
         });
         toast.success('Udfyldt som seneste registrering.');
