@@ -754,6 +754,16 @@ export default function AdminTimesheet({ leadsData, profile }) {
 
     const entryLocked = (entry) => isDateLocked(entry?.date, lockedUntil);
 
+    const computeHours = (start, end, pauseStr) => {
+        if (!start || !end) return '';
+        const s = new Date(`2000-01-01T${start}`);
+        const e = new Date(`2000-01-01T${end}`);
+        let diffMs = e - s;
+        if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000;
+        const diffMin = (diffMs / (1000 * 60)) - (parseInt(pauseStr) || 0);
+        return diffMin > 0 ? (Math.round((diffMin / 60) * 4) / 4) : 0;
+    };
+
     const openEdit = (entry) => {
         if (entryLocked(entry)) {
             toast.error(`Perioden er lønkørt og låst (til og med ${formatDa(lockedUntil)}). Genåbn for at redigere.`);
@@ -768,7 +778,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
             leadId: isInternal ? '' : (entry.leadId || ''),
             absenceType: isInternal ? (entry.absenceType || entry.desc || 'Sygdom') : 'Sygdom',
             desc: entry.desc || '',
-            hours: entry.hours || '',
+            hours: entry.hours !== undefined && entry.hours !== '' ? entry.hours : computeHours(entry.startTime || '', entry.endTime || '', entry.pauseMinutes !== undefined ? String(entry.pauseMinutes) : '0'),
             km: entry.km || '',
             startTime: entry.startTime || '',
             endTime: entry.endTime || '',
@@ -787,7 +797,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
             leadId: '', 
             absenceType: 'Sygdom',
             desc: '', 
-            hours: '', 
+            hours: computeHours('07:00', '15:00', '30'), 
             km: '', 
             startTime: '07:00', 
             endTime: '15:00',
@@ -795,16 +805,6 @@ export default function AdminTimesheet({ leadsData, profile }) {
         });
         setIsAdding(true);
         setEditingEntry(null);
-    };
-
-    const computeHours = (start, end, pauseStr) => {
-        if (!start || !end) return '';
-        const s = new Date(`2000-01-01T${start}`);
-        const e = new Date(`2000-01-01T${end}`);
-        let diffMs = e - s;
-        if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000;
-        const diffMin = (diffMs / (1000 * 60)) - (parseInt(pauseStr) || 0);
-        return diffMin > 0 ? (Math.round((diffMin / 60) * 4) / 4) : 0;
     };
 
     // "Som i går": udfyld med den valgte medarbejders seneste registrering, på dags dato
@@ -821,7 +821,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
             leadId: last.leadId === 'internal' ? '' : (last.leadId || ''),
             absenceType: last.absenceType || 'Sygdom',
             desc: last.desc || '',
-            hours: last.hours || '',
+            hours: last.hours !== undefined && last.hours !== '' ? last.hours : computeHours(last.startTime || '07:00', last.endTime || '15:00', last.pauseMinutes !== undefined ? String(last.pauseMinutes) : '30'),
             km: last.km || '',
             startTime: last.startTime || '07:00',
             endTime: last.endTime || '15:00',
