@@ -47,7 +47,7 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
             if (!isMineFallback) return false;
 
             const isUnsent = lead.status === 'Kladde' || lead.status === 'Intern Kladde';
-            const isSent = lead.status === 'Ny forespørgsel' && lead.raw_data?.draft_mode === true;
+            const isSent = lead.status === 'Sendt Kladde';
             
             if (!isUnsent && !isSent) return false;
 
@@ -97,7 +97,10 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                 project_category: targetDraft.project_category,
                 price_estimate: targetDraft.price_estimate,
                 contact_preference: targetDraft.contact_preference,
-                raw_data: newRawData,
+                raw_data: {
+                    ...newRawData,
+                    sent_by_worker_name: profile.owner_name || profile.company_name || 'En medarbejder'
+                },
                 carpenter_id: targetDraft.carpenter_id,
                 status: 'Ny forespørgsel',
                 is_read: false
@@ -110,20 +113,20 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
 
             if (insertError) throw insertError;
 
-            // Marker den gamle kladde som slettet
+            // Marker den gamle kladde som Sendt Kladde (så svenden stadig kan se den)
             const { error: deleteError } = await supabase
                 .from('leads')
-                .update({ status: 'Slettet' })
+                .update({ status: 'Sendt Kladde' })
                 .eq('id', draftId);
 
             if (deleteError) {
-                console.error("Advarsel: Kunne ikke markere gammel kladde som slettet.", deleteError);
+                console.error("Advarsel: Kunne ikke markere gammel kladde som sendt.", deleteError);
             }
 
             toast.success("Kladde sendt til mester!", { id: "send_draft" });
             
             if (setLeadsData) {
-                setLeadsData(prev => prev.map(l => l.id === draftId ? { ...l, status: 'Slettet' } : l));
+                setLeadsData(prev => prev.map(l => l.id === draftId ? { ...l, status: 'Sendt Kladde' } : l));
             }
             setSelectedDraft(null);
         } catch (err) {

@@ -3241,6 +3241,11 @@ const Dashboard = () => {
                                                     </p>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    {lead.raw_data?.sent_by_worker_name && (
+                                                        <span style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '20px', backgroundColor: '#f1f5f9', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', fontWeight: 'bold' }}>
+                                                            <User size={14} /> Fra {lead.raw_data.sent_by_worker_name}
+                                                        </span>
+                                                    )}
                                                     <span style={{ 
                                                         fontSize: '0.8rem', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold',
                                                         backgroundColor: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? 'rgba(37,99,235,0.1)' : ((lead.status || '') === 'Sendt tilbud' ? 'rgba(202,138,4,0.1)' : (lead.status || '') === 'Bekræftet opgave' ? 'rgba(5,150,105,0.1)' : (lead.status === 'Intern Kladde' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(220,38,38,0.1)')),
