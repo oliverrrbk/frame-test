@@ -194,6 +194,22 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
                                     <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>Standard arbejdsdag (timer)</span>
                                     <input type="number" step="0.1" min="0" value={form.config.daily_hours} onChange={(e) => setCfg({ daily_hours: parseFloat(e.target.value) || 0 })} style={fieldStyle} />
                                 </label>
+
+                                <div style={{ marginTop: '12px' }}>
+                                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>Automatisk frokostpause</span>
+                                    <span style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginBottom: '8px' }}>Trækkes automatisk fra ved stempling — og bruges som standard i timeregistreringen — når arbejdsdagen er over grænsen.</span>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>Pause (minutter)</span>
+                                            <input type="number" step="5" min="0" value={form.config.auto_break_minutes ?? 30} onChange={(e) => setCfg({ auto_break_minutes: parseInt(e.target.value) || 0 })} style={fieldStyle} />
+                                        </label>
+                                        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>Når over (timer)</span>
+                                            <input type="number" step="0.5" min="0" value={form.config.auto_break_threshold_hours ?? 5} onChange={(e) => setCfg({ auto_break_threshold_hours: parseFloat(e.target.value) || 0 })} style={fieldStyle} />
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <div style={{ marginTop: '12px' }}>
                                     <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>Eksportér ferie/fravær som</span>
                                     <span style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginBottom: '8px' }}>Gælder kun ferie/fravær — arbejdstimer eksporteres altid som timer. De fleste lønsystemer bruger dage til ferie.</span>

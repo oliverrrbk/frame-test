@@ -5,7 +5,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { isWeekendOrHoliday } from '../../utils/holidays';
-import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
+import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil, getConfig, suggestedBreakMinutes } from '../../utils/payroll';
 import { mutateTimeEntries } from '../../utils/timeEntries';
 import TimeRegistrationReminder from './TimeRegistrationReminder';
 
@@ -175,6 +175,19 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
             setFormData(prev => ({ ...prev, hours: (Math.round(finalHours * 4) / 4).toString() }));
         }
     }, [formData.startTime, formData.endTime, formData.pauseMinutes]);
+
+    // Tærskel-bevidst standard-pause ved NY registrering (firmaets regel, fx 30 min over 5 t).
+    // Rører ikke en eksisterende registrering man redigerer, og kan altid overskrives manuelt.
+    useEffect(() => {
+        if (!isAdding || !formData.startTime || !formData.endTime) return;
+        const [sH, sM] = formData.startTime.split(':').map(Number);
+        const [eH, eM] = formData.endTime.split(':').map(Number);
+        let gross = (eH + eM / 60) - (sH + sM / 60);
+        if (gross < 0) gross += 24;
+        const suggested = suggestedBreakMinutes(gross, getConfig(payrollSettings));
+        setFormData(prev => (String(prev.pauseMinutes) === String(suggested) ? prev : { ...prev, pauseMinutes: String(suggested) }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.startTime, formData.endTime, isAdding, payrollSettings]);
 
     // Opsamling af alle registreringer for DENNE ENE medarbejder
     const allEntries = useMemo(() => {
