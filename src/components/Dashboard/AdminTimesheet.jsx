@@ -12,7 +12,9 @@ import {
 } from '../../utils/payroll';
 import { mutateTimeEntries } from '../../utils/timeEntries';
 import { getRoleLabel } from '../../utils/roles';
-import { Lock, FileSpreadsheet, RotateCcw } from 'lucide-react';
+import { Lock, FileSpreadsheet, RotateCcw, IdCard, Briefcase } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
 
 const CustomSelect = ({ value, onChange, options, placeholder }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -139,6 +141,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
     const [selectedUser, setSelectedUser] = useState('all');
     const [payrollSettings, setPayrollSettings] = useState(null);
     const [exportMenuOpen, setExportMenuOpen] = useState(false);
+    const [isStamdataModalOpen, setIsStamdataModalOpen] = useState(false);
     const exportMenuRef = useRef(null);
     const payrollCompanyId = profile?.company_id || profile?.id;
     const lockedUntil = getEffectiveLockedUntil(payrollSettings);
@@ -844,6 +847,44 @@ export default function AdminTimesheet({ leadsData, profile }) {
         }
     };
 
+    const handleLonnummerInput = (employeeId, value) => {
+        setTeamMembers(teamMembers.map(m => m.id === employeeId ? { ...m, raw_data: { ...(m.raw_data || {}), lonnummer: value } } : m));
+    };
+
+    const handleLonnummerBlur = async (member) => {
+        const v = String(member.raw_data?.lonnummer ?? '').trim();
+        if (v && !isValidLonnummer(v)) {
+            toast.error('Lønnummer må kun indeholde tal.');
+            return;
+        }
+        const dup = [...teamMembers, { id: profile.id, raw_data: profile.raw_data }]
+            .some(m => m.id !== member.id && v && String(m.raw_data?.lonnummer ?? '').trim() === v);
+        if (dup) {
+            toast.error('Lønnummeret er allerede i brug af en anden.');
+            return;
+        }
+        const newRawData = { ...(member.raw_data || {}), lonnummer: v };
+        const { error } = await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', member.id);
+        if (error) {
+            console.error("Kunne ikke opdatere lønnummer:", error);
+            toast.error('Kunne ikke gemme lønnummer.');
+        } else {
+            toast.success('Lønnummer gemt');
+        }
+    };
+
+    const handleVacationQuotaUpdate = async (employeeId, currentRawData, newQuota) => {
+        const parsedQuota = parseInt(newQuota);
+        if (isNaN(parsedQuota) || parsedQuota < 0) return;
+        const newRawData = { ...currentRawData, vacation_quota: parsedQuota };
+        setTeamMembers(teamMembers.map(m => m.id === employeeId ? { ...m, raw_data: newRawData } : m));
+        const { error } = await supabase.from('carpenters').update({ raw_data: newRawData }).eq('id', employeeId);
+        if (error) {
+            console.error("Kunne ikke opdatere feriesaldo:", error);
+            toast.error('Kunne ikke gemme feriekvote.');
+        }
+    };
+
     return (
         <div className="dashboard-workspace timesheet-view admin-timesheet" style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-out', maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px' }}>
             <div className="glass-panel" style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', position: 'relative', zIndex: 50, overflow: 'visible' }}>
@@ -884,6 +925,17 @@ export default function AdminTimesheet({ leadsData, profile }) {
                         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; }}
                     >
                         <Plus size={18} /> Opret registrering
+                    </button>
+
+                    <button 
+                        onClick={() => setIsStamdataModalOpen(true)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(10px)', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.4)'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; }}
+                        className="stamdata-btn"
+                    >
+                        <IdCard size={18} className="text-blue-600" />
+                        <span className="hidden sm:inline">Stamdata & Ferie</span>
                     </button>
 
                     <div ref={exportMenuRef} style={{ position: 'relative' }}>
@@ -1405,6 +1457,132 @@ export default function AdminTimesheet({ leadsData, profile }) {
                     </div>
                 </div>
             , document.body)}
+
+            {/* Stamdata & Ferie Modal */}
+            <AnimatePresence>
+                {isStamdataModalOpen && createPortal(
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsStamdataModalOpen(false)}
+                            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            style={{ 
+                                position: 'relative', 
+                                width: '100%', 
+                                maxWidth: '800px', 
+                                maxHeight: '90vh', 
+                                display: 'flex', 
+                                flexDirection: 'column',
+                                background: 'rgba(255, 255, 255, 0.85)', 
+                                backdropFilter: 'blur(24px)', 
+                                WebkitBackdropFilter: 'blur(24px)',
+                                borderRadius: '24px', 
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255,255,255,0.3) inset',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <div style={{ padding: '24px 32px', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.5)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ padding: '10px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '14px', color: '#2563eb' }}>
+                                        <IdCard size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a' }}>Stamdata & Ferie</h3>
+                                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Overblik over lønnumre og feriesaldi for alle medarbejdere.</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => setIsStamdataModalOpen(false)}
+                                    style={{ width: '36px', height: '36px', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; e.currentTarget.style.color = '#ef4444'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#64748b'; }}
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                            
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr', gap: '16px', paddingBottom: '12px', borderBottom: '1px solid rgba(0,0,0,0.1)', marginBottom: '16px', fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    <div>Medarbejder</div>
+                                    <div style={{ textAlign: 'center' }}>Lønnummer</div>
+                                    <div style={{ textAlign: 'center' }}>Feriesaldo (Rest / Kvote)</div>
+                                </div>
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {teamMembers.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>Ingen medarbejdere fundet.</div>
+                                    ) : teamMembers.map(member => {
+                                        const quota = member.raw_data?.vacation_quota ?? 30;
+                                        const currentYear = new Date().getFullYear();
+                                        const ferieEntries = allEntries.filter(e => {
+                                            if (e.employeeId !== member.id) return false;
+                                            if (e.absenceType !== 'Ferie') return false;
+                                            if (new Date(e.date).getFullYear() !== currentYear) return false;
+                                            if (isWeekendOrHoliday(e.date)) return false;
+                                            return true;
+                                        });
+                                        const used = new Set(ferieEntries.map(e => e.date)).size;
+                                        const remaining = quota - used;
+                                        
+                                        return (
+                                            <div key={member.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr', gap: '16px', alignItems: 'center', padding: '12px 16px', background: 'rgba(255,255,255,0.6)', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(15, 23, 42, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#334155', fontSize: '0.9rem' }}>
+                                                        {member.owner_name?.charAt(0).toUpperCase() || 'M'}
+                                                    </div>
+                                                    <div style={{ overflow: 'hidden' }}>
+                                                        <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.owner_name || 'Uden Navn'}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{getRoleLabel(member.role)}</div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                                    <input 
+                                                        type="text" 
+                                                        inputMode="numeric"
+                                                        placeholder="Eks. 1001" 
+                                                        value={member.raw_data?.lonnummer ?? ''} 
+                                                        onChange={(e) => handleLonnummerInput(member.id, e.target.value)} 
+                                                        onBlur={() => handleLonnummerBlur(member)}
+                                                        style={{ width: '80px', padding: '8px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.1)', background: '#fff', fontSize: '0.9rem', textAlign: 'center', fontWeight: 'bold', outline: 'none', transition: 'all 0.2s', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }} 
+                                                        onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                                                    />
+                                                </div>
+                                                
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: remaining < 5 ? '#ef4444' : '#10b981', lineHeight: 1 }}>{remaining}</span>
+                                                        <span style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginTop: '2px' }}>Rest</span>
+                                                    </div>
+                                                    <div style={{ width: '1px', height: '24px', background: 'rgba(0,0,0,0.1)' }} />
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <input 
+                                                            type="number" 
+                                                            min="0" 
+                                                            value={quota} 
+                                                            onChange={(e) => handleVacationQuotaUpdate(member.id, member.raw_data || {}, e.target.value)}
+                                                            style={{ width: '50px', padding: '4px', borderRadius: '6px', border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600, outline: 'none' }} 
+                                                        />
+                                                        <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'none', '@media (min-width: 640px)': { display: 'inline' } }}>dage</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                , document.body)}
+            </AnimatePresence>
         </div>
     );
 }
