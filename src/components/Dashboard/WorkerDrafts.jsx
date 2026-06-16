@@ -76,9 +76,19 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
     const handleSendToMester = async (draftId) => {
         try {
             toast.loading("Sender til mester...", { id: "send_draft" });
+
+            const targetDraft = leadsData.find(l => l.id === draftId) || selectedDraft;
+            let newRawData = targetDraft?.raw_data || {};
+            if (newRawData.assigned_workers && newRawData.assigned_workers.includes(profile.id)) {
+                newRawData = {
+                    ...newRawData,
+                    assigned_workers: newRawData.assigned_workers.filter(id => id !== profile.id)
+                };
+            }
+
             const { error } = await supabase
                 .from('leads')
-                .update({ status: 'Ny forespørgsel', is_read: false })
+                .update({ status: 'Ny forespørgsel', is_read: false, raw_data: newRawData })
                 .eq('id', draftId);
 
             if (error) throw error;
@@ -87,7 +97,7 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
             
             // Local state update
             if (setLeadsData) {
-                setLeadsData(prev => prev.map(l => l.id === draftId ? { ...l, status: 'Ny forespørgsel', is_read: false } : l));
+                setLeadsData(prev => prev.map(l => l.id === draftId ? { ...l, status: 'Ny forespørgsel', is_read: false, raw_data: newRawData } : l));
             }
             setSelectedDraft(null);
         } catch (err) {
@@ -470,7 +480,7 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                                 </button>
                             </div>
 
-                            {selectedDraft.status === 'Kladde' && (
+                            {(selectedDraft.status === 'Kladde' || selectedDraft.status === 'Intern Kladde') && (
                                 <button
                                     onClick={() => handleSendToMester(selectedDraft.id)}
                                     style={{ padding: isMobile ? '16px 24px' : '12px 24px', width: isMobile ? '100%' : 'auto', justifyContent: 'center', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', borderRadius: isMobile ? '12px' : '10px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)', transition: 'all 0.2s' }}

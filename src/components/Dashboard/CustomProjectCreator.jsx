@@ -543,7 +543,14 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
             project_category: 'special',
             price_estimate: totals.totalSales.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' kr.',
             raw_data: {
-                ...(draftCreator ? { created_by: draftCreator.id, draft_mode: true } : {}),
+                ...(initialData?.raw_data || {}),
+                ...(draftCreator ? { 
+                    created_by: draftCreator.id, 
+                    draft_mode: true,
+                    assigned_workers: initialData?.raw_data?.assigned_workers?.includes(draftCreator.id) 
+                        ? initialData.raw_data.assigned_workers 
+                        : [...(initialData?.raw_data?.assigned_workers || []), draftCreator.id]
+                } : {}),
                 material_list: globalMaterialList,
                 material_lists_meta: [{ id: 'default', name: 'Materialeliste til Opgaven', price: '' }],
                 details: { 
@@ -1108,15 +1115,15 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                         <div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', marginBottom: '8px' }}>
                                 <span>Materialer i alt (Salgspris):</span>
-                                <span>{totals.materialsSales.toFixed(0)} kr</span>
+                                <span>{totals.materialsSales.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kr</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', marginBottom: '8px' }}>
                                 <span>Arbejdsløn i alt {laborType === 'hourly' ? `(${totals.totalHours} t)` : '(Fast Pris)'}:</span>
-                                <span>{totals.laborSales.toFixed(0)} kr</span>
+                                <span>{totals.laborSales.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kr</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f172a', fontWeight: 'bold', fontSize: '1.3rem', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
                                 <span>Total (ekskl. moms):</span>
-                                <span style={{ color: '#10b981' }}>{totals.totalSales.toFixed(0)} kr</span>
+                                <span style={{ color: '#10b981' }}>{totals.totalSales.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kr</span>
                             </div>
                         </div>
                     </div>

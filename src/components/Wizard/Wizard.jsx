@@ -513,7 +513,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
                     .from('leads')
                     .update({
                         price_estimate: res.priceRange,
-                        raw_data: { ...updatedProjectData, calc_data: res.calcData, breakdownArr: res.breakdownArr },
+                        raw_data: { ...(initialData?.raw_data || {}), ...updatedProjectData, calc_data: res.calcData, breakdownArr: res.breakdownArr },
                         updated_at: new Date().toISOString()
                     });
                 
@@ -537,7 +537,13 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
                 
                 if (draftCreator) {
                     initialStatus = 'Kladde';
-                    extraRawData = { created_by: draftCreator.id, draft_mode: true };
+                    extraRawData = { 
+                        created_by: draftCreator.id, 
+                        draft_mode: true,
+                        assigned_workers: initialData?.raw_data?.assigned_workers?.includes(draftCreator.id) 
+                            ? initialData.raw_data.assigned_workers 
+                            : [...(initialData?.raw_data?.assigned_workers || []), draftCreator.id]
+                    };
                 }
 
                 const { error } = await supabase
@@ -551,7 +557,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
                         project_category: categoryName,
                         price_estimate: res.priceRange,
                         contact_preference: isFastTrack ? 'Hurtigst muligt' : 'Afventer accept',
-                        raw_data: { ...updatedProjectData, calc_data: res.calcData, breakdownArr: res.breakdownArr, ...extraRawData },
+                        raw_data: { ...(initialData?.raw_data || {}), ...updatedProjectData, calc_data: res.calcData, breakdownArr: res.breakdownArr, ...extraRawData },
                         carpenter_id: carpenter?.id || null,
                         status: initialStatus
                     }]);
