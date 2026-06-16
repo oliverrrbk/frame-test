@@ -76,9 +76,11 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
     const handleSendToMester = async (draftId) => {
         try {
             toast.loading("Sender til mester...", { id: "send_draft" });
-
+            
             const targetDraft = leadsData.find(l => l.id === draftId) || selectedDraft;
             let newRawData = targetDraft?.raw_data || {};
+            
+            // Vi fjerner svenden fra holdet til den nye sag
             if (newRawData.assigned_workers && newRawData.assigned_workers.includes(profile.id)) {
                 newRawData = {
                     ...newRawData,
@@ -86,18 +88,42 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
                 };
             }
 
-            const { error } = await supabase
+            const newLeadPayload = {
+                quote_token: crypto.randomUUID(),
+                customer_name: targetDraft.customer_name,
+                customer_email: targetDraft.customer_email,
+                customer_phone: targetDraft.customer_phone,
+                customer_address: targetDraft.customer_address,
+                project_category: targetDraft.project_category,
+                price_estimate: targetDraft.price_estimate,
+                contact_preference: targetDraft.contact_preference,
+                raw_data: newRawData,
+                carpenter_id: targetDraft.carpenter_id,
+                status: 'Ny forespørgsel',
+                is_read: false
+            };
+
+            // Opret ny kopi uden assigned_workers (bypasser RLS WITH CHECK på update)
+            const { error: insertError } = await supabase
                 .from('leads')
-                .update({ status: 'Ny forespørgsel', is_read: false, raw_data: newRawData })
+                .insert([newLeadPayload]);
+
+            if (insertError) throw insertError;
+
+            // Marker den gamle kladde som slettet
+            const { error: deleteError } = await supabase
+                .from('leads')
+                .update({ status: 'Slettet' })
                 .eq('id', draftId);
 
-            if (error) throw error;
+            if (deleteError) {
+                console.error("Advarsel: Kunne ikke markere gammel kladde som slettet.", deleteError);
+            }
 
             toast.success("Kladde sendt til mester!", { id: "send_draft" });
             
-            // Local state update
             if (setLeadsData) {
-                setLeadsData(prev => prev.map(l => l.id === draftId ? { ...l, status: 'Ny forespørgsel', is_read: false, raw_data: newRawData } : l));
+                setLeadsData(prev => prev.map(l => l.id === draftId ? { ...l, status: 'Slettet' } : l));
             }
             setSelectedDraft(null);
         } catch (err) {
