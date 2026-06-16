@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Clock, CheckCircle, MessageSquare, Plus, Users, X, Trash2, Truck, ChevronDown, Palmtree, Thermometer, Briefcase, Coffee, PartyPopper, Search, Bell, BellOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Clock, CheckCircle, MessageSquare, Plus, Users, X, Trash2, Truck, ChevronDown, Palmtree, Thermometer, Briefcase, Coffee, PartyPopper, Search, Bell, BellOff, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -89,6 +89,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         endDate: new Date().toISOString().substring(0,10),
         startTime: '10:00',
         endTime: '11:00',
+        allDay: false,
+        location: '',
+        notes: '',
         participants: ['all'],
         selectedLeadId: '', // For Materialelevering
         notification_preference: 'day_before'
@@ -113,6 +116,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 endDate: eventToEdit.endDate || eventToEdit.date || new Date().toISOString().substring(0,10),
                 startTime: eventToEdit.startTime || '10:00',
                 endTime: eventToEdit.endTime || '11:00',
+                allDay: !!eventToEdit.allDay,
+                location: eventToEdit.location || '',
+                notes: eventToEdit.notes || '',
                 participants: eventToEdit.participants || ['all'],
                 selectedLeadId: eventToEdit.relatedLeadId || '',
                 notification_preference: eventToEdit.notification_preference || 'day_before'
@@ -131,6 +137,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 endDate: dateStr,
                 startTime: '10:00',
                 endTime: '11:00',
+                allDay: false,
+                location: '',
+                notes: '',
                 participants: ['all'],
                 selectedLeadId: '',
                 notification_preference: 'day_before'
@@ -306,6 +315,63 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         return { isHoliday, leads, absences, events };
     };
 
+    const goToToday = () => {
+        const today = new Date();
+        setCurrentDate(today);
+        setSelectedMobileDate(today);
+    };
+
+    const eventTimeLabel = (event) => event?.allDay ? 'Hele dagen' : `${event?.startTime || '10:00'} - ${event?.endTime || '11:00'}`;
+
+    const getLeadLocation = (lead) => (
+        lead?.address ||
+        lead?.customer_address ||
+        lead?.raw_data?.address ||
+        lead?.raw_data?.customer_address ||
+        lead?.raw_data?.details?.address ||
+        lead?.raw_data?.details?.customerAddress ||
+        ''
+    );
+
+    const getEventConflictSummary = (formData) => {
+        if (!formData?.startDate || !formData?.endDate) return [];
+        const participants = formData.type === 'Materialelevering'
+            ? (() => {
+                const lead = relevantLeads.find(l => String(l.id) === String(formData.selectedLeadId));
+                const workers = lead?.raw_data?.assigned_workers || [];
+                const pms = lead?.raw_data?.assigned_pm || [];
+                return [...new Set([...workers, ...pms].map(String))];
+            })()
+            : (formData.participants || []).map(String);
+
+        const checksAll = participants.length === 0 || participants.includes('all');
+        const start = new Date(formData.startDate + 'T00:00:00');
+        const end = new Date(formData.endDate + 'T00:00:00');
+        const conflicts = [];
+
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const items = getItemsForDay(new Date(d));
+            const dayLabel = format(new Date(d), 'd. MMM', { locale: da });
+            const otherEvents = items.events.filter(event => {
+                if (event.id === formData.id) return false;
+                if (checksAll || event.participants?.includes('all')) return true;
+                return (event.participants || []).some(id => participants.includes(String(id)));
+            });
+            const relevantAbsences = items.absences.filter(absence => checksAll || participants.includes(String(absence.employeeId)));
+            const relevantLeadsForParticipants = items.leads.filter(lead => {
+                if (checksAll) return true;
+                const ids = [...(lead.raw_data?.assigned_workers || []), ...(lead.raw_data?.assigned_pm || [])].map(String);
+                return ids.some(id => participants.includes(id));
+            });
+
+            if (otherEvents.length > 0) conflicts.push(`${dayLabel}: ${otherEvents.length} anden aftale`);
+            if (relevantAbsences.length > 0) conflicts.push(`${dayLabel}: ${relevantAbsences.length} fravær`);
+            if (relevantLeadsForParticipants.length > 0) conflicts.push(`${dayLabel}: ${relevantLeadsForParticipants.length} sag(er) planlagt`);
+        }
+
+        return conflicts.slice(0, 4);
+    };
+
     // ----------------- ACTIONS -----------------
 
     const saveEvent = async (e) => {
@@ -345,6 +411,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             endDate: eventFormData.endDate,
             startTime: eventFormData.startTime,
             endTime: eventFormData.endTime,
+            allDay: !!eventFormData.allDay,
+            location: eventFormData.location?.trim() || '',
+            notes: eventFormData.notes?.trim() || '',
             participants: finalParticipants,
             relatedLeadId: eventFormData.selectedLeadId || null,
             notification_preference: eventFormData.notification_preference || 'day_before',
@@ -573,6 +642,122 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         return { bg: '#e0e7ff', border: '#a5b4fc', text: '#3730a3' }; // Bekræftet
     };
 
+    const renderMobileMyDayView = () => {
+        const dayItems = getItemsForDay(new Date(selectedMobileDate));
+        const myId = String(userId || '');
+        const myEvents = dayItems.events.filter(event => event.participants?.includes('all') || (event.participants || []).map(String).includes(myId));
+        const myAbsences = dayItems.absences.filter(absence => String(absence.employeeId) === myId);
+        const myLeads = dayItems.leads.filter(lead => {
+            const ids = [...(lead.raw_data?.assigned_workers || []), ...(lead.raw_data?.assigned_pm || [])].map(String);
+            return ids.includes(myId) || isManager;
+        });
+        const hasAny = myEvents.length > 0 || myAbsences.length > 0 || myLeads.length > 0 || dayItems.isHoliday;
+
+        return (
+            <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: '#fff', borderRadius: '24px', padding: '20px', boxShadow: '0 18px 36px rgba(15,23,42,0.22)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                        <div>
+                            <div style={{ fontSize: '0.78rem', color: '#93c5fd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Min dag</div>
+                            <h3 style={{ margin: '4px 0 0', fontSize: '1.45rem', fontWeight: 900, textTransform: 'capitalize' }}>
+                                {format(selectedMobileDate, 'EEEE d. MMM', { locale: da })}
+                            </h3>
+                        </div>
+                        <button onClick={goToToday} style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.1)', color: '#fff', borderRadius: '14px', padding: '10px 12px', fontWeight: 800, cursor: 'pointer' }}>
+                            I dag
+                        </button>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '18px' }}>
+                        {[
+                            { label: 'Sager', value: myLeads.length },
+                            { label: 'Aftaler', value: myEvents.length },
+                            { label: 'Fravær', value: myAbsences.length }
+                        ].map(item => (
+                            <div key={item.label} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '10px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>{item.value}</div>
+                                <div style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 700 }}>{item.label}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {!hasAny && (
+                    <div style={{ padding: '28px 18px', textAlign: 'center', background: '#fff', borderRadius: '20px', border: '1px solid #e2e8f0', color: '#64748b' }}>
+                        <CalendarIcon size={34} color="#94a3b8" style={{ marginBottom: '10px' }} />
+                        <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>Ingen planlagte aktiviteter</div>
+                        <div style={{ fontSize: '0.9rem' }}>Du har ikke noget i kalenderen på denne dag.</div>
+                    </div>
+                )}
+
+                {dayItems.isHoliday && (
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '4px solid #94a3b8', borderRadius: '16px', padding: '14px 16px', fontWeight: 800, color: '#475569' }}>
+                        Helligdag
+                    </div>
+                )}
+
+                {myAbsences.map((absence, index) => (
+                    <div key={`my-absence-${index}`} style={{ background: absence.absenceType === 'Sygdom' ? '#fef2f2' : '#fff7ed', border: `1px solid ${absence.absenceType === 'Sygdom' ? '#fecaca' : '#fed7aa'}`, borderLeft: `4px solid ${absence.absenceType === 'Sygdom' ? '#ef4444' : '#f97316'}`, borderRadius: '16px', padding: '14px 16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        {absence.absenceType === 'Sygdom' ? <Thermometer size={22} color="#ef4444"/> : <Palmtree size={22} color="#f97316"/>}
+                        <div>
+                            <div style={{ fontWeight: 900, color: '#0f172a' }}>{absence.absenceType}</div>
+                            <div style={{ fontSize: '0.86rem', color: '#64748b' }}>{absence.employeeName}</div>
+                        </div>
+                    </div>
+                ))}
+
+                {myEvents.map(event => {
+                    const style = getEventStyle(event.type);
+                    const Icon = style.icon;
+                    return (
+                        <div key={event.id} onClick={() => openModalForDate(null, event)} style={{ background: '#fff', border: `1px solid ${style.border}`, borderLeft: `4px solid ${style.leftBorder}`, borderRadius: '18px', padding: '16px', boxShadow: '0 8px 20px rgba(15,23,42,0.05)', cursor: 'pointer' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: style.bg, color: style.text, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Icon size={21} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
+                                        <div style={{ color: style.text, fontWeight: 900, fontSize: '0.86rem' }}>{event.type}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 800 }}>{eventTimeLabel(event)}</div>
+                                    </div>
+                                    <div style={{ marginTop: '3px', color: '#0f172a', fontWeight: 900, fontSize: '1rem' }}>{event.title}</div>
+                                    {event.location && (
+                                        <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontSize: '0.86rem', fontWeight: 600 }}>
+                                            <MapPin size={15} color="#64748b" /> {event.location}
+                                        </div>
+                                    )}
+                                    {event.notes && (
+                                        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#64748b', fontSize: '0.84rem', lineHeight: 1.35 }}>
+                                            <MessageSquare size={15} color="#94a3b8" style={{ marginTop: '1px', flexShrink: 0 }} /> {event.notes}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+
+                {myLeads.map(lead => {
+                    const colors = getStatusColor(lead.status);
+                    const location = getLeadLocation(lead);
+                    return (
+                        <div key={lead.id} onClick={() => setCaseActionSheet({ lead })} style={{ background: '#fff', border: `1px solid ${colors.border}`, borderLeft: `4px solid ${colors.text}`, borderRadius: '18px', padding: '16px', boxShadow: '0 8px 20px rgba(15,23,42,0.05)', cursor: 'pointer' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                                <span style={{ fontSize: '0.76rem', fontWeight: 900, color: '#64748b', background: '#f1f5f9', padding: '4px 8px', borderRadius: '999px' }}>Sag {lead.case_number || String(lead.id).substring(0,6)}</span>
+                                <span style={{ fontSize: '0.78rem', color: colors.text, fontWeight: 900 }}>{lead.status}</span>
+                            </div>
+                            <div style={{ marginTop: '8px', fontWeight: 900, color: '#0f172a', fontSize: '1.02rem' }}>{lead.raw_data?.project_title || lead.project_category}</div>
+                            {location && (
+                                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontSize: '0.86rem', fontWeight: 600 }}>
+                                    <MapPin size={15} color="#64748b" /> {location}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
 
     const renderMobileMonthView = () => {
         return (
@@ -602,6 +787,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 <div style={{ display: 'flex', background: '#e2e8f0', padding: '3px', borderRadius: '10px', marginTop: '8px' }}>
                                     <button onClick={() => setMobileViewType('month')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 16px', borderRadius: '8px', border: 'none', background: mobileViewType === 'month' ? '#fff' : 'transparent', color: mobileViewType === 'month' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: mobileViewType === 'month' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s' }}>
                                         <CalendarIcon size={16} />
+                                    </button>
+                                    <button onClick={() => { setMobileViewType('today'); goToToday(); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 16px', borderRadius: '8px', border: 'none', background: mobileViewType === 'today' ? '#fff' : 'transparent', color: mobileViewType === 'today' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: mobileViewType === 'today' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s' }}>
+                                        <Clock size={16} />
                                     </button>
                                     {canViewTimeline && (
                                         <button onClick={() => setMobileViewType('timeline')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 16px', borderRadius: '8px', border: 'none', background: mobileViewType === 'timeline' ? '#fff' : 'transparent', color: mobileViewType === 'timeline' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: mobileViewType === 'timeline' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s' }}>
@@ -778,7 +966,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 </div>
                             </div>
                             );
-                        })() : (
+                        })() : mobileViewType === 'today' ? renderMobileMyDayView() : (
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {/* Mobile Grid */}
                         <div style={{ padding: '0 16px' }}>

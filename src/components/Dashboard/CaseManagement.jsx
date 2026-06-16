@@ -1389,8 +1389,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const originalBudget = selectedCase?.raw_data?.calc_data?.materialCostBase !== undefined
         ? parseFloat(selectedCase.raw_data.calc_data.materialCostBase)
         : Math.round((parseFloat(selectedCase?.raw_data?.calc_data?.materialCost) || 0) / defaultMarkup);
-    const materialListsMeta = selectedCase?.raw_data?.material_lists_meta || [];
-    const totalSpent = materialListsMeta.reduce((sum, list) => sum + (parseFloat(list.price) || 0), 0);
+    const supplierInvoices = selectedCase?.raw_data?.supplier_invoices || [];
+    const totalSpent = supplierInvoices
+        .filter(inv => inv.category === 'Materialer' || !inv.category)
+        .reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
     const budgetRemaining = originalBudget - totalSpent;
     const isOverBudget = budgetRemaining < 0;
 
