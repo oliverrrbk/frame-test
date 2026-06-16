@@ -607,8 +607,30 @@ const Dashboard = () => {
     const [showCreateLeadCancelConfirm, setShowCreateLeadCancelConfirm] = useState(false);
     const [createLeadMode, setCreateLeadMode] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [mapFilters, setMapFilters] = useState({ showNew: true, showSent: true, showConfirmed: true });
-    
+    const [mapFilters, setMapFilters] = useState({ showNew: true, showSent: true, showConfirmed: true, showOnHold: true });
+    const [selectedMapLead, setSelectedMapLead] = useState(null); // lead vist i info-boblen på kortet
+
+    // Hvilke sager vises på kortet — én fælles, autoritativ liste (whitelist) brugt af
+    // både prikker og tælleren, så de altid stemmer overens med filter-knapperne.
+    const mapVisibleLeads = useMemo(() => {
+        const role = simulatedRole || myProfile?.role || 'admin';
+        return (leadsData || []).filter(l => {
+            if (['worker', 'apprentice'].includes(role)) {
+                if (simulatedRole) return ['Bekræftet opgave', 'Historik'].includes(l.status);
+                const workers = l.raw_data?.assigned_workers || [];
+                const pmData = l.raw_data?.assigned_pm;
+                const pms = Array.isArray(pmData) ? pmData : (pmData ? [pmData] : []);
+                return (workers.includes(myProfile?.id) || pms.includes(myProfile?.id)) && ['Bekræftet opgave', 'Historik'].includes(l.status);
+            }
+            const s = l.status || 'Ny forespørgsel';
+            if (s === 'Ny forespørgsel') return mapFilters.showNew;
+            if (s === 'Sendt tilbud') return mapFilters.showSent;
+            if (s === 'Bekræftet opgave') return mapFilters.showConfirmed;
+            if (s === 'Sæt i bero') return mapFilters.showOnHold;
+            return false; // Historik, Afbrudt Sag, Slettet, Fortrudt, Afvist m.fl. — skjult
+        });
+    }, [leadsData, simulatedRole, myProfile, mapFilters]);
+
     const [quoteBuilder, setQuoteBuilder] = useState(null);
     const [integrationSuccessData, setIntegrationSuccessData] = useState(null);
     const [showEmailPreview, setShowEmailPreview] = useState(false);
@@ -5407,6 +5429,19 @@ const Dashboard = () => {
                                                     <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: mapFilters.showConfirmed ? '#10b981' : '#cbd5e1' }} />
                                                     Bekræftet opgave
                                                 </button>
+                                                <button
+                                                    onClick={() => setMapFilters(p => ({...p, showOnHold: !p.showOnHold}))}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px',
+                                                        border: `1px solid ${mapFilters.showOnHold ? '#f97316' : '#e2e8f0'}`,
+                                                        backgroundColor: mapFilters.showOnHold ? '#fff7ed' : '#f8fafc',
+                                                        color: mapFilters.showOnHold ? '#c2410c' : '#64748b',
+                                                        fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
+                                                    }}
+                                                >
+                                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: mapFilters.showOnHold ? '#f97316' : '#cbd5e1' }} />
+                                                    Sæt i bero
+                                                </button>
                                             </div>
                                             <div className="hide-on-mobile" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f3f1ed', borderRadius: '8px', borderLeft: '3px solid #cbd5e1', fontSize: '0.85rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
@@ -5435,73 +5470,76 @@ const Dashboard = () => {
                                           mapTypeControl: false,
                                       }}
                                     >
-                                        {(() => {
-                                            const visibleLeads = leadsData.filter(l => {
-                                                if (['worker', 'apprentice'].includes(effectiveRole)) {
-                                                    if (simulatedRole) {
-                                                        return ['Bekræftet opgave', 'Historik'].includes(l.status);
-                                                    }
-                                                    const workers = l.raw_data?.assigned_workers || [];
-                                                    const pm = l.raw_data?.assigned_pm;
-                                                    return (workers.includes(myProfile?.id) || pm === myProfile?.id) && ['Bekræftet opgave', 'Historik'].includes(l.status);
-                                                } else {
-                                                    if (l.status === 'Afbrudt Sag' || l.status === 'Historik' || l.status === 'Slettet') return false;
-                                                    if (l.status === 'Ny forespørgsel' && !mapFilters.showNew) return false;
-                                                    if (l.status === 'Sendt tilbud' && !mapFilters.showSent) return false;
-                                                    if (l.status === 'Bekræftet opgave' && !mapFilters.showConfirmed) return false;
-                                                    return true;
-                                                }
-                                            });
+                                        <MarkerClusterer>
+                                            {(clusterer) => (
+                                                <>
+                                                    {mapVisibleLeads.map(lead => {
+                                                        const coords = geocodedLeads[lead.id];
+                                                        if (!coords) return null; // Adresse ikke geokodet endnu
+                                                        const s = lead.status || 'Ny forespørgsel';
+                                                        let iconUrl = 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+                                                        if (s === 'Sendt tilbud') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
+                                                        else if (s === 'Bekræftet opgave') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
+                                                        else if (s === 'Sæt i bero') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/orange-dot.png';
+                                                        else if (s === 'Historik') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/ltblue-dot.png';
+                                                        return (
+                                                            <Marker
+                                                                key={lead.id}
+                                                                position={coords}
+                                                                title={lead.customer_name}
+                                                                icon={{ url: iconUrl }}
+                                                                clusterer={clusterer}
+                                                                onClick={() => setSelectedMapLead(lead)}
+                                                            />
+                                                        );
+                                                    })}
+                                                </>
+                                            )}
+                                        </MarkerClusterer>
 
-                                            return visibleLeads.map(lead => {
-                                                const coords = geocodedLeads[lead.id];
-                                                if (!coords) return null; // Har ikke fundet koordinater på adressen
-                                                
-                                                // Vælg farveikon baseret på status
-                                                let iconUrl = 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
-                                                if (lead.status === 'Sendt tilbud') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
-                                                else if (lead.status === 'Bekræftet opgave') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
-                                                else if (lead.status === 'Historik') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/ltblue-dot.png'; // Grå/lyseblå pin for historik
-                                                
-                                                return (
-                                                    <Marker 
-                                                        key={lead.id} 
-                                                        position={coords}
-                                                        title={lead.customer_name}
-                                                        icon={{ url: iconUrl }}
-                                                        onClick={() => {
-                                                            if (['worker', 'apprentice'].includes(effectiveRole)) {
-                                                                setTargetCaseId(lead.id);
-                                                                setActiveTab('cases');
-                                                            } else {
-                                                                handleSelectLead(lead);
-                                                                setActiveTab('leads');
-                                                            }
-                                                        }}
-                                                    />
-                                                );
-                                            });
+                                        {selectedMapLead && geocodedLeads[selectedMapLead.id] && mapVisibleLeads.some(l => l.id === selectedMapLead.id) && (() => {
+                                            const lead = selectedMapLead;
+                                            const s = lead.status || 'Ny forespørgsel';
+                                            const pill = s === 'Sendt tilbud' ? { bg: '#fefce8', col: '#a16207', label: 'Sendt tilbud' }
+                                                : s === 'Bekræftet opgave' ? { bg: '#ecfdf5', col: '#047857', label: 'Bekræftet opgave' }
+                                                : s === 'Sæt i bero' ? { bg: '#fff7ed', col: '#c2410c', label: 'Sæt i bero' }
+                                                : { bg: '#eff6ff', col: '#1d4ed8', label: 'Ny forespørgsel' };
+                                            const goToCase = ['Bekræftet opgave', 'Sæt i bero', 'Historik'].includes(s) || ['worker', 'apprentice'].includes(effectiveRole);
+                                            const actionLabel = goToCase ? 'Åbn sag' : (s === 'Sendt tilbud' ? 'Åbn tilbud' : 'Åbn forespørgsel');
+                                            const openIt = () => {
+                                                setSelectedMapLead(null);
+                                                if (goToCase) { setTargetCaseId(lead.id); setActiveTab('cases'); }
+                                                else { handleSelectLead(lead); setActiveTab('leads'); }
+                                            };
+                                            return (
+                                                <InfoWindow position={geocodedLeads[lead.id]} onCloseClick={() => setSelectedMapLead(null)}>
+                                                    <div style={{ minWidth: '210px', fontFamily: 'inherit', padding: '2px' }}>
+                                                        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.98rem', lineHeight: 1.2 }}>{lead.customer_name || 'Ukendt kunde'}</div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '6px 0 12px', flexWrap: 'wrap' }}>
+                                                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: pill.col, background: pill.bg, padding: '3px 9px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{pill.label}</span>
+                                                            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Sag {lead.case_number || String(lead.id).substring(0, 6)}</span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                            <button onClick={openIt} style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>{actionLabel}</button>
+                                                            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.customer_address || '')}`} target="_blank" rel="noopener noreferrer" title="Åbn i Google Maps" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', color: '#2563eb', textDecoration: 'none' }}>
+                                                                <MapPin size={16} />
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </InfoWindow>
+                                            );
                                         })()}
                                     </GoogleMap>
                                 )}
                             </div>
                             
                             {(() => {
-                                const visibleLeadsForCount = leadsData.filter(l => {
-                                    if (['worker', 'apprentice'].includes(effectiveRole)) {
-                                        if (simulatedRole) {
-                                            return ['Bekræftet opgave', 'Historik'].includes(l.status);
-                                        }
-                                        const workers = l.raw_data?.assigned_workers || [];
-                                        const pm = l.raw_data?.assigned_pm;
-                                        return (workers.includes(myProfile?.id) || pm === myProfile?.id) && ['Bekræftet opgave', 'Historik'].includes(l.status);
-                                    } else {
-                                        return l.status !== 'Afbrudt Sag' && l.status !== 'Historik' && l.status !== 'Slettet';
-                                    }
-                                });
+                                // Samme filtrerede liste som prikkerne, så tallet følger filter-knapperne.
+                                const shown = mapVisibleLeads;
+                                const onMap = shown.filter(l => geocodedLeads[l.id]).length;
                                 return (
                                     <div style={{ marginTop: '16px', display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                                        <span><strong style={{color: '#10b981'}}>{visibleLeadsForCount.filter(l => geocodedLeads[l.id]).length}</strong> / {visibleLeadsForCount.length} aktive adresser fundet på kortet.</span>
+                                        <span><strong style={{color: '#10b981'}}>{onMap}</strong> / {shown.length} adresser vist på kortet.</span>
                                     </div>
                                 );
                             })()}
