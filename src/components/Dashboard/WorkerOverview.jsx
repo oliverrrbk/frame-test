@@ -370,7 +370,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                             </div>
 
                             {/* Fravær/Manglende Registrering Logik */}
-                            (
+
                                 <div style={{ background: hasMissingPastDays ? '#fef2f2' : '#f8fafc', padding: '24px', borderRadius: '20px', border: `1px solid ${hasMissingPastDays ? '#fecaca' : '#e2e8f0'}` }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                                         {hasMissingPastDays ? <AlertCircle size={24} color="#ef4444" /> : <CheckCircle2 size={24} color="#10b981" />}
@@ -416,7 +416,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                                         <p style={{ margin: '16px 0 0', fontSize: '0.85rem', color: '#ef4444', textAlign: 'center' }}>Tryk på en rød dag for at melde fravær (syg/ferie) eller gå til din timeregistrering og indtast arbejdstimer.</p>
                                     )}
                                 </div>
-                            )}
+
 
                             <button 
                                 onClick={() => {
