@@ -7,7 +7,10 @@ import { supabase } from '../../supabaseClient';
 
 const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false }) => {
     const [showUploadForm, setShowUploadForm] = useState(false);
-    const [newSupplierInvoice, setNewSupplierInvoice] = useState({ amount: '', description: '', category: 'Materialer', file: null, file_name: '' });
+    const [newSupplierInvoice, setNewSupplierInvoice] = useState({ amount: '', description: '', category: 'Materialer', file: null, file_name: '', material_list_id: '' });
+    const [isMaterialListDropdownOpen, setIsMaterialListDropdownOpen] = useState(false);
+    
+    const materialListsMeta = lead?.raw_data?.material_lists_meta || [];
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
     const [sendingId, setSendingId] = useState(null);
     const [isSendingAll, setIsSendingAll] = useState(false);
@@ -185,7 +188,8 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false }) => {
             status: 'Godkendt',
             category: newSupplierInvoice.category || 'Materialer',
             file_path: filePath,      // sti i privat 'bilag'-bucket (nyt)
-            file_name: newSupplierInvoice.file_name
+            file_name: newSupplierInvoice.file_name,
+            material_list_id: newSupplierInvoice.material_list_id || null
         };
 
         try {
@@ -212,7 +216,7 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false }) => {
             }
             
             toast.success("Bilag gemt!");
-            setNewSupplierInvoice({ amount: '', description: '', category: 'Materialer', file: null, file_name: '' });
+            setNewSupplierInvoice({ amount: '', description: '', category: 'Materialer', file: null, file_name: '', material_list_id: '' });
             setShowUploadForm(false);
         } catch (err) {
             console.error("Fejl ved gem bilag:", err);
@@ -348,6 +352,51 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false }) => {
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Valg af Materialeliste (kun hvis kategori er Materialer) */}
+                                    {(newSupplierInvoice.category === 'Materialer' && materialListsMeta.length > 0) && (
+                                        <div style={{ position: 'relative' }}>
+                                            <div
+                                                onClick={() => setIsMaterialListDropdownOpen(!isMaterialListDropdownOpen)}
+                                                style={{ width: '100%', boxSizing: 'border-box', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px', backgroundColor: '#f8fafc', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#0f172a', transition: 'all 0.2s' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
+                                            >
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: newSupplierInvoice.material_list_id ? '#0f172a' : '#64748b' }}>
+                                                    {newSupplierInvoice.material_list_id 
+                                                        ? materialListsMeta.find(l => l.id === newSupplierInvoice.material_list_id)?.name || 'Ukendt liste'
+                                                        : 'Tilknyt til materialeliste (Valgfrit)'}
+                                                </span>
+                                                <ChevronDown size={18} style={{ color: '#94a3b8', transform: isMaterialListDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                                            </div>
+
+                                            {isMaterialListDropdownOpen && (
+                                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '6px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.12)', zIndex: 10, overflow: 'hidden', padding: '6px' }}>
+                                                    <div
+                                                        onClick={() => { setNewSupplierInvoice({...newSupplierInvoice, material_list_id: ''}); setIsMaterialListDropdownOpen(false); }}
+                                                        style={{ padding: '12px 14px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', color: '#64748b', fontStyle: 'italic' }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                        Ingen materialeliste valgt
+                                                    </div>
+                                                    <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
+                                                    {materialListsMeta.map(list => (
+                                                        <div
+                                                            key={list.id}
+                                                            onClick={() => { setNewSupplierInvoice({...newSupplierInvoice, material_list_id: list.id}); setIsMaterialListDropdownOpen(false); }}
+                                                            style={{ padding: '12px 14px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', color: '#334155', fontWeight: newSupplierInvoice.material_list_id === list.id ? 'bold' : 'normal' }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e0f2fe'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                        >
+                                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0ea5e9' }} />
+                                                            {list.name}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Beløb */}
                                     <div style={{ position: 'relative' }}>

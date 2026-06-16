@@ -484,7 +484,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                             <Wallet size={18} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Budget</span>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Budget <span style={{fontSize: '0.65rem', color: '#94a3b8', textTransform: 'none'}}>(Ekskl. moms)</span></span>
                             <span>{originalBudget.toLocaleString('da-DK')} kr.</span>
                         </div>
                     </div>
@@ -496,7 +496,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                             <ShoppingCart size={18} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Forbrug</span>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: '1' }}>Forbrug <span style={{fontSize: '0.65rem', color: '#94a3b8', textTransform: 'none'}}>(Ekskl. moms)</span></span>
                             <span>{totalSpent.toLocaleString('da-DK')} kr.</span>
                         </div>
                     </div>
@@ -520,6 +520,11 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                 {materialListsMeta.map((list) => {
                     const isOpen = openLists[list.id];
                     const listMaterials = materials.filter(m => m.listId === list.id);
+
+                    const listInvoices = supplierInvoices.filter(inv => inv.material_list_id === list.id);
+                    const listPriceFromInvoices = listInvoices.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
+                    const listHasInvoices = listInvoices.length > 0;
+                    const displayPrice = listHasInvoices ? listPriceFromInvoices : (parseFloat(list.price) || 0);
 
                     // To-spors visning: kendte (beregner) sektioner først, derefter etape-sektioner
                     const listKnownSections = sectionsList.filter(s => listMaterials.some(m => (m.section || 'Hovedmaterialer') === s));
@@ -633,23 +638,20 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', flexWrap: 'wrap', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                                             
                                             {/* Fakturapris */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#ffffff', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', flex: '1 1 auto', minWidth: '130px', transition: 'all 0.2s' }}>
-                                                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pris:</span>
-                                                <input 
-                                                    type="text"
-                                                    placeholder="Indtast..."
-                                                    value={formatPrice(list.price)}
-                                                    onChange={(e) => handleUpdateListMeta(list.id, 'price', parsePrice(e.target.value))}
-                                                    onBlur={(e) => {
-                                                        const newVal = parsePrice(e.target.value);
-                                                        const newMeta = materialListsMeta.map(l => l.id === list.id ? { ...l, price: newVal } : l);
-                                                        handleSaveList(materials, newMeta);
-                                                        e.currentTarget.parentElement.style.borderColor = '#e2e8f0';
-                                                    }}
-                                                    onFocus={(e) => { e.currentTarget.parentElement.style.borderColor = '#3b82f6'; }}
-                                                    style={{ width: '100%', border: 'none', background: 'transparent', fontSize: '0.9rem', fontWeight: 'bold', color: '#0f172a', outline: 'none', textAlign: 'right' }}
-                                                />
-                                                <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold' }}>kr.</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#ffffff', padding: '6px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', flex: '1 1 auto', minWidth: '130px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Pris:</span>
+                                                    <span style={{ fontSize: '0.95rem', fontWeight: 'bold', color: displayPrice > 0 ? '#0f172a' : '#94a3b8' }}>{displayPrice > 0 ? displayPrice.toLocaleString('da-DK') : '0'} <span style={{fontSize: '0.8rem'}}>kr.</span></span>
+                                                </div>
+                                                {listHasInvoices ? (
+                                                    <div style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 'bold', textAlign: 'right', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px' }}>
+                                                        <CheckCircle2 size={10} /> {listInvoices.length} bilag tilknyttet
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontStyle: 'italic', textAlign: 'right', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px' }}>
+                                                        <FileText size={10} /> Sæt pris via Økonomi
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Bestilt Knap */}
