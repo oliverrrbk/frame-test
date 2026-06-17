@@ -82,6 +82,9 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
     };
 
     const calcWonRevenue = (lead) => {
+        if (lead.raw_data?.calc_data?.totalPrice) {
+            return parseFloat(lead.raw_data.calc_data.totalPrice);
+        }
         const mat = parseFloat(lead.raw_data?.calc_data?.materialCost || 0);
         const labor = parseFloat(lead.raw_data?.calc_data?.laborCost || (lead.raw_data?.calc_data?.laborHours * lead.raw_data?.calc_data?.hourlyRate) || 0);
         return mat + labor;
