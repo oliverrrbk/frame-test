@@ -562,11 +562,14 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                     {team.map((member) => {
                                         const isExpanded = expandedEmployee === member.id;
                                         
-                                        // Beregn Projektleder-Statistikker
-                                        const assignedLeads = leadsData.filter(l => 
-                                            l.assigned_to === member.id || 
-                                            (l.raw_data?.assigned_workers || []).includes(member.id) ||
-                                            (l.raw_data?.assigned_pm || []).includes(member.id)
+                                        // Beregn Projektleder-Statistikker.
+                                        // Id'er sammenlignes som tekst, så det matcher uanset om de er tal eller streng.
+                                        const mid = String(member.id);
+                                        const toIds = (v) => (Array.isArray(v) ? v : (v ? [v] : [])).map(String);
+                                        const assignedLeads = leadsData.filter(l =>
+                                            String(l.assigned_to) === mid ||
+                                            toIds(l.raw_data?.assigned_workers).includes(mid) ||
+                                            toIds(l.raw_data?.assigned_pm).includes(mid)
                                         );
                                         const wonLeads = assignedLeads.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status));
                                         const lostLeads = assignedLeads.filter(l => ['Afvist', 'Fortrudt', 'Afbrudt Sag'].includes(l.status));
@@ -595,7 +598,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                         leadsData.forEach(lead => {
                                             const entries = lead.raw_data?.time_entries || [];
                                             entries.forEach(entry => {
-                                                if (entry.employeeId === member.id) {
+                                                if (String(entry.employeeId) === mid) {
                                                     const d = new Date(entry.date);
                                                     if (d.getMonth() === thisMonth && d.getFullYear() === thisYear) {
                                                         monthHours += parseFloat(entry.hours || 0);
