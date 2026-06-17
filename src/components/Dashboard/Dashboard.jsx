@@ -749,6 +749,21 @@ const Dashboard = () => {
             const newUrl = new URL(window.location);
             newUrl.searchParams.delete('tab');
             window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+        } else if (tabParam === 'timesheet' && myProfile) {
+            const effectiveRole = simulatedRole || myProfile.role;
+            if (['admin', 'accountant'].includes(effectiveRole)) {
+                setActiveTab('admin_timesheet');
+            } else {
+                setActiveTab('worker_timesheet');
+            }
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('tab');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+        } else if (tabParam === 'calendar') {
+            setActiveTab('calendar');
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('tab');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
         } else if (tabParam === 'integrations') {
             setActiveTab('integrations');
             const newUrl = new URL(window.location);

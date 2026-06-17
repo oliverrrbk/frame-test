@@ -260,12 +260,12 @@ serve(async (req) => {
             let notificationType = "";
 
             if (lead.status === "Ny forespørgsel") {
-                title = "Ny forespørgsel! 🛠️";
+                title = "Ny forespørgsel";
                 bodyText = `${lead.customer_name || 'En kunde'} har sendt en forespørgsel på ${lead.project_category || 'projekt'}.`;
                 slot = "new_lead";
                 notificationType = "lead_request";
             } else if (lead.status === "Bekræftet opgave") {
-                title = "Tilbud godkendt! 🎉";
+                title = "Tilbud godkendt";
                 bodyText = `${lead.customer_name || 'Kunden'} har bekræftet tilbuddet på ${lead.project_category || 'projekt'}.`;
                 slot = "quote_accepted";
                 notificationType = "lead_accept";
@@ -348,7 +348,7 @@ serve(async (req) => {
                     payload: {
                         title: "Mangler timer",
                         body: "Du mangler at registrere timer for i dag.",
-                        url: "/dashboard"
+                        url: "/dashboard?tab=timesheet"
                     }
                 });
             }
@@ -412,7 +412,7 @@ serve(async (req) => {
                                 payload: {
                                     title: reminder.title,
                                     body: reminder.body,
-                                    url: "/dashboard"
+                                    url: "/dashboard?tab=calendar"
                                 }
                             });
                         }
