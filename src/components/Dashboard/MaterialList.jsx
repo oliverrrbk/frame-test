@@ -1086,11 +1086,17 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                     border: '1px solid #cbd5e1', 
                                     borderRadius: '8px', 
                                     backgroundColor: '#f8fafc',
-                                    color: '#0f172a',
+                                    color: localDeliveryDate ? '#0f172a' : 'transparent',
                                     outline: 'none',
                                     fontWeight: '600',
                                     width: '130px',
-                                    boxSizing: 'border-box'
+                                    boxSizing: 'border-box',
+                                    cursor: 'pointer'
+                                }}
+                                onClick={(e) => {
+                                    if (e.target.showPicker) {
+                                        try { e.target.showPicker(); } catch (err) {}
+                                    }
                                 }}
                             />
                             {!localDeliveryDate && (
