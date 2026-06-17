@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle, MessageSquare, Users, Download, Search, Bell, LogOut, Link2, Filter, Image as ImageIcon, Video, Mail, UploadCloud, Link as LinkIcon, ExternalLink, Settings, MoreHorizontal, Pause, RotateCcw, Megaphone, GripVertical } from 'lucide-react';
+import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle, MessageSquare, Users, Download, Search, Bell, LogOut, Link2, Filter, Image as ImageIcon, Video, Mail, UploadCloud, Link as LinkIcon, ExternalLink, Settings, MoreHorizontal, Pause, RotateCcw, Megaphone, GripVertical, Mic, MicOff, Loader2 } from 'lucide-react';
 import { DndContext, closestCenter, TouchSensor, MouseSensor, useSensor, useSensors, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -621,6 +621,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     // States til logs
     const [logsList, setLogsList] = useState([]);
     const [newLogText, setNewLogText] = useState('');
+    // Stemme-diktering til log-modalen (genbruger /api/process-voice)
+    const logDictation = useVoiceDictation((text) => setNewLogText(prev => (prev ? prev + ' ' : '') + text));
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
     const [logStatus, setLogStatus] = useState('green'); // 'green', 'yellow', 'red'
     const [logPhotos, setLogPhotos] = useState([]); // Previews (blob URLs)
@@ -3507,6 +3509,22 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         onBlur={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}
                                                     />
                                                 </div>
+
+                                                {/* Indtal status (stemme) */}
+                                                <button
+                                                    type="button"
+                                                    onClick={logDictation.isProcessing ? undefined : logDictation.toggle}
+                                                    disabled={logDictation.isProcessing}
+                                                    className="hover-lift"
+                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px 16px', borderRadius: '12px', fontWeight: 700, fontSize: '0.95rem', border: 'none', cursor: logDictation.isProcessing ? 'wait' : 'pointer', color: logDictation.isProcessing ? '#475569' : '#ffffff', background: logDictation.isRecording ? '#ef4444' : (logDictation.isProcessing ? '#e2e8f0' : 'linear-gradient(135deg, #10b981, #059669)'), boxShadow: logDictation.isRecording ? '0 0 0 6px rgba(239,68,68,0.18)' : (logDictation.isProcessing ? 'none' : '0 4px 12px rgba(16,185,129,0.3)'), transition: 'all 0.2s' }}
+                                                >
+                                                    {logDictation.isProcessing
+                                                        ? <Loader2 size={18} className="animate-spin" />
+                                                        : (logDictation.isRecording ? <MicOff size={18} /> : <Mic size={18} />)}
+                                                    {logDictation.isProcessing
+                                                        ? 'Skriver det ned…'
+                                                        : (logDictation.isRecording ? 'Optager… tryk for at stoppe' : 'Indtal i stedet for at skrive')}
+                                                </button>
 
                                                 {/* Rigtigt Foto-upload */}
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
