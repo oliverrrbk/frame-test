@@ -82,9 +82,23 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
     };
 
     const calcWonRevenue = (lead) => {
+        if (!lead) return 0;
         if (lead.raw_data?.calc_data?.totalPrice) {
-            return parseFloat(lead.raw_data.calc_data.totalPrice);
+            return parseFloat(lead.raw_data.calc_data.totalPrice) || 0;
         }
+        if (lead.raw_data?.actual_quote_price) {
+            return typeof lead.raw_data.actual_quote_price === 'number' 
+                ? lead.raw_data.actual_quote_price 
+                : parseInt(String(lead.raw_data.actual_quote_price).replace(/[^0-9]/g, '')) || 0;
+        } else if (typeof lead.price_estimate === 'number') {
+            return lead.price_estimate;
+        } else if (lead.price_estimate) {
+            const priceStr = lead.price_estimate || '0';
+            const firstPricePart = priceStr.split('-')[0] || priceStr;
+            return parseInt(firstPricePart.replace(/[^0-9]/g, '')) || 0;
+        }
+        
+        // Final fallback if absolutely no price is found
         const mat = parseFloat(lead.raw_data?.calc_data?.materialCost || 0);
         const labor = parseFloat(lead.raw_data?.calc_data?.laborCost || (lead.raw_data?.calc_data?.laborHours * lead.raw_data?.calc_data?.hourlyRate) || 0);
         return mat + labor;
