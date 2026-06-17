@@ -1,6 +1,11 @@
 -- ============================================================================
 -- FELT-VAGT PÅ leads — kør i Supabase -> SQL Editor
 -- ============================================================================
+-- VIGTIGT: Den KANONISKE version af funktionen protect_lead_sensitive_fields()
+-- vedligeholdes både her OG i supabase/add_lead_push_trigger.sql (som derudover
+-- tilføjer push-triggeren tr_on_lead_push_notify). De skal være IDENTISKE.
+-- Denne fil er den fulde "felt-vagt"-opsætning inkl. selve BEFORE UPDATE-triggeren.
+--
 -- BAGGRUND (audit #5): RLS er rækkeniveau. UPDATE-politikken på `leads` lader
 -- enhver TILDELT bruger (svend/lærling/projektleder) opdatere HELE rækken — altså
 -- også pris, calc_data, faktura-historik, status, holdtildeling og kundens
@@ -16,7 +21,10 @@
 --   • ejeren/mesteren (auth.uid() = leads.carpenter_id)
 --   • bogholder (carpenters.role = 'accountant' i samme firma)
 --   • en brugers EGEN kladde (raw_data->created_by = auth.uid og status er kladde)
---     — de bygger jo tilbuddet og skal kunne redigere alt på det.
+--
+-- ANONYM KUNDE (offentlig accept-side): må sætte status til 'Ny forespørgsel' /
+-- 'Bekræftet opgave' og skrive audit_trail/audit_trail_opened — så de kan
+-- acceptere tilbud/overslag. Alt andet er stadig beskyttet.
 --
 -- IKKE-PRIVILEGERET på en RIGTIG sag (svend/lærling/projektleder):
 --   • Altid beskyttet:  status*, assigned_to, price_estimate, carpenter_id,
@@ -24,7 +32,6 @@
 --     invoice_history, invoiced_amount, actual_quote_price, customerDetails, audit_trail.
 --   • Kun projektleder (sales) må røre hold/drift: assigned_workers, assigned_pm,
 --     assigned_subcontractors, material_list(+meta), daily_message, case_messages.
---     For svend/lærling er disse også beskyttet.
 --   • Tilladt for alle tildelte (drift): time_entries, checklist, logs, foto-arrays mm.
 --
 -- Idempotent. Rollback-blok står nederst (udkommenteret).
@@ -76,21 +83,34 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    -- ---- Herfra: tildelt svend/lærling/PM på en RIGTIG sag ----
+    -- ---- Herfra: tildelt svend/lærling/PM eller anonym gæst (kunde) ----
 
-    -- Beskyttede top-niveau-kolonner ruller tilbage
-    NEW.status              := OLD.status;
-    NEW.assigned_to         := OLD.assigned_to;
-    NEW.price_estimate      := OLD.price_estimate;
-    NEW.carpenter_id        := OLD.carpenter_id;
+    -- Beskyttede top-niveau-kolonner ruller tilbage.
+    -- Undtagelse: en anonym kunde må acceptere via public RPC (sætte status til
+    -- 'Ny forespørgsel' eller 'Bekræftet opgave').
+    IF NOT (
+        (v_uid IS NULL OR auth.role() = 'anon')
+        AND NEW.status IN ('Ny forespørgsel', 'Bekræftet opgave')
+    ) THEN
+        NEW.status := OLD.status;
+    END IF;
+
+    NEW.assigned_to          := OLD.assigned_to;
+    NEW.price_estimate       := OLD.price_estimate;
+    NEW.carpenter_id         := OLD.carpenter_id;
     NEW.ordrestyring_case_id := OLD.ordrestyring_case_id;
-    NEW.apacta_case_id      := OLD.apacta_case_id;
-    NEW.minuba_case_id      := OLD.minuba_case_id;
+    NEW.apacta_case_id       := OLD.apacta_case_id;
+    NEW.minuba_case_id       := OLD.minuba_case_id;
 
-    -- Beskyttede raw_data-nøgler ruller tilbage (uanset hvad klienten sender)
+    -- Beskyttede raw_data-nøgler ruller tilbage (uanset hvad klienten sender).
     v_rd := COALESCE(NEW.raw_data, '{}'::jsonb);
 
     FOREACH k IN ARRAY protected_all LOOP
+        -- Undtagelse: anonym kunde må skrive audit_trail/audit_trail_opened.
+        IF (v_uid IS NULL OR auth.role() = 'anon') AND k IN ('audit_trail', 'audit_trail_opened') THEN
+            CONTINUE;
+        END IF;
+
         IF OLD.raw_data ? k THEN
             v_rd := jsonb_set(v_rd, ARRAY[k], OLD.raw_data->k);
         ELSE
@@ -98,7 +118,7 @@ BEGIN
         END IF;
     END LOOP;
 
-    -- Hold/drift kun for projektleder (sales); beskyttet for svend/lærling
+    -- Hold/drift kun for projektleder (sales); beskyttet for svend/lærling.
     IF COALESCE(v_role,'') <> 'sales' THEN
         FOREACH k IN ARRAY protected_team LOOP
             IF OLD.raw_data ? k THEN
