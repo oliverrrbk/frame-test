@@ -9,6 +9,17 @@ import toast from 'react-hot-toast';
 const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
   const [threads, setThreads] = useState([]);
   const [activeThread, setActiveThread] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessageText, setNewMessageText] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'dm', 'case', 'company'
+  const [teammates, setTeammates] = useState([]);
+  const [isLoadingThreads, setIsLoadingThreads] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isMobileActiveThread, setIsMobileActiveThread] = useState(false);
+
+  const messagesEndRef = useRef(null);
+  const realtimeChannelRef = useRef(null);
 
   // Handle targetLeadId to auto-select or auto-create case chat thread
   useEffect(() => {
@@ -94,17 +105,6 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
       handleTargetLeadChat();
     }
   }, [isLoadingThreads, targetLeadId, profile, threads, leads, clearTargetLeadId]);
-  const [messages, setMessages] = useState([]);
-  const [newMessageText, setNewMessageText] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'dm', 'case', 'company'
-  const [teammates, setTeammates] = useState([]);
-  const [isLoadingThreads, setIsLoadingThreads] = useState(true);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [isMobileActiveThread, setIsMobileActiveThread] = useState(false);
-
-  const messagesEndRef = useRef(null);
-  const realtimeChannelRef = useRef(null);
 
   // Load teammates (carpenters) and threads
   useEffect(() => {
