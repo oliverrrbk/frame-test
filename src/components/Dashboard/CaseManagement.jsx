@@ -1872,9 +1872,23 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         className="hover:scale-[1.01] hover:shadow-lg"
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                                            <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
-                                                Aktiv Sag
-                                            </span>
+                                            {c.status === 'Sæt i bero' ? (
+                                                <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#fff7ed', color: '#ea580c', border: '1px solid #fdba74' }}>
+                                                    Sat i bero
+                                                </span>
+                                            ) : c.status === 'Historik' ? (
+                                                <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>
+                                                    Afsluttet
+                                                </span>
+                                            ) : c.status === 'Afbrudt Sag' ? (
+                                                <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5' }}>
+                                                    Tabt / Afvist
+                                                </span>
+                                            ) : (
+                                                <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
+                                                    Aktiv Sag
+                                                </span>
+                                            )}
                                             <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
                                                 {new Date(c.created_at).toLocaleDateString('da-DK')}
                                             </span>
@@ -1978,6 +1992,18 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 </button>
                             </div>
 
+                            {selectedCase.status === 'Sæt i bero' && (
+                                <div style={{ margin: '0 12px 16px 12px', backgroundColor: '#fff7ed', border: '1px solid #fdba74', padding: '16px', borderRadius: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                                    <div style={{ color: '#ea580c', display: 'flex', alignItems: 'center', marginTop: '2px' }}><Pause size={24} /></div>
+                                    <div>
+                                        <h4 style={{ margin: '0 0 4px 0', color: '#9a3412', fontSize: '1rem', fontWeight: 'bold' }}>Sagen er sat i bero</h4>
+                                        <p style={{ margin: 0, color: '#c2410c', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                                            Sagen er på pause. Tidsregistrering kan stadig udføres ved akut behov, men rådfør dig altid med mester først.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Dashboard Widgets (Små Bobler Række) */}
                             <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-start', padding: '20px 0', margin: '0 -16px' }}>
                                 {/* Time Bubble */}
@@ -2046,9 +2072,15 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 </button>
                                             )}
                                             {['admin', 'sales'].includes(profile?.role) && selectedCase.status !== 'Afbrudt Sag' && (
-                                                <button onClick={() => { setShowActionSheet(false); handleStatusChange('Sæt i bero'); }} style={{ padding: '16px', background: '#fff7ed', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#ea580c', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <Pause size={20} color="#ea580c" /> Sæt i bero
-                                                </button>
+                                                selectedCase.status === 'Sæt i bero' ? (
+                                                    <button onClick={() => { setShowActionSheet(false); handleStatusChange('Bekræftet opgave'); }} style={{ padding: '16px', background: '#ecfdf5', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#059669', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        <CheckCircle size={20} color="#10b981" /> Genoptag Sag (Aktiv)
+                                                    </button>
+                                                ) : (
+                                                    <button onClick={() => { setShowActionSheet(false); handleStatusChange('Sæt i bero'); }} style={{ padding: '16px', background: '#fff7ed', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#ea580c', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        <Pause size={20} color="#ea580c" /> Sæt i bero
+                                                    </button>
+                                                )
                                             )}
                                             {['admin', 'sales'].includes(profile?.role) && selectedCase.status !== 'Afbrudt Sag' && (
                                                 <button onClick={() => { setShowActionSheet(false); handleStatusChange('Afbrudt Sag'); }} style={{ padding: '16px', background: '#fef2f2', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#ef4444', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -2452,6 +2484,17 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             >
                                 <ArrowLeft size={16} /> Tilbage til sagsliste
                             </button>
+                            {selectedCase.status === 'Sæt i bero' && (
+                                <div style={{ backgroundColor: '#fff7ed', border: '1px solid #fdba74', padding: '16px', borderRadius: '16px', marginBottom: '20px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                                    <div style={{ color: '#ea580c', display: 'flex', alignItems: 'center', marginTop: '2px' }}><Pause size={28} /></div>
+                                    <div>
+                                        <h4 style={{ margin: '0 0 6px 0', color: '#9a3412', fontSize: '1.1rem', fontWeight: 'bold' }}>Sagen er sat i bero</h4>
+                                        <p style={{ margin: 0, color: '#c2410c', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                                            Sagen er i øjeblikket på pause pga. afventning eller en konflikt. Tidsregistrering og opgaver <b>kan stadig udføres</b> ved akut behov, men rådfør dig altid med projektlederen inden du fortsætter arbejdet.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                             <h3 style={{ margin: '0 0 6px 0', fontSize: '1.3rem', fontWeight: 'bold', color: '#1a1a1a' }}>
                                 Sag {selectedCase.case_number || String(selectedCase.id).substring(0,8)} - {selectedCase.raw_data?.project_title || selectedCase.project_category}
                             </h3>
@@ -2602,14 +2645,25 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '8px', zIndex: 50, minWidth: '220px' }}>
                                             {selectedCase.status !== 'Afbrudt Sag' ? (
                                                 <>
-                                                    <button 
-                                                        onClick={() => { handleStatusChange('Sæt i bero'); setIsStatusDropdownOpen(false); }}
-                                                        style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#f97316', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#fff7ed'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                                    >
-                                                        Sæt i bero
-                                                    </button>
+                                                    {selectedCase.status === 'Sæt i bero' ? (
+                                                        <button 
+                                                            onClick={() => { handleStatusChange('Bekræftet opgave'); setIsStatusDropdownOpen(false); }}
+                                                            style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#059669', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.background = '#ecfdf5'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                        >
+                                                            <CheckCircle size={16}/> Genoptag Sag (Aktiv)
+                                                        </button>
+                                                    ) : (
+                                                        <button 
+                                                            onClick={() => { handleStatusChange('Sæt i bero'); setIsStatusDropdownOpen(false); }}
+                                                            style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#f97316', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.background = '#fff7ed'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                        >
+                                                            Sæt i bero
+                                                        </button>
+                                                    )}
                                                     <button 
                                                         onClick={() => { 
                                                             handleStatusChange('Afbrudt Sag');
