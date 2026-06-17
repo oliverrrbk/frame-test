@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
 // OBS: Udskiftes med rigtig public VAPID key fra backend
-const PUBLIC_VAPID_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+const PUBLIC_VAPID_KEY = 'BCG4X8ATJWFxFoDgrq08RTpZF59-nV3AQveg0Hg3DcNmm5vkPGiv2w-3zYngMhtE8I4ctXyUkmcslD20ASC6Izg';
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
