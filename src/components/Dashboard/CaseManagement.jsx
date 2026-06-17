@@ -747,7 +747,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     // Indlæs data
     useEffect(() => {
-        const confirmed = leads.filter(l => ['Bekræftet opgave', 'Historik', 'Afbrudt Sag'].includes(l.status));
+        const confirmed = leads.filter(l => ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(l.status));
         
         if (['worker', 'apprentice', 'sales'].includes(profile?.role)) {
             if (simulatedRole) {

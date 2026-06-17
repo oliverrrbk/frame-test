@@ -3279,7 +3279,7 @@ const Dashboard = () => {
                                                         </span>
                                                     </div>
                                                     
-                                                    {lead.status === 'Bekræftet opgave' ? (
+                                                    {['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(lead.status) ? (
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', backgroundColor: 'rgba(16,185,129,0.05)', padding: '10px 12px', borderRadius: '8px' }}>
                                                             <CheckCircle size={18} />
                                                             <div>
@@ -3375,7 +3375,7 @@ const Dashboard = () => {
                                                         Se Opgavedetaljer
                                                     </button>
 
-                                                    {lead.status === 'Bekræftet opgave' && (
+                                                    {['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(lead.status) && (
                                                         <div className="lead-card-integration-btns">
                                                             {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(effectiveRole) && !carpenterProfile?.ordrestyring_token && !carpenterProfile?.apacta_api_key && !carpenterProfile?.minuba_api_token && (
                                                                 // Bison Frame OMS check: If lead has timesheets or work orders, hide the button so they must invoice from within the case management
@@ -3465,7 +3465,7 @@ const Dashboard = () => {
                                         {/* Manuel Overslag Email Afsendelse / Vis Tilbud */}
                                         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
 
-                                            {selectedLead.status === 'Bekræftet opgave' && (
+                                            {['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) && (
                                                 <a 
                                                     href={`${window.location.origin}/${carpenterProfile?.slug || 't'}/tilbud/${selectedLead.quote_token || selectedLead.id}`}
                                                     target="_blank"
@@ -3491,7 +3491,7 @@ const Dashboard = () => {
 
                                         {/* Tjekket top-menu for integrationer med ensartede knapper */}
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'stretch', marginBottom: '32px' }}>
-                                            {selectedLead.status === 'Bekræftet opgave' && ['admin', 'accountant'].includes(effectiveRole) && (
+                                            {['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) && ['admin', 'accountant'].includes(effectiveRole) && (
                                                 <>
                                                     {/* Regnskab integration fjernet fra lead-visning. Skal ligge under fremtidigt Faktura/Økonomi overblik */}
 
@@ -3541,7 +3541,7 @@ const Dashboard = () => {
                                                 </>
                                             )}
                                             
-                                            {selectedLead.raw_data?.quote_pdf_url && selectedLead.status !== 'Bekræftet opgave' && (
+                                            {selectedLead.raw_data?.quote_pdf_url && !['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) && (
                                                 <a href={selectedLead.raw_data.quote_pdf_url} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', background: '#f3f1ed', border: '1px solid #e8e6e1', color: '#374151', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
                                                     <FileText size={18} /> PDF-tilbud
                                                 </a>
@@ -3560,7 +3560,7 @@ const Dashboard = () => {
                                             )}
                                         </div>
 
-                                        {selectedLead.status === 'Bekræftet opgave' && isLeadReadyForHistory(selectedLead) && (
+                                        {['Bekræftet opgave', 'Sæt i bero'].includes(selectedLead.status) && isLeadReadyForHistory(selectedLead) && (
                                             <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fcd34d', padding: '20px', borderRadius: '14px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div>
                                                     <strong style={{ color: '#6b7280', display: 'block', fontSize: '1.1rem', marginBottom: '4px' }}>Er byggeriet afsluttet?</strong>
@@ -3578,7 +3578,7 @@ const Dashboard = () => {
                                             </div>
                                         )}
 
-                                        {selectedLead.status === 'Bekræftet opgave' && selectedLead.raw_data?.audit_trail && (
+                                        {['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) && selectedLead.raw_data?.audit_trail && (
                                             <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '16px', borderRadius: '14px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'center' }}>
                                                 <div style={{ color: '#059669', display: 'flex', alignItems: 'center' }}><Shield size={32} /></div>
                                                 <div>
@@ -3594,8 +3594,8 @@ const Dashboard = () => {
 
                                         <div className="lead-details-grid">
                                             {/* TILBUD / OVERSLAG BOKS (Nu flyttet øverst) */}
-                                            <div style={{ padding: '16px', backgroundColor: selectedLead.status === 'Bekræftet opgave' ? '#ecfdf5' : '#f7f6f3', borderRadius: '14px', border: selectedLead.status === 'Bekræftet opgave' ? '1px solid #10b981' : '1px solid #e8e6e1' }}>
-                                                {selectedLead.status === 'Bekræftet opgave' ? (
+                                            <div style={{ padding: '16px', backgroundColor: ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) ? '#ecfdf5' : '#f7f6f3', borderRadius: '14px', border: ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) ? '1px solid #10b981' : '1px solid #e8e6e1' }}>
+                                                {['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) ? (
                                                     <>
                                                         <span style={{ fontSize: '0.85rem', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tilbud givet og accepteret</span>
                                                         <div style={{ margin: '12px 0 0', color: '#064e3b', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -4580,7 +4580,7 @@ const Dashboard = () => {
                                         )}
 
                                         {/* MATERIALELISTE ACCORDION (For alle ikke-bekræftede cases) */}
-                                        {selectedLead.status !== 'Bekræftet opgave' && (
+                                        {!['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) && (
                                             <>
                                                 <div 
                                                     onClick={() => setIsMaterialListOpen(!isMaterialListOpen)}
@@ -4616,7 +4616,7 @@ const Dashboard = () => {
                                          )}
 
                                         {/* QUOTE BUILDER SEKTION */}
-                                        {selectedLead.status !== 'Bekræftet opgave' && (
+                                        {!['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) && (
                                             <>
                                                 <div 
                                                     onClick={() => setIsQuoteEditorOpen(!isQuoteEditorOpen)}
@@ -4943,7 +4943,7 @@ const Dashboard = () => {
                                                 ))}
                                             </>
                                         )}
-                                        {selectedLead.status === 'Bekræftet opgave' && (
+                                        {['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) && (
                                             <div style={{ marginTop: '24px', borderTop: '2px solid #cbd5e1', paddingTop: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                                                 <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', textAlign: 'center' }}>Ordrestyring og Byggeproces</h3>
                                                 <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', textAlign: 'center', maxWidth: '500px' }}>
@@ -4998,8 +4998,7 @@ const Dashboard = () => {
                                             </div>
                                         )}
 
-                                        {selectedLead.status !== 'Afbrudt Sag' && selectedLead.status !== 'Historik' && (
-                                            <div style={{ marginTop: selectedLead.status !== 'Bekræftet opgave' ? '32px' : '16px', borderTop: selectedLead.status !== 'Bekræftet opgave' ? '2px solid #e2e8f0' : 'none', paddingTop: selectedLead.status !== 'Bekræftet opgave' ? '24px' : '0', display: 'flex', justifyContent: 'center' }}>
+                                            <div style={{ marginTop: !['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) ? '32px' : '16px', borderTop: !['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) ? '2px solid #e2e8f0' : 'none', paddingTop: !['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(selectedLead.status) ? '24px' : '0', display: 'flex', justifyContent: 'center' }}>
                                                 <button 
                                                     onClick={() => {
                                                         updateLeadStatus(selectedLead.id, 'Afbrudt Sag');
