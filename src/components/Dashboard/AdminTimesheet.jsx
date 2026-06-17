@@ -16,7 +16,7 @@ import { Lock, FileSpreadsheet, RotateCcw, IdCard, Briefcase } from 'lucide-reac
 import { motion, AnimatePresence } from 'framer-motion';
 import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
 
-const CustomSelect = ({ value, onChange, options, placeholder }) => {
+const CustomSelect = ({ value, onChange, options, placeholder, style = {} }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -34,7 +34,7 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
     const label = selectedOption ? selectedOption.label : placeholder;
 
     return (
-        <div ref={dropdownRef} style={{ position: 'relative', width: '100%', minWidth: '180px' }}>
+        <div ref={dropdownRef} style={{ position: 'relative', width: '100%', minWidth: '180px', ...style }}>
             <div 
                 onClick={() => setIsOpen(!isOpen)}
                 onMouseEnter={(e) => {
@@ -134,7 +134,19 @@ const ExportMenuItem = ({ title, desc, onClick }) => (
     </div>
 );
 
+// feature flag to toggle back to old design if needed
+const USE_UNIFIED_PAYROLL_MODAL = true;
+
 export default function AdminTimesheet({ leadsData, profile }) {
+    const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+    
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const [teamMembers, setTeamMembers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedPeriod, setSelectedPeriod] = useState('this_month');
@@ -142,6 +154,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
     const [payrollSettings, setPayrollSettings] = useState(null);
     const [exportMenuOpen, setExportMenuOpen] = useState(false);
     const [isStamdataModalOpen, setIsStamdataModalOpen] = useState(false);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const exportMenuRef = useRef(null);
     const payrollCompanyId = profile?.company_id || profile?.id;
     const lockedUntil = getEffectiveLockedUntil(payrollSettings);
@@ -561,6 +574,80 @@ export default function AdminTimesheet({ leadsData, profile }) {
         setExportMenuOpen(false);
     };
 
+    // Hent data for eksporten (seneste lønperiode)
+    const getExportData = () => {
+        const cycle = payrollSettings?.cycle || 'monthly';
+        const anchor = payrollSettings?.anchor;
+        const range = lastCompletedPeriodRange(cycle, anchor);
+        const start = range.start;
+        const end = range.end;
+        const entries = allEntries.filter(e => {
+            if (e.endTime === null) return false;
+            const k = toDateKey(e.date);
+            return k >= start && k <= end;
+        });
+        
+        const cfg = getConfig(payrollSettings);
+        const agg = aggregatePayroll(entries, cfg);
+        const rows = Object.values(agg).map(r => {
+            const m = teamMembers.find(t => t.id === r.employeeId);
+            return {
+                ...r,
+                name: m?.owner_name || m?.company_name || 'Ukendt',
+                lonnummer: m?.raw_data?.lonnummer || ''
+            };
+        }).filter(r => r.normalHours || r.vacation || r.sick || r.other || r.mileage);
+
+        const totalHours = rows.reduce((acc, r) => acc + (r.normalHours || 0), 0);
+        const totalKm = rows.reduce((acc, r) => acc + (r.mileage || 0), 0);
+        const totalAbsence = rows.reduce((acc, r) => acc + (r.vacation || 0) + (r.sick || 0) + (r.other || 0), 0);
+        const absenceUnitText = cfg.absence_unit === 'hours' ? 't' : 'dage';
+
+        return { start, end, rows, totalHours, totalKm, totalAbsence, absenceUnitText, entries };
+    };
+
+    // Trigger download af den valgte filtype baseret på modalens data
+    const triggerDownload = (format, data) => {
+        const { start, end, rows, entries } = data;
+        const cfg = getConfig(payrollSettings);
+        const periodLabel = `${start} – ${end}`;
+        
+        if (format === 'lonart') {
+            downloadCSV(`Loneksport_lonart_${start}_${end}.csv`, buildLonartCSV(rows, cfg.lonart, periodLabel));
+            toast.success(`Lønfil hentet for ${formatDa(start)} – ${formatDa(end)}.`);
+        } else if (format === 'summary') {
+            downloadCSV(`Loneksport_opsummering_${start}_${end}.csv`, buildSummaryCSV(rows));
+            toast.success(`Opsummering hentet for ${formatDa(start)} – ${formatDa(end)}.`);
+        } else if (format === 'kontrol') {
+            let csvContent = "Dato,Medarbejder,Sag/Type,Beskrivelse,Starttid,Sluttid,Timer,Kilometer\n";
+            entries.forEach(e => {
+                const member = teamMembers.find(m => m.id === e.employeeId);
+                const name = member?.owner_name || member?.company_name || 'Slettet/Ukendt';
+                const row = [
+                    e.date,
+                    `"${name}"`,
+                    `"${e.caseNumber} - ${e.leadName}"`,
+                    `"${e.desc || ''}"`,
+                    e.startTime,
+                    e.endTime || '',
+                    e.hours || 0,
+                    e.km || 0
+                ].join(',');
+                csvContent += row + "\n";
+            });
+
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Loen_Timer_${start}_${end}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success(`Kontrol-CSV hentet for ${formatDa(start)} – ${formatDa(end)}.`);
+        }
+    };
+
     // Gem den aktuelle brugers (Mester/Bogholder) eget lønnummer — med validering.
     const saveActorLonnummer = async (value) => {
         const v = String(value ?? '').trim();
@@ -890,109 +977,362 @@ export default function AdminTimesheet({ leadsData, profile }) {
 
     return (
         <div className="dashboard-workspace timesheet-view admin-timesheet" style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-out', maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px' }}>
-            <div className="glass-panel" style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', position: 'relative', zIndex: 50, overflow: 'visible' }}>
+            <div className="glass-panel" style={{ 
+                padding: isMobile ? '16px' : '24px', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: isMobile ? 'stretch' : 'flex-start', 
+                flexDirection: isMobile ? 'column' : 'row',
+                flexWrap: 'wrap', 
+                gap: '16px', 
+                position: 'relative', 
+                zIndex: 50, 
+                overflow: 'visible' 
+            }}>
                 <div>
-                    <h2 style={{ margin: '0 0 8px 0', color: '#1a1a1a', fontSize: '1.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FileText size={28} color="#000" />
+                    <h2 style={{ margin: '0 0 4px 0', color: '#1a1a1a', fontSize: isMobile ? '1.4rem' : '1.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FileText size={isMobile ? 22 : 28} color="#000" />
                         Løn & Timer
                     </h2>
-                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem' }}>Kontrol, redigering og eksport af medarbejdernes tids- og kørselsregistreringer.</p>
+                    {!isMobile && <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem' }}>Kontrol, redigering og eksport af medarbejdernes tids- og kørselsregistreringer.</p>}
                 </div>
                 
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <CustomSelect 
-                        value={selectedUser}
-                        onChange={setSelectedUser}
-                        options={[
-                            { value: 'all', label: 'Alle medarbejdere' },
-                            ...teamMembers.map(m => ({ value: m.id, label: `${m.owner_name || m.company_name} (${getRoleLabel(m.role)})` }))
-                        ]}
-                    />
-                    
-                    <CustomSelect 
-                        value={selectedPeriod}
-                        onChange={setSelectedPeriod}
-                        options={[
-                            { value: 'this_week', label: 'Denne Uge' },
-                            { value: 'last_week', label: 'Sidste Uge' },
-                            { value: 'this_month', label: 'Denne Måned' },
-                            { value: 'last_month', label: 'Sidste Måned' },
-                            { value: 'this_year', label: 'Dette År' }
-                        ]}
-                    />
+                {isMobile ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+                        {/* Dropdowns side-by-side to save vertical space */}
+                        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <CustomSelect 
+                                    value={selectedUser}
+                                    onChange={setSelectedUser}
+                                    options={[
+                                        { value: 'all', label: 'Alle medarbejdere' },
+                                        ...teamMembers.map(m => ({ value: m.id, label: `${m.owner_name || m.company_name} (${getRoleLabel(m.role)})` }))
+                                    ]}
+                                    style={{ minWidth: '0' }}
+                                />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <CustomSelect 
+                                    value={selectedPeriod}
+                                    onChange={setSelectedPeriod}
+                                    options={[
+                                        { value: 'this_week', label: 'Denne Uge' },
+                                        { value: 'last_week', label: 'Sidste Uge' },
+                                        { value: 'this_month', label: 'Denne Måned' },
+                                        { value: 'last_month', label: 'Sidste Måned' },
+                                        { value: 'this_year', label: 'Dette År' }
+                                    ]}
+                                    style={{ minWidth: '0' }}
+                                />
+                            </div>
+                        </div>
 
-                    <button 
-                        onClick={openAdd}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff', color: '#1a1a1a', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.06)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; }}
-                    >
-                        <Plus size={18} /> Opret registrering
-                    </button>
+                        {/* Apple-style Control Grid (2x2) */}
+                        <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: '1fr 1fr', 
+                            gap: '10px', 
+                            width: '100%',
+                            marginTop: '4px'
+                        }}>
+                            {/* 1. Løneksport (Primary action, dark and prominent) */}
+                            {USE_UNIFIED_PAYROLL_MODAL ? (
+                                <button 
+                                    onClick={() => setIsExportModalOpen(true)}
+                                    style={{ 
+                                        display: 'flex', 
+                                        flexDirection: 'column', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center', 
+                                        gap: '6px', 
+                                        padding: '14px 10px', 
+                                        borderRadius: '16px', 
+                                        border: 'none', 
+                                        backgroundColor: '#000', 
+                                        color: '#fff', 
+                                        fontWeight: 'bold', 
+                                        fontSize: '0.82rem', 
+                                        cursor: 'pointer', 
+                                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)' 
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.25)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}
+                                    onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                                    onMouseUp={e => e.currentTarget.style.transform = 'none'}
+                                    onTouchStart={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                                    onTouchEnd={e => e.currentTarget.style.transform = 'none'}
+                                >
+                                    <FileSpreadsheet size={22} color="#fff" />
+                                    <span>Løneksport</span>
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={() => setExportMenuOpen(o => !o)}
+                                    style={{ 
+                                        display: 'flex', 
+                                        flexDirection: 'column', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center', 
+                                        gap: '6px', 
+                                        padding: '14px 10px', 
+                                        borderRadius: '16px', 
+                                        border: 'none', 
+                                        backgroundColor: '#000', 
+                                        color: '#fff', 
+                                        fontWeight: 'bold', 
+                                        fontSize: '0.82rem', 
+                                        cursor: 'pointer', 
+                                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)' 
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.25)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}
+                                    onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                                    onMouseUp={e => e.currentTarget.style.transform = 'none'}
+                                >
+                                    <FileSpreadsheet size={22} color="#fff" />
+                                    <span>Løneksport</span>
+                                </button>
+                            )}
 
-                    <button 
-                        onClick={() => setIsStamdataModalOpen(true)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(10px)', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.4)'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; }}
-                        className="stamdata-btn"
-                    >
-                        <IdCard size={18} className="text-blue-600" />
-                        <span className="hidden sm:inline">Stamdata & Ferie</span>
-                    </button>
+                            {/* 2. Opret registrering (Plus action, light and clean) */}
+                            <button 
+                                onClick={openAdd}
+                                style={{ 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    gap: '6px', 
+                                    padding: '14px 10px', 
+                                    borderRadius: '16px', 
+                                    border: '1px solid #e2e8f0', 
+                                    backgroundColor: '#fff', 
+                                    color: '#1a1a1a', 
+                                    fontWeight: 'bold', 
+                                    fontSize: '0.82rem', 
+                                    cursor: 'pointer', 
+                                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)' 
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; }}
+                                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                                onMouseUp={e => e.currentTarget.style.transform = 'none'}
+                                onTouchStart={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                                onTouchEnd={e => e.currentTarget.style.transform = 'none'}
+                            >
+                                <Plus size={22} color="#000" />
+                                <span>Opret tid</span>
+                            </button>
 
-                    <div ref={exportMenuRef} style={{ position: 'relative' }}>
-                        <button
-                            onClick={() => setExportMenuOpen(o => !o)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: 'none', backgroundColor: '#000', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}
+                            {/* 3. Stamdata & Ferie (Info/IdCard action, light translucent blue) */}
+                            <button 
+                                onClick={() => setIsStamdataModalOpen(true)}
+                                style={{ 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    gap: '6px', 
+                                    padding: '14px 10px', 
+                                    borderRadius: '16px', 
+                                    border: '1px solid rgba(37,99,235,0.15)', 
+                                    backgroundColor: 'rgba(239, 246, 255, 0.7)', 
+                                    backdropFilter: 'blur(10px)',
+                                    WebkitBackdropFilter: 'blur(10px)',
+                                    color: '#1e3a8a', 
+                                    fontWeight: 'bold', 
+                                    fontSize: '0.82rem', 
+                                    cursor: 'pointer', 
+                                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
+                                    boxShadow: '0 2px 4px rgba(37,99,235,0.02)' 
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 246, 255, 0.9)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 246, 255, 0.7)'; e.currentTarget.style.transform = 'none'; }}
+                                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                                onMouseUp={e => e.currentTarget.style.transform = 'none'}
+                                onTouchStart={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                                onTouchEnd={e => e.currentTarget.style.transform = 'none'}
+                            >
+                                <IdCard size={22} className="text-blue-600" />
+                                <span>Stamdata</span>
+                            </button>
+
+                            {/* 4. Eksporter visning (Download active view, clean gray style) */}
+                            {USE_UNIFIED_PAYROLL_MODAL && (
+                                <button 
+                                    onClick={handleExportCSV}
+                                    title="Eksporter den aktuelle tabelvisning til CSV"
+                                    style={{ 
+                                        display: 'flex', 
+                                        flexDirection: 'column', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center', 
+                                        gap: '6px', 
+                                        padding: '14px 10px', 
+                                        borderRadius: '16px', 
+                                        border: '1px solid #e2e8f0', 
+                                        backgroundColor: '#fff', 
+                                        color: '#475569', 
+                                        fontWeight: 'bold', 
+                                        fontSize: '0.82rem', 
+                                        cursor: 'pointer', 
+                                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)' 
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; }}
+                                    onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                                    onMouseUp={e => e.currentTarget.style.transform = 'none'}
+                                    onTouchStart={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                                    onTouchEnd={e => e.currentTarget.style.transform = 'none'}
+                                >
+                                    <Download size={22} color="#475569" />
+                                    <span>Eksporter</span>
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Lock status & Settings grouped row */}
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%', marginTop: '4px', flexWrap: 'wrap' }}>
+                            <PayrollControls
+                                companyId={payrollCompanyId}
+                                role={profile?.role}
+                                actorId={profile?.id}
+                                actorName={profile?.owner_name || profile?.company_name || profile?.email}
+                                settings={payrollSettings}
+                                onUpdated={setPayrollSettings}
+                                actorLonnummer={teamMembers.find(m => m.id === profile?.id)?.raw_data?.lonnummer || ''}
+                                existingLonnumre={teamMembers.filter(m => m.id !== profile?.id).map(m => m.raw_data?.lonnummer).filter(Boolean)}
+                                onSaveActorLonnummer={saveActorLonnummer}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <CustomSelect 
+                            value={selectedUser}
+                            onChange={setSelectedUser}
+                            options={[
+                                { value: 'all', label: 'Alle medarbejdere' },
+                                ...teamMembers.map(m => ({ value: m.id, label: `${m.owner_name || m.company_name} (${getRoleLabel(m.role)})` }))
+                            ]}
+                        />
+                        
+                        <CustomSelect 
+                            value={selectedPeriod}
+                            onChange={setSelectedPeriod}
+                            options={[
+                                { value: 'this_week', label: 'Denne Uge' },
+                                { value: 'last_week', label: 'Sidste Uge' },
+                                { value: 'this_month', label: 'Denne Måned' },
+                                { value: 'last_month', label: 'Sidste Måned' },
+                                { value: 'this_year', label: 'Dette År' }
+                            ]}
+                        />
+
+                        {USE_UNIFIED_PAYROLL_MODAL && (
+                            <button 
+                                onClick={handleExportCSV}
+                                title="Eksporter den aktuelle tabelvisning til CSV"
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff', color: '#475569', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.06)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; }}
+                                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                                onMouseUp={e => e.currentTarget.style.transform = 'translateY(-2px) scale(1)'}
+                            >
+                                <Download size={18} color="#64748b" />
+                                <span className="hidden sm:inline">Eksporter visning</span>
+                            </button>
+                        )}
+
+                        <button 
+                            onClick={openAdd}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff', color: '#1a1a1a', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.06)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; }}
                         >
-                            <FileSpreadsheet size={18} /> Løneksport
-                            <ChevronDown size={16} style={{ transform: exportMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                            <Plus size={18} /> Opret registrering
                         </button>
 
-                        {exportMenuOpen && (
-                            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: '320px', background: '#fff', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 16px 32px -8px rgba(15,23,42,0.18)', zIndex: 100000, overflow: 'hidden', padding: '8px', animation: 'fadeIn 0.15s ease-out' }}>
-                                {/* PRIMÆR: filen man importerer i lønsystemet */}
-                                <div
-                                    onClick={() => exportPayroll('lonart')}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px', cursor: 'pointer', background: '#eff6ff', border: '1px solid #bfdbfe', transition: 'all 0.15s' }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.transform = 'none'; }}
-                                >
-                                    <div style={{ width: '40px', height: '40px', flexShrink: 0, borderRadius: '10px', background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <Download size={20} />
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>Lønfil til lønsystem</span>
-                                            <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#1d4ed8', background: '#dbeafe', border: '1px solid #bfdbfe', padding: '2px 7px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Anbefalet</span>
-                                        </div>
-                                        <div style={{ fontSize: '0.78rem', color: '#3b82f6', marginTop: '2px' }}>Den du importerer direkte i lønsystemet · seneste lønperiode</div>
-                                    </div>
-                                </div>
+                        <button 
+                            onClick={() => setIsStamdataModalOpen(true)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(10px)', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.4)'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; }}
+                            className="stamdata-btn"
+                        >
+                            <IdCard size={18} className="text-blue-600" />
+                            <span className="hidden sm:inline">Stamdata & Ferie</span>
+                        </button>
 
-                                {/* SEKUNDÆR: til at dobbelttjekke perioden */}
-                                <div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '12px 10px 4px' }}>Til at dobbelttjekke perioden:</div>
-                                <ExportMenuItem title="Opsummering" desc="Normaltimer, ferie, sygdom, kørsel pr. medarbejder" onClick={() => exportPayroll('summary')} />
-                                <ExportMenuItem title="Kontrol-CSV" desc="Alle rå linjer · valgt periode" onClick={() => { handleExportCSV(); setExportMenuOpen(false); }} />
+                        {USE_UNIFIED_PAYROLL_MODAL ? (
+                            <button 
+                                onClick={() => setIsExportModalOpen(true)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: 'none', backgroundColor: '#000', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}
+                            >
+                                <FileSpreadsheet size={18} /> Løneksport
+                            </button>
+                        ) : (
+                            <div ref={exportMenuRef} style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => setExportMenuOpen(o => !o)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: 'none', backgroundColor: '#000', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}
+                                >
+                                    <FileSpreadsheet size={18} /> Løneksport
+                                    <ChevronDown size={16} style={{ transform: exportMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                                </button>
+
+                                {exportMenuOpen && (
+                                    <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: '320px', background: '#fff', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 16px 32px -8px rgba(15,23,42,0.18)', zIndex: 100000, overflow: 'hidden', padding: '8px', animation: 'fadeIn 0.15s ease-out' }}>
+                                        {/* PRIMÆR: filen man importerer i lønsystemet */}
+                                        <div
+                                            onClick={() => exportPayroll('lonart')}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px', cursor: 'pointer', background: '#eff6ff', border: '1px solid #bfdbfe', transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.transform = 'none'; }}
+                                        >
+                                            <div style={{ width: '40px', height: '40px', flexShrink: 0, borderRadius: '10px', background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Download size={20} />
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>Lønfil til lønsystem</span>
+                                                    <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#1d4ed8', background: '#dbeafe', border: '1px solid #bfdbfe', padding: '2px 7px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Anbefalet</span>
+                                                </div>
+                                                <div style={{ fontSize: '0.78rem', color: '#3b82f6', marginTop: '2px' }}>Den du importerer direkte i lønsystemet · seneste lønperiode</div>
+                                            </div>
+                                        </div>
+
+                                        {/* SEKUNDÆR: til at dobbelttjekke perioden */}
+                                        <div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '12px 10px 4px' }}>Til at dobbelttjekke perioden:</div>
+                                        <ExportMenuItem title="Opsummering" desc="Normaltimer, ferie, sygdom, kørsel pr. medarbejder" onClick={() => exportPayroll('summary')} />
+                                        <ExportMenuItem title="Kontrol-CSV" desc="Alle rå linjer · valgt periode" onClick={() => { handleExportCSV(); setExportMenuOpen(false); }} />
+                                    </div>
+                                )}
                             </div>
                         )}
-                    </div>
 
-                    <PayrollControls
-                        companyId={payrollCompanyId}
-                        role={profile?.role}
-                        actorId={profile?.id}
-                        actorName={profile?.owner_name || profile?.company_name || profile?.email}
-                        settings={payrollSettings}
-                        onUpdated={setPayrollSettings}
-                        actorLonnummer={teamMembers.find(m => m.id === profile?.id)?.raw_data?.lonnummer || ''}
-                        existingLonnumre={teamMembers.filter(m => m.id !== profile?.id).map(m => m.raw_data?.lonnummer).filter(Boolean)}
-                        onSaveActorLonnummer={saveActorLonnummer}
-                    />
-                </div>
+                        <PayrollControls
+                            companyId={payrollCompanyId}
+                            role={profile?.role}
+                            actorId={profile?.id}
+                            actorName={profile?.owner_name || profile?.company_name || profile?.email}
+                            settings={payrollSettings}
+                            onUpdated={setPayrollSettings}
+                            actorLonnummer={teamMembers.find(m => m.id === profile?.id)?.raw_data?.lonnummer || ''}
+                            existingLonnumre={teamMembers.filter(m => m.id !== profile?.id).map(m => m.raw_data?.lonnummer).filter(Boolean)}
+                            onSaveActorLonnummer={saveActorLonnummer}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* PAYROLL REMINDER WIDGET */}
@@ -1259,6 +1599,454 @@ export default function AdminTimesheet({ leadsData, profile }) {
                 </div>,
                 document.body
             )}
+
+            {/* UNIFIED LØNEKSPORT & KONTROL-CENTER MODAL */}
+            {USE_UNIFIED_PAYROLL_MODAL && isExportModalOpen && (() => {
+                const data = getExportData();
+                const showWarning = data.rows.some(r => !r.lonnummer);
+                
+                return createPortal(
+                    <div style={{ 
+                        position: 'fixed', 
+                        top: 0, 
+                        left: 0, 
+                        right: 0, 
+                        bottom: 0, 
+                        backgroundColor: 'rgba(15, 23, 42, 0.7)', 
+                        backdropFilter: 'blur(8px)', 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center', 
+                        zIndex: 100000, 
+                        padding: '20px', 
+                        animation: 'fadeIn 0.2s ease-out' 
+                    }}>
+                        <div style={{ 
+                            width: '100%', 
+                            maxWidth: '720px', 
+                            maxHeight: '90vh',
+                            background: '#fff', 
+                            borderRadius: '20px', 
+                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden'
+                        }}>
+                            
+                            {/* Modal Header */}
+                            <div style={{ 
+                                padding: '24px 28px', 
+                                borderBottom: '1px solid #e2e8f0', 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center',
+                                background: '#f8fafc'
+                            }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <FileSpreadsheet size={24} color="#000" />
+                                        Løneksport & Kontrol-center
+                                    </h3>
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.88rem', color: '#64748b' }}>
+                                        Verificer timer og fravær for medarbejdere inden download af filer.
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={() => setIsExportModalOpen(false)} 
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#e2e8f0'; e.currentTarget.style.transform = 'scale(1.1) rotate(90deg)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.transform = 'none'; }}
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            {/* Modal Body (Scrollable) */}
+                            <div style={{ padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
+                                {/* Period Range Indicator */}
+                                <div style={{ 
+                                    background: '#eff6ff', 
+                                    border: '1px solid #bfdbfe', 
+                                    borderRadius: '14px', 
+                                    padding: '16px 20px', 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    alignItems: 'center' 
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ color: '#1d4ed8', background: '#dbeafe', padding: '10px', borderRadius: '10px' }}>
+                                            <Calendar size={20} />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                Officiel lønperiode
+                                            </div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e3a8a', marginTop: '2px' }}>
+                                                {formatDa(data.start)} – {formatDa(data.end)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span style={{ 
+                                        fontSize: '0.8rem', 
+                                        fontWeight: 'bold', 
+                                        color: '#1e40af', 
+                                        background: '#dbeafe', 
+                                        padding: '4px 10px', 
+                                        borderRadius: '999px' 
+                                    }}>
+                                        {data.rows.length} {data.rows.length === 1 ? 'medarbejder' : 'medarbejdere'}
+                                    </span>
+                                </div>
+
+                                {/* Warnings (if any) */}
+                                {showWarning && (
+                                    <div style={{ 
+                                        backgroundColor: '#fffbeb', 
+                                        border: '1px solid #fde68a', 
+                                        borderRadius: '12px', 
+                                        padding: '14px 16px', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '12px', 
+                                        color: '#b45309' 
+                                    }}>
+                                        <AlertTriangle size={20} style={{ flexShrink: 0 }} />
+                                        <div style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>
+                                            <strong>Advarsel:</strong> En eller flere medarbejdere mangler et <strong>lønnummer</strong>. Dette kan give problemer ved import i dit lønsystem. Gå til <em>Stamdata & Ferie</em> for at rette det.
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Summary Stats Grid */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                                    <div 
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                            e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.04)';
+                                            e.currentTarget.style.borderColor = '#cbd5e1';
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.transform = 'none';
+                                            e.currentTarget.style.boxShadow = 'none';
+                                            e.currentTarget.style.borderColor = '#e2e8f0';
+                                        }}
+                                        style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default' }}
+                                    >
+                                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Normale timer</span>
+                                        <strong style={{ fontSize: '1.5rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <Clock size={16} color="#3b82f6" />
+                                            {data.totalHours.toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} t
+                                        </strong>
+                                    </div>
+                                    <div 
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                            e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.04)';
+                                            e.currentTarget.style.borderColor = '#cbd5e1';
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.transform = 'none';
+                                            e.currentTarget.style.boxShadow = 'none';
+                                            e.currentTarget.style.borderColor = '#e2e8f0';
+                                        }}
+                                        style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default' }}
+                                    >
+                                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Kørsel</span>
+                                        <strong style={{ fontSize: '1.5rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <TrendingUp size={16} color="#10b981" />
+                                            {data.totalKm} km
+                                        </strong>
+                                    </div>
+                                    <div 
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                            e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.04)';
+                                            e.currentTarget.style.borderColor = '#cbd5e1';
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.transform = 'none';
+                                            e.currentTarget.style.boxShadow = 'none';
+                                            e.currentTarget.style.borderColor = '#e2e8f0';
+                                        }}
+                                        style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default' }}
+                                    >
+                                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Samlet fravær</span>
+                                        <strong style={{ fontSize: '1.5rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <AlertTriangle size={16} color="#f59e0b" />
+                                            {data.totalAbsence.toLocaleString('da-DK', { maximumFractionDigits: 1 })} {data.absenceUnitText}
+                                        </strong>
+                                    </div>
+                                </div>
+
+                                {/* Employees Breakdown List */}
+                                <div>
+                                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: '#475569', fontWeight: 'bold' }}>Specifikation pr. medarbejder</h4>
+                                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem', textAlign: 'left' }}>
+                                            <thead>
+                                                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 'bold' }}>
+                                                    <th style={{ padding: '12px 16px' }}>Medarbejder</th>
+                                                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Normaltimer</th>
+                                                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Kørsel</th>
+                                                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Fravær</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {data.rows.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="4" style={{ padding: '24px', textTextAlign: 'center', color: '#64748b', textAlign: 'center' }}>
+                                                            Ingen registrerede timer eller fravær i denne periode.
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    data.rows.map((r, i) => {
+                                                        const initials = r.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                                                        const absence = (r.vacation || 0) + (r.sick || 0) + (r.other || 0);
+                                                        
+                                                        return (
+                                                            <tr 
+                                                                key={i} 
+                                                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                                                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                                style={{ borderBottom: i < data.rows.length - 1 ? '1px solid #f1f5f9' : 'none', transition: 'background-color 0.15s ease' }}
+                                                            >
+                                                                <td style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                    <div style={{ 
+                                                                        width: '32px', 
+                                                                        height: '32px', 
+                                                                        borderRadius: '50%', 
+                                                                        backgroundColor: '#f1f5f9', 
+                                                                        color: '#475569', 
+                                                                        display: 'flex', 
+                                                                        alignItems: 'center', 
+                                                                        justifyContent: 'center',
+                                                                        fontSize: '0.75rem',
+                                                                        fontWeight: 'bold',
+                                                                        border: '1px solid #e2e8f0'
+                                                                    }}>
+                                                                        {initials}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div style={{ fontWeight: 'bold', color: '#0f172a' }}>{r.name}</div>
+                                                                        <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                                                            {r.lonnummer ? `Lønnr: ${r.lonnummer}` : (
+                                                                                <span style={{ color: '#b45309', fontWeight: 'bold', background: '#fef3c7', padding: '1px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>
+                                                                                    ⚠️ Mangler lønnummer
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 'bold', color: '#0f172a' }}>
+                                                                    {r.normalHours > 0 ? `${r.normalHours.toLocaleString('da-DK', { minimumFractionDigits: 2 })} t` : '—'}
+                                                                </td>
+                                                                <td style={{ padding: '12px 16px', textAlign: 'right', color: '#475569' }}>
+                                                                    {r.mileage > 0 ? `${r.mileage} km` : '—'}
+                                                                </td>
+                                                                <td style={{ padding: '12px 16px', textAlign: 'right', color: '#475569' }}>
+                                                                    {absence > 0 ? `${absence.toLocaleString('da-DK')} ${data.absenceUnitText}` : '—'}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer (Eksportfiler) */}
+                            <div style={{ 
+                                padding: '24px 28px', 
+                                borderTop: '1px solid #e2e8f0', 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                gap: '16px',
+                                background: '#f8fafc' 
+                            }}>
+                                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Hent eksportfiler:
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    
+                                    {/* 1. Primær lønfil */}
+                                    <div 
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.transform = 'translateY(-3px)';
+                                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(37,99,235,0.08)';
+                                            e.currentTarget.style.borderColor = '#93c5fd';
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.transform = 'none';
+                                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                                            e.currentTarget.style.borderColor = '#bfdbfe';
+                                        }}
+                                        style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'space-between', 
+                                            padding: '12px 16px', 
+                                            backgroundColor: '#fff', 
+                                            border: '1px solid #bfdbfe', 
+                                            borderRadius: '12px',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                                        }}
+                                    >
+                                        <div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>1. Lønfil til Lønsystem (Zenegy / Dataløn)</strong>
+                                                <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#1d4ed8', background: '#dbeafe', border: '1px solid #bfdbfe', padding: '1px 6px', borderRadius: '999px', textTransform: 'uppercase' }}>Anbefalet</span>
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>Transaktionsfil med lønarter klar til direkte import.</div>
+                                        </div>
+                                        <button 
+                                            onClick={() => triggerDownload('lonart', data)}
+                                            disabled={data.rows.length === 0}
+                                            style={{ 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                gap: '6px', 
+                                                padding: '8px 14px', 
+                                                backgroundColor: data.rows.length === 0 ? '#cbd5e1' : '#000', 
+                                                color: '#fff', 
+                                                border: 'none', 
+                                                borderRadius: '8px', 
+                                                fontWeight: 'bold', 
+                                                fontSize: '0.85rem', 
+                                                cursor: data.rows.length === 0 ? 'not-allowed' : 'pointer',
+                                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' 
+                                            }}
+                                            onMouseEnter={e => { if (data.rows.length > 0) { e.currentTarget.style.backgroundColor = '#1e293b'; e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)'; } }}
+                                            onMouseLeave={e => { if (data.rows.length > 0) { e.currentTarget.style.backgroundColor = '#000'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; } }}
+                                            onMouseDown={e => { if (data.rows.length > 0) e.currentTarget.style.transform = 'translateY(-1px) scale(0.95)'; }}
+                                            onMouseUp={e => { if (data.rows.length > 0) e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)'; }}
+                                        >
+                                            <Download size={14} /> Hent lønfil
+                                        </button>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                        {/* 2. Opsummering */}
+                                        <div 
+                                            onMouseEnter={e => {
+                                                e.currentTarget.style.transform = 'translateY(-3px)';
+                                                e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.04)';
+                                                e.currentTarget.style.borderColor = '#cbd5e1';
+                                            }}
+                                            onMouseLeave={e => {
+                                                e.currentTarget.style.transform = 'none';
+                                                e.currentTarget.style.boxShadow = 'none';
+                                                e.currentTarget.style.borderColor = '#e2e8f0';
+                                            }}
+                                            style={{ 
+                                                display: 'flex', 
+                                                flexDirection: 'column', 
+                                                justifyContent: 'space-between', 
+                                                padding: '12px 16px', 
+                                                backgroundColor: '#fff', 
+                                                border: '1px solid #e2e8f0', 
+                                                borderRadius: '12px',
+                                                gap: '8px',
+                                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                                            }}
+                                        >
+                                            <div>
+                                                <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>2. Opsummering (CSV)</strong>
+                                                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>Overblik over timer, fravær og kørsel pr. medarbejder.</div>
+                                            </div>
+                                            <button 
+                                                onClick={() => triggerDownload('summary', data)}
+                                                disabled={data.rows.length === 0}
+                                                style={{ 
+                                                    display: 'flex', 
+                                                    alignItems: 'center', 
+                                                    justifyContent: 'center',
+                                                    gap: '6px', 
+                                                    padding: '8px 14px', 
+                                                    backgroundColor: '#fff', 
+                                                    color: data.rows.length === 0 ? '#cbd5e1' : '#0f172a', 
+                                                    border: '1px solid #e2e8f0', 
+                                                    borderRadius: '8px', 
+                                                    fontWeight: 'bold', 
+                                                    fontSize: '0.85rem', 
+                                                    cursor: data.rows.length === 0 ? 'not-allowed' : 'pointer',
+                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' 
+                                                }}
+                                                onMouseEnter={e => { if (data.rows.length > 0) { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.08)'; } }}
+                                                onMouseLeave={e => { if (data.rows.length > 0) { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; } }}
+                                                onMouseDown={e => { if (data.rows.length > 0) e.currentTarget.style.transform = 'translateY(-1px) scale(0.95)'; }}
+                                                onMouseUp={e => { if (data.rows.length > 0) e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)'; }}
+                                            >
+                                                <Download size={14} /> Hent rapport
+                                            </button>
+                                        </div>
+
+                                        {/* 3. Kontrol-CSV */}
+                                        <div 
+                                            onMouseEnter={e => {
+                                                e.currentTarget.style.transform = 'translateY(-3px)';
+                                                e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.04)';
+                                                e.currentTarget.style.borderColor = '#cbd5e1';
+                                            }}
+                                            onMouseLeave={e => {
+                                                e.currentTarget.style.transform = 'none';
+                                                e.currentTarget.style.boxShadow = 'none';
+                                                e.currentTarget.style.borderColor = '#e2e8f0';
+                                            }}
+                                            style={{ 
+                                                display: 'flex', 
+                                                flexDirection: 'column', 
+                                                justifyContent: 'space-between', 
+                                                padding: '12px 16px', 
+                                                backgroundColor: '#fff', 
+                                                border: '1px solid #e2e8f0', 
+                                                borderRadius: '12px',
+                                                gap: '8px',
+                                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                                            }}
+                                        >
+                                            <div>
+                                                <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>3. Kontrol-CSV</strong>
+                                                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>Alle rå tidsregistreringer til revision og bogføring.</div>
+                                            </div>
+                                            <button 
+                                                onClick={() => triggerDownload('kontrol', data)}
+                                                disabled={data.rows.length === 0}
+                                                style={{ 
+                                                    display: 'flex', 
+                                                    alignItems: 'center', 
+                                                    justifyContent: 'center',
+                                                    gap: '6px', 
+                                                    padding: '8px 14px', 
+                                                    backgroundColor: '#fff', 
+                                                    color: data.rows.length === 0 ? '#cbd5e1' : '#0f172a', 
+                                                    border: '1px solid #e2e8f0', 
+                                                    borderRadius: '8px', 
+                                                    fontWeight: 'bold', 
+                                                    fontSize: '0.85rem', 
+                                                    cursor: data.rows.length === 0 ? 'not-allowed' : 'pointer',
+                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' 
+                                                }}
+                                                onMouseEnter={e => { if (data.rows.length > 0) { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.08)'; } }}
+                                                onMouseLeave={e => { if (data.rows.length > 0) { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; } }}
+                                                onMouseDown={e => { if (data.rows.length > 0) e.currentTarget.style.transform = 'translateY(-1px) scale(0.95)'; }}
+                                                onMouseUp={e => { if (data.rows.length > 0) e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)'; }}
+                                            >
+                                                <Download size={14} /> Hent rå data
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>,
+                    document.body
+                );
+            })()}
 
             {/* MODAL TIL OPRET / REDIGER */}
             {showModal && createPortal(
