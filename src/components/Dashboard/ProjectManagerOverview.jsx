@@ -2,10 +2,14 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { mutateTimeEntries } from '../../utils/timeEntries';
+import { queueTimeEntryOp, flushTimeEntryQueue, queuedOpsCount } from '../../utils/offlineQueue';
 import { fetchPayrollSettings, getConfig, computeNetHours, suggestedBreakMinutes, DEFAULT_PAYROLL_CONFIG } from '../../utils/payroll';
 
 // Klokkeslæt som "HH:MM" (kolon — kan altid læses, modsat dansk locale "HH.MM").
 const toHHMM = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+// Loft på en enkelt automatisk vagt (brutto) ved tjek-ud — se WorkerOverview.
+const MAX_SHIFT_HOURS = 14;
 
 export default function ProjectManagerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId }) {
     // Filtrer sager, som projektlederen er tilknyttet
@@ -35,6 +39,21 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
         if (cid) fetchPayrollSettings(cid).then(s => setPayrollCfg(getConfig(s))).catch(() => {});
     }, [myProfile]);
 
+    // Send offline-gemte stemplinger automatisk: ved opstart og når nettet kommer igen.
+    useEffect(() => {
+        const sync = async () => {
+            if (queuedOpsCount() === 0) return;
+            const { flushed } = await flushTimeEntryQueue();
+            if (flushed > 0) {
+                toast.success(`${flushed} offline-stempling${flushed > 1 ? 'er' : ''} synkroniseret.`);
+                setTimeout(() => window.location.reload(), 1200);
+            }
+        };
+        sync();
+        window.addEventListener('online', sync);
+        return () => window.removeEventListener('online', sync);
+    }, []);
+
     const activeCheckInInfo = useMemo(() => {
         for (const lead of activeManagerCases) {
             const entries = lead.raw_data?.time_entries || [];
@@ -47,6 +66,10 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
     const handleGlobalCheckIn = async () => {
         if (!selectedCheckInProject) {
             toast.error('Vælg venligst et projekt først!');
+            return;
+        }
+        if (activeCheckInInfo) {
+            toast.error(`Du er allerede tjekket ind på ${activeCheckInInfo.lead.customer_name || 'en sag'}. Tjek ud først.`);
             return;
         }
         const leadToUpdate = activeManagerCases.find(l => String(l.id) === String(selectedCheckInProject));
@@ -70,7 +93,8 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
             toast.success('Du er nu tjekket ind!');
             setTimeout(() => window.location.reload(), 1000);
         } catch {
-            toast.error('Fejl ved stempling.');
+            queueTimeEntryOp({ table: 'leads', id: leadToUpdate.id, add: [entry] });
+            toast('Ingen forbindelse — stemplingen er gemt og sendes automatisk, når du får signal.', { icon: '📡', duration: 5000 });
         }
     };
 
@@ -90,18 +114,30 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
         let grossHours = (now.getTime() - startMs) / (1000 * 60 * 60);
         if (!isFinite(grossHours) || grossHours < 0) grossHours = 0;
 
+        // Loft mod glemt udstempling (se WorkerOverview).
+        let capped = false;
+        if (grossHours > MAX_SHIFT_HOURS) {
+            grossHours = MAX_SHIFT_HOURS;
+            capped = true;
+        }
+
         // Træk automatisk pause fra (firmaets regel) og afrund til kvarter.
         entry.pauseMinutes = suggestedBreakMinutes(grossHours, payrollCfg);
         entry.hours = computeNetHours(grossHours, payrollCfg);
-        entry.desc = 'Arbejde udført (Tjek-ud)';
+        entry.desc = 'Arbejde udført (Tjek-ud)' + (capped ? ' (tid afkortet — tjek venligst)' : '');
 
         try {
             // Atomisk: fjern den åbne registrering og tilføj den afsluttede i én operation.
             await mutateTimeEntries({ table: 'leads', id: lead.id, removeIds: [activeEntry.id], add: [entry] });
-            toast.success('Tjekket ud! Timerne er nu gemt.');
+            if (capped) {
+                toast(`Du har været tjekket ind meget længe — tiden er sat til ${entry.hours} t. Ret den i timesedlen, hvis det er forkert.`, { icon: '⚠️', duration: 8000 });
+            } else {
+                toast.success('Tjekket ud! Timerne er nu gemt.');
+            }
             setTimeout(() => window.location.reload(), 1000);
         } catch {
-            toast.error('Fejl ved udstempling.');
+            queueTimeEntryOp({ table: 'leads', id: lead.id, removeIds: [activeEntry.id], add: [entry] });
+            toast('Ingen forbindelse — udstemplingen er gemt og sendes automatisk, når du får signal.', { icon: '📡', duration: 5000 });
         }
     };
 

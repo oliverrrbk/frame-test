@@ -1522,6 +1522,17 @@ const Dashboard = () => {
     const syncToAccounting = async (lead, action = 'draft', invoiceLines = [], isReverseCharge = false, customerOverride = null) => {
         if (!carpenterProfile) return;
 
+        // Beskyt mod dobbelt-overførsel: overførsel laver en kladde i regnskabsprogrammet,
+        // men er sagen allerede overført før, bekræft at man bevidst laver én mere.
+        const priorInvoices = (lead?.raw_data?.invoice_history || []).length;
+        if (priorInvoices > 0) {
+            const ok = window.confirm(
+                `Denne sag er allerede overført til dit regnskabsprogram ${priorInvoices} gang${priorInvoices > 1 ? 'e' : ''} før.\n\n` +
+                `Vil du overføre en ny fakturakladde igen? (Du undgår dobbelt-fakturering ved at redigere den eksisterende kladde i regnskabsprogrammet i stedet.)`
+            );
+            if (!ok) return;
+        }
+
         const buildInvoiceLead = (sourceLead, override) => {
             if (!override) return sourceLead;
 

@@ -6,12 +6,17 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { mutateTimeEntries } from '../../utils/timeEntries';
+import { queueTimeEntryOp, flushTimeEntryQueue, queuedOpsCount } from '../../utils/offlineQueue';
 import { getTodaysMessagesForUser, getSeenSet, markSeen, countUnseen } from '../../utils/caseMessages';
 import { getRoleLabel } from '../../utils/roles';
 import { fetchPayrollSettings, getConfig, computeNetHours, suggestedBreakMinutes, DEFAULT_PAYROLL_CONFIG } from '../../utils/payroll';
 
 // Klokkeslæt som "HH:MM" (kolon — kan altid læses, modsat dansk locale "HH.MM").
 const toHHMM = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+// Loft på en enkelt automatisk vagt (brutto) ved tjek-ud, så en glemt udstempling
+// ikke registrerer fx 70 timer. Lang dag med overarbejde er stadig dækket.
+const MAX_SHIFT_HOURS = 14;
 
 export default function WorkerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId, simulatedRole }) {
     // ---- EKSISTERENDE LOGIK (Beholdt for funktionel integritet) ----
@@ -49,6 +54,21 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         if (cid) fetchPayrollSettings(cid).then(s => setPayrollCfg(getConfig(s))).catch(() => {});
     }, [myProfile]);
 
+    // Send eventuelle offline-gemte stemplinger automatisk: ved opstart og når nettet kommer igen.
+    useEffect(() => {
+        const sync = async () => {
+            if (queuedOpsCount() === 0) return;
+            const { flushed } = await flushTimeEntryQueue();
+            if (flushed > 0) {
+                toast.success(`${flushed} offline-stempling${flushed > 1 ? 'er' : ''} synkroniseret.`);
+                setTimeout(() => window.location.reload(), 1200);
+            }
+        };
+        sync();
+        window.addEventListener('online', sync);
+        return () => window.removeEventListener('online', sync);
+    }, []);
+
     const activeCheckInInfo = useMemo(() => {
         for (const lead of activeWorkerCases) {
             const entries = lead.raw_data?.time_entries || [];
@@ -63,9 +83,14 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             toast.error('Vælg venligst et projekt først!');
             return;
         }
+        // Spær mod dobbelt tjek-ind: man kan ikke være tjekket ind to steder samtidigt.
+        if (activeCheckInInfo) {
+            toast.error(`Du er allerede tjekket ind på ${activeCheckInInfo.lead.customer_name || 'en sag'}. Tjek ud først.`);
+            return;
+        }
         const leadToUpdate = activeWorkerCases.find(l => String(l.id) === String(selectedCheckInProject));
         if (!leadToUpdate) return;
-        
+
         const now = new Date();
         const entry = {
             id: `time-${Date.now()}`,
@@ -84,7 +109,9 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             toast.success('Du er nu tjekket ind!');
             setTimeout(() => window.location.reload(), 1000);
         } catch {
-            toast.error('Fejl ved stempling.');
+            // Ingen forbindelse: gem stemplingen lokalt og send den automatisk senere.
+            queueTimeEntryOp({ table: 'leads', id: leadToUpdate.id, add: [entry] });
+            toast('Ingen forbindelse — stemplingen er gemt og sendes automatisk, når du får signal.', { icon: '📡', duration: 5000 });
         }
     };
 
@@ -104,18 +131,32 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         let grossHours = (now.getTime() - startMs) / (1000 * 60 * 60);
         if (!isFinite(grossHours) || grossHours < 0) grossHours = 0;
 
+        // Loft mod glemt udstempling: en urealistisk lang vagt afkortes, så en glemt
+        // tjek-ud (fx hele weekenden) ikke vælter lønnen. Svenden bedes tjekke tiden.
+        let capped = false;
+        if (grossHours > MAX_SHIFT_HOURS) {
+            grossHours = MAX_SHIFT_HOURS;
+            capped = true;
+        }
+
         // Træk automatisk pause fra (firmaets regel) og afrund til kvarter.
         entry.pauseMinutes = suggestedBreakMinutes(grossHours, payrollCfg);
         entry.hours = computeNetHours(grossHours, payrollCfg);
-        entry.desc = 'Arbejde udført (Tjek-ud)';
+        entry.desc = 'Arbejde udført (Tjek-ud)' + (capped ? ' (tid afkortet — tjek venligst)' : '');
 
         try {
             // Atomisk: fjern den åbne registrering og tilføj den afsluttede i én operation.
             await mutateTimeEntries({ table: 'leads', id: lead.id, removeIds: [activeEntry.id], add: [entry] });
-            toast.success('Tjekket ud! Timerne er nu gemt.');
+            if (capped) {
+                toast(`Du har været tjekket ind meget længe — tiden er sat til ${entry.hours} t. Ret den i din timeseddel, hvis det er forkert.`, { icon: '⚠️', duration: 8000 });
+            } else {
+                toast.success('Tjekket ud! Timerne er nu gemt.');
+            }
             setTimeout(() => window.location.reload(), 1000);
         } catch {
-            toast.error('Fejl ved udstempling.');
+            // Ingen forbindelse: gem udstemplingen lokalt og send den automatisk senere.
+            queueTimeEntryOp({ table: 'leads', id: lead.id, removeIds: [activeEntry.id], add: [entry] });
+            toast('Ingen forbindelse — udstemplingen er gemt og sendes automatisk, når du får signal.', { icon: '📡', duration: 5000 });
         }
     };
 
