@@ -108,10 +108,10 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
 
   // Load teammates (carpenters) and threads
   useEffect(() => {
-    if (profile) {
+    if (profile && profile.id) {
       loadTeammatesAndThreads();
     }
-  }, [profile, leads]);
+  }, [profile?.id, leads]);
 
   // Scroll to bottom whenever messages list updates
   useEffect(() => {
@@ -133,6 +133,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
   }, [activeThread]);
 
   const loadTeammatesAndThreads = async () => {
+    if (!profile || !profile.id) return;
     setIsLoadingThreads(true);
     try {
       const companyId = profile.company_id || profile.id;
@@ -141,7 +142,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
       const { data: teamData, error: teamError } = await supabase
         .from('carpenters')
         .select('id, owner_name, company_name, email, role, phone')
-        .eq('company_id', companyId);
+        .or(`company_id.eq.${companyId},id.eq.${companyId}`);
 
       if (teamError) throw teamError;
       setTeammates(teamData || []);

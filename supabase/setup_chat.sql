@@ -39,39 +39,43 @@ CREATE INDEX IF NOT EXISTS idx_chat_participants_user ON public.chat_participant
 CREATE INDEX IF NOT EXISTS idx_chat_participants_thread ON public.chat_participants(thread_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_thread_created ON public.chat_messages(thread_id, created_at ASC);
 
--- 5. Enable Row Level Security (RLS)
+-- 5. Helper Function for Policy Checks (avoids RLS recursion)
+CREATE OR REPLACE FUNCTION public.check_user_in_thread(t_id UUID, u_id UUID)
+RETURNS BOOLEAN SECURITY DEFINER AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.chat_participants 
+    WHERE thread_id = t_id AND user_id = u_id
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+-- 6. Enable Row Level Security (RLS)
 ALTER TABLE public.chat_threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 
--- 6. RLS Policies for chat_threads
+-- 7. RLS Policies for chat_threads
 DROP POLICY IF EXISTS "Users can view threads they participate in or company threads" ON public.chat_threads;
 CREATE POLICY "Users can view threads they participate in or company threads" ON public.chat_threads
     FOR SELECT USING (
         type = 'company' 
-        OR EXISTS (
-            SELECT 1 FROM public.chat_participants cp 
-            WHERE cp.thread_id = id AND cp.user_id = auth.uid()
-        )
+        OR public.check_user_in_thread(id, auth.uid())
     );
 
 DROP POLICY IF EXISTS "Users can create threads" ON public.chat_threads;
 CREATE POLICY "Users can create threads" ON public.chat_threads
     FOR INSERT WITH CHECK (true);
 
--- 7. RLS Policies for chat_participants
+-- 8. RLS Policies for chat_participants
 DROP POLICY IF EXISTS "Users can view participants for accessible threads" ON public.chat_participants;
 CREATE POLICY "Users can view participants for accessible threads" ON public.chat_participants
     FOR SELECT USING (
-        EXISTS (
+        user_id = auth.uid()
+        OR public.check_user_in_thread(thread_id, auth.uid())
+        OR EXISTS (
             SELECT 1 FROM public.chat_threads ct
-            WHERE ct.id = thread_id AND (
-                ct.type = 'company' 
-                OR EXISTS (
-                    SELECT 1 FROM public.chat_participants cp2 
-                    WHERE cp2.thread_id = thread_id AND cp2.user_id = auth.uid()
-                )
-            )
+            WHERE ct.id = thread_id AND ct.type = 'company'
         )
     );
 
@@ -79,19 +83,14 @@ DROP POLICY IF EXISTS "Users can insert participants" ON public.chat_participant
 CREATE POLICY "Users can insert participants" ON public.chat_participants
     FOR INSERT WITH CHECK (true);
 
--- 8. RLS Policies for chat_messages
+-- 9. RLS Policies for chat_messages
 DROP POLICY IF EXISTS "Users can view messages in accessible threads" ON public.chat_messages;
 CREATE POLICY "Users can view messages in accessible threads" ON public.chat_messages
     FOR SELECT USING (
-        EXISTS (
+        public.check_user_in_thread(thread_id, auth.uid())
+        OR EXISTS (
             SELECT 1 FROM public.chat_threads ct
-            WHERE ct.id = thread_id AND (
-                ct.type = 'company' 
-                OR EXISTS (
-                    SELECT 1 FROM public.chat_participants cp 
-                    WHERE cp.thread_id = thread_id AND cp.user_id = auth.uid()
-                )
-            )
+            WHERE ct.id = thread_id AND ct.type = 'company'
         )
     );
 
@@ -99,14 +98,11 @@ DROP POLICY IF EXISTS "Users can insert their own messages into participating th
 CREATE POLICY "Users can insert their own messages into participating threads" ON public.chat_messages
     FOR INSERT WITH CHECK (
         auth.uid() = sender_id
-        AND EXISTS (
-            SELECT 1 FROM public.chat_threads ct
-            WHERE ct.id = thread_id AND (
-                ct.type = 'company'
-                OR EXISTS (
-                    SELECT 1 FROM public.chat_participants cp 
-                    WHERE cp.thread_id = thread_id AND cp.user_id = auth.uid()
-                )
+        AND (
+            public.check_user_in_thread(thread_id, auth.uid())
+            OR EXISTS (
+                SELECT 1 FROM public.chat_threads ct
+                WHERE ct.id = thread_id AND ct.type = 'company'
             )
         )
     );
