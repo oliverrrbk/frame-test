@@ -19,7 +19,9 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
             const isAssignedWorker = workers.includes(myProfile?.id);
             const isAssigned = isAssignedSales || isAssignedWorker;
 
-            return isAssigned && ['Sendt tilbud', 'Bekræftet opgave', 'Historik', 'Afbrudt Sag'].includes(lead.status || '');
+            // Kun sager der reelt er gået i gang (efter bekræftelse + holdbygning).
+            // Kladder og endnu-ikke-bekræftede tilbud man selv har lavet skal ikke vælges her.
+            return isAssigned && ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(lead.status || '');
         });
     }, [leadsData, myProfile]);
 

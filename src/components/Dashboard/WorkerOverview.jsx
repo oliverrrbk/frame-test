@@ -32,7 +32,10 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                 return ['Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag'].includes(lead.status);
             }
 
-            return isAssigned;
+            // Vis kun sager der reelt er gået i gang (efter mester har bekræftet og bygget holdet).
+            // Kladder/tilbud man selv har lavet skal IKKE kunne vælges/tjekkes ind på her.
+            const isRealJob = ['Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag', 'Historik'].includes(lead.status);
+            return isAssigned && isRealJob;
         });
     }, [leadsData, myProfile, simulatedRole]);
 

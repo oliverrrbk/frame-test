@@ -571,6 +571,9 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                             toIds(l.raw_data?.assigned_workers).includes(mid) ||
                                             toIds(l.raw_data?.assigned_pm).includes(mid)
                                         );
+                                        // Kladder tæller ikke som tildelte opgaver — kun rigtige sager.
+                                        const DRAFT_STATUSES = ['Kladde', 'Intern Kladde', 'Sendt Kladde', 'Slettet'];
+                                        const assignedJobs = assignedLeads.filter(l => !DRAFT_STATUSES.includes(l.status));
                                         const wonLeads = assignedLeads.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status));
                                         const lostLeads = assignedLeads.filter(l => ['Afvist', 'Fortrudt', 'Afbrudt Sag'].includes(l.status));
                                         const activeLeads = assignedLeads.filter(l => l.status === 'Sendt tilbud');
@@ -648,7 +651,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                     <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                                                         <div className="text-right mr-4 hidden sm:block">
                                                             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', margin: '0 0 2px' }}>Tildelte opgaver</p>
-                                                            <p style={{ fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{assignedLeads.length}</p>
+                                                            <p style={{ fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{assignedJobs.length}</p>
                                                         </div>
                                                         
                                                         <div className="flex items-center gap-2">
@@ -675,7 +678,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                         <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                                             <Target size={18} color="#3b82f6" />
                                                                             <div>
-                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0, lineHeight: 1 }}>{assignedLeads.length}</p>
+                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0, lineHeight: 1 }}>{assignedJobs.length}</p>
                                                                                 <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Tildelt</p>
                                                                             </div>
                                                                         </div>
@@ -706,7 +709,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                         <div className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                                             <Target size={18} color="#3b82f6" />
                                                                             <div>
-                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0, lineHeight: 1 }}>{assignedLeads.length}</p>
+                                                                                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0, lineHeight: 1 }}>{assignedJobs.length}</p>
                                                                                 <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Opgaver</p>
                                                                             </div>
                                                                         </div>
