@@ -172,16 +172,12 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
         opacity: isDragging ? 0.5 : (sub.done ? 0.75 : 1), 
         boxShadow: isDragging ? '0 10px 25px rgba(0,0,0,0.1)' : (sub.done ? 'none' : '0 2px 6px rgba(0,0,0,0.02)'),
         marginBottom: '8px',
-        touchAction: 'none', // Critical for TouchSensor to work correctly without scrolling the page
-        cursor: isDragging ? 'grabbing' : 'grab'
     };
 
     return (
         <div 
             ref={setNodeRef} 
             style={style}
-            {...attributes}
-            {...(isEditing ? {} : listeners)}
             onMouseEnter={(e) => {
                 if (!sub.done && !isDragging) {
                     e.currentTarget.style.backgroundColor = '#f8fafc';
@@ -197,9 +193,11 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
                 }
             }}
         >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: 0 }}>
                 <div 
-                    style={{ padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', marginTop: '-2px', marginLeft: '-8px' }}
+                    {...attributes}
+                    {...(isEditing ? {} : listeners)}
+                    style={{ padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', marginTop: '-2px', marginLeft: '-8px', touchAction: 'none', cursor: isDragging ? 'grabbing' : 'grab' }}
                 >
                     <GripVertical size={18} />
                 </div>
@@ -278,7 +276,9 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
                             cursor: 'pointer', 
                             flex: 1, 
                             lineHeight: '1.5',
-                            transition: 'color 0.2s'
+                            transition: 'color 0.2s',
+                            wordBreak: 'break-word',
+                            minWidth: 0
                         }}
                     >
                         {sub.text}
@@ -356,12 +356,11 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
         borderRadius: '16px', 
         overflow: 'hidden',
         boxShadow: isDragging ? '0 10px 30px rgba(0,0,0,0.15)' : (isAllDone ? '0 4px 14px rgba(16, 185, 129, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.03)'),
-        opacity: isDragging ? 0.6 : 1,
-        touchAction: 'none'
+        opacity: isDragging ? 0.6 : 1
     };
 
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...(isEditing ? {} : listeners)}>
+        <div ref={setNodeRef} style={style}>
             {/* Header / Accordion trigger */}
             <div 
                 onClick={() => { if (!isEditing) handleToggleExpand(step.id); }}
@@ -375,15 +374,21 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
                     display: 'flex', 
                     justifyContent: 'space-between', 
                     alignItems: 'center', 
+                    flexWrap: 'wrap',
+                    gap: '12px',
                     padding: '18px 24px', 
                     backgroundColor: isAllDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent', 
-                    cursor: isDragging ? 'grabbing' : 'pointer', 
+                    cursor: 'pointer', 
                     transition: 'background-color 0.2s ease',
                 }}
             >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '200px' }}>
                     {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                        <div style={{ color: '#cbd5e1', display: 'flex', alignItems: 'center', marginLeft: '-8px' }}>
+                        <div 
+                            {...attributes}
+                            {...(isEditing ? {} : listeners)}
+                            style={{ color: '#cbd5e1', display: 'flex', alignItems: 'center', marginLeft: '-8px', touchAction: 'none', cursor: isDragging ? 'grabbing' : 'grab' }}
+                        >
                             <GripVertical size={20} />
                         </div>
                     )}
@@ -452,7 +457,7 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
                                     setIsEditing(true);
                                 }
                             }}
-                            style={{ margin: 0, fontSize: '1.1rem', color: isAllDone ? '#065f46' : '#0f172a', fontWeight: '700', letterSpacing: '-0.01em', cursor: 'text' }}
+                            style={{ margin: 0, fontSize: '1.1rem', color: isAllDone ? '#065f46' : '#0f172a', fontWeight: '700', letterSpacing: '-0.01em', cursor: 'text', wordBreak: 'break-word', minWidth: 0, flex: 1 }}
                         >
                             {step.text}
                         </h5>
@@ -472,7 +477,7 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
                     </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
                     {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
                         <>
                             <button 
