@@ -5027,7 +5027,6 @@ const Dashboard = () => {
                                                     Marker som tabt / afvist opgave
                                                 </button>
                                             </div>
-                                        )}
 
                                         {/* Slet sag (Permanent) */}
                                         <div style={{ marginTop: '32px', borderTop: '1px solid #fee2e2', paddingTop: '16px', display: 'flex', justifyContent: 'center' }}>
