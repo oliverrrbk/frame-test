@@ -220,7 +220,96 @@ serve(async (req) => {
             serviceRoleKey
         );
 
-        const { type } = await req.json().catch(() => ({ type: "all" }));
+        const bodyData = await req.json().catch(() => ({ type: "all" }));
+        const type = bodyData?.type || "all";
+
+        if (type === "lead_notification") {
+            const leadId = bodyData?.lead_id;
+            if (!leadId) {
+                return new Response(JSON.stringify({ error: "Missing lead_id", ...stats }), {
+                    headers: { "Content-Type": "application/json" },
+                    status: 400
+                });
+            }
+
+            const { data: lead, error: leadError } = await supabaseClient
+                .from("leads")
+                .select("id, status, customer_name, project_category, carpenter_id")
+                .eq("id", leadId)
+                .single();
+
+            if (leadError || !lead) {
+                console.error("Error fetching lead", leadError);
+                return new Response(JSON.stringify({ error: "Lead not found", ...stats }), {
+                    headers: { "Content-Type": "application/json" },
+                    status: 404
+                });
+            }
+
+            const carpenterId = lead.carpenter_id;
+            if (!carpenterId) {
+                return new Response(JSON.stringify({ success: true, message: "No carpenter assigned to lead", ...stats }), {
+                    headers: { "Content-Type": "application/json" },
+                    status: 200
+                });
+            }
+
+            let title = "";
+            let bodyText = "";
+            let slot = "";
+            let notificationType = "";
+
+            if (lead.status === "Ny forespørgsel") {
+                title = "Ny forespørgsel! 🛠️";
+                bodyText = `${lead.customer_name || 'En kunde'} har sendt en forespørgsel på ${lead.project_category || 'projekt'}.`;
+                slot = "new_lead";
+                notificationType = "lead_request";
+            } else if (lead.status === "Bekræftet opgave") {
+                title = "Tilbud godkendt! 🎉";
+                bodyText = `${lead.customer_name || 'Kunden'} har bekræftet tilbuddet på ${lead.project_category || 'projekt'}.`;
+                slot = "quote_accepted";
+                notificationType = "lead_accept";
+            } else {
+                return new Response(JSON.stringify({ success: true, message: "Status not trigger-worthy", ...stats }), {
+                    headers: { "Content-Type": "application/json" },
+                    status: 200
+                });
+            }
+
+            const recipientIds = [String(carpenterId)];
+
+            const { data: carpenter } = await supabaseClient
+                .from("carpenters")
+                .select("company_id")
+                .eq("id", carpenterId)
+                .single();
+
+            if (carpenter && carpenter.company_id) {
+                recipientIds.push(String(carpenter.company_id));
+            }
+
+            const uniqueRecipients = [...new Set(recipientIds)];
+
+            for (const userId of uniqueRecipients) {
+                await sendToUser(supabaseClient, stats, {
+                    userId,
+                    type: notificationType,
+                    relatedId: String(lead.id),
+                    slot,
+                    payload: {
+                        title,
+                        body: bodyText,
+                        url: "/dashboard"
+                    }
+                });
+            }
+
+            return new Response(JSON.stringify({ success: true, ...stats }), {
+                headers: { "Content-Type": "application/json" },
+                status: 200
+            });
+        }
+
         const now = new Date();
         const todayStr = getLocalDate(now);
         const tomorrowStr = addDays(todayStr, 1);
