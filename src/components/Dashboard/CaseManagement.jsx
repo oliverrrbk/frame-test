@@ -552,7 +552,7 @@ const isConfirmedCase = (lead) => {
     return false;
 };
 
-export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile }) {
+export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile }) {
     const [activeCases, setActiveCases] = useState([]);
     const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
     const selectedCase = activeCases.find(c => c.id === selectedCaseIdState) || null;
@@ -2081,6 +2081,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         <div style={{ width: '40px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', margin: '0 auto 24px auto' }} />
                                         <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#64748b', fontWeight: '600' }}>Handlinger</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <button onClick={() => { setShowActionSheet(false); onOpenChat && onOpenChat(selectedCase.id); }} style={{ padding: '16px', background: '#eff6ff', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#2563eb', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <MessageSquare size={20} color="#2563eb" /> Åben Chat
+                                            </button>
                                             <button onClick={() => { setShowActionSheet(false); setIsDailyMessageOpen(true); }} style={{ padding: '16px', background: '#f8fafc', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#0f172a', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <MessageCircle size={20} color="#3b82f6" /> Dagens Besked
                                             </button>
@@ -2532,6 +2535,28 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         
                         {/* Status bar */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <button
+                                onClick={() => onOpenChat && onOpenChat(selectedCase.id)}
+                                style={{
+                                    padding: '8px 16px',
+                                    borderRadius: '99px',
+                                    border: '1px solid rgba(37, 99, 235, 0.2)',
+                                    background: 'rgba(37, 99, 235, 0.1)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: '600',
+                                    color: '#2563eb',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.15)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.1)'; }}
+                            >
+                                <MessageSquare size={16} /> Åben Chat
+                            </button>
+
                             {/* DAGENS BESKED PILL */}
                             <div style={{ position: 'relative' }}>
                                 {(() => {

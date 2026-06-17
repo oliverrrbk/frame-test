@@ -40,6 +40,7 @@ import DrawingsGallery from '../Drawings/DrawingsGallery';
 import CalendarView from './CalendarView';
 import PwaOnboarding from './PwaOnboarding';
 import AccountSettingsView from './AccountSettingsView';
+import ChatTab from './ChatTab';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 // Konfiguration til det nye Google Map
@@ -472,6 +473,7 @@ const Dashboard = () => {
     
     const [targetCaseId, setTargetCaseId] = useState(null);
     const [targetInvoiceCaseId, setTargetInvoiceCaseId] = useState(null);
+    const [chatTargetLeadId, setChatTargetLeadId] = useState(null);
     const [activeTab, setActiveTab] = useState(() => {
         return localStorage.getItem('dashboard_active_tab') || 'overview';
     });
@@ -766,6 +768,11 @@ const Dashboard = () => {
             window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
         } else if (tabParam === 'integrations') {
             setActiveTab('integrations');
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('tab');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+        } else if (tabParam === 'chat') {
+            setActiveTab('chat');
             const newUrl = new URL(window.location);
             newUrl.searchParams.delete('tab');
             window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
@@ -2484,6 +2491,11 @@ const Dashboard = () => {
                             <Calendar size={20} /> Kalender
                         </button>
                     )}
+                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
+                        <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => { setActiveTab('chat'); setIsMobileMenuOpen(false); }}>
+                            <MessageSquare size={20} /> Intern Chat
+                        </button>
+                    )}
                     {['worker', 'apprentice', 'sales'].includes(effectiveRole) && (
                         <button className={activeTab === 'worker_timesheet' ? 'active' : ''} onClick={() => { setActiveTab('worker_timesheet'); setIsMobileMenuOpen(false); }}>
                             <Clock size={20} /> Timeregistrering
@@ -3012,6 +3024,10 @@ const Dashboard = () => {
                                     setTargetInvoiceCaseId(caseId);
                                     setActiveTab('finance');
                                 }}
+                                onOpenChat={(caseId) => {
+                                    setChatTargetLeadId(caseId);
+                                    setActiveTab('chat');
+                                }}
                                 onUpdateLead={(updated) => {
                                     setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
                                     if (selectedLead && selectedLead.id === updated.id) {
@@ -3035,6 +3051,16 @@ const Dashboard = () => {
                                     setTargetCaseId(lead.id);
                                     setActiveTab('cases');
                                 }}
+                            />
+                        </div>
+                    )}
+                    {activeTab === 'chat' && (
+                        <div className="tab-pane active" style={{ height: '100%' }}>
+                            <ChatTab 
+                                profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.id }}
+                                leads={leadsData}
+                                targetLeadId={chatTargetLeadId}
+                                clearTargetLeadId={() => setChatTargetLeadId(null)}
                             />
                         </div>
                     )}
