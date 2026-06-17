@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Clock, CheckCircle, MessageSquare, Plus, Users, X, Trash2, Truck, ChevronDown, Palmtree, Thermometer, Briefcase, Coffee, PartyPopper, Search, Bell, BellOff, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Clock, CheckCircle, MessageSquare, Plus, Users, X, Trash2, Truck, ChevronDown, Palmtree, Thermometer, Briefcase, Coffee, PartyPopper, Search, Bell, BellOff, MapPin, Repeat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -39,6 +39,13 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         { id: 'both', name: 'Begge dele', icon: Bell }
     ];
 
+    const RECURRENCE_OPTIONS = [
+        { id: 'none', name: 'Ingen', short: 'Enkelt' },
+        { id: 'weekly', name: 'Hver uge', short: 'Ugentlig' },
+        { id: 'biweekly', name: 'Hver 14. dag', short: '14 dage' },
+        { id: 'monthly', name: 'Hver måned', short: 'Månedlig' }
+    ];
+
     const getEventStyle = (type) => {
         if (type === 'Materialelevering') return { bg: '#fff7ed', border: '#fdba74', text: '#c2410c', leftBorder: '#f97316', icon: Truck };
         if (type === 'Kundemøde') return { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', leftBorder: '#0284c7', icon: Briefcase };
@@ -53,7 +60,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [selectedMobileDate, setSelectedMobileDate] = useState(new Date());
     const [showMobileFilter, setShowMobileFilter] = useState(false);
     const [showMobileSearch, setShowMobileSearch] = useState(false);
-    const [mobileViewType, setMobileViewType] = useState('month'); // 'month' or 'timeline'
+    const [mobileViewType, setMobileViewType] = useState('month'); // 'month', 'today' or 'timeline'
     
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -94,7 +101,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         notes: '',
         participants: ['all'],
         selectedLeadId: '', // For Materialelevering
-        notification_preference: 'day_before'
+        notification_preference: 'day_before',
+        recurrence: 'none',
+        recurrenceUntil: ''
     });
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -121,7 +130,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 notes: eventToEdit.notes || '',
                 participants: eventToEdit.participants || ['all'],
                 selectedLeadId: eventToEdit.relatedLeadId || '',
-                notification_preference: eventToEdit.notification_preference || 'day_before'
+                notification_preference: eventToEdit.notification_preference || 'day_before',
+                recurrence: eventToEdit.recurrence || 'none',
+                recurrenceUntil: eventToEdit.recurrenceUntil || ''
             });
         } else if (dateObj) {
             const year = dateObj.getFullYear();
@@ -142,7 +153,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 notes: '',
                 participants: ['all'],
                 selectedLeadId: '',
-                notification_preference: 'day_before'
+                notification_preference: 'day_before',
+                recurrence: 'none',
+                recurrenceUntil: ''
             });
         }
         setShowEventModal(true);
@@ -228,7 +241,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const calendarEvents = useMemo(() => {
         const events = carpenterProfile?.raw_data?.calendar_events || [];
         if (selectedEmployeeIds.includes('all') || selectedEmployeeIds.length === 0) return events;
-        return events.filter(e => e.participants.includes('all') || e.participants.some(p => selectedEmployeeIds.includes(String(p))));
+        return events.filter(e => (e.participants || []).includes('all') || (e.participants || []).some(p => selectedEmployeeIds.includes(String(p))));
     }, [carpenterProfile, selectedEmployeeIds]);
 
 
@@ -335,6 +348,86 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         ''
     );
 
+    const toDateInputValue = (date) => {
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const parseDateInput = (value) => new Date(`${value}T00:00:00`);
+
+    const addDaysToDate = (date, days) => {
+        const d = new Date(date);
+        d.setDate(d.getDate() + days);
+        return d;
+    };
+
+    const addMonthsToDate = (date, months) => {
+        const d = new Date(date);
+        const day = d.getDate();
+        d.setMonth(d.getMonth() + months);
+        if (d.getDate() !== day) d.setDate(0);
+        return d;
+    };
+
+    const getDefaultRecurrenceUntil = (startDate) => toDateInputValue(addMonthsToDate(parseDateInput(startDate), 3));
+
+    const getRecurrenceName = (recurrence) => RECURRENCE_OPTIONS.find(option => option.id === recurrence)?.name || 'Gentagelse';
+
+    const getRecurrencePreview = (formData) => {
+        const previewBase = {
+            id: 'preview',
+            startDate: formData.startDate,
+            endDate: formData.endDate
+        };
+        return buildRecurringEventDrafts(previewBase, formData);
+    };
+
+    const buildRecurringEventDrafts = (baseEvent, formData) => {
+        if (formData.id || !formData.recurrence || formData.recurrence === 'none' || !formData.recurrenceUntil) {
+            return [baseEvent];
+        }
+
+        const start = parseDateInput(formData.startDate);
+        const end = parseDateInput(formData.endDate);
+        const until = parseDateInput(formData.recurrenceUntil);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || Number.isNaN(until.getTime()) || until < start) {
+            return [baseEvent];
+        }
+
+        const durationDays = Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+        const recurrenceGroupId = `rec-${Date.now()}`;
+        const drafts = [];
+        let occurrenceStart = new Date(start);
+        let index = 0;
+
+        while (occurrenceStart <= until && drafts.length < 60) {
+            const occurrenceEnd = addDaysToDate(occurrenceStart, durationDays);
+            drafts.push({
+                ...baseEvent,
+                id: index === 0 ? baseEvent.id : `${baseEvent.id}-r${index}`,
+                startDate: toDateInputValue(occurrenceStart),
+                endDate: toDateInputValue(occurrenceEnd),
+                recurrence: formData.recurrence,
+                recurrenceUntil: formData.recurrenceUntil,
+                recurrenceGroupId,
+                occurrenceIndex: index,
+                recurrenceLabel: getRecurrenceName(formData.recurrence)
+            });
+
+            if (formData.recurrence === 'monthly') {
+                occurrenceStart = addMonthsToDate(occurrenceStart, 1);
+            } else {
+                occurrenceStart = addDaysToDate(occurrenceStart, formData.recurrence === 'biweekly' ? 14 : 7);
+            }
+            index += 1;
+        }
+
+        return drafts;
+    };
+
     const getEventConflictSummary = (formData) => {
         if (!formData?.startDate || !formData?.endDate) return [];
         const participants = formData.type === 'Materialelevering'
@@ -347,29 +440,36 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             : (formData.participants || []).map(String);
 
         const checksAll = participants.length === 0 || participants.includes('all');
-        const start = new Date(formData.startDate + 'T00:00:00');
-        const end = new Date(formData.endDate + 'T00:00:00');
         const conflicts = [];
+        const ranges = buildRecurringEventDrafts({
+            id: formData.id || 'draft',
+            startDate: formData.startDate,
+            endDate: formData.endDate
+        }, formData);
 
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const items = getItemsForDay(new Date(d), { ignoreSearch: true });
-            const dayLabel = format(new Date(d), 'd. MMM', { locale: da });
-            const otherEvents = items.events.filter(event => {
-                if (event.id === formData.id) return false;
-                if (checksAll || event.participants?.includes('all')) return true;
-                return (event.participants || []).some(id => participants.includes(String(id)));
-            });
-            const relevantAbsences = items.absences.filter(absence => checksAll || participants.includes(String(absence.employeeId)));
-            const relevantLeadsForParticipants = items.leads.filter(lead => {
-                if (checksAll) return true;
-                const ids = [...(lead.raw_data?.assigned_workers || []), ...(lead.raw_data?.assigned_pm || [])].map(String);
-                return ids.some(id => participants.includes(id));
-            });
+        ranges.forEach(range => {
+            const start = new Date(range.startDate + 'T00:00:00');
+            const end = new Date(range.endDate + 'T00:00:00');
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const items = getItemsForDay(new Date(d), { ignoreSearch: true });
+                const dayLabel = format(new Date(d), 'd. MMM', { locale: da });
+                const otherEvents = items.events.filter(event => {
+                    if (event.id === formData.id || event.id === range.id) return false;
+                    if (checksAll || event.participants?.includes('all')) return true;
+                    return (event.participants || []).some(id => participants.includes(String(id)));
+                });
+                const relevantAbsences = items.absences.filter(absence => checksAll || participants.includes(String(absence.employeeId)));
+                const relevantLeadsForParticipants = items.leads.filter(lead => {
+                    if (checksAll) return true;
+                    const ids = [...(lead.raw_data?.assigned_workers || []), ...(lead.raw_data?.assigned_pm || [])].map(String);
+                    return ids.some(id => participants.includes(id));
+                });
 
-            if (otherEvents.length > 0) conflicts.push(`${dayLabel}: ${otherEvents.length} anden aftale`);
-            if (relevantAbsences.length > 0) conflicts.push(`${dayLabel}: ${relevantAbsences.length} fravær`);
-            if (relevantLeadsForParticipants.length > 0) conflicts.push(`${dayLabel}: ${relevantLeadsForParticipants.length} sag(er) planlagt`);
-        }
+                if (otherEvents.length > 0) conflicts.push(`${dayLabel}: ${otherEvents.length} anden aftale`);
+                if (relevantAbsences.length > 0) conflicts.push(`${dayLabel}: ${relevantAbsences.length} fravær`);
+                if (relevantLeadsForParticipants.length > 0) conflicts.push(`${dayLabel}: ${relevantLeadsForParticipants.length} sag(er) planlagt`);
+            }
+        });
 
         return conflicts.slice(0, 4);
     };
@@ -419,17 +519,23 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             participants: finalParticipants,
             relatedLeadId: eventFormData.selectedLeadId || null,
             notification_preference: eventFormData.notification_preference || 'day_before',
+            recurrence: original?.recurrence || eventFormData.recurrence || 'none',
+            recurrenceUntil: original?.recurrenceUntil || eventFormData.recurrenceUntil || '',
+            recurrenceGroupId: original?.recurrenceGroupId || null,
+            occurrenceIndex: original?.occurrenceIndex ?? null,
+            recurrenceLabel: original?.recurrenceLabel || getRecurrenceName(eventFormData.recurrence),
             createdById: original?.createdById || userId  // hvem oprettede aftalen
         };
+        const eventsToAdd = buildRecurringEventDrafts(newEventObj, eventFormData);
 
         try {
             const updatedEvents = await mutateCalendarEvents({
                 companyId: carpenterProfile?.id,
                 removeIds: eventFormData.id ? [eventFormData.id] : [],
-                add: [newEventObj]
+                add: eventsToAdd
             });
             if (setCarpenterProfile) setCarpenterProfile({ ...carpenterProfile, raw_data: { ...carpenterProfile.raw_data, calendar_events: updatedEvents } });
-            toast.success(eventFormData.id ? 'Aftale opdateret' : 'Aftale oprettet i kalenderen');
+            toast.success(eventFormData.id ? 'Aftale opdateret' : eventsToAdd.length > 1 ? `${eventsToAdd.length} aftaler oprettet i kalenderen` : 'Aftale oprettet i kalenderen');
             setShowEventModal(false);
         } catch (error) {
             toast.error('Fejl ved gemning af aftale');
@@ -1727,7 +1833,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                             setEventFormData(prev => ({
                                                 ...prev, 
                                                 startDate: newStart,
-                                                endDate: prev.endDate < newStart ? newStart : prev.endDate
+                                                endDate: prev.endDate < newStart ? newStart : prev.endDate,
+                                                recurrenceUntil: prev.recurrence !== 'none' && (!prev.recurrenceUntil || prev.recurrenceUntil < newStart) ? getDefaultRecurrenceUntil(newStart) : prev.recurrenceUntil
                                             }))
                                         }} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', flex: 1 }} />
                                         {!eventFormData.allDay && <input type="time" required value={eventFormData.startTime} onChange={e=> {
@@ -1749,6 +1856,93 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     </div>
                                 </div>
                             </div>
+
+                            {!eventFormData.id ? (
+                                <div style={{
+                                    background: 'linear-gradient(135deg, rgba(248,250,252,0.96), rgba(239,246,255,0.9))',
+                                    border: '1px solid rgba(191,219,254,0.9)',
+                                    boxShadow: '0 14px 30px rgba(15,23,42,0.08)',
+                                    borderRadius: '18px',
+                                    padding: '16px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '12px'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ width: '38px', height: '38px', borderRadius: '14px', background: '#dbeafe', color: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Repeat size={19} />
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a' }}>Gentagelse</div>
+                                                <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>Til faste byggemøder, kontordage eller rutiner</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '8px' }}>
+                                        {RECURRENCE_OPTIONS.map(option => {
+                                            const active = eventFormData.recurrence === option.id;
+                                            return (
+                                                <motion.button
+                                                    key={option.id}
+                                                    type="button"
+                                                    whileHover={{ y: -2 }}
+                                                    whileTap={{ scale: 0.97 }}
+                                                    onClick={() => setEventFormData(prev => ({
+                                                        ...prev,
+                                                        recurrence: option.id,
+                                                        recurrenceUntil: option.id === 'none' ? '' : (prev.recurrenceUntil || getDefaultRecurrenceUntil(prev.startDate))
+                                                    }))}
+                                                    style={{
+                                                        border: active ? '1px solid #2563eb' : '1px solid #dbeafe',
+                                                        background: active ? '#1d4ed8' : 'rgba(255,255,255,0.86)',
+                                                        color: active ? '#fff' : '#334155',
+                                                        borderRadius: '14px',
+                                                        padding: '10px 8px',
+                                                        fontSize: '0.82rem',
+                                                        fontWeight: 900,
+                                                        cursor: 'pointer',
+                                                        boxShadow: active ? '0 10px 18px rgba(37,99,235,0.24)' : '0 8px 16px rgba(15,23,42,0.04)'
+                                                    }}
+                                                >
+                                                    {option.short}
+                                                </motion.button>
+                                            );
+                                        })}
+                                    </div>
+                                    {eventFormData.recurrence !== 'none' && (
+                                        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '10px', alignItems: isMobile ? 'stretch' : 'center' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', marginBottom: '4px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gentag indtil</label>
+                                                <input
+                                                    type="date"
+                                                    min={eventFormData.startDate}
+                                                    value={eventFormData.recurrenceUntil || getDefaultRecurrenceUntil(eventFormData.startDate)}
+                                                    onChange={e => setEventFormData({ ...eventFormData, recurrenceUntil: e.target.value })}
+                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '12px', border: '1px solid #bfdbfe', background: '#fff', fontWeight: 800, color: '#0f172a' }}
+                                                />
+                                            </div>
+                                            {(() => {
+                                                const preview = getRecurrencePreview({
+                                                    ...eventFormData,
+                                                    recurrenceUntil: eventFormData.recurrenceUntil || getDefaultRecurrenceUntil(eventFormData.startDate)
+                                                });
+                                                return (
+                                                    <div style={{ flex: 1, background: '#fff', border: '1px solid #dbeafe', borderRadius: '14px', padding: '12px', color: '#1e3a8a', fontSize: '0.84rem', fontWeight: 800, lineHeight: 1.35 }}>
+                                                        Opretter {preview.length} aftale{preview.length === 1 ? '' : 'r'} som {getRecurrenceName(eventFormData.recurrence).toLowerCase()}.
+                                                        {preview.length >= 60 && <div style={{ marginTop: '4px', color: '#b45309' }}>Grænse: maks. 60 gentagelser ad gangen.</div>}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : eventFormData.recurrence && eventFormData.recurrence !== 'none' ? (
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '14px', padding: '12px', color: '#1e3a8a', fontSize: '0.84rem', fontWeight: 800, lineHeight: 1.4 }}>
+                                    <Repeat size={17} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                    <div>Denne aftale er del af en gentagende serie. Ændringer her gælder kun denne ene aftale.</div>
+                                </div>
+                            ) : null}
 
                             {eventFormData.type === 'Materialelevering' ? (
                                 <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>

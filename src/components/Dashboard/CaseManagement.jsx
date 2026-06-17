@@ -180,7 +180,7 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
             ref={setNodeRef} 
             style={style}
             {...attributes}
-            {...listeners}
+            {...(isEditing ? {} : listeners)}
             onMouseEnter={(e) => {
                 if (!sub.done && !isDragging) {
                     e.currentTarget.style.backgroundColor = '#f8fafc';
@@ -262,7 +262,14 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
                     />
                 ) : (
                     <span 
-                        onClick={(e) => { e.stopPropagation(); handleTodoToggle(stepId, sub.id); }}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (profile?.role !== 'worker' && profile?.role !== 'apprentice') {
+                                setIsEditing(true);
+                            } else {
+                                handleTodoToggle(stepId, sub.id);
+                            }
+                        }}
                         style={{ 
                             fontSize: '0.95rem', 
                             color: sub.done ? '#64748b' : '#1e293b', 
@@ -353,7 +360,7 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
     };
 
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        <div ref={setNodeRef} style={style} {...attributes} {...(isEditing ? {} : listeners)}>
             {/* Header / Accordion trigger */}
             <div 
                 onClick={() => { if (!isEditing) handleToggleExpand(step.id); }}
@@ -437,7 +444,15 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
                             }}
                         />
                     ) : (
-                        <h5 style={{ margin: 0, fontSize: '1.1rem', color: isAllDone ? '#065f46' : '#0f172a', fontWeight: '700', letterSpacing: '-0.01em' }}>
+                        <h5 
+                            onClick={(e) => {
+                                if (profile?.role !== 'worker' && profile?.role !== 'apprentice') {
+                                    e.stopPropagation();
+                                    setIsEditing(true);
+                                }
+                            }}
+                            style={{ margin: 0, fontSize: '1.1rem', color: isAllDone ? '#065f46' : '#0f172a', fontWeight: '700', letterSpacing: '-0.01em', cursor: 'text' }}
+                        >
                             {step.text}
                         </h5>
                     )}
