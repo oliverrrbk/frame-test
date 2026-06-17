@@ -30,7 +30,9 @@ const CATEGORY_KEYWORDS = [
     [['hegn'], 'fence'],
 ];
 
-function detectCategory(text) {
+// Genkend faget ud fra fritekst (etapenavn, titel, materialer). Eksporteret så
+// både materiale-berigelsen og bygge-to-do'en bruger SAMME fag-genkendelse.
+export function detectCategory(text) {
     const t = (text || '').toLowerCase();
     for (const [kws, cat] of CATEGORY_KEYWORDS) {
         if (kws.some(k => t.includes(k))) return cat;
