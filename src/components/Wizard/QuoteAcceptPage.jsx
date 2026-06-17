@@ -139,11 +139,6 @@ const QuoteAcceptPage = () => {
             // Succes
             setAccepted(true);
 
-            // Push til tømreren (best-effort — må aldrig blokere accept-flowet)
-            if (lead?.id) {
-                supabase.functions.invoke('notify-quote-accepted', { body: { leadId: lead.id } }).catch(() => {});
-            }
-
             // Send bekræftelses-emails
             if (lead && lead.carpenter_id) {
                 // Hent tømrerens info for at få email og navn
