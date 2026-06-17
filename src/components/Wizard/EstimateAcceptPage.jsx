@@ -120,6 +120,11 @@ const EstimateAcceptPage = () => {
                 if (error) throw error;
             }
 
+            // Push til tømreren (best-effort — må aldrig blokere flowet)
+            if (lead?.id) {
+                supabase.functions.invoke('notify-quote-accepted', { body: { leadId: lead.id, kind: 'new_request' } }).catch(() => {});
+            }
+
             // Send Email to Carpenter
             const customerEmail = lead.customer_email;
             const customerName = lead.customer_name;
