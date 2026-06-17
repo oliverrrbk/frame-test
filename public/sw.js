@@ -114,18 +114,34 @@ self.addEventListener('push', function(event) {
 
 self.addEventListener('notificationclick', function(event) {
     event.notification.close();
+    
+    // Resolve relative URL to absolute URL relative to the service worker origin
+    const targetUrl = new URL(event.notification.data.url || '/', self.location.origin).href;
+
     event.waitUntil(
         clients.matchAll({ type: 'window' }).then(windowClients => {
-            // Tjek om vi allerede har en tab åben
+            // 1. Tjek om en af de åbne tabs har samme sti (fx /dashboard)
             for (let i = 0; i < windowClients.length; i++) {
                 const client = windowClients[i];
-                if (client.url.includes(event.notification.data.url) && 'focus' in client) {
-                    return client.focus();
+                try {
+                    const clientUrl = new URL(client.url);
+                    const targetUrlObj = new URL(targetUrl);
+                    
+                    if (clientUrl.pathname === targetUrlObj.pathname && 'focus' in client) {
+                        // Naviger den åbne tab til den specifikke URL (fx med nyt ?leadId=)
+                        if ('navigate' in client) {
+                            client.navigate(targetUrl);
+                        }
+                        return client.focus();
+                    }
+                } catch (err) {
+                    console.error('Error matching URLs in service worker:', err);
                 }
             }
-            // Hvis ikke, åbn et nyt vindue
+            
+            // 2. Hvis ingen tab matcher stien, åbn et nyt vindue
             if (clients.openWindow) {
-                return clients.openWindow(event.notification.data.url);
+                return clients.openWindow(targetUrl);
             }
         })
     );

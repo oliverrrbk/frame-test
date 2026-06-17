@@ -299,7 +299,7 @@ serve(async (req) => {
                     payload: {
                         title,
                         body: bodyText,
-                        url: "/dashboard"
+                        url: `/dashboard?leadId=${lead.id}`
                     }
                 });
             }
