@@ -310,10 +310,206 @@ serve(async (req) => {
             });
         }
 
+        if (type === "new_assignment") {
+            const leadId = bodyData?.lead_id;
+            const addedWorkers = Array.isArray(bodyData?.added_workers) ? bodyData.added_workers.map(String) : [];
+            const addedPms = Array.isArray(bodyData?.added_pms) ? bodyData.added_pms.map(String) : [];
+            const allAdded = [...new Set([...addedWorkers, ...addedPms])];
+
+            if (!leadId || allAdded.length === 0) {
+                return new Response(JSON.stringify({ success: true, message: "No new assignments or missing leadId", ...stats }), {
+                    headers: { "Content-Type": "application/json" },
+                    status: 200
+                });
+            }
+
+            const { data: lead, error: leadError } = await supabaseClient
+                .from("leads")
+                .select("id, project_category, raw_data")
+                .eq("id", leadId)
+                .single();
+
+            if (leadError || !lead) {
+                console.error("Error fetching lead for assignment notification", leadError);
+                return new Response(JSON.stringify({ error: "Lead not found", ...stats }), {
+                    headers: { "Content-Type": "application/json" },
+                    status: 404
+                });
+            }
+
+            const projectTitle = lead.raw_data?.project_title || lead.project_category || "ny opgave";
+            const title = "Ny sag tildelt";
+            const bodyText = `Du er blevet tilføjet til sagen: ${projectTitle}.`;
+
+            for (const userId of allAdded) {
+                await sendToUser(supabaseClient, stats, {
+                    userId,
+                    type: "new_assignment",
+                    relatedId: String(lead.id),
+                    slot: `assigned-${lead.id}-${userId}`,
+                    payload: {
+                        title,
+                        body: bodyText,
+                        url: `/dashboard?leadId=${lead.id}`
+                    }
+                });
+            }
+
+            return new Response(JSON.stringify({ success: true, ...stats }), {
+                headers: { "Content-Type": "application/json" },
+                status: 200
+            });
+        }
+
+        if (type === "case_message_notification") {
+            const leadId = bodyData?.lead_id;
+            const message = bodyData?.message;
+
+            if (!leadId || !message) {
+                return new Response(JSON.stringify({ error: "Missing lead_id or message", ...stats }), {
+                    headers: { "Content-Type": "application/json" },
+                    status: 400
+                });
+            }
+
+            const { data: lead, error: leadError } = await supabaseClient
+                .from("leads")
+                .select("id, project_category, raw_data")
+                .eq("id", leadId)
+                .single();
+
+            if (leadError || !lead) {
+                console.error("Error fetching lead for message notification", leadError);
+                return new Response(JSON.stringify({ error: "Lead not found", ...stats }), {
+                    headers: { "Content-Type": "application/json" },
+                    status: 404
+                });
+            }
+
+            const projectTitle = lead.raw_data?.project_title || lead.project_category || "sagen";
+            const authorName = message.authorName || "Mester";
+            const title = `Ny besked på sag: ${projectTitle}`;
+            const bodyText = `${authorName} skriver: ${message.text || ""}`;
+
+            let recipientIds: string[] = [];
+            if (message.forId) {
+                recipientIds = [String(message.forId)];
+            } else {
+                const assignedWorkers = Array.isArray(lead.raw_data?.assigned_workers) ? lead.raw_data.assigned_workers.map(String) : [];
+                const assignedPm = Array.isArray(lead.raw_data?.assigned_pm) ? lead.raw_data.assigned_pm.map(String) : (lead.raw_data?.assigned_pm ? [String(lead.raw_data.assigned_pm)] : []);
+                recipientIds = [...new Set([...assignedWorkers, ...assignedPm])];
+            }
+
+            for (const userId of recipientIds) {
+                await sendToUser(supabaseClient, stats, {
+                    userId,
+                    type: "case_message_notification",
+                    relatedId: String(message.id || lead.id),
+                    slot: `msg-${message.id || Date.now()}-${userId}`,
+                    payload: {
+                        title,
+                        body: bodyText,
+                        url: `/dashboard?leadId=${lead.id}`
+                    }
+                });
+            }
+
+            return new Response(JSON.stringify({ success: true, ...stats }), {
+                headers: { "Content-Type": "application/json" },
+                status: 200
+            });
+        }
+
         const now = new Date();
         const todayStr = getLocalDate(now);
         const tomorrowStr = addDays(todayStr, 1);
-        const { hour, totalMinutes } = getLocalTimeParts(now);
+        const { hour, minute, totalMinutes } = getLocalTimeParts(now);
+
+        // A. Dagens Morgenbriefing (Kl. 06:00 - 06:59, bypass hour check if explicitly triggered as morning_briefing)
+        if ((type === "all" && hour === 6) || type === "morning_briefing") {
+            const { data: subs } = await supabaseClient
+                .from("push_subscriptions")
+                .select("user_id");
+
+            const uniqueUserIds = [...new Set((subs || []).map((sub: any) => String(sub.user_id)))];
+            const { data: leads } = await supabaseClient
+                .from("leads")
+                .select("id, project_category, raw_data")
+                .in("status", ["Bekræftet opgave", "Sæt i bero"]);
+
+            for (const userId of uniqueUserIds) {
+                const myCases = (leads || []).filter(lead => {
+                    const workers = Array.isArray(lead.raw_data?.assigned_workers) ? lead.raw_data.assigned_workers.map(String) : [];
+                    const pms = Array.isArray(lead.raw_data?.assigned_pm) ? lead.raw_data.assigned_pm.map(String) : (lead.raw_data?.assigned_pm ? [String(lead.raw_data.assigned_pm)] : []);
+                    return workers.includes(userId) || pms.includes(userId);
+                });
+
+                let msgCount = 0;
+                const caseNotes: string[] = [];
+
+                for (const lead of myCases) {
+                    const messages = lead.raw_data?.case_messages || [];
+                    const daily = lead.raw_data?.daily_message;
+
+                    if (daily?.text && daily.date && daily.date.startsWith(todayStr)) {
+                        if (!daily.seen_by || !daily.seen_by.includes(userId)) {
+                            msgCount++;
+                            caseNotes.push(String(daily.text));
+                        }
+                    }
+
+                    for (const m of messages) {
+                        if (m.date && m.date.startsWith(todayStr)) {
+                            if (!m.forId || String(m.forId) === userId) {
+                                msgCount++;
+                                caseNotes.push(String(m.text));
+                            }
+                        }
+                    }
+                }
+
+                if (msgCount > 0) {
+                    const bodyText = msgCount === 1 
+                        ? `Huskeseddel: "${caseNotes[0].slice(0, 60)}${caseNotes[0].length > 60 ? '...' : ''}"`
+                        : `Du har ${msgCount} beskeder/aftaler på dine sager i dag.`;
+
+                    await sendToUser(supabaseClient, stats, {
+                        userId,
+                        type: "morning_briefing",
+                        relatedId: todayStr,
+                        slot: `morning-briefing-${todayStr}-${userId}`,
+                        payload: {
+                            title: "Dagens huskeseddel",
+                            body: bodyText,
+                            url: "/dashboard"
+                        }
+                    });
+                }
+            }
+        }
+
+        // B. Ugentlig fredags-påmindelse: Husk ugeseddel (Fredag kl. 13:30 - 13:59, bypass weekday/hour check if explicitly triggered as timesheet_weekly)
+        const isFriday = weekdayFormatter.format(now) === "Fri";
+        if ((type === "all" && isFriday && hour === 13 && minute >= 30) || type === "timesheet_weekly") {
+            const { data: subs } = await supabaseClient
+                .from("push_subscriptions")
+                .select("user_id");
+
+            const uniqueUserIds = [...new Set((subs || []).map((sub: any) => String(sub.user_id)))];
+            for (const userId of uniqueUserIds) {
+                await sendToUser(supabaseClient, stats, {
+                    userId,
+                    type: "timesheet_weekly",
+                    relatedId: todayStr,
+                    slot: `weekly-timesheet-${todayStr}-${userId}`,
+                    payload: {
+                        title: "Ugeseddel klar til godkendelse",
+                        body: "Husk at godkende dine timer for denne uge, så lønnen kan køres.",
+                        url: "/dashboard?tab=timesheet"
+                    }
+                });
+            }
+        }
 
         if ((type === "timesheet" || type === "all") && isLocalWeekday(now) && hour >= 15 && hour < 18) {
             const registeredToday = new Set<string>();

@@ -112,17 +112,21 @@ CREATE OR REPLACE FUNCTION public.tr_on_lead_push_notify()
 RETURNS TRIGGER AS $$
 DECLARE
     service_role_key TEXT;
+    v_new_msg jsonb;
+    v_msg_exists boolean;
+    v_added_workers jsonb;
+    v_added_pms jsonb;
 BEGIN
-    -- Only trigger when status transitions to 'Ny forespørgsel' or 'Bekræftet opgave'
+    -- Retrieve service role key from cron job command dynamically to avoid hardcoding secrets
+    SELECT substring(command from 'Bearer ([^\"]+)') INTO service_role_key 
+      FROM cron.job 
+     WHERE jobname = 'send-push-reminders-cron' 
+     LIMIT 1;
+
+    -- 1. Status transition push notifications
     IF (TG_OP = 'INSERT' AND NEW.status IN ('Ny forespørgsel', 'Bekræftet opgave')) OR
        (TG_OP = 'UPDATE' AND NEW.status IN ('Ny forespørgsel', 'Bekræftet opgave') AND (OLD.status IS NULL OR OLD.status <> NEW.status)) THEN
        
-        -- Retrieve service role key from cron job command dynamically to avoid hardcoding secrets
-        SELECT substring(command from 'Bearer ([^\"]+)') INTO service_role_key 
-          FROM cron.job 
-         WHERE jobname = 'send-push-reminders-cron' 
-         LIMIT 1;
-
         -- Trigger HTTP Post to send-push-reminders edge function
         PERFORM net.http_post(
             url := 'https://zjbjupovlgwlrvojusnr.supabase.co/functions/v1/send-push-reminders',
@@ -136,6 +140,78 @@ BEGIN
             )
         );
     END IF;
+
+    -- 2. Worker assignment notifications
+    v_added_workers := '[]'::jsonb;
+    v_added_pms := '[]'::jsonb;
+    
+    IF TG_OP = 'INSERT' THEN
+        IF jsonb_typeof(COALESCE(NEW.raw_data->'assigned_workers', '[]'::jsonb)) = 'array' THEN
+            v_added_workers := NEW.raw_data->'assigned_workers';
+        END IF;
+        IF jsonb_typeof(COALESCE(NEW.raw_data->'assigned_pm', '[]'::jsonb)) = 'array' THEN
+            v_added_pms := NEW.raw_data->'assigned_pm';
+        END IF;
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF COALESCE(NEW.raw_data->'assigned_workers', '[]'::jsonb) IS DISTINCT FROM COALESCE(OLD.raw_data->'assigned_workers', '[]'::jsonb) 
+           AND jsonb_typeof(COALESCE(NEW.raw_data->'assigned_workers', '[]'::jsonb)) = 'array' THEN
+            SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb) INTO v_added_workers
+            FROM jsonb_array_elements_text(COALESCE(NEW.raw_data->'assigned_workers', '[]'::jsonb)) AS elem
+            WHERE jsonb_typeof(COALESCE(OLD.raw_data->'assigned_workers', '[]'::jsonb)) <> 'array' 
+               OR NOT (COALESCE(OLD.raw_data->'assigned_workers', '[]'::jsonb) ? elem);
+        END IF;
+        
+        IF COALESCE(NEW.raw_data->'assigned_pm', '[]'::jsonb) IS DISTINCT FROM COALESCE(OLD.raw_data->'assigned_pm', '[]'::jsonb)
+           AND jsonb_typeof(COALESCE(NEW.raw_data->'assigned_pm', '[]'::jsonb)) = 'array' THEN
+            SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb) INTO v_added_pms
+            FROM jsonb_array_elements_text(COALESCE(NEW.raw_data->'assigned_pm', '[]'::jsonb)) AS elem
+            WHERE jsonb_typeof(COALESCE(OLD.raw_data->'assigned_pm', '[]'::jsonb)) <> 'array'
+               OR NOT (COALESCE(OLD.raw_data->'assigned_pm', '[]'::jsonb) ? elem);
+        END IF;
+    END IF;
+
+    IF jsonb_array_length(v_added_workers) > 0 OR jsonb_array_length(v_added_pms) > 0 THEN
+        PERFORM net.http_post(
+            url := 'https://zjbjupovlgwlrvojusnr.supabase.co/functions/v1/send-push-reminders',
+            body := jsonb_build_object(
+                'type', 'new_assignment',
+                'lead_id', NEW.id,
+                'added_workers', v_added_workers,
+                'added_pms', v_added_pms
+            ),
+            headers := jsonb_build_object(
+                'Content-Type', 'application/json',
+                'Authorization', 'Bearer ' || COALESCE(service_role_key, '')
+            )
+        );
+    END IF;
+
+    -- 3. Case message notification
+    IF TG_OP = 'UPDATE' AND COALESCE(NEW.raw_data->'case_messages', '[]'::jsonb) IS DISTINCT FROM COALESCE(OLD.raw_data->'case_messages', '[]'::jsonb) THEN
+        v_new_msg := NEW.raw_data->'case_messages'->-1;
+        IF v_new_msg IS NOT NULL THEN
+            SELECT EXISTS (
+                SELECT 1 FROM jsonb_array_elements(COALESCE(OLD.raw_data->'case_messages', '[]'::jsonb)) AS elem
+                WHERE elem->>'id' = v_new_msg->>'id'
+            ) INTO v_msg_exists;
+
+            IF NOT v_msg_exists THEN
+                PERFORM net.http_post(
+                    url := 'https://zjbjupovlgwlrvojusnr.supabase.co/functions/v1/send-push-reminders',
+                    body := jsonb_build_object(
+                        'type', 'case_message_notification',
+                        'lead_id', NEW.id,
+                        'message', v_new_msg
+                    ),
+                    headers := jsonb_build_object(
+                        'Content-Type', 'application/json',
+                        'Authorization', 'Bearer ' || COALESCE(service_role_key, '')
+                    )
+                );
+            END IF;
+        END IF;
+    END IF;
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
