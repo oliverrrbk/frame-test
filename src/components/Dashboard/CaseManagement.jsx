@@ -3944,6 +3944,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     profile={profile}
                                     onUpdateLead={onUpdateLead}
                                     isMobile={isMobile}
+                                    onGoToInvoice={() => {
+                                        if (onOpenInvoice) {
+                                            onOpenInvoice(selectedCase.id);
+                                        }
+                                    }}
                                 />
                             </div>
                         )}

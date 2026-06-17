@@ -5,7 +5,7 @@ import { Upload, ChevronDown, CheckCircle2, FileText, Building2, Send, Loader2, 
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
 
-const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false }) => {
+const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInvoice }) => {
     const [showUploadForm, setShowUploadForm] = useState(false);
     const [newSupplierInvoice, setNewSupplierInvoice] = useState({ amount: '', description: '', category: 'Materialer', file: null, file_name: '', material_list_id: '' });
     const [isMaterialListDropdownOpen, setIsMaterialListDropdownOpen] = useState(false);
@@ -511,17 +511,29 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false }) => {
                 )}
             </div>
 
-            {(unsentInvoices.length > 0 && profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                <button 
-                    onClick={handleSendAllToAccounting}
-                    disabled={isSendingAll}
-                    style={{ width: '100%', marginTop: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', background: '#0f172a', color: '#fff', border: 'none', padding: '16px 24px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', cursor: isSendingAll ? 'not-allowed' : 'pointer', opacity: isSendingAll ? 0.7 : 1, transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
-                    onMouseEnter={(e) => { if (!isSendingAll) { e.currentTarget.style.backgroundColor = '#1e293b'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)'; } }}
-                    onMouseLeave={(e) => { if (!isSendingAll) { e.currentTarget.style.backgroundColor = '#0f172a'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; } }}
-                >
-                    {isSendingAll ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={20} />}
-                    {isSendingAll ? 'Overfører bilag...' : `Overfør bilag (${unsentInvoices.length})`}
-                </button>
+            {(unsentInvoices.length > 0 && ['admin', 'master', 'boss', 'bookkeeper'].includes(profile?.role)) && (
+                onGoToInvoice ? (
+                    <button 
+                        onClick={() => onGoToInvoice()}
+                        style={{ width: '100%', marginTop: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', background: '#0f172a', color: '#fff', border: 'none', padding: '16px 24px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#1e293b'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#0f172a'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}
+                    >
+                        <FileText size={20} />
+                        Gå til faktura for at overføre bilag
+                    </button>
+                ) : (
+                    <button 
+                        onClick={handleSendAllToAccounting}
+                        disabled={isSendingAll}
+                        style={{ width: '100%', marginTop: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', background: '#0f172a', color: '#fff', border: 'none', padding: '16px 24px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', cursor: isSendingAll ? 'not-allowed' : 'pointer', opacity: isSendingAll ? 0.7 : 1, transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                        onMouseEnter={(e) => { if (!isSendingAll) { e.currentTarget.style.backgroundColor = '#1e293b'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)'; } }}
+                        onMouseLeave={(e) => { if (!isSendingAll) { e.currentTarget.style.backgroundColor = '#0f172a'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; } }}
+                    >
+                        {isSendingAll ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={20} />}
+                        {isSendingAll ? 'Overfører bilag...' : `Overfør bilag (${unsentInvoices.length})`}
+                    </button>
+                )
             )}
         </div>
     );
