@@ -1270,7 +1270,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
         return (
             <div className="custom-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflowX: 'auto', overflowY: 'auto' }}>
-                <div style={{ minWidth: 'max-content', paddingBottom: '16px' }}>
+                <div style={{ minWidth: '100%', paddingBottom: '16px' }}>
                     
                     {/* Header: Dage */}
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', position: 'sticky', top: 0, background: '#f8fafc', zIndex: 10, paddingBottom: '8px', borderBottom: '1px solid #e2e8f0' }}>
@@ -1280,7 +1280,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             checkDate.setDate(startOfWeek.getDate() + idx);
                             const isToday = new Date().getDate() === checkDate.getDate() && new Date().getMonth() === checkDate.getMonth() && new Date().getFullYear() === checkDate.getFullYear();
                             return (
-                                <div key={idx} className="cal-day-header" style={{ width: '120px', flexShrink: 0, textAlign: 'center', fontWeight: '700', fontSize: '0.85rem', color: isToday ? '#2563eb' : '#0f172a', background: isToday ? '#eff6ff' : 'transparent', padding: '12px 8px', borderRadius: '8px' }}>
+                                <div key={idx} className="cal-day-header" style={{ flex: 1, minWidth: 0, textAlign: 'center', fontWeight: '700', fontSize: '0.85rem', color: isToday ? '#2563eb' : '#0f172a', background: isToday ? '#eff6ff' : 'transparent', padding: '12px 8px', borderRadius: '8px' }}>
                                     {format(checkDate, 'eee d. MMM', { locale: da })}
                                 </div>
                             )
@@ -1324,7 +1324,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                                     e.currentTarget.style.background = '#fff'; 
                                                     handleDropOnDate(checkDate); 
                                                 }}
-                                                style={{ width: '120px', flexShrink: 0, minHeight: '80px', background: '#fff', border: '1px dashed #e2e8f0', borderRadius: '8px', padding: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                style={{ flex: 1, minWidth: 0, minHeight: '80px', background: '#fff', border: '1px dashed #e2e8f0', borderRadius: '8px', padding: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                                 {isOverbooked && <div style={{ fontSize: '0.7rem', color: '#fff', background: '#ef4444', padding: '2px 4px', borderRadius: '4px', textAlign: 'center', fontWeight: 'bold' }}>Dobbeltbooket</div>}
                                                 
                                                 {empAbsences.map((a, i) => (
@@ -1378,7 +1378,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const renderMonthView = () => {
         return (
             <div className="custom-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflowX: 'auto' }}>
-                <div style={{ minWidth: '900px', display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px' }}>
+                <div style={{ minWidth: '100%', display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px' }}>
                     {/* Grid Header */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', marginBottom: '12px' }}>
                     {['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'].map(day => (
@@ -1512,7 +1512,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
         return (
             <div className="custom-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflowX: 'auto' }}>
-                <div style={{ minWidth: '900px', display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', height: '100%', paddingBottom: '16px' }}>
+                <div style={{ minWidth: '100%', display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', height: '100%', paddingBottom: '16px' }}>
                     {Array.from({ length: 7 }).map((_, idx) => {
                     const checkDate = new Date(startOfWeek);
                     checkDate.setDate(startOfWeek.getDate() + idx);
