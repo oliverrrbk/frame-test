@@ -1,8 +1,62 @@
 import { MATERIAL_INDEX, WORK_FORMULAS } from '../src/prices.js';
+import { WHISPER_PROMPT, FAGTERMER_TEXT, FAGTERM_CORRECTION_PROMPT } from '../src/utils/fagtermer.js';
 
 export const config = {
     runtime: 'edge'
 };
+
+// Transskribér lyd med den bedste tilgængelige model + dansk fag-ordliste som hint.
+// Prøver gpt-4o-transcribe (mest præcis) og falder tilbage til whisper-1, så det
+// altid virker — også hvis den nye model ikke er slået til på kontoen.
+async function transcribeAudio(audioFile, apiKey) {
+    const models = ['gpt-4o-transcribe', 'whisper-1'];
+    let lastErr = '';
+    for (const model of models) {
+        const fd = new FormData();
+        fd.append('file', audioFile, 'recording.webm');
+        fd.append('model', model);
+        fd.append('language', 'da');
+        fd.append('prompt', WHISPER_PROMPT);
+        const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+            body: fd
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            console.log(`Transcribed with ${model}`);
+            return data.text;
+        }
+        lastErr = await resp.text();
+        console.error(`Transcription failed with ${model}:`, lastErr);
+    }
+    throw new Error(`Whisper API Error: ${lastErr}`);
+}
+
+// Let efter-rettelse: retter KUN fejlhørte danske fagtermer i den rå diktering.
+// Fejler aldrig flowet — returnerer den oprindelige tekst ved problemer.
+async function correctFagtermer(text, apiKey) {
+    try {
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model: 'gpt-5.5',
+                messages: [
+                    { role: 'system', content: FAGTERM_CORRECTION_PROMPT },
+                    { role: 'user', content: text }
+                ]
+            })
+        });
+        if (!resp.ok) return text;
+        const data = await resp.json();
+        const corrected = data.choices?.[0]?.message?.content?.trim();
+        return corrected || text;
+    } catch (e) {
+        console.error('Fagterm-rettelse fejlede:', e);
+        return text;
+    }
+}
 
 export default async function handler(req) {
     if (req.method !== 'POST') {
@@ -25,44 +79,25 @@ export default async function handler(req) {
                 return new Response(JSON.stringify({ error: 'No audio file provided' }), { status: 400 });
             }
 
-            // 1. Transcribe audio using OpenAI Whisper
-            const whisperFormData = new FormData();
-            whisperFormData.append('file', audioFile, 'recording.webm');
-            whisperFormData.append('model', 'whisper-1');
-            whisperFormData.append('language', 'da');
-
-            console.log('Sending to Whisper API...');
-            const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-                },
-                body: whisperFormData
-            });
-
-            if (!whisperResponse.ok) {
-                const errorText = await whisperResponse.text();
-                console.error('Whisper API Error:', errorText);
-                throw new Error(`Whisper API Error: ${whisperResponse.statusText}`);
-            }
-
-            const whisperData = await whisperResponse.json();
-            transcription = whisperData.text;
+            // 1. Transskribér lyd (bedste model + dansk fag-ordliste som hint)
+            console.log('Sending to transcription API...');
+            transcription = await transcribeAudio(audioFile, process.env.OPENAI_API_KEY);
             console.log('Transcription:', transcription);
 
             if (!transcription || transcription.trim() === '') {
-                return new Response(JSON.stringify({ 
-                    title: 'Tom lydfil', 
-                    notes: 'Der blev ikke registreret noget tale. Prøv igen.', 
-                    phases: [{ name: 'Generelt', hours: 0, materials: [] }] 
+                return new Response(JSON.stringify({
+                    title: 'Tom lydfil',
+                    notes: 'Der blev ikke registreret noget tale. Prøv igen.',
+                    phases: [{ name: 'Generelt', hours: 0, materials: [] }]
                 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
 
-            // Return immediately if only transcribing
+            // Kun transskribering (log-diktering): ret fagtermer og returnér ren tekst.
             if (mode === 'transcribe') {
-                return new Response(JSON.stringify({ transcription }), { 
-                    status: 200, 
-                    headers: { 'Content-Type': 'application/json' } 
+                const corrected = await correctFagtermer(transcription, process.env.OPENAI_API_KEY);
+                return new Response(JSON.stringify({ transcription: corrected }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
                 });
             }
         }
@@ -79,6 +114,9 @@ ${JSON.stringify(MATERIAL_INDEX)}
 
 Og her er hans standard formler for tidsforbrug:
 ${JSON.stringify(WORK_FORMULAS)}
+
+Vigtige danske byggefagtermer (forstå dem korrekt, og ret fejlhørte/fejlstavede varianter i transskriptionen til disse):
+${FAGTERMER_TEXT}
 
 Instrukser:
 1. Inddel arbejdet i logiske byggeetaper (Phases). F.eks. "Jord og beton", "Råhus", "Montering af vinduer", "Indvendig finish", "El/VVS".
