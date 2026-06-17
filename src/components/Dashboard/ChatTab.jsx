@@ -47,16 +47,16 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
 
           const companyId = profile.company_id || profile.id;
           
-          // Create the thread
-          const { data: newThread, error: threadError } = await supabase
+          // Create the thread with a client-generated UUID to bypass RLS chicken-and-egg
+          const threadId = window.crypto.randomUUID();
+          const { error: threadError } = await supabase
             .from('chat_threads')
             .insert([{
+              id: threadId,
               company_id: companyId,
               type: 'case',
               related_lead_id: lead.id
-            }])
-            .select()
-            .single();
+            }]);
 
           if (threadError) throw threadError;
 
@@ -73,7 +73,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
           ]);
 
           const participantsToInsert = Array.from(participantUserIds).map(userId => ({
-            thread_id: newThread.id,
+            thread_id: threadId,
             user_id: userId
           }));
 
@@ -84,9 +84,13 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
           if (partError) throw partError;
 
           const enriched = {
-            ...newThread,
+            id: threadId,
+            company_id: companyId,
+            type: 'case',
+            related_lead_id: lead.id,
             participantIds: Array.from(participantUserIds),
-            lastMessage: null
+            lastMessage: null,
+            created_at: new Date().toISOString()
           };
 
           // Update local threads state
@@ -283,19 +287,18 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
         return;
       }
 
-      // Create new DM thread
-      const { data: newThread, error: threadError } = await supabase
+      // Create new DM thread with a client-generated UUID to bypass RLS chicken-and-egg
+      const threadId = window.crypto.randomUUID();
+      const { error: threadError } = await supabase
         .from('chat_threads')
-        .insert([{ company_id: companyId, type: 'dm' }])
-        .select()
-        .single();
+        .insert([{ id: threadId, company_id: companyId, type: 'dm' }]);
 
       if (threadError) throw threadError;
 
       // Add participants
       const participantsToInsert = [
-        { thread_id: newThread.id, user_id: profile.id },
-        { thread_id: newThread.id, user_id: teammate.id }
+        { thread_id: threadId, user_id: profile.id },
+        { thread_id: threadId, user_id: teammate.id }
       ];
 
       const { error: partError } = await supabase
@@ -305,9 +308,12 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
       if (partError) throw partError;
 
       const enriched = {
-        ...newThread,
+        id: threadId,
+        company_id: companyId,
+        type: 'dm',
         participantIds: [profile.id, teammate.id],
-        lastMessage: null
+        lastMessage: null,
+        created_at: new Date().toISOString()
       };
 
       setThreads(prev => [enriched, ...prev]);
