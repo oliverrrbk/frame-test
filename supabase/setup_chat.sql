@@ -106,3 +106,25 @@ CREATE POLICY "Users can insert their own messages into participating threads" O
             )
         )
     );
+
+-- 10. Enable Realtime for Chat Tables (only add if not already present)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    and schemaname = 'public' 
+    and tablename = 'chat_messages'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    and schemaname = 'public' 
+    and tablename = 'chat_threads'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_threads;
+  END IF;
+END $$;
