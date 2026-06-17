@@ -655,12 +655,15 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     };
 
     const confirmScheduleLead = async (lead, start, end) => {
-        const updatedRawData = { ...lead.raw_data, start_date: start.toISOString(), end_date: end.toISOString() };
-        const updatedLead = { ...lead, raw_data: updatedRawData };
+        const updatedLead = { ...lead, raw_data: { ...lead.raw_data, start_date: start.toISOString(), end_date: end.toISOString() } };
         setLeadsData(prev => prev.map(l => l.id === lead?.id ? updatedLead : l));
         setCollisionWarning(null);
         try {
-            await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', lead?.id);
+            // Genhent frisk raw_data og flet KUN datoerne ind, så samtidige ændringer
+            // på sagen (checkliste, timer, bilag) ikke overskrives.
+            const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', lead?.id).single();
+            const merged = { ...(latest?.raw_data || lead.raw_data || {}), start_date: start.toISOString(), end_date: end.toISOString() };
+            await supabase.from('leads').update({ raw_data: merged }).eq('id', lead?.id);
             toast.success('Sag planlagt');
         } catch (error) {
             toast.error('Fejl ved gem kalenderdato');
@@ -712,14 +715,18 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         setShowCasePicker(false);
     };
     const unscheduleLead = async (lead) => {
-        const updatedRawData = { ...lead.raw_data };
-        delete updatedRawData.start_date;
-        delete updatedRawData.end_date;
-        const updatedLead = { ...lead, raw_data: updatedRawData };
-        setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
+        const localRaw = { ...lead.raw_data };
+        delete localRaw.start_date;
+        delete localRaw.end_date;
+        setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...lead, raw_data: localRaw } : l));
         setCaseActionSheet(null);
         try {
-            await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', lead.id);
+            // Genhent frisk raw_data og fjern KUN datoerne, så intet andet overskrives.
+            const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const merged = { ...(latest?.raw_data || lead.raw_data || {}) };
+            delete merged.start_date;
+            delete merged.end_date;
+            await supabase.from('leads').update({ raw_data: merged }).eq('id', lead.id);
             toast.success('Sag fjernet fra kalender');
         } catch (error) {
             toast.error('Fejl ved fjernelse');
@@ -728,15 +735,19 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
     const removeLeadFromCalendar = async () => {
         if (!popoverLead) return;
-        const updatedRawData = { ...popoverLead.raw_data };
-        delete updatedRawData.start_date;
-        delete updatedRawData.end_date;
-        const updatedLead = { ...popoverLead.lead, raw_data: updatedRawData };
-        
-        setLeadsData(prev => prev.map(l => l.id === popoverLead?.lead?.id ? updatedLead : l));
+        const leadId = popoverLead?.lead?.id;
+        const localRaw = { ...popoverLead.raw_data };
+        delete localRaw.start_date;
+        delete localRaw.end_date;
+        setLeadsData(prev => prev.map(l => l.id === leadId ? { ...popoverLead.lead, raw_data: localRaw } : l));
         setPopoverLead(null);
         try {
-            await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', popoverLead?.lead?.id);
+            // Genhent frisk raw_data og fjern KUN datoerne, så intet andet overskrives.
+            const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', leadId).single();
+            const merged = { ...(latest?.raw_data || popoverLead.raw_data || {}) };
+            delete merged.start_date;
+            delete merged.end_date;
+            await supabase.from('leads').update({ raw_data: merged }).eq('id', leadId);
             toast.success('Sag fjernet fra kalender');
         } catch (error) {
             toast.error('Fejl');
