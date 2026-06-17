@@ -42,6 +42,7 @@ afløser/supplerer hinanden.
 | `setup_stripe_events.sql` | Idempotens-tabel til Stripe-webhook |
 | `setup_calibration.sql` | Kalibrerings-data (beregner) |
 | `setup_public_carpenter.sql` | Offentlig læseadgang til tømrer-profil (wizard) |
+| `supabase/setup_chat.sql` | Frame Chat-system: tabeller, indexes + RLS til sikker real-time chat |
 
 ### 3) RPC'er (funktioner)
 | Fil | Formål |
