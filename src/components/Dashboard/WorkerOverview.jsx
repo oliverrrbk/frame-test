@@ -6,7 +6,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { mutateTimeEntries } from '../../utils/timeEntries';
-import { queueTimeEntryOp, flushTimeEntryQueue, queuedOpsCount } from '../../utils/offlineQueue';
+import { queueTimeEntryOp, flushTimeEntryQueue, queuedOpsCount, getQueuedOpenEntry } from '../../utils/offlineQueue';
 import { getTodaysMessagesForUser, getSeenSet, markSeen, countUnseen } from '../../utils/caseMessages';
 import { getRoleLabel } from '../../utils/roles';
 import { fetchPayrollSettings, getConfig, computeNetHours, suggestedBreakMinutes, DEFAULT_PAYROLL_CONFIG } from '../../utils/payroll';
@@ -69,14 +69,23 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         return () => window.removeEventListener('online', sync);
     }, []);
 
+    // Offline-gemt tjek-ind der endnu ikke er synket (init fra køen, så det overlever reload).
+    const [pendingEntry, setPendingEntry] = useState(() => getQueuedOpenEntry());
+
     const activeCheckInInfo = useMemo(() => {
         for (const lead of activeWorkerCases) {
             const entries = lead.raw_data?.time_entries || [];
             const activeEntry = entries.find(t => t.employeeId === myProfile?.id && t.endTime === null);
             if (activeEntry) return { lead, activeEntry };
         }
+        // Vis en offline-stempling optimistisk, indtil den er sendt til serveren.
+        if (pendingEntry) {
+            const lead = activeWorkerCases.find(l => String(l.id) === String(pendingEntry.leadId))
+                || (leadsData || []).find(l => String(l.id) === String(pendingEntry.leadId));
+            if (lead) return { lead, activeEntry: pendingEntry, pending: true };
+        }
         return null;
-    }, [activeWorkerCases, myProfile]);
+    }, [activeWorkerCases, myProfile, pendingEntry, leadsData]);
 
     const handleGlobalCheckIn = async () => {
         if (!selectedCheckInProject) {
@@ -111,6 +120,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         } catch {
             // Ingen forbindelse: gem stemplingen lokalt og send den automatisk senere.
             queueTimeEntryOp({ table: 'leads', id: leadToUpdate.id, add: [entry] });
+            setPendingEntry({ ...entry, leadId: leadToUpdate.id }); // vis tjek-ind med det samme
             toast('Ingen forbindelse — stemplingen er gemt og sendes automatisk, når du får signal.', { icon: '📡', duration: 5000 });
         }
     };
@@ -156,6 +166,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         } catch {
             // Ingen forbindelse: gem udstemplingen lokalt og send den automatisk senere.
             queueTimeEntryOp({ table: 'leads', id: lead.id, removeIds: [activeEntry.id], add: [entry] });
+            setPendingEntry(null); // ikke længere tjekket ind
             toast('Ingen forbindelse — udstemplingen er gemt og sendes automatisk, når du får signal.', { icon: '📡', duration: 5000 });
         }
     };
@@ -614,6 +625,11 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                             <div style={{ margin: '2px 0 0', color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {activeCheckInInfo.lead.customer_name}
                             </div>
+                            {activeCheckInInfo.pending && (
+                                <div style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', color: '#92400e', border: '1px solid #fcd34d', padding: '5px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                    📡 Afventer synk — sendes når du får signal
+                                </div>
+                            )}
                         </div>
                     </>
                 ) : (

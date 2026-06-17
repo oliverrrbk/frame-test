@@ -36,6 +36,26 @@ export function queuedOpsCount() {
     return readQueue().length;
 }
 
+// Udled den netto "åbne" tjek-ind fra køen — bruges til optimistisk visning, så
+// svenden ser at han er tjekket ind, selv mens stemplingen venter på at blive sendt.
+// Overlever reload, fordi den læses fra localStorage-køen (ikke React-state).
+export function getQueuedOpenEntry() {
+    const list = readQueue();
+    let open = null;
+    for (const op of list) {
+        const removed = new Set(op.removeIds || []);
+        if (open && removed.has(open.id)) open = null;
+        for (const e of (op.add || [])) {
+            if (e.endTime === null || e.endTime === undefined) {
+                open = { ...e, leadId: op.id };
+            } else if (open && e.id === open.id) {
+                open = null;
+            }
+        }
+    }
+    return open;
+}
+
 // Afspil køen i rækkefølge. Stopper ved første fejl (stadig offline) og beholder
 // resten, så intet går tabt. Returnerer hvor mange der blev sendt + hvor mange er tilbage.
 let flushing = false;

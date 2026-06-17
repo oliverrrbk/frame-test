@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { mutateTimeEntries } from '../../utils/timeEntries';
-import { queueTimeEntryOp, flushTimeEntryQueue, queuedOpsCount } from '../../utils/offlineQueue';
+import { queueTimeEntryOp, flushTimeEntryQueue, queuedOpsCount, getQueuedOpenEntry } from '../../utils/offlineQueue';
 import { fetchPayrollSettings, getConfig, computeNetHours, suggestedBreakMinutes, DEFAULT_PAYROLL_CONFIG } from '../../utils/payroll';
 
 // Klokkeslæt som "HH:MM" (kolon — kan altid læses, modsat dansk locale "HH.MM").
@@ -54,14 +54,23 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
         return () => window.removeEventListener('online', sync);
     }, []);
 
+    // Offline-gemt tjek-ind der endnu ikke er synket (init fra køen, så det overlever reload).
+    const [pendingEntry, setPendingEntry] = useState(() => getQueuedOpenEntry());
+
     const activeCheckInInfo = useMemo(() => {
         for (const lead of activeManagerCases) {
             const entries = lead.raw_data?.time_entries || [];
             const activeEntry = entries.find(t => t.employeeId === myProfile?.id && t.endTime === null);
             if (activeEntry) return { lead, activeEntry };
         }
+        // Vis en offline-stempling optimistisk, indtil den er sendt til serveren.
+        if (pendingEntry) {
+            const lead = activeManagerCases.find(l => String(l.id) === String(pendingEntry.leadId))
+                || (leadsData || []).find(l => String(l.id) === String(pendingEntry.leadId));
+            if (lead) return { lead, activeEntry: pendingEntry, pending: true };
+        }
         return null;
-    }, [activeManagerCases, myProfile]);
+    }, [activeManagerCases, myProfile, pendingEntry, leadsData]);
 
     const handleGlobalCheckIn = async () => {
         if (!selectedCheckInProject) {
@@ -94,6 +103,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
             setTimeout(() => window.location.reload(), 1000);
         } catch {
             queueTimeEntryOp({ table: 'leads', id: leadToUpdate.id, add: [entry] });
+            setPendingEntry({ ...entry, leadId: leadToUpdate.id });
             toast('Ingen forbindelse — stemplingen er gemt og sendes automatisk, når du får signal.', { icon: '📡', duration: 5000 });
         }
     };
@@ -137,6 +147,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
             setTimeout(() => window.location.reload(), 1000);
         } catch {
             queueTimeEntryOp({ table: 'leads', id: lead.id, removeIds: [activeEntry.id], add: [entry] });
+            setPendingEntry(null);
             toast('Ingen forbindelse — udstemplingen er gemt og sendes automatisk, når du får signal.', { icon: '📡', duration: 5000 });
         }
     };
@@ -194,6 +205,11 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
                         <div style={{ margin: 0, color: '#6b7280', fontSize: '0.95rem' }}>
                             Du har været tjekket ind siden kl. <strong>{activeCheckInInfo.activeEntry.startTime}</strong> på <strong>Sag {activeCheckInInfo.lead.case_number || String(activeCheckInInfo.lead.id).substring(0, 6)}</strong>{(activeCheckInInfo.lead.raw_data?.project_title || activeCheckInInfo.lead.project_category) ? ` · ${activeCheckInInfo.lead.raw_data?.project_title || activeCheckInInfo.lead.project_category}` : ''} <em>({activeCheckInInfo.lead.customer_name})</em>
                         </div>
+                        {activeCheckInInfo.pending && (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', color: '#92400e', border: '1px solid #fcd34d', padding: '5px 12px', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 700 }}>
+                                📡 Afventer synk — sendes når du får signal
+                            </div>
+                        )}
                         <button 
                             onClick={handleGlobalCheckOut}
                             style={{ maxWidth: '400px', width: '100%', padding: '20px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 8px 16px rgba(239, 68, 68, 0.3)', transition: 'transform 0.1s' }}
