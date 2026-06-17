@@ -1026,11 +1026,22 @@ const Dashboard = () => {
             targetId = impId;
         }
 
+        // Svende/lærlinge i produktion abonnerer IKKE på realtime: payloaden bærer
+        // hele rækken (inkl. pris) over websocket. De opdateres i stedet når appen
+        // kommer i fokus — så prisdata aldrig leveres til dem (audit #6).
+        const isDevEnv = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const isWorkerRole = (myProfile.role === 'worker' || myProfile.role === 'apprentice');
+        if (!isDevEnv && isWorkerRole) {
+            const onVisible = () => { if (document.visibilityState === 'visible') refreshData(); };
+            document.addEventListener('visibilitychange', onVisible);
+            return () => document.removeEventListener('visibilitychange', onVisible);
+        }
+
         const subscription = supabase
             .channel('dashboard_leads_changes')
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
                 table: 'leads'
             }, (payload) => {
                 // For a simpler approach, just refresh when ANY lead changes that we have access to
@@ -1426,22 +1437,32 @@ const Dashboard = () => {
                 setIsLeadsLoading(true);
             }
         }
-        const { data: leadsDataFetch } = await supabase.from('leads').select('*').eq('carpenter_id', targetId).order('created_at', { ascending: false });
-        // Orphane leads fix:
-        let workingLeads = leadsDataFetch || [];
-        
-        // --- EMERGENCY FIX: Hent også strandede kladder fra medarbejderens eget ID ---
-        if (userProfile.role !== 'admin' && userProfile.company_id && targetId !== userProfile.id) {
-            const { data: strandedLeads } = await supabase.from('leads').select('*').eq('carpenter_id', userProfile.id).order('created_at', { ascending: false });
-            if (strandedLeads && strandedLeads.length > 0) {
-                workingLeads = [...workingLeads, ...strandedLeads];
-            }
-        }
+        // Svende/lærlinge i produktion henter via maskeret RPC, så pris/økonomi
+        // aldrig forlader serveren til dem (audit #6). Alle andre: som før.
+        const isDevEnv = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const maskForWorker = !isDevEnv && !impersonateId && (userProfile.role === 'worker' || userProfile.role === 'apprentice');
 
-        if (leadsDataFetch && leadsDataFetch.length < 2) { 
-             await supabase.from('leads').update({ carpenter_id: targetId }).is('carpenter_id', null);
-             const { data: nData } = await supabase.from('leads').select('*').eq('carpenter_id', targetId).order('created_at', { ascending: false });
-             if (nData) workingLeads = [...workingLeads.filter(l => l.carpenter_id !== targetId), ...nData];
+        let workingLeads = [];
+        if (maskForWorker) {
+            const { data: maskedLeads } = await supabase.rpc('get_visible_leads');
+            workingLeads = maskedLeads || [];
+        } else {
+            const { data: leadsDataFetch } = await supabase.from('leads').select('*').eq('carpenter_id', targetId).order('created_at', { ascending: false });
+            workingLeads = leadsDataFetch || [];
+
+            // --- EMERGENCY FIX: Hent også strandede kladder fra medarbejderens eget ID ---
+            if (userProfile.role !== 'admin' && userProfile.company_id && targetId !== userProfile.id) {
+                const { data: strandedLeads } = await supabase.from('leads').select('*').eq('carpenter_id', userProfile.id).order('created_at', { ascending: false });
+                if (strandedLeads && strandedLeads.length > 0) {
+                    workingLeads = [...workingLeads, ...strandedLeads];
+                }
+            }
+
+            if (leadsDataFetch && leadsDataFetch.length < 2) {
+                await supabase.from('leads').update({ carpenter_id: targetId }).is('carpenter_id', null);
+                const { data: nData } = await supabase.from('leads').select('*').eq('carpenter_id', targetId).order('created_at', { ascending: false });
+                if (nData) workingLeads = [...workingLeads.filter(l => l.carpenter_id !== targetId), ...nData];
+            }
         }
         workingLeads = workingLeads.filter(l => l.status !== 'Slettet');
         
