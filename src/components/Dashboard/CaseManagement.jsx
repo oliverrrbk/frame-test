@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle, MessageSquare, Users, Download, Search, Bell, LogOut, Link2, Filter, Image as ImageIcon, Video, Mail, UploadCloud, Link as LinkIcon, ExternalLink, Settings, MoreHorizontal, Pause, RotateCcw, Megaphone, GripVertical, Mic, MicOff, Loader2, Lock } from 'lucide-react';
+import { HardHat, CheckSquare, Camera, Clock, Briefcase, Calendar, MapPin, ArrowRight, ChevronDown, Package, Activity, AlertTriangle, Phone, FileImage, UserPlus, ChevronRight, TrendingUp, Plus, Trash2, ShieldAlert, User, ArrowLeft, DollarSign, PackageCheck, ClipboardList, CheckCircle, Upload, Save, Edit2, Wallet, FileText, Send, Receipt, Store, List, CreditCard, X, PenTool, MessageCircle, MessageSquare, Users, Download, Search, Bell, LogOut, Link2, Filter, Image as ImageIcon, Video, Mail, UploadCloud, Link as LinkIcon, ExternalLink, Settings, MoreHorizontal, Pause, RotateCcw, Megaphone, GripVertical, Mic, MicOff, Loader2, Lock, Volume2, Square } from 'lucide-react';
 import { DndContext, closestCenter, TouchSensor, MouseSensor, useSensor, useSensors, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -144,7 +144,7 @@ const CustomSelect = function({ value, onChange, options, placeholder }) {
     );
 };
 // --- DND KIT SORTABLE COMPONENT ---
-function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDeleteSubTask, handleEditSubTaskText, profile }) {
+function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDeleteSubTask, handleEditSubTaskText, profile, speakingId }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(sub.text);
     const {
@@ -161,11 +161,11 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
         transition,
         zIndex: isDragging ? 50 : 1,
         position: 'relative',
-        display: 'flex', 
-        alignItems: 'flex-start', 
-        justifyContent: 'space-between', 
-        padding: '14px 16px', 
-        backgroundColor: sub.done ? 'rgba(248, 250, 252, 0.7)' : '#ffffff', 
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        padding: '14px 16px',
+        backgroundColor: sub.done ? 'rgba(248, 250, 252, 0.7)' : '#ffffff',
         border: '1px solid', 
         borderColor: sub.done ? '#e2e8f0' : '#f1f5f9', 
         borderRadius: '10px', 
@@ -193,13 +193,14 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
                 }
             }}
         >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: 0 }}>
-                <div 
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', width: '100%', minWidth: 0 }}>
+                <div
                     {...attributes}
                     {...(isEditing ? {} : listeners)}
-                    style={{ padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', marginTop: '-2px', marginLeft: '-8px', touchAction: 'none', cursor: isDragging ? 'grabbing' : 'grab' }}
+                    title="Hold inde og træk for at flytte"
+                    style={{ padding: '10px 6px', minWidth: '34px', minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', marginLeft: '-6px', marginTop: '-4px', borderRadius: '8px', touchAction: 'none', cursor: isDragging ? 'grabbing' : 'grab', flexShrink: 0 }}
                 >
-                    <GripVertical size={18} />
+                    <GripVertical size={20} />
                 </div>
                 <div 
                     onClick={(e) => { e.stopPropagation(); handleTodoToggle(stepId, sub.id); }}
@@ -286,15 +287,16 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
                 )}
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, marginLeft: '12px' }}>
-                <button 
-                    onClick={(e) => { e.stopPropagation(); speakText(sub.text); }}
-                    title="Læs op"
-                    style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginTop: '12px' }}>
+                <button
+                    onClick={(e) => { e.stopPropagation(); speakText(sub.text, sub.id); }}
+                    title={speakingId === sub.id ? 'Stop oplæsning' : 'Læs op'}
+                    style={{ background: speakingId === sub.id ? '#dbeafe' : 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '8px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', fontWeight: 600, fontSize: '0.8rem', transition: 'all 0.2s' }}
                     onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; e.currentTarget.style.transform = 'scale(1.05)'; }}
-                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = speakingId === sub.id ? '#dbeafe' : 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
                 >
-                    🔊
+                    {speakingId === sub.id ? <Square size={15} fill="#3b82f6" /> : <Volume2 size={18} />}
+                    <span>{speakingId === sub.id ? 'Stop' : 'Lyt'}</span>
                 </button>
                 
                 {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
@@ -384,12 +386,13 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '200px' }}>
                     {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
-                        <div 
+                        <div
                             {...attributes}
                             {...(isEditing ? {} : listeners)}
-                            style={{ color: '#cbd5e1', display: 'flex', alignItems: 'center', marginLeft: '-8px', touchAction: 'none', cursor: isDragging ? 'grabbing' : 'grab' }}
+                            title="Hold inde og træk for at flytte trinnet"
+                            style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', minWidth: '34px', minHeight: '40px', marginLeft: '-6px', borderRadius: '8px', touchAction: 'none', cursor: isDragging ? 'grabbing' : 'grab', flexShrink: 0 }}
                         >
-                            <GripVertical size={20} />
+                            <GripVertical size={22} />
                         </div>
                     )}
                     <div style={{ 
@@ -1220,16 +1223,26 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         setTodoList(todoList.map(step => step.id === mainId ? { ...step, isExpanded: !step.isExpanded } : step));
     };
     
-    const speakText = (text) => {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'da-DK';
-            utterance.rate = 0.9;
-            window.speechSynthesis.speak(utterance);
-        } else {
+    const [speakingId, setSpeakingId] = useState(null);
+    const speakText = (text, id = null) => {
+        if (!('speechSynthesis' in window)) {
             toast.error('Oplæsning understøttes desværre ikke af din browser.');
+            return;
         }
+        // Tryk igen på samme punkt → stop oplæsningen.
+        if (id && speakingId === id) {
+            window.speechSynthesis.cancel();
+            setSpeakingId(null);
+            return;
+        }
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'da-DK';
+        utterance.rate = 0.9;
+        utterance.onend = () => setSpeakingId(null);
+        utterance.onerror = () => setSpeakingId(null);
+        window.speechSynthesis.speak(utterance);
+        setSpeakingId(id);
     };
 
 
@@ -3364,7 +3377,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                                         speakText={speakText} 
                                                                         handleDeleteSubTask={handleDeleteSubTask} 
                                                                         handleEditSubTaskText={handleEditSubTaskText}
-                                                                        profile={profile} 
+                                                                        profile={profile}
+                                                                        speakingId={speakingId}
                                                                     />
                                                                 ))}
                                                             </SortableContext>
