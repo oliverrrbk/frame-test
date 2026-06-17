@@ -17,6 +17,7 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { getRoleLabel } from '../../utils/roles';
 import { buildCaseMessage, mutateCaseMessages } from '../../utils/caseMessages';
 import { getChecklistForCategory, buildPhasesChecklist } from '../../utils/checklistGenerator';
+import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 
 import toast from 'react-hot-toast';
 
@@ -598,7 +599,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     useClickOutside(statusDropdownRef, () => setIsStatusDropdownOpen(false), isStatusDropdownOpen);
     const [isSavingTeam, setIsSavingTeam] = useState(false);
     const [isSavedTeam, setIsSavedTeam] = useState(false);
-    const [showAbortConfirmModal, setShowAbortConfirmModal] = useState(false);
+    const [statusToChange, setStatusToChange] = useState(null);
 
     // Løn-lås: timer i en lønkørt periode kan ikke redigeres
     const [payrollSettings, setPayrollSettings] = useState(null);
@@ -937,11 +938,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         if (!selectedCase) return;
         
         if (!skipConfirm) {
-            const confirmMsg = newStatus === 'Udgået opgave' 
-                ? 'Er du sikker på, at du vil annullere sagen?' 
-                : `Er du sikker på, at du vil ændre status til "${newStatus}"?`;
-                
-            if (!window.confirm(confirmMsg)) return;
+            setStatusToChange(newStatus);
+            return;
         }
 
         const { error } = await supabase
@@ -2035,7 +2033,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 </button>
                                             )}
                                             {['admin', 'sales'].includes(profile?.role) && selectedCase.status !== 'Afbrudt Sag' && (
-                                                <button onClick={() => { setShowActionSheet(false); setShowAbortConfirmModal(true); }} style={{ padding: '16px', background: '#fef2f2', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#ef4444', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <button onClick={() => { setShowActionSheet(false); handleStatusChange('Afbrudt Sag'); }} style={{ padding: '16px', background: '#fef2f2', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#ef4444', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <AlertTriangle size={20} color="#ef4444" /> Afbryd Sag (Konkurs)
                                                 </button>
                                             )}
@@ -2596,7 +2594,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     </button>
                                                     <button 
                                                         onClick={() => { 
-                                                            setShowAbortConfirmModal(true);
+                                                            handleStatusChange('Afbrudt Sag');
                                                             setIsStatusDropdownOpen(false);
                                                         }}
                                                         style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -4106,23 +4104,26 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             </div>,
             document.body
         )}
-        {/* MODAL TIL BEKRÆFTELSE AF "AFBRUDT SAG" */}
-        {showAbortConfirmModal && createPortal(
+        {/* MODAL TIL BEKRÆFTELSE AF STATUS ÆNDRING */}
+        {statusToChange && createPortal(
             <div className="dashboard-modal-overlay delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
                 <div className="dashboard-modal-panel" style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '24px', padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
-                    <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: '0 0 0 8px rgba(239, 68, 68, 0.1)' }}>
-                        <AlertTriangle size={36} color="#ef4444" />
+                    <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: statusToChange === 'Sæt i bero' ? '#fff7ed' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: statusToChange === 'Sæt i bero' ? '0 0 0 8px rgba(234, 88, 12, 0.1)' : '0 0 0 8px rgba(239, 68, 68, 0.1)' }}>
+                        {statusToChange === 'Sæt i bero' ? <Pause size={36} color="#ea580c" /> : <AlertTriangle size={36} color="#ef4444" />}
                     </div>
                     <h3 style={{ margin: '0 0 12px 0', fontSize: '1.4rem', color: '#0f172a', fontWeight: '800' }}>
                         Er du helt sikker?
                     </h3>
                     <p style={{ margin: '0 0 24px 0', color: '#475569', fontSize: '1rem', lineHeight: '1.5' }}>
-                        Du er ved at ændre statussen til <strong style={{ color: '#ef4444' }}>Afbrudt Sag (Konkurs / Aflyst)</strong>.<br/><br/>
-                        Dette vil <strong style={{ color: '#0f172a' }}>stoppe al produktion</strong> øjeblikkeligt og fjerne sagen fra svendenes telefoner, så de ikke længere kan registrere timer på den.
+                        Du er ved at ændre statussen til <strong style={{ color: statusToChange === 'Sæt i bero' ? '#ea580c' : '#ef4444' }}>{statusToChange === 'Afbrudt Sag' ? 'Afbrudt Sag (Konkurs / Aflyst)' : statusToChange}</strong>.<br/><br/>
+                        {statusToChange === 'Afbrudt Sag' || statusToChange === 'Udgået opgave' 
+                            ? <span>Dette vil <strong style={{ color: '#0f172a' }}>stoppe al produktion</strong> øjeblikkeligt og fjerne sagen fra svendenes telefoner, så de ikke længere kan registrere timer på den.</span>
+                            : <span>Dette vil sætte opgaven på pause. Du kan altid genoptage den senere ved at ændre statussen tilbage.</span>
+                        }
                     </p>
                     <div style={{ display: 'flex', gap: '16px', width: '100%', marginTop: '8px' }}>
                         <button 
-                            onClick={() => setShowAbortConfirmModal(false)}
+                            onClick={() => setStatusToChange(null)}
                             style={{ flex: 1, padding: '14px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '14px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
                             onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
                             onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
@@ -4131,14 +4132,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         </button>
                         <button 
                             onClick={() => {
-                                handleStatusChange('Afbrudt Sag', true);
-                                setShowAbortConfirmModal(false);
+                                handleStatusChange(statusToChange, true);
+                                setStatusToChange(null);
                             }}
-                            style={{ flex: 1, padding: '14px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(239, 68, 68, 0.2)' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(239, 68, 68, 0.3)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(239, 68, 68, 0.2)'; }}
+                            style={{ flex: 1, padding: '14px', background: statusToChange === 'Sæt i bero' ? '#ea580c' : '#ef4444', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: statusToChange === 'Sæt i bero' ? '0 4px 6px rgba(234, 88, 12, 0.2)' : '0 4px 6px rgba(239, 68, 68, 0.2)' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = statusToChange === 'Sæt i bero' ? '#c2410c' : '#dc2626'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = statusToChange === 'Sæt i bero' ? '0 6px 12px rgba(234, 88, 12, 0.3)' : '0 6px 12px rgba(239, 68, 68, 0.3)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = statusToChange === 'Sæt i bero' ? '#ea580c' : '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = statusToChange === 'Sæt i bero' ? '0 4px 6px rgba(234, 88, 12, 0.2)' : '0 4px 6px rgba(239, 68, 68, 0.2)'; }}
                         >
-                            Ja, afbryd sag
+                            Ja, skift status
                         </button>
                     </div>
                 </div>
