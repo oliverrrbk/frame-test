@@ -528,6 +528,22 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
     );
 }
 
+const isConfirmedCase = (lead) => {
+    if (!lead) return false;
+    if (['Bekræftet opgave', 'Historik', 'Afbrudt Sag'].includes(lead.status)) return true;
+    if (lead.status === 'Sæt i bero') {
+        return !!lead.raw_data?.actual_quote_price || 
+               !!lead.raw_data?.audit_trail || 
+               !!lead.ordrestyring_case_id || 
+               !!lead.apacta_case_id || 
+               !!lead.minuba_case_id || 
+               (lead.raw_data?.case_logs && lead.raw_data.case_logs.length > 0) || 
+               (lead.raw_data?.todo_list && lead.raw_data.todo_list.length > 0) || 
+               (lead.raw_data?.assigned_workers && lead.raw_data.assigned_workers.length > 0);
+    }
+    return false;
+};
+
 export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile }) {
     const [activeCases, setActiveCases] = useState([]);
     const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
@@ -747,7 +763,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     // Indlæs data
     useEffect(() => {
-        const confirmed = leads.filter(l => ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(l.status));
+        const confirmed = leads.filter(l => isConfirmedCase(l));
         
         if (['worker', 'apprentice', 'sales'].includes(profile?.role)) {
             if (simulatedRole) {
@@ -3510,21 +3526,27 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     />
                                                 </div>
 
-                                                {/* Indtal status (stemme) */}
-                                                <button
-                                                    type="button"
-                                                    onClick={logDictation.isProcessing ? undefined : logDictation.toggle}
-                                                    disabled={logDictation.isProcessing}
-                                                    className="hover-lift"
-                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px 16px', borderRadius: '12px', fontWeight: 700, fontSize: '0.95rem', border: 'none', cursor: logDictation.isProcessing ? 'wait' : 'pointer', color: logDictation.isProcessing ? '#475569' : '#ffffff', background: logDictation.isRecording ? '#ef4444' : (logDictation.isProcessing ? '#e2e8f0' : 'linear-gradient(135deg, #10b981, #059669)'), boxShadow: logDictation.isRecording ? '0 0 0 6px rgba(239,68,68,0.18)' : (logDictation.isProcessing ? 'none' : '0 4px 12px rgba(16,185,129,0.3)'), transition: 'all 0.2s' }}
-                                                >
-                                                    {logDictation.isProcessing
-                                                        ? <Loader2 size={18} className="animate-spin" />
-                                                        : (logDictation.isRecording ? <MicOff size={18} /> : <Mic size={18} />)}
-                                                    {logDictation.isProcessing
-                                                        ? 'Skriver det ned…'
-                                                        : (logDictation.isRecording ? 'Optager… tryk for at stoppe' : 'Indtal i stedet for at skrive')}
-                                                </button>
+                                                {/* Indtal status (stemme) — rund tryk-for-at-tale knap */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={logDictation.isProcessing ? undefined : logDictation.toggle}
+                                                        disabled={logDictation.isProcessing}
+                                                        aria-label="Indtal status"
+                                                        style={{ width: '68px', height: '68px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: logDictation.isProcessing ? 'wait' : 'pointer', color: logDictation.isProcessing ? '#475569' : '#ffffff', background: logDictation.isRecording ? '#ef4444' : (logDictation.isProcessing ? '#e2e8f0' : 'linear-gradient(135deg, #10b981, #059669)'), boxShadow: logDictation.isProcessing ? 'none' : (logDictation.isRecording ? 'none' : '0 6px 16px rgba(16,185,129,0.35)'), animation: logDictation.isRecording ? 'micPulse 1.5s ease-in-out infinite' : 'none', transition: 'background 0.2s, transform 0.15s, box-shadow 0.2s', transform: 'scale(1)' }}
+                                                        onMouseEnter={(e) => { if (!logDictation.isRecording && !logDictation.isProcessing) { e.currentTarget.style.transform = 'scale(1.06)'; e.currentTarget.style.boxShadow = '0 8px 22px rgba(16,185,129,0.45)'; } }}
+                                                        onMouseLeave={(e) => { if (!logDictation.isRecording && !logDictation.isProcessing) { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(16,185,129,0.35)'; } }}
+                                                    >
+                                                        {logDictation.isProcessing
+                                                            ? <Loader2 size={28} className="animate-spin" />
+                                                            : (logDictation.isRecording ? <MicOff size={28} /> : <Mic size={28} />)}
+                                                    </button>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: logDictation.isRecording ? '#ef4444' : '#64748b', transition: 'color 0.2s' }}>
+                                                        {logDictation.isProcessing
+                                                            ? 'Skriver det ned…'
+                                                            : (logDictation.isRecording ? 'Optager… tryk for at stoppe' : 'Tryk for at indtale')}
+                                                    </span>
+                                                </div>
 
                                                 {/* Rigtigt Foto-upload */}
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
