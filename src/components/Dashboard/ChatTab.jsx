@@ -516,12 +516,11 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
 
     if (thread.type === 'case') {
       const lead = leads.find(l => String(l.id) === String(thread.related_lead_id));
-      const caseNumberText = lead?.case_number ? `${lead.case_number}: ` : ': ';
+      const caseNumberText = lead?.case_number ? `#${lead.case_number} - ` : '';
       const title = lead ? `Sag ${caseNumberText}${lead.raw_data?.project_title || lead.project_category}` : 'Sagsgruppe';
-      const caseNo = lead?.case_number ? `Sag #${lead.case_number}` : '';
       return {
         title,
-        desc: caseNo || 'Fælles sags-chat',
+        desc: 'Fælles sags-chat',
         avatar: <HardHat size={22} color="#ea580c" />,
         phone: null
       };
@@ -687,12 +686,12 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                     {info.avatar}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '2px' }}>
-                      <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: isActive ? 700 : 600, color: '#0f172a', fontSize: '0.95rem', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {info.title}
-                      </h4>
+                      </span>
                       {thread.lastMessage && (
-                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                        <span style={{ fontSize: '0.7rem', color: '#94a3b8', whiteSpace: 'nowrap', marginLeft: '8px' }}>
                           {new Date(thread.lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
@@ -760,7 +759,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                   borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
                   backgroundColor: 'rgba(255, 255, 255, 0.6)'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                     {/* Back button on mobile */}
                     <button 
                       onClick={() => setMobileViewState('list')}
@@ -782,15 +781,15 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                     </button>
 
                     <div 
-                      style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1, minWidth: 0 }}
                       onClick={() => setMobileViewState('info')}
                     >
-                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
                         {info.avatar}
                       </div>
-                      <div>
-                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>{info.title}</h3>
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>{info.desc}</p>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{info.title}</h3>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{info.desc}</p>
                       </div>
                     </div>
                   </div>
@@ -954,7 +953,8 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  flexShrink: 0
                 }}
               >
                 {isUploading ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent" /> : <Plus size={24} strokeWidth={2.5} />}
@@ -992,6 +992,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                     disabled={isUploading}
                     style={{
                       flex: 1,
+                      minWidth: 0,
                       border: 'none',
                       background: 'transparent',
                       outline: 'none',
@@ -1015,7 +1016,8 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      transition: 'all 0.2s'
+                      transition: 'all 0.2s',
+                      flexShrink: 0
                     }}
                   >
                     {isRecording ? <Square size={18} /> : <Mic size={20} />}
@@ -1038,7 +1040,8 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                   justifyContent: 'center',
                   cursor: newMessageText.trim() ? 'pointer' : 'not-allowed',
                   boxShadow: newMessageText.trim() ? '0 4px 12px rgba(37, 99, 235, 0.2)' : 'none',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  flexShrink: 0
                 }}
               >
                 <Send size={16} style={{ marginLeft: '2px' }} />
@@ -1089,8 +1092,8 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                 <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f8fafc', border: '1px solid rgba(226, 232, 240, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', marginBottom: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
                   {info.avatar}
                 </div>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', textAlign: 'center' }}>{info.title}</h3>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', textAlign: 'center', marginBottom: '32px' }}>{info.desc}</p>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', textAlign: 'center', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{info.title}</h3>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', textAlign: 'center', marginBottom: '32px', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{info.desc}</p>
 
                 <div style={{ width: '100%', borderTop: '1px solid rgba(226, 232, 240, 0.8)', paddingTop: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em', fontWeight: 700 }}>Chatoplysninger</h4>
