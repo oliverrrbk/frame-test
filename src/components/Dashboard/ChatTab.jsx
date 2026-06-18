@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { 
-  MessageSquare, Send, Phone, Search, Users, 
-  Sparkles, Paperclip, Mic, ArrowLeft, ShieldAlert, CheckCircle2 
+  MessageSquare, Send, Phone, Search, Users, User,
+  Sparkles, Paperclip, Mic, ArrowLeft, ShieldAlert, CheckCircle2,
+  Megaphone, HardHat, Square, Info, Image as ImageIcon, FileText, Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import UserAvatar from '../ui/UserAvatar';
 
 const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
   const [threads, setThreads] = useState([]);
@@ -16,10 +18,28 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
   const [teammates, setTeammates] = useState([]);
   const [isLoadingThreads, setIsLoadingThreads] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [isMobileActiveThread, setIsMobileActiveThread] = useState(false);
+  const [mobileViewState, setMobileViewState] = useState('list'); // 'list', 'chat', 'info'
 
   const messagesEndRef = useRef(null);
   const realtimeChannelRef = useRef(null);
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  
+  const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isRecording]);
 
   // Handle targetLeadId to auto-select or auto-create case chat thread
   useEffect(() => {
@@ -31,7 +51,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
         
         if (existingThread) {
           setActiveThread(existingThread);
-          setIsMobileActiveThread(true);
+          setMobileViewState('chat');
           if (clearTargetLeadId) clearTargetLeadId();
           return;
         }
@@ -96,7 +116,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
           // Update local threads state
           setThreads(prev => [enriched, ...prev]);
           setActiveThread(enriched);
-          setIsMobileActiveThread(true);
+          setMobileViewState('chat');
           toast.success(`Sagschat oprettet for ${lead.raw_data?.project_title || lead.project_category}`);
         } catch (error) {
           console.error('Error creating case chat:', error);
@@ -145,7 +165,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
       // 1. Fetch teammates (carpenters)
       const { data: teamData, error: teamError } = await supabase
         .from('carpenters')
-        .select('id, owner_name, company_name, email, role, phone')
+        .select('id, owner_name, company_name, email, role, phone, avatar_url')
         .or(`company_id.eq.${companyId},id.eq.${companyId}`);
 
       if (teamError) throw teamError;
@@ -283,7 +303,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
 
       if (existingDm) {
         setActiveThread(existingDm);
-        setIsMobileActiveThread(true);
+        setMobileViewState('chat');
         return;
       }
 
@@ -318,12 +338,127 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
 
       setThreads(prev => [enriched, ...prev]);
       setActiveThread(enriched);
-      setIsMobileActiveThread(true);
+      setMobileViewState('chat');
       toast.success(`Chat startet med ${teammate.owner_name}`);
     } catch (error) {
       console.error('Error starting DM:', error);
       toast.error('Kunne ikke starte chat.');
     }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeThread) return;
+    
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${window.crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${activeThread.id}/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('chat_media')
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('chat_media')
+        .getPublicUrl(filePath);
+        
+      const { error: msgError } = await supabase
+        .from('chat_messages')
+        .insert([{
+          thread_id: activeThread.id,
+          sender_id: profile.id,
+          message_type: 'image',
+          media_url: publicUrl,
+          text_content: file.name
+        }]);
+        
+      if (msgError) throw msgError;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Kunne ikke uploade fil.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
+        
+        setIsUploading(true);
+        try {
+          const fileName = `${window.crypto.randomUUID()}.webm`;
+          const filePath = `${activeThread?.id}/${fileName}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('chat_media')
+            .upload(filePath, audioBlob);
+            
+          if (uploadError) throw uploadError;
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('chat_media')
+            .getPublicUrl(filePath);
+            
+          const { error: msgError } = await supabase
+            .from('chat_messages')
+            .insert([{
+              thread_id: activeThread.id,
+              sender_id: profile.id,
+              message_type: 'voice',
+              media_url: publicUrl,
+              text_content: 'Lydbesked'
+            }]);
+            
+          if (msgError) throw msgError;
+        } catch (err) {
+          console.error('Error uploading voice note:', err);
+          toast.error('Kunne ikke sende lydbesked.');
+        } finally {
+          setIsUploading(false);
+        }
+      };
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error('Microphone error:', err);
+      toast.error('Kunne ikke få adgang til mikrofonen.');
+    }
+  };
+  
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const formatRecordingTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleSendMessage = async (e) => {
@@ -333,10 +468,24 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
     const textToSend = newMessageText.trim();
     setNewMessageText('');
 
+    // Optimistic UI update
+    const tempId = window.crypto.randomUUID();
+    const optimisticMsg = {
+      id: tempId,
+      thread_id: activeThread.id,
+      sender_id: profile.id,
+      message_type: 'text',
+      text_content: textToSend,
+      created_at: new Date().toISOString()
+    };
+    
+    setMessages(prev => [...prev, optimisticMsg]);
+
     try {
       const { error } = await supabase
         .from('chat_messages')
         .insert([{
+          id: tempId,
           thread_id: activeThread.id,
           sender_id: profile.id,
           message_type: 'text',
@@ -347,6 +496,8 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Kunne ikke sende besked.');
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setNewMessageText(textToSend);
     }
   };
 
@@ -358,19 +509,20 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
       return {
         title: 'Firma-fællestråd',
         desc: 'Beskeder til alle medarbejdere i virksomheden',
-        avatar: '📢',
+        avatar: <Megaphone size={22} color="#2563eb" />,
         phone: null
       };
     }
 
     if (thread.type === 'case') {
       const lead = leads.find(l => String(l.id) === String(thread.related_lead_id));
-      const title = lead ? `Sag: ${lead.raw_data?.project_title || lead.project_category}` : 'Sagsgruppe';
+      const caseNumberText = lead?.case_number ? `${lead.case_number}: ` : ': ';
+      const title = lead ? `Sag ${caseNumberText}${lead.raw_data?.project_title || lead.project_category}` : 'Sagsgruppe';
       const caseNo = lead?.case_number ? `Sag #${lead.case_number}` : '';
       return {
         title,
         desc: caseNo || 'Fælles sags-chat',
-        avatar: '🏗️',
+        avatar: <HardHat size={22} color="#ea580c" />,
         phone: null
       };
     }
@@ -382,7 +534,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
     return {
       title: otherParticipant?.owner_name || 'Kollega',
       desc: otherParticipant ? `${otherParticipant.role === 'admin' ? 'Mester' : 'Svend'} · ${otherParticipant.email}` : 'Direkte besked',
-      avatar: '👤',
+      avatar: <UserAvatar name={otherParticipant?.owner_name || 'Kollega'} avatarUrl={otherParticipant?.avatar_url} size={40} ring={false} />,
       phone: otherParticipant?.phone || null
     };
   };
@@ -415,14 +567,10 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
     }}>
       {/* 1. LEFT SIDEBAR: Threads list */}
       <div style={{
-        width: isMobileActiveThread ? '0%' : '100%',
-        maxWidth: isMobileActiveThread ? '0px' : 'none',
-        display: isMobileActiveThread ? 'none' : 'flex',
         flexDirection: 'column',
         borderRight: '1px solid rgba(226, 232, 240, 0.8)',
         backgroundColor: 'rgba(255, 255, 255, 0.4)',
         transition: 'all 0.3s ease',
-        flex: 1
       }} className="chat-sidebar">
         
         {/* Search & Header */}
@@ -505,7 +653,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                   key={thread.id}
                   onClick={() => {
                     setActiveThread(thread);
-                    setIsMobileActiveThread(true);
+                    setMobileViewState('chat');
                   }}
                   style={{
                     display: 'flex',
@@ -580,8 +728,8 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.03)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>
-                    👤
+                  <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <UserAvatar name={mate.owner_name || mate.company_name || ''} avatarUrl={mate.avatar_url} size={30} ring={false} />
                   </div>
                   <span>{mate.owner_name}</span>
                 </div>
@@ -591,14 +739,13 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
         </div>
       </div>
 
-      {/* 2. RIGHT PANEL: Active conversation */}
+      {/* 2. MIDDLE PANEL: Active conversation */}
       <div style={{
-        flex: 3,
-        display: !isMobileActiveThread && window.innerWidth <= 768 ? 'none' : 'flex',
+        flex: 1,
         flexDirection: 'column',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)',
-        width: '100%'
-      }}>
+        backgroundColor: 'rgba(255, 255, 255, 0.6)',
+        position: 'relative'
+      }} className="chat-main">
         {activeThread ? (
           <>
             {/* Header */}
@@ -616,7 +763,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {/* Back button on mobile */}
                     <button 
-                      onClick={() => setIsMobileActiveThread(false)}
+                      onClick={() => setMobileViewState('list')}
                       style={{
                         background: 'none',
                         border: 'none',
@@ -634,12 +781,17 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                       <ArrowLeft size={20} />
                     </button>
 
-                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                      {info.avatar}
-                    </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>{info.title}</h3>
-                      <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>{info.desc}</p>
+                    <div 
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                      onClick={() => setMobileViewState('info')}
+                    >
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                        {info.avatar}
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>{info.title}</h3>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>{info.desc}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -731,7 +883,30 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                         boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
                         wordBreak: 'break-word'
                       }}>
-                        {msg.text_content}
+                        {msg.message_type === 'image' && msg.media_url ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <img 
+                              src={msg.media_url} 
+                              alt="Vedhæftning" 
+                              style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', cursor: 'pointer', objectFit: 'contain' }} 
+                              onClick={() => window.open(msg.media_url, '_blank')}
+                            />
+                          </div>
+                        ) : msg.message_type === 'voice' && msg.media_url ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Mic size={16} />
+                            <audio controls src={msg.media_url} style={{ height: '32px', maxWidth: '200px' }} />
+                          </div>
+                        ) : msg.message_type === 'file' && msg.media_url ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Paperclip size={16} />
+                            <a href={msg.media_url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                              {msg.text_content || 'Vedhæftet fil'}
+                            </a>
+                          </div>
+                        ) : (
+                          msg.text_content
+                        )}
                       </div>
 
                       {/* Timestamp */}
@@ -757,67 +932,96 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                 gap: '12px'
               }}
             >
-              {/* Dummy attachment actions */}
+              {/* Attachment actions */}
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleFileUpload}
+              />
               <button 
                 type="button" 
                 title="Vedhæft fil"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#64748b',
-                  cursor: 'pointer',
+                  color: isUploading ? '#cbd5e1' : '#2563eb',
+                  cursor: isUploading ? 'not-allowed' : 'pointer',
                   padding: '6px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  transition: 'background-color 0.2s'
+                  transition: 'all 0.2s'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
-                <Paperclip size={20} />
+                {isUploading ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent" /> : <Plus size={24} strokeWidth={2.5} />}
               </button>
 
-              <input
-                type="text"
-                placeholder="Skriv besked..."
-                value={newMessageText}
-                onChange={(e) => setNewMessageText(e.target.value)}
-                style={{
+              {isRecording ? (
+                <div style={{
                   flex: 1,
-                  padding: '10px 16px',
-                  borderRadius: '24px',
-                  border: '1px solid rgba(203, 213, 225, 0.8)',
-                  background: 'rgba(255, 255, 255, 0.8)',
-                  outline: 'none',
-                  fontSize: '0.9rem',
-                  color: '#0f172a',
-                  transition: 'border-color 0.2s'
-                }}
-              />
-
-              {/* Dummy voice note action */}
-              <button 
-                type="button" 
-                title="Indtal besked"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  padding: '6px',
-                  borderRadius: '50%',
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  background: '#fee2e2',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <Mic size={20} />
-              </button>
+                  color: '#ef4444',
+                  fontSize: '0.9rem',
+                  fontWeight: 600
+                }}>
+                  <div className="animate-pulse mr-2" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
+                  Optager... {formatRecordingTime(recordingTime)}
+                </div>
+              ) : (
+                <div style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: 'rgba(241, 245, 249, 0.8)',
+                  borderRadius: '20px',
+                  padding: '4px 4px 4px 16px',
+                }}>
+                  <input
+                    type="text"
+                    placeholder="Aa"
+                    value={newMessageText}
+                    onChange={(e) => setNewMessageText(e.target.value)}
+                    disabled={isUploading}
+                    style={{
+                      flex: 1,
+                      border: 'none',
+                      background: 'transparent',
+                      outline: 'none',
+                      fontSize: '0.95rem',
+                      color: '#0f172a',
+                    }}
+                  />
+                  {/* Voice note action */}
+                  <button 
+                    type="button" 
+                    title={isRecording ? "Stop optagelse" : "Indtal besked"}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isUploading}
+                    style={{
+                      background: isRecording ? '#fee2e2' : 'transparent',
+                      border: 'none',
+                      color: isRecording ? '#ef4444' : '#2563eb',
+                      cursor: isUploading ? 'not-allowed' : 'pointer',
+                      padding: '8px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {isRecording ? <Square size={18} /> : <Mic size={20} />}
+                  </button>
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -850,20 +1054,129 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
         )}
       </div>
 
+      {/* 3. RIGHT PANEL: Chat Info */}
+      {activeThread && (
+        <div style={{
+          borderLeft: '1px solid rgba(226, 232, 240, 0.8)',
+          backgroundColor: 'rgba(255, 255, 255, 0.4)',
+          flexDirection: 'column',
+          overflowY: 'auto'
+        }} className="chat-info">
+          {(() => {
+            const info = getThreadInfo(activeThread);
+            return (
+              <div style={{ padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                {/* Back button strictly for mobile, using global CSS class `chat-info-back` */}
+                <button 
+                  onClick={() => setMobileViewState('chat')}
+                  style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '20px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '6px',
+                    borderRadius: '8px',
+                    color: '#64748b',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  className="chat-info-back-btn"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f8fafc', border: '1px solid rgba(226, 232, 240, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', marginBottom: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                  {info.avatar}
+                </div>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', textAlign: 'center' }}>{info.title}</h3>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', textAlign: 'center', marginBottom: '32px' }}>{info.desc}</p>
+
+                <div style={{ width: '100%', borderTop: '1px solid rgba(226, 232, 240, 0.8)', paddingTop: '20px' }}>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em', fontWeight: 700 }}>Chatoplysninger</h4>
+                  
+                  {info.phone && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid rgba(226, 232, 240, 0.4)' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Phone size={14} color="#64748b" />
+                      </div>
+                      <a href={`tel:${info.phone}`} style={{ fontSize: '0.9rem', color: '#0f172a', textDecoration: 'none', fontWeight: 500 }}>{info.phone}</a>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid rgba(226, 232, 240, 0.4)', cursor: 'pointer' }}
+                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.02)'}
+                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Users size={14} color="#64748b" />
+                    </div>
+                    <span style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 500 }}>Deltagere ({activeThread.participantIds?.length || 0})</span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid rgba(226, 232, 240, 0.4)', cursor: 'pointer' }}
+                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.02)'}
+                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ImageIcon size={14} color="#64748b" />
+                    </div>
+                    <span style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 500 }}>Medier og billeder</span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', cursor: 'pointer' }}
+                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.02)'}
+                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <FileText size={14} color="#64748b" />
+                    </div>
+                    <span style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 500 }}>Filer og links</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {/* Global CSS Inject to support responsive view */}
       <style>{`
         @media (max-width: 768px) {
           .chat-sidebar {
             width: 100% !important;
             max-width: none !important;
+            display: ${mobileViewState === 'list' ? 'flex' : 'none'} !important;
+          }
+          .chat-main {
+            display: ${mobileViewState === 'chat' ? 'flex' : 'none'} !important;
+          }
+          .chat-info {
+            width: 100% !important;
+            max-width: none !important;
+            display: ${mobileViewState === 'info' ? 'flex' : 'none'} !important;
+            border-left: none !important;
           }
           .chat-back-btn {
             display: flex !important;
           }
+          .chat-info-back-btn {
+            display: flex !important;
+          }
         }
         @media (min-width: 769px) {
-          .chat-back-btn {
+          .chat-back-btn, .chat-info-back-btn {
             display: none !important;
+          }
+          .chat-sidebar {
+             width: 320px !important;
+             max-width: 320px !important;
+             display: flex !important;
+          }
+          .chat-main {
+             display: flex !important;
+          }
+          .chat-info {
+             width: 320px !important;
+             max-width: 320px !important;
+             display: flex !important;
           }
         }
       `}</style>
