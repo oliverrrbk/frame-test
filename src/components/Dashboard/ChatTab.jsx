@@ -574,7 +574,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
   return (
     <div style={{
       display: 'flex',
-      height: 'calc(100vh - 100px)',
+      height: 'calc(100dvh - 100px)',
       background: 'rgba(255, 255, 255, 0.45)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
@@ -845,7 +845,13 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
             })()}
 
             {/* Messages body */}
-            <div style={{
+            <div 
+              onTouchStart={() => {
+                if (textareaRef.current && document.activeElement === textareaRef.current) {
+                  textareaRef.current.blur();
+                }
+              }}
+              style={{
               flex: 1,
               overflowY: 'auto',
               padding: '20px',
@@ -1023,7 +1029,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                       outline: 'none',
                       boxShadow: 'none',
                       WebkitAppearance: 'none',
-                      fontSize: '0.95rem',
+                      fontSize: '16px', // Prevents iOS Safari from auto-zooming on focus
                       color: '#0f172a',
                       resize: 'none',
                       overflowY: 'auto',
