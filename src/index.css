@@ -534,6 +534,7 @@ p {
     min-height: 48px;
     width: 100%;
     box-sizing: border-box;
+    position: relative;
 }
 
 .sidebar-nav button svg {

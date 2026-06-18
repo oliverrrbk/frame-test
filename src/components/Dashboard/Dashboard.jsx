@@ -2533,7 +2533,7 @@ const Dashboard = () => {
                         </button>
                     )}
                     {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
-                        <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => { setActiveTab('chat'); setIsMobileMenuOpen(false); }}>
+                        <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => { setActiveTab('chat'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
                             <MessageSquare size={20} /> Intern Chat
                             {chatUnreadCount > 0 && <span className="notification-badge">{chatUnreadCount}</span>}
                         </button>
