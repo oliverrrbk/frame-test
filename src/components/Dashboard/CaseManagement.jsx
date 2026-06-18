@@ -17,6 +17,7 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { getRoleLabel } from '../../utils/roles';
 import { buildCaseMessage, mutateCaseMessages } from '../../utils/caseMessages';
 import { getChecklistForCategory, buildPhasesChecklist } from '../../utils/checklistGenerator';
+import UserAvatar from '../ui/UserAvatar';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 
 import toast from 'react-hot-toast';
@@ -559,6 +560,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [stepToDelete, setStepToDelete] = useState(null);
 
     const [activeSubTab, setActiveSubTab] = useState(['worker', 'apprentice', 'sales'].includes(profile?.role) ? 'timesheet' : 'todo'); // 'todo', 'materials', 'logs', 'timesheet', 'finance'
+    const tabContentRef = useRef(null);
 
     // --- DND KIT SENSORS OG HANDLER ---
     const sensors = useSensors(
@@ -760,6 +762,56 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [showActionSheet, setShowActionSheet] = useState(false);
     const [showTeamSheet, setShowTeamSheet] = useState(false);
     const [infoSheetType, setInfoSheetType] = useState(null);
+
+    const getTabScrollTargets = (element) => {
+        const candidates = [
+            element?.closest?.('.tab-pane.active'),
+            element?.closest?.('.dashboard-content'),
+            document.scrollingElement,
+            window
+        ].filter(Boolean);
+
+        return candidates.filter((candidate, index) => candidates.indexOf(candidate) === index);
+    };
+
+    const scrollTabContentIntoView = (tabId) => {
+        const scrollOnce = () => {
+            const target = tabContentRef.current?.firstElementChild || tabContentRef.current;
+            if (!target) return;
+
+            const offset = tabId === 'drawings' ? (isMobile ? -80 : -140) : (isMobile ? 12 : 24);
+            const targetRect = target.getBoundingClientRect();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            getTabScrollTargets(target).forEach((scrollTarget) => {
+                if (scrollTarget === window || scrollTarget === document.scrollingElement) {
+                    const targetTop = targetRect.top + window.scrollY - offset;
+                    window.scrollTo({ top: Math.max(targetTop, 0), behavior: 'smooth' });
+                    return;
+                }
+
+                const parentRect = scrollTarget.getBoundingClientRect();
+                scrollTarget.scrollTo({
+                    top: Math.max(scrollTarget.scrollTop + targetRect.top - parentRect.top - offset, 0),
+                    behavior: 'smooth'
+                });
+            });
+        };
+
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                scrollOnce();
+                if (tabId === 'drawings') {
+                    window.setTimeout(scrollOnce, 160);
+                }
+            });
+        });
+    };
+
+    const handleSubTabChange = (tabId) => {
+        setActiveSubTab(tabId);
+        scrollTabContentIntoView(tabId);
+    };
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -1959,9 +2011,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     if (!m) return null;
                                                     return (
                                                         <span key={pmId} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: '#eff6ff', color: '#1d4ed8', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '500' }}>
-                                                            <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: '#1e3a8a' }}>
-                                                                {(m.owner_name || m.company_name || '?').charAt(0).toUpperCase()}
-                                                            </div>
+                                                            <UserAvatar name={m.owner_name || m.company_name || ''} avatarUrl={m.avatar_url} size={16} ring={false} />
                                                             {m.owner_name || m.company_name || 'Ukendt'} (PM)
                                                         </span>
                                                     );
@@ -1972,9 +2022,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     if (!m) return null;
                                                     return (
                                                         <span key={wId} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: '#f8fafc', color: '#475569', borderRadius: '6px', fontSize: '0.75rem', border: '1px solid #e2e8f0' }}>
-                                                            <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: '#334155' }}>
-                                                                {(m.owner_name || m.company_name || '?').charAt(0).toUpperCase()}
-                                                            </div>
+                                                            <UserAvatar name={m.owner_name || m.company_name || ''} avatarUrl={m.avatar_url} size={16} ring={false} />
                                                             {m.owner_name || m.company_name || 'Ukendt'}
                                                         </span>
                                                     );
@@ -2130,7 +2178,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center' }}>
                                                 <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{totalActualHours} <span style={{ fontSize: '1rem', color: '#94a3b8' }}>/ {parseFloat(selectedCase.raw_data?.calc_data?.laborHours) || 40} t.</span></h1>
                                                 <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Registrerede timer af holdet</p>
-                                                <button onClick={() => { setInfoSheetType(null); setActiveSubTab('timesheet'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#d97706', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Timeregistrering</button>
+                                                <button onClick={() => { setInfoSheetType(null); handleSubTabChange('timesheet'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#d97706', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Timeregistrering</button>
                                             </div>
                                         )}
                                         {infoSheetType === 'materials' && (
@@ -2150,7 +2198,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     </>
                                                 )}
                                                 
-                                                <button onClick={() => { setInfoSheetType(null); setActiveSubTab('materials'); }} style={{ marginTop: '24px', width: '100%', padding: '14px', background: '#2563eb', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Gå til materialeliste</button>
+                                                <button onClick={() => { setInfoSheetType(null); handleSubTabChange('materials'); }} style={{ marginTop: '24px', width: '100%', padding: '14px', background: '#2563eb', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Gå til materialeliste</button>
                                                 
                                                 <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                                                     <div style={{ position: 'relative', flex: 1 }}>
@@ -2209,7 +2257,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center' }}>
                                                 <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{(originalBudget/1000).toFixed(0)}k <span style={{ fontSize: '1rem', color: '#94a3b8' }}>DKK</span></h1>
                                                 <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Estimeret materialebudget</p>
-                                                <button onClick={() => { setInfoSheetType(null); setActiveSubTab('materials'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#059669', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Materialer</button>
+                                                <button onClick={() => { setInfoSheetType(null); handleSubTabChange('materials'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#059669', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Materialer</button>
                                             </div>
                                         )}
                                     </div>
@@ -2244,9 +2292,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                             return (
                                                                 <div key={pmId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#eff6ff', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
                                                                     <div onClick={() => setProfilePerson({ name: m.owner_name || m.company_name || 'Ukendt', role: 'Projektleder', phone: m.phone, email: m.email })} style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', flex: 1, minWidth: 0 }}>
-                                                                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.3)' }}>
-                                                                            {(m.owner_name || m.company_name || '?').charAt(0).toUpperCase()}
-                                                                        </div>
+                                                                        <UserAvatar name={m.owner_name || m.company_name || ''} avatarUrl={m.avatar_url} size={44} />
+
                                                                         <div>
                                                                             <div style={{ fontWeight: '700', color: '#1e3a8a', fontSize: '1.05rem' }}>{m.owner_name || m.company_name || 'Ukendt'}</div>
                                                                             <div style={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: '600' }}>Projektleder</div>
@@ -2275,9 +2322,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                             return (
                                                                 <div key={wId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
                                                                     <div onClick={() => setProfilePerson({ name: m.owner_name || m.company_name || 'Ukendt', role: m.role === 'apprentice' ? 'Tømrerlærling' : 'Tømrersvend', phone: m.phone, email: m.email })} style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', flex: 1, minWidth: 0 }}>
-                                                                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e2e8f0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>
-                                                                            {(m.owner_name || m.company_name || '?').charAt(0).toUpperCase()}
-                                                                        </div>
+                                                                        <UserAvatar name={m.owner_name || m.company_name || ''} avatarUrl={m.avatar_url} size={44} />
+
                                                                         <div>
                                                                             <div style={{ fontWeight: '700', color: '#334155', fontSize: '1.05rem' }}>{m.owner_name || m.company_name || 'Ukendt'}</div>
                                                                             <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>Håndværker</div>
@@ -2751,7 +2797,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         
                         {/* 1. Tidsregistrering */}
                         <div 
-                            onClick={() => setActiveSubTab('timesheet')}
+                            onClick={() => handleSubTabChange('timesheet')}
                             style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', flexDirection: 'column' }}
                             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#10b981'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; e.currentTarget.style.borderColor = '#e8e6e1'; }}
@@ -2793,7 +2839,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         {/* 3. Materialer */}
                         {!['worker', 'apprentice'].includes(profile?.role) && (
                             <div 
-                                onClick={() => setActiveSubTab('materials')}
+                                onClick={() => handleSubTabChange('materials')}
                             style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', flexDirection: 'column' }}
                             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; e.currentTarget.style.borderColor = '#e8e6e1'; }}
@@ -3299,7 +3345,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     return (
                                         <button
                                             key={tab.id}
-                                            onClick={() => setActiveSubTab(tab.id)}
+                                            onClick={() => handleSubTabChange(tab.id)}
                                             style={isMobile ? {
                                                 /* MOBILE TAB STYLES (No text, evenly spaced icons) */
                                                 display: 'flex', 
@@ -3360,7 +3406,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     })()}
 
                     {/* CASE WORKSPACE TABS INDHOLD */}
-                    <div style={{ padding: '8px 0' }}>
+                    <div ref={tabContentRef} style={{ padding: '8px 0' }}>
                         
                         {/* TAB 1: TO-DO / CHECKLIST */}
                         {activeSubTab === 'todo' && (
