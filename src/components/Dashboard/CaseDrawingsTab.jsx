@@ -4,11 +4,13 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { PenTool, Upload, Trash2, Calendar, FileText, Image as ImageIcon, X, ChevronLeft, ChevronRight, Download, ExternalLink } from 'lucide-react';
 import DrawingBoard from '../Drawings/DrawingBoard';
+import UserAvatar from '../ui/UserAvatar';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
 
 export default function CaseDrawingsTab({ selectedCase, profile, isMobile = false }) {
     const [drawings, setDrawings] = useState([]);
+    const [creatorsById, setCreatorsById] = useState({}); // skitse-skabere (id -> profil m. avatar)
     const [isLoading, setIsLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
     
@@ -37,6 +39,17 @@ export default function CaseDrawingsTab({ selectedCase, profile, isMobile = fals
                 if (error.code !== '42P01') throw error;
             } else {
                 setDrawings(data || []);
+                // Berig med skaber-profiler (navn + profilbillede) til visning på skitserne.
+                const ids = [...new Set((data || []).map(x => x.user_id).filter(Boolean))];
+                if (ids.length > 0) {
+                    const { data: profs } = await supabase
+                        .from('profiles')
+                        .select('id, owner_name, email, avatar_url')
+                        .in('id', ids);
+                    const map = {};
+                    (profs || []).forEach(p => { map[p.id] = p; });
+                    setCreatorsById(map);
+                }
             }
         } catch (err) {
             console.error("Fejl ved hentning af tegninger:", err);
@@ -473,6 +486,16 @@ export default function CaseDrawingsTab({ selectedCase, profile, isMobile = fals
                     <h4 style={{ margin: '4px 0 0 0', color: '#0f172a', fontSize: '1rem', fontWeight: 600, wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {d.name}
                     </h4>
+                    {(() => {
+                        const c = creatorsById[d.user_id];
+                        if (!c) return null;
+                        return (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                                <UserAvatar name={c.owner_name || c.email || ''} avatarUrl={c.avatar_url} size={20} ring={false} />
+                                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{c.owner_name || c.email}</span>
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
         );
