@@ -11,6 +11,14 @@
 ALTER TABLE public.chat_participants
     ADD COLUMN IF NOT EXISTS last_read_at timestamptz;
 
+-- Tillad at brugere kan opdatere deres egen last_read_at status via RLS
+DROP POLICY IF EXISTS "Users can update their own last_read_at" ON public.chat_participants;
+CREATE POLICY "Users can update their own last_read_at" ON public.chat_participants
+    FOR UPDATE
+    TO authenticated
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
+
 -- 2) Push ved ny chat-besked (samme mønster som tr_on_lead_push_notify)
 CREATE OR REPLACE FUNCTION public.tr_on_chat_message_notify()
 RETURNS TRIGGER AS $$
@@ -51,5 +59,6 @@ CREATE TRIGGER tr_chat_message_push
 -- ROLLBACK:
 -- DROP TRIGGER IF EXISTS tr_chat_message_push ON public.chat_messages;
 -- DROP FUNCTION IF EXISTS public.tr_on_chat_message_notify();
+-- DROP POLICY IF EXISTS "Users can update their own last_read_at" ON public.chat_participants;
 -- ALTER TABLE public.chat_participants DROP COLUMN IF EXISTS last_read_at;
 -- ============================================================================
