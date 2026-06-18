@@ -31,6 +31,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -138,10 +139,29 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
   }, [profile?.id, leads]);
 
   // Scroll to bottom whenever messages list updates
-  useEffect(() => {
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  };
 
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, activeThread]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  }, [newMessageText]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e);
+    }
+  };
+  
   // Subscribe to realtime messages for the active thread
   useEffect(() => {
     if (activeThread) {
@@ -927,7 +947,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                 borderTop: '1px solid rgba(226, 232, 240, 0.8)',
                 backgroundColor: 'rgba(255, 255, 255, 0.6)',
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-end',
                 gap: '12px'
               }}
             >
@@ -954,7 +974,8 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.2s',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  marginBottom: '2px'
                 }}
               >
                 {isUploading ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent" /> : <Plus size={24} strokeWidth={2.5} />}
@@ -979,17 +1000,19 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                 <div style={{
                   flex: 1,
                   display: 'flex',
-                  alignItems: 'center',
+                  alignItems: 'flex-end',
                   background: 'rgba(241, 245, 249, 0.8)',
                   borderRadius: '20px',
                   padding: '4px 4px 4px 16px',
                 }}>
-                  <input
-                    type="text"
+                  <textarea
+                    ref={textareaRef}
                     placeholder="Aa"
                     value={newMessageText}
                     onChange={(e) => setNewMessageText(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     disabled={isUploading}
+                    rows={1}
                     style={{
                       flex: 1,
                       minWidth: 0,
@@ -998,6 +1021,14 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                       outline: 'none',
                       fontSize: '0.95rem',
                       color: '#0f172a',
+                      resize: 'none',
+                      overflowY: 'auto',
+                      padding: '8px 0',
+                      lineHeight: '1.4',
+                      maxHeight: '120px',
+                      fontFamily: 'inherit',
+                      marginTop: '2px',
+                      marginBottom: '2px'
                     }}
                   />
                   {/* Voice note action */}
@@ -1017,7 +1048,8 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       transition: 'all 0.2s',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      marginBottom: '2px'
                     }}
                   >
                     {isRecording ? <Square size={18} /> : <Mic size={20} />}
@@ -1041,7 +1073,8 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                   cursor: newMessageText.trim() ? 'pointer' : 'not-allowed',
                   boxShadow: newMessageText.trim() ? '0 4px 12px rgba(37, 99, 235, 0.2)' : 'none',
                   transition: 'all 0.2s',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  marginBottom: '2px'
                 }}
               >
                 <Send size={16} style={{ marginLeft: '2px' }} />
