@@ -420,6 +420,62 @@ serve(async (req) => {
             });
         }
 
+        if (type === "chat_message") {
+            const threadId = bodyData?.thread_id;
+            const senderId = String(bodyData?.sender_id || "");
+            const messageId = bodyData?.message_id;
+
+            if (!threadId || !messageId) {
+                return new Response(JSON.stringify({ error: "Missing thread_id or message_id", ...stats }), {
+                    headers: { "Content-Type": "application/json" }, status: 400
+                });
+            }
+
+            // Beskedens indhold (til preview)
+            const { data: msg } = await supabaseClient
+                .from("chat_messages")
+                .select("text_content, message_type")
+                .eq("id", messageId)
+                .single();
+
+            // Afsenderens navn
+            const { data: sender } = await supabaseClient
+                .from("carpenters")
+                .select("owner_name, company_name")
+                .eq("id", senderId)
+                .single();
+            const senderName = sender?.owner_name || sender?.company_name || "En kollega";
+
+            // Trådens deltagere (undtagen afsenderen)
+            const { data: parts } = await supabaseClient
+                .from("chat_participants")
+                .select("user_id")
+                .eq("thread_id", threadId);
+            const recipientIds = [...new Set((parts || []).map((p: any) => String(p.user_id)))].filter(id => id !== senderId);
+
+            const preview = msg?.message_type === "image" ? "📷 Sendte et billede"
+                : msg?.message_type === "voice" ? "🎤 Sendte en talebesked"
+                : (msg?.text_content || "Ny besked");
+
+            for (const userId of recipientIds) {
+                await sendToUser(supabaseClient, stats, {
+                    userId,
+                    type: "chat_message",
+                    relatedId: String(messageId),
+                    slot: `chat-${messageId}-${userId}`,
+                    payload: {
+                        title: `Ny besked fra ${senderName}`,
+                        body: preview,
+                        url: `/dashboard?chatThread=${threadId}`
+                    }
+                });
+            }
+
+            return new Response(JSON.stringify({ success: true, ...stats }), {
+                headers: { "Content-Type": "application/json" }, status: 200
+            });
+        }
+
         const now = new Date();
         const todayStr = getLocalDate(now);
         const tomorrowStr = addDays(todayStr, 1);
