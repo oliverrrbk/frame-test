@@ -507,6 +507,46 @@ const Dashboard = () => {
     const [showDailyMessagePopup, setShowDailyMessagePopup] = useState(false);
     const [unreadDailyMessages, setUnreadDailyMessages] = useState([]);
 
+    // Global ulæst-tæller til chat (vises som badge i menuen, à la Messenger).
+    const [chatUnreadCount, setChatUnreadCount] = useState(0);
+    const chatUnreadRefreshRef = useRef(null);
+    useEffect(() => {
+        const uid = myProfile?.id;
+        if (!uid) return;
+        const compute = async () => {
+            try {
+                const { data: parts } = await supabase
+                    .from('chat_participants')
+                    .select('thread_id, last_read_at')
+                    .eq('user_id', uid);
+                if (!parts || parts.length === 0) { setChatUnreadCount(0); return; }
+                let total = 0;
+                await Promise.all(parts.map(async (p) => {
+                    let q = supabase
+                        .from('chat_messages')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('thread_id', p.thread_id)
+                        .neq('sender_id', uid);
+                    if (p.last_read_at) q = q.gt('created_at', p.last_read_at);
+                    const { count } = await q;
+                    total += count || 0;
+                }));
+                setChatUnreadCount(total);
+            } catch {
+                setChatUnreadCount(0); // last_read_at mangler måske endnu (kør setup_chat_notifications.sql)
+            }
+        };
+        chatUnreadRefreshRef.current = compute;
+        compute();
+        const ch = supabase
+            .channel('chat_unread_global')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+                if (payload?.new?.sender_id !== uid) compute();
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(ch); };
+    }, [myProfile?.id]);
+
 
     useEffect(() => {
         let touchStartX = 0;
@@ -2494,6 +2534,7 @@ const Dashboard = () => {
                     {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
                         <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => { setActiveTab('chat'); setIsMobileMenuOpen(false); }}>
                             <MessageSquare size={20} /> Intern Chat
+                            {chatUnreadCount > 0 && <span className="notification-badge">{chatUnreadCount}</span>}
                         </button>
                     )}
                     {['worker', 'apprentice', 'sales'].includes(effectiveRole) && (
@@ -3061,6 +3102,7 @@ const Dashboard = () => {
                                 leads={leadsData}
                                 targetLeadId={chatTargetLeadId}
                                 clearTargetLeadId={() => setChatTargetLeadId(null)}
+                                onThreadRead={() => chatUnreadRefreshRef.current && chatUnreadRefreshRef.current()}
                             />
                         </div>
                     )}

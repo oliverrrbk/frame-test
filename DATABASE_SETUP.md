@@ -43,6 +43,8 @@ afløser/supplerer hinanden.
 | `setup_calibration.sql` | Kalibrerings-data (beregner) |
 | `setup_public_carpenter.sql` | Offentlig læseadgang til tømrer-profil (wizard) |
 | `supabase/setup_chat.sql` | Frame Chat-system: tabeller, indexes + RLS til sikker real-time chat |
+| `supabase/fix_chat_rls.sql` | Rettelse af chat-RLS-politikker |
+| `supabase/setup_chat_notifications.sql` | Chat: `last_read_at` (ulæst) + push-trigger på nye beskeder (kør sidst, efter setup_chat) |
 
 ### 3) RPC'er (funktioner)
 | Fil | Formål |

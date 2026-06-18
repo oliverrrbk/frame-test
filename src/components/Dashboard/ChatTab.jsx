@@ -8,7 +8,7 @@ import {
 import toast from 'react-hot-toast';
 import UserAvatar from '../ui/UserAvatar';
 
-const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
+const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThreadRead }) => {
   const [threads, setThreads] = useState([]);
   const [activeThread, setActiveThread] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -167,6 +167,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
     if (activeThread) {
       loadMessages(activeThread.id);
       subscribeToRealtimeMessages(activeThread.id);
+      markThreadRead(activeThread.id);
     } else {
       setMessages([]);
     }
@@ -175,6 +176,22 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
       unsubscribeRealtimeMessages();
     };
   }, [activeThread]);
+
+  // Markér tråden som læst (last_read_at = nu) og bed forælderen om at opdatere ulæst-badgen.
+  const markThreadRead = async (threadId) => {
+    if (!threadId || !profile?.id) return;
+    try {
+      await supabase
+        .from('chat_participants')
+        .update({ last_read_at: new Date().toISOString() })
+        .eq('thread_id', threadId)
+        .eq('user_id', profile.id);
+      if (onThreadRead) onThreadRead();
+    } catch (e) {
+      // last_read_at-kolonnen findes måske ikke endnu (kør setup_chat_notifications.sql)
+      console.warn('Kunne ikke markere tråd som læst:', e?.message);
+    }
+  };
 
   const loadTeammatesAndThreads = async () => {
     if (!profile || !profile.id) return;
