@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js";
 import webPush from "npm:web-push";
 
-const publicVapidKey = Deno.env.get("PUBLIC_VAPID_KEY") || "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U";
+const publicVapidKey = Deno.env.get("PUBLIC_VAPID_KEY") || "BKLNPYR40nKRfERxXXWctbVztLnvUJTBMaacXoOr_z16Jf-1T7Ou-oBWZNoJ5W7c_av8L3G3qNlww5KJr15u36U";
 const privateVapidKey = Deno.env.get("PRIVATE_VAPID_KEY") || "";
 const timezone = Deno.env.get("PUSH_TIMEZONE") || "Europe/Copenhagen";
 
