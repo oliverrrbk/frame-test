@@ -16,6 +16,26 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'dm', 'case', 'company'
   const [teammates, setTeammates] = useState([]);
+  const [threadReads, setThreadReads] = useState({}); // thread_id -> last_read_at (til ulæst pr. tråd)
+
+  // Hent min læse-status pr. tråd (best-effort — fejler stille hvis last_read_at ikke findes endnu).
+  useEffect(() => {
+    if (!profile?.id || threads.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('chat_participants')
+          .select('thread_id, last_read_at')
+          .eq('user_id', profile.id);
+        if (error || cancelled || !data) return;
+        const map = {};
+        data.forEach(p => { map[p.thread_id] = p.last_read_at; });
+        setThreadReads(map);
+      } catch { /* kolonne mangler måske endnu */ }
+    })();
+    return () => { cancelled = true; };
+  }, [threads, profile?.id]);
   const [isLoadingThreads, setIsLoadingThreads] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [mobileViewState, setMobileViewState] = useState('list'); // 'list', 'chat', 'info'
@@ -186,6 +206,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
         .update({ last_read_at: new Date().toISOString() })
         .eq('thread_id', threadId)
         .eq('user_id', profile.id);
+      setThreadReads(prev => ({ ...prev, [threadId]: new Date().toISOString() }));
       if (onThreadRead) onThreadRead();
     } catch (e) {
       // last_read_at-kolonnen findes måske ikke endnu (kør setup_chat_notifications.sql)
@@ -683,7 +704,11 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
             filteredThreads.map(thread => {
               const info = getThreadInfo(thread);
               const isActive = activeThread?.id === thread.id;
-              
+              const lm = thread.lastMessage;
+              const lastRead = threadReads[thread.id];
+              const isUnread = !isActive && !!lm && String(lm.sender_id) !== String(profile?.id)
+                && (!lastRead || new Date(lm.created_at) > new Date(lastRead));
+
               return (
                 <div
                   key={thread.id}
@@ -724,18 +749,21 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: isActive ? 700 : 600, color: '#0f172a', fontSize: '0.95rem', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span style={{ fontWeight: isUnread ? 800 : (isActive ? 700 : 600), color: '#0f172a', fontSize: '0.95rem', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {info.title}
                       </span>
                       {thread.lastMessage && (
-                        <span style={{ fontSize: '0.7rem', color: '#94a3b8', whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                        <span style={{ fontSize: '0.7rem', color: isUnread ? '#2563eb' : '#94a3b8', fontWeight: isUnread ? 700 : 400, whiteSpace: 'nowrap', marginLeft: '8px' }}>
                           {new Date(thread.lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {thread.lastMessage ? thread.lastMessage.text_content : 'Ingen beskeder endnu'}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: isUnread ? '#0f172a' : '#64748b', fontWeight: isUnread ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        {thread.lastMessage ? thread.lastMessage.text_content : 'Ingen beskeder endnu'}
+                      </p>
+                      {isUnread && <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#2563eb', flexShrink: 0, boxShadow: '0 0 0 3px rgba(37,99,235,0.15)' }} />}
+                    </div>
                   </div>
                 </div>
               );
