@@ -3015,7 +3015,7 @@ const Dashboard = () => {
                                 targetCaseId={targetCaseId}
                                 clearTargetCase={() => setTargetCaseId(null)}
                                 leads={leadsData} 
-                                profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.id }} 
+                                profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.company_id || carpenterProfile?.id }} 
                                 carpenterProfile={carpenterProfile}
                                 setCarpenterProfile={setCarpenterProfile}
                                 simulatedRole={simulatedRole}
@@ -3057,7 +3057,7 @@ const Dashboard = () => {
                     {activeTab === 'chat' && (
                         <div className="tab-pane active" style={{ height: '100%' }}>
                             <ChatTab 
-                                profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.id }}
+                                profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.company_id || carpenterProfile?.id }}
                                 leads={leadsData}
                                 targetLeadId={chatTargetLeadId}
                                 clearTargetLeadId={() => setChatTargetLeadId(null)}
