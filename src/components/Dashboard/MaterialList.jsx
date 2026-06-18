@@ -288,15 +288,15 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
         setOpenLists(prev => ({ ...prev, [listId]: !prev[listId] }));
     };
 
-    const handleDownloadPdf = (listId, listName) => {
+    // Bygger bestillings-PDF'en og returnerer { pdf, filename } (gemmer/sender ikke selv),
+    // så den kan genbruges af både Download- og Send/Del-knappen.
+    const buildOrderPdf = (listId, listName) => {
+        const listMaterials = materials.filter(m => m.listId === listId);
+        if (listMaterials.length === 0) {
+            toast.error("Listen er tom!");
+            return null;
+        }
         try {
-            toast.loading("Genererer materialebestilling...", { id: "pdf_generation" });
-            const listMaterials = materials.filter(m => m.listId === listId);
-            if (listMaterials.length === 0) {
-                toast.error("Listen er tom!");
-                return;
-            }
-
             const pdf = new jsPDF('p', 'mm', 'a4');
             const brandColor = [26, 26, 26]; 
             const secondaryColor = [107, 114, 128]; 
@@ -404,22 +404,44 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                 y = 20;
             }
             
-            y += 15;
-            pdf.setDrawColor(180, 180, 180);
-            pdf.line(14, y, 90, y);
-            pdf.line(120, y, 196, y);
-            
-            pdf.setFont('helvetica', 'italic');
-            pdf.setFontSize(8);
-            pdf.text('Dato & underskrift (Tømrer)', 14, y + 4);
-            pdf.text('Dato & underskrift (Plukker/Trælast)', 120, y + 4);
-            
-            pdf.save(`Bestilling_${listName.replace(/ /g, '_')}_Sag_${lead.case_number || String(lead.id).substring(0, 8)}.pdf`);
-            toast.success("Bestillings-PDF gemt!", { id: "pdf_generation" });
+            const filename = `Bestilling_${listName.replace(/ /g, '_')}_Sag_${lead.case_number || String(lead.id).substring(0, 8)}.pdf`;
+            return { pdf, filename };
         } catch (err) {
             console.error('Fejl under PDF-generering:', err);
             toast.error("Kunne ikke oprette PDF: " + err.message, { id: "pdf_generation" });
+            return null;
         }
+    };
+
+    const handleDownloadPdf = (listId, listName) => {
+        const res = buildOrderPdf(listId, listName);
+        if (!res) return;
+        res.pdf.save(res.filename);
+        toast.success("Bestillings-PDF gemt!");
+    };
+
+    // Send/del bestillingen. På mobil åbnes telefonens del-ark (vælg din EGEN mail,
+    // så den sendes fra din adresse). Hvor fil-deling ikke understøttes (typisk
+    // computer), hentes PDF'en i stedet, så den kan vedhæftes manuelt.
+    const handleSharePdf = async (listId, listName) => {
+        const res = buildOrderPdf(listId, listName);
+        if (!res) return;
+        try {
+            const file = new File([res.pdf.output('blob')], res.filename, { type: 'application/pdf' });
+            if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: 'Materialebestilling',
+                    text: `Materialebestilling – ${listName}`
+                });
+                return;
+            }
+        } catch (err) {
+            if (err && err.name === 'AbortError') return; // brugeren lukkede del-arket
+            console.warn('Deling ikke mulig, falder tilbage til download:', err);
+        }
+        res.pdf.save(res.filename);
+        toast('Deling understøttes ikke her — PDF hentet, så du kan vedhæfte den i din mail.', { icon: '📎', duration: 6000 });
     };
 
     const handleGenerateEmail = (listId, listName) => {
@@ -682,6 +704,19 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
                                             >
                                                 <Download size={16} /> <span style={{fontSize: '0.65rem', fontWeight: 'bold'}}>PDF</span>
+                                            </button>
+
+                                            {/* Send / Del Knap */}
+                                            <button
+                                                onClick={() => handleSharePdf(list.id, list.name)}
+                                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '6px', borderRadius: '8px', border: 'none', cursor: 'pointer', flex: '1 1 auto', minWidth: '60px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#ffffff', boxShadow: '0 4px 12px rgba(37,99,235,0.30)', transition: 'transform 0.15s ease, box-shadow 0.2s ease' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(37,99,235,0.42)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(37,99,235,0.30)'; }}
+                                                onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.96)'; }}
+                                                onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                                title="Send bestillingen – på mobil vælger du din egen mail"
+                                            >
+                                                <Send size={16} /> <span style={{fontSize: '0.65rem', fontWeight: 'bold'}}>Send</span>
                                             </button>
 
                                             {/* Slet Liste Knap */}
