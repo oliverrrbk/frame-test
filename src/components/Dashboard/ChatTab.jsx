@@ -1013,12 +1013,16 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId }) => {
                     onKeyDown={handleKeyDown}
                     disabled={isUploading}
                     rows={1}
+                    className="focus:ring-0 focus:outline-none"
                     style={{
                       flex: 1,
                       minWidth: 0,
                       border: 'none',
                       background: 'transparent',
+                      backgroundColor: 'transparent',
                       outline: 'none',
+                      boxShadow: 'none',
+                      WebkitAppearance: 'none',
                       fontSize: '0.95rem',
                       color: '#0f172a',
                       resize: 'none',
