@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
 import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
+import UserAvatar from '../ui/UserAvatar';
 
 const roles = [
     { value: 'sales', label: 'Projektleder', desc: 'Kan styre tildelte sager, oprette ordrer og se materialepriser. (Kan ikke ændre andres timer).' },
@@ -625,9 +626,8 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                     style={{ background: isExpanded ? 'var(--surface-bg)' : 'transparent', transition: 'background 0.2s' }}
                                                 >
                                                     <div className="flex items-center gap-4">
-                                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.125rem', flexShrink: 0 }}>
-                                                            {member.owner_name?.charAt(0).toUpperCase() || 'M'}
-                                                        </div>
+                                                        <UserAvatar name={member.owner_name || member.company_name || ''} avatarUrl={member.avatar_url} size={48} />
+
                                                         <div>
                                                             <h4 style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 4px' }}>
                                                                 {member.owner_name || 'Uden Navn'}

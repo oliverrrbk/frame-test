@@ -12,6 +12,7 @@ import {
 } from '../../utils/payroll';
 import { mutateTimeEntries } from '../../utils/timeEntries';
 import { getRoleLabel } from '../../utils/roles';
+import UserAvatar from '../ui/UserAvatar';
 import { Lock, FileSpreadsheet, RotateCcw, IdCard, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
@@ -1493,9 +1494,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                             </td>
                                             <td data-label="Medarbejder" style={{ padding: '20px 24px', color: '#334155', fontSize: '0.95rem', fontWeight: '500' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                                                        {memberName.charAt(0).toUpperCase()}
-                                                    </div>
+                                                    <UserAvatar name={memberName} avatarUrl={member?.avatar_url} size={28} ring={false} />
                                                     {memberName}
                                                 </div>
                                             </td>
@@ -1800,7 +1799,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                                     </tr>
                                                 ) : (
                                                     data.rows.map((r, i) => {
-                                                        const initials = r.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                                                        const rowAvatar = teamMembers.find(t => String(t.id) === String(r.employeeId))?.avatar_url;
                                                         const absence = (r.vacation || 0) + (r.sick || 0) + (r.other || 0);
                                                         
                                                         return (
@@ -1811,21 +1810,8 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                                                 style={{ borderBottom: i < data.rows.length - 1 ? '1px solid #f1f5f9' : 'none', transition: 'background-color 0.15s ease' }}
                                                             >
                                                                 <td style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                                    <div style={{ 
-                                                                        width: '32px', 
-                                                                        height: '32px', 
-                                                                        borderRadius: '50%', 
-                                                                        backgroundColor: '#f1f5f9', 
-                                                                        color: '#475569', 
-                                                                        display: 'flex', 
-                                                                        alignItems: 'center', 
-                                                                        justifyContent: 'center',
-                                                                        fontSize: '0.75rem',
-                                                                        fontWeight: 'bold',
-                                                                        border: '1px solid #e2e8f0'
-                                                                    }}>
-                                                                        {initials}
-                                                                    </div>
+                                                                    <UserAvatar name={r.name} avatarUrl={rowAvatar} size={32} />
+
                                                                     <div>
                                                                         <div style={{ fontWeight: 'bold', color: '#0f172a' }}>{r.name}</div>
                                                                         <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
@@ -2350,9 +2336,8 @@ export default function AdminTimesheet({ leadsData, profile }) {
                                                 onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.6)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.05)'; }}
                                             >
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(15, 23, 42, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#334155', fontSize: '0.9rem' }}>
-                                                        {member.owner_name?.charAt(0).toUpperCase() || 'M'}
-                                                    </div>
+                                                    <UserAvatar name={member.owner_name || member.company_name || ''} avatarUrl={member.avatar_url} size={36} />
+
                                                     <div style={{ overflow: 'hidden' }}>
                                                         <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.owner_name || 'Uden Navn'}</div>
                                                         <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{getRoleLabel(member.role)}</div>
