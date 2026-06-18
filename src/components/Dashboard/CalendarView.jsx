@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Clock
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import UserAvatar from '../ui/UserAvatar';
 import GorgeousMultiSelect from './GorgeousMultiSelect';
 import GorgeousSingleSelect from './GorgeousSingleSelect';
 import { getDanishHolidays } from '../../utils/holidays';
@@ -1026,18 +1027,12 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     ].map((emp, empIdx) => {
                                         if (selectedEmployeeIds.length > 0 && !selectedEmployeeIds.includes('all') && !selectedEmployeeIds.includes(emp.id)) return null;
 
-                                        const initials = emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                                        // Genererer en fast, lys og pæn farve ud fra ID
-                                        const hue = (String(emp.id).charCodeAt(0) * 137) % 360;
-                                        const bgColor = `hsl(${hue}, 70%, 90%)`;
-                                        const textColor = `hsl(${hue}, 70%, 30%)`;
+                                        const empAvatar = String(emp.id) === String(myProfile?.id) ? myProfile?.avatar_url : (teamMembers.find(t => String(t.id) === String(emp.id))?.avatar_url);
 
                                         return (
                                             <div key={emp.id} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                                                 <div style={{ width: '56px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: bgColor, color: textColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '800', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                                                        {initials}
-                                                    </div>
+                                                    <UserAvatar name={emp.name} avatarUrl={empAvatar} size={36} />
                                                 </div>
                                                 {Array.from({ length: 5 }).map((_, i) => {
                                                     const d = new Date(startOfWeekMobile);
@@ -1253,9 +1248,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '16px', background: isSelected ? '#eff6ff' : '#fff', border: isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0', cursor: 'pointer', transition: 'all 0.2s' }}
                                         >
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: emp.isMe ? '#dbeafe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: emp.isMe ? '#1d4ed8' : '#64748b', fontWeight: 'bold' }}>
-                                                    {emp.name.charAt(0).toUpperCase()}
-                                                </div>
+                                                <UserAvatar name={emp.name} avatarUrl={emp.isMe ? myProfile?.avatar_url : (teamMembers.find(t => String(t.id) === String(emp.id))?.avatar_url)} size={36} />
                                                 <span style={{ fontSize: '1.05rem', fontWeight: '600', color: isSelected ? '#1e293b' : '#475569' }}>{emp.name}</span>
                                             </div>
                                             {isSelected && <CheckCircle size={22} color="#3b82f6" />}
