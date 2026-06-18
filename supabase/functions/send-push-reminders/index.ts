@@ -447,11 +447,30 @@ serve(async (req) => {
             const senderName = sender?.owner_name || sender?.company_name || "En kollega";
 
             // Trådens deltagere (undtagen afsenderen)
-            const { data: parts } = await supabaseClient
-                .from("chat_participants")
-                .select("user_id")
-                .eq("thread_id", threadId);
-            const recipientIds = [...new Set((parts || []).map((p: any) => String(p.user_id)))].filter(id => id !== senderId);
+            const { data: thread } = await supabaseClient
+                .from("chat_threads")
+                .select("type, company_id")
+                .eq("id", threadId)
+                .single();
+
+            let recipientIds: string[] = [];
+
+            if (thread?.type === "company" && thread?.company_id) {
+                // For firma-chat skal vi sende til alle aktive brugere i firmaet
+                const { data: teamMembers } = await supabaseClient
+                    .from("carpenters")
+                    .select("id")
+                    .eq("company_id", thread.company_id);
+                recipientIds = [thread.company_id, ...((teamMembers || []).map((m: any) => String(m.id)))];
+            } else {
+                const { data: parts } = await supabaseClient
+                    .from("chat_participants")
+                    .select("user_id")
+                    .eq("thread_id", threadId);
+                recipientIds = (parts || []).map((p: any) => String(p.user_id));
+            }
+            
+            recipientIds = [...new Set(recipientIds)].filter(id => id !== senderId);
 
             const preview = msg?.message_type === "image" ? "📷 Sendte et billede"
                 : msg?.message_type === "voice" ? "🎤 Sendte en talebesked"
