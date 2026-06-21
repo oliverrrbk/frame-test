@@ -43,10 +43,16 @@ class ErrorBoundary extends React.Component {
         <div style={{ padding: '20px', background: '#fee2e2', color: '#991b1b', height: '100vh', display: 'flex', flexDirection: 'column' }}>
           <h2>🚨 Dashboard Crashed!</h2>
           <p>Tag venligst et screenshot af denne fejl og send til udvikleren:</p>
+          <button 
+            onClick={() => window.location.reload(true)}
+            style={{ padding: '10px 15px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '15px' }}
+          >
+            🔄 Genindlæs Appen Nu
+          </button>
           <pre style={{ background: '#fef2f2', padding: '10px', borderRadius: '8px', overflowX: 'auto', border: '1px solid #fca5a5' }}>
             {this.state.error && this.state.error.toString()}
           </pre>
-          <pre style={{ marginTop: '10px', background: '#fef2f2', padding: '10px', borderRadius: '8px', overflowX: 'auto', fontSize: '12px', color: '#7f1d1d' }}>
+          <pre style={{ marginTop: '10px', background: '#fef2f2', padding: '10px', borderRadius: '8px', overflowX: 'auto', fontSize: '12px', color: '#7f1d1d', flex: 1 }}>
             {this.state.info && this.state.info.componentStack}
           </pre>
         </div>

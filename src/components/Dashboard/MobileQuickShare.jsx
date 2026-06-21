@@ -73,7 +73,7 @@ const MobileQuickShare = ({ carpenterProfile }) => {
                                 zIndex: 50
                             }}
                         />
-                        <motion.div
+                            <motion.div
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
@@ -83,17 +83,18 @@ const MobileQuickShare = ({ carpenterProfile }) => {
                                 bottom: 0,
                                 left: 0,
                                 right: 0,
-                                backgroundColor: 'var(--bg-card)',
+                                backgroundColor: '#ffffff',
                                 borderTopLeftRadius: '24px',
                                 borderTopRightRadius: '24px',
                                 padding: '24px',
                                 zIndex: 51,
-                                paddingBottom: 'calc(24px + env(safe-area-inset-bottom))'
+                                paddingBottom: 'calc(24px + env(safe-area-inset-bottom))',
+                                boxShadow: '0 -10px 40px rgba(0,0,0,0.1)'
                             }}
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                                 <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)' }}>Del Prisberegner</h3>
-                                <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', padding: '8px' }}>
+                                <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', padding: '8px', cursor: 'pointer' }}>
                                     <X size={24} />
                                 </button>
                             </div>
@@ -117,7 +118,7 @@ const MobileQuickShare = ({ carpenterProfile }) => {
                                     }}
                                 >
                                     <MessageSquare size={20} />
-                                    Send via SMS (Gratis)
+                                    Send via SMS
                                 </button>
 
                                 <button 
