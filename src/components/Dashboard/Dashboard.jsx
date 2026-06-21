@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Home, Droplets, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown, Play } from 'lucide-react';
@@ -16,8 +16,8 @@ import AiTrainingView from './AiTrainingView';
 import TeamManagement from './TeamManagement';
 import CaseManagement from './CaseManagement';
 import MaterialList from './MaterialList';
-import WorkerTimesheet from './WorkerTimesheet';
-import AdminTimesheet from './AdminTimesheet';
+const WorkerTimesheet = lazy(() => import('./WorkerTimesheet'));
+const AdminTimesheet = lazy(() => import('./AdminTimesheet'));
 import WorkerDrafts from './WorkerDrafts';
 import ProjectManagerOverview from './ProjectManagerOverview';
 import FinanceOverview from './FinanceOverview';
@@ -27,7 +27,7 @@ import EmployeeOnboardingModal from './EmployeeOnboardingModal';
 import SuperAdminView from './SuperAdminView';
 import MyProfileView from './MyProfileView';
 import SubscriptionSettings from './SubscriptionSettings';
-import DashboardOverview from './DashboardOverview';
+const DashboardOverview = lazy(() => import('./DashboardOverview'));
 import WorkerOverview from './WorkerOverview';
 import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
@@ -2949,23 +2949,27 @@ const Dashboard = () => {
                                 simulatedRole={simulatedRole}
                             />
                         ) : (
-                            <DashboardOverview 
-                                leadsData={roleFilteredLeads} 
-                                carpenterProfile={{ ...carpenterProfile, role: effectiveRole }} 
-                                myProfile={{ ...myProfile, role: effectiveRole }} 
-                                setActiveTab={setActiveTab} 
+                            <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
+                            <DashboardOverview
+                                leadsData={roleFilteredLeads}
+                                carpenterProfile={{ ...carpenterProfile, role: effectiveRole }}
+                                myProfile={{ ...myProfile, role: effectiveRole }}
+                                setActiveTab={setActiveTab}
                                 setSelectedLead={setSelectedLead}
                                 setTargetCaseId={setTargetCaseId}
                             />
+                            </Suspense>
                         )
                     )}
 
                     {activeTab === 'worker_timesheet' && ['worker', 'apprentice', 'sales'].includes(effectiveRole) && (
-                        <WorkerTimesheet 
-                            leadsData={roleFilteredLeads} 
-                            myProfile={{ ...myProfile, role: effectiveRole }} 
+                        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
+                        <WorkerTimesheet
+                            leadsData={roleFilteredLeads}
+                            myProfile={{ ...myProfile, role: effectiveRole }}
                             simulatedRole={simulatedRole}
                         />
+                        </Suspense>
                     )}
 
                     {activeTab === 'worker_drafts' && ['worker', 'sales'].includes(effectiveRole) && (
@@ -3130,10 +3134,12 @@ const Dashboard = () => {
                     )}
                     {activeTab === 'admin_timesheet' && (
                         <div className="tab-pane active " style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
-                            <AdminTimesheet 
-                                leadsData={leadsData} 
-                                profile={myProfile} 
+                            <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
+                            <AdminTimesheet
+                                leadsData={leadsData}
+                                profile={myProfile}
                             />
+                            </Suspense>
                         </div>
                     )}
                     {activeTab === 'leads' && (
