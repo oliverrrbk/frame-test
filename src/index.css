@@ -3514,3 +3514,9 @@ button:focus-visible {
   70%  { box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
+
+/* Skeleton-loader: blødt pulserende placeholder mens data hentes */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}

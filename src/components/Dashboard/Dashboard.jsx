@@ -3306,7 +3306,18 @@ const Dashboard = () => {
                             </div>
                             
                             {isLeadsLoading ? (
-                                <div className="placeholder-state"><h3>Henter kunder fra databasen...</h3></div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {[0, 1, 2, 3, 4].map(i => (
+                                        <div key={i} style={{ background: '#fff', border: '1px solid #eef2f7', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', animation: 'skeletonPulse 1.4s ease-in-out infinite', animationDelay: `${i * 0.08}s` }}>
+                                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#e8edf3', flexShrink: 0 }} />
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ height: '14px', width: '38%', background: '#e8edf3', borderRadius: '6px', marginBottom: '10px' }} />
+                                                <div style={{ height: '12px', width: '62%', background: '#eef2f7', borderRadius: '6px' }} />
+                                            </div>
+                                            <div style={{ width: '84px', height: '28px', background: '#eef2f7', borderRadius: '999px', flexShrink: 0 }} />
+                                        </div>
+                                    ))}
+                                </div>
                             ) : filteredLeads.length === 0 ? (
                                 <div className="placeholder-state" style={{ backgroundColor: '#f3f1ed', borderColor: '#e2e8f0', padding: '48px 24px', textAlign: 'center' }}>
                                     <div style={{ width: '64px', height: '64px', backgroundColor: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
