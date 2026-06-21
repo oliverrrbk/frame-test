@@ -11,7 +11,9 @@ const toHHMM = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMi
 // Loft på en enkelt automatisk vagt (brutto) ved tjek-ud — se WorkerOverview.
 const MAX_SHIFT_HOURS = 14;
 
-export default function ProjectManagerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId }) {
+export default function ProjectManagerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId, onDataChange }) {
+    // Let SPA-opdatering i stedet for fuld sidegenindlæsning (hurtigere på mobil).
+    const refresh = () => { if (onDataChange) onDataChange(); else window.location.reload(); };
     // Filtrer sager, som projektlederen er tilknyttet
     const activeManagerCases = useMemo(() => {
         return leadsData.filter(lead => {
@@ -46,7 +48,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
             const { flushed } = await flushTimeEntryQueue();
             if (flushed > 0) {
                 toast.success(`${flushed} offline-stempling${flushed > 1 ? 'er' : ''} synkroniseret.`);
-                setTimeout(() => window.location.reload(), 1200);
+                refresh();
             }
         };
         sync();
@@ -100,7 +102,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
         try {
             await mutateTimeEntries({ table: 'leads', id: leadToUpdate.id, add: [entry] });
             toast.success('Du er nu tjekket ind!');
-            setTimeout(() => window.location.reload(), 1000);
+            refresh();
         } catch {
             queueTimeEntryOp({ table: 'leads', id: leadToUpdate.id, add: [entry] });
             setPendingEntry({ ...entry, leadId: leadToUpdate.id });
@@ -144,7 +146,7 @@ export default function ProjectManagerOverview({ leadsData, myProfile, setActive
             } else {
                 toast.success('Tjekket ud! Timerne er nu gemt.');
             }
-            setTimeout(() => window.location.reload(), 1000);
+            refresh();
         } catch {
             queueTimeEntryOp({ table: 'leads', id: lead.id, removeIds: [activeEntry.id], add: [entry] });
             setPendingEntry(null);

@@ -18,7 +18,9 @@ const toHHMM = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMi
 // ikke registrerer fx 70 timer. Lang dag med overarbejde er stadig dækket.
 const MAX_SHIFT_HOURS = 14;
 
-export default function WorkerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId, simulatedRole }) {
+export default function WorkerOverview({ leadsData, myProfile, setActiveTab, setTargetCaseId, simulatedRole, onDataChange }) {
+    // Let SPA-opdatering i stedet for fuld sidegenindlæsning (hurtigere på mobil).
+    const refresh = () => { if (onDataChange) onDataChange(); else window.location.reload(); };
     // ---- EKSISTERENDE LOGIK (Beholdt for funktionel integritet) ----
     const activeWorkerCases = useMemo(() => {
         return leadsData.filter(lead => {
@@ -61,7 +63,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             const { flushed } = await flushTimeEntryQueue();
             if (flushed > 0) {
                 toast.success(`${flushed} offline-stempling${flushed > 1 ? 'er' : ''} synkroniseret.`);
-                setTimeout(() => window.location.reload(), 1200);
+                refresh();
             }
         };
         sync();
@@ -116,7 +118,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         try {
             await mutateTimeEntries({ table: 'leads', id: leadToUpdate.id, add: [entry] });
             toast.success('Du er nu tjekket ind!');
-            setTimeout(() => window.location.reload(), 1000);
+            refresh();
         } catch {
             // Ingen forbindelse: gem stemplingen lokalt og send den automatisk senere.
             queueTimeEntryOp({ table: 'leads', id: leadToUpdate.id, add: [entry] });
@@ -162,7 +164,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
             } else {
                 toast.success('Tjekket ud! Timerne er nu gemt.');
             }
-            setTimeout(() => window.location.reload(), 1000);
+            refresh();
         } catch {
             // Ingen forbindelse: gem udstemplingen lokalt og send den automatisk senere.
             queueTimeEntryOp({ table: 'leads', id: lead.id, removeIds: [activeEntry.id], add: [entry] });
@@ -300,7 +302,7 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         } else {
             toast.success(`${absenceType} er registreret!`);
             setSelectedMissingDate(null);
-            setTimeout(() => window.location.reload(), 1000);
+            refresh();
         }
     };
 

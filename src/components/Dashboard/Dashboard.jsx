@@ -2947,6 +2947,7 @@ const Dashboard = () => {
                                 setActiveTab={setActiveTab}
                                 setTargetCaseId={setTargetCaseId}
                                 simulatedRole={simulatedRole}
+                                onDataChange={refreshData}
                             />
                         ) : (
                             <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
