@@ -3139,6 +3139,7 @@ const Dashboard = () => {
                             <AdminTimesheet
                                 leadsData={leadsData}
                                 profile={myProfile}
+                                onDataChange={refreshData}
                             />
                             </Suspense>
                         </div>

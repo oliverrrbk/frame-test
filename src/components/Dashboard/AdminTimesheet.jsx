@@ -138,7 +138,9 @@ const ExportMenuItem = ({ title, desc, onClick }) => (
 // feature flag to toggle back to old design if needed
 const USE_UNIFIED_PAYROLL_MODAL = true;
 
-export default function AdminTimesheet({ leadsData, profile }) {
+export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
+    // Let SPA-opdatering i stedet for fuld sidegenindlæsning.
+    const refresh = () => { if (onDataChange) onDataChange(); else window.location.reload(); };
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
     
     useEffect(() => {
@@ -700,7 +702,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
             try {
                 await mutateTimeEntries({ table: 'carpenters', id: member.id, removeIds });
                 toast.success(entry.isGrouped ? 'Ferie-periode slettet.' : 'Registrering slettet.');
-                setTimeout(() => window.location.reload(), 800);
+                refresh();
             } catch {
                 toast.error('Kunne ikke slette fravær/internt.');
             }
@@ -710,7 +712,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
             try {
                 await mutateTimeEntries({ table: 'leads', id: lead.id, removeIds: [entry.id] });
                 toast.success('Tidsregistrering slettet.');
-                setTimeout(() => window.location.reload(), 800);
+                refresh();
             } catch {
                 toast.error('Kunne ikke slette tiden.');
             }
@@ -834,7 +836,7 @@ export default function AdminTimesheet({ leadsData, profile }) {
             toast.success(isAdding ? 'Registrering tilføjet!' : 'Registrering opdateret!');
             setEditingEntry(null);
             setIsAdding(false);
-            setTimeout(() => window.location.reload(), 800);
+            refresh();
         } catch (err) {
             console.error(err);
             const errorMsg = 'Fejl detaljer: ' + (err.message || JSON.stringify(err));
