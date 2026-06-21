@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Home, Droplets, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown, Play } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+// jsPDF + html2canvas udskydes (dynamisk import i PDF-handlerne) for hurtigere load
 import { GoogleMap, useLoadScript, Marker, InfoWindow, MarkerClusterer } from '@react-google-maps/api';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -5332,6 +5331,7 @@ const Dashboard = () => {
                                                                     }
 
                                                                     try {
+                                                                        const [{ jsPDF }, html2canvas] = await Promise.all([import('jspdf'), import('html2canvas').then(m => m.default)]);
                                                                         const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
                                                                         const imgData = canvas.toDataURL('image/jpeg', 1.0);
                                                                         const pdfWidth = 210;
@@ -5416,6 +5416,7 @@ const Dashboard = () => {
                                                                     }
 
                                                                     try {
+                                                                        const [{ jsPDF }, html2canvas] = await Promise.all([import('jspdf'), import('html2canvas').then(m => m.default)]);
                                                                         const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
                                                                         const pdf = new jsPDF('p', 'mm', 'a4');
                                                                         const imgData = canvas.toDataURL('image/jpeg', 1.0);

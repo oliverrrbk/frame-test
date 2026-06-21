@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { jsPDF } from 'jspdf';
 import { PenTool, CheckCircle, FileText, Download, X, Save, Plus, Loader2, Edit3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
@@ -134,7 +133,7 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
 
 
     // --- PDF GENERATION ---
-    const generateAndSavePDF = () => {
+    const generateAndSavePDF = async () => {
         if (!title || !description || !amount) {
             toast.error("Udfyld venligst alle felter inden godkendelse.");
             return;
@@ -157,7 +156,8 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
 
         try {
             const signatureImage = canvas.toDataURL("image/png");
-            
+
+            const { jsPDF } = await import('jspdf'); // udskudt: hentes først ved PDF-generering
             const pdf = new jsPDF('p', 'mm', 'a4');
             const brandColor = [15, 23, 42]; 
             

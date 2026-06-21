@@ -7,7 +7,6 @@ import GorgeousSingleSelect from '../Dashboard/GorgeousSingleSelect';
 import DrawingBoard from './DrawingBoard';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
-import { jsPDF } from 'jspdf';
 import { renderElementsToCanvas } from './renderUtils';
 
 const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
@@ -219,8 +218,9 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
             }
             
             const pngDataUrl = canvas.toDataURL('image/png', 1.0);
-            
-            const pdf = new jsPDF('l', 'mm', 'a4'); 
+
+            const { jsPDF } = await import('jspdf'); // udskudt: hentes først ved PDF-download
+            const pdf = new jsPDF('l', 'mm', 'a4');
             pdf.addImage(pngDataUrl, 'PNG', 0, 0, 297, 210, '', 'FAST'); 
             
             pdf.save(`Skitse_${drawing.name || 'Dokument'}.pdf`);

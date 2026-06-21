@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { jsPDF } from 'jspdf';
 import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck, Upload, FileText, ExternalLink, Calculator, Send, AlertTriangle, CheckCircle, Package, ArrowRight, Printer, Info, CreditCard, Minus, MapPin, Wallet, ShoppingCart, TrendingDown, TrendingUp, Calendar } from 'lucide-react';
 import { generateMaterialList } from '../../utils/materialGenerator';
 import { supabase } from '../../supabaseClient';
@@ -290,13 +289,14 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
 
     // Bygger bestillings-PDF'en og returnerer { pdf, filename } (gemmer/sender ikke selv),
     // så den kan genbruges af både Download- og Send/Del-knappen.
-    const buildOrderPdf = (listId, listName) => {
+    const buildOrderPdf = async (listId, listName) => {
         const listMaterials = materials.filter(m => m.listId === listId);
         if (listMaterials.length === 0) {
             toast.error("Listen er tom!");
             return null;
         }
         try {
+            const { jsPDF } = await import('jspdf'); // udskudt: hentes først når en PDF laves
             const pdf = new jsPDF('p', 'mm', 'a4');
             const brandColor = [26, 26, 26]; 
             const secondaryColor = [107, 114, 128]; 
@@ -413,8 +413,8 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
         }
     };
 
-    const handleDownloadPdf = (listId, listName) => {
-        const res = buildOrderPdf(listId, listName);
+    const handleDownloadPdf = async (listId, listName) => {
+        const res = await buildOrderPdf(listId, listName);
         if (!res) return;
         res.pdf.save(res.filename);
         toast.success("Bestillings-PDF gemt!");
@@ -424,7 +424,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
     // så den sendes fra din adresse). Hvor fil-deling ikke understøttes (typisk
     // computer), hentes PDF'en i stedet, så den kan vedhæftes manuelt.
     const handleSharePdf = async (listId, listName) => {
-        const res = buildOrderPdf(listId, listName);
+        const res = await buildOrderPdf(listId, listName);
         if (!res) return;
         try {
             const file = new File([res.pdf.output('blob')], res.filename, { type: 'application/pdf' });

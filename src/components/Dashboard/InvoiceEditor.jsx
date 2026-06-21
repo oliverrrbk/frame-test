@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Send, Upload, FileText, CheckCircle2, ChevronDown, Plus, Banknote, Building2, User, Phone, Mail, MapPin, AlertCircle, Edit2, Save, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
-import { jsPDF } from "jspdf";
 import BilagManager from './BilagManager';
 
 const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onOpenCase, onUpdateLead, isMobile = false }) => {
