@@ -1,25 +1,27 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useLoadScript } from '@react-google-maps/api';
 import { Toaster } from 'react-hot-toast';
-import Wizard from './components/Wizard/Wizard';
-import Dashboard from './components/Dashboard/Dashboard';
-import LandingPage from './components/Landing/LandingPage';
-import CalculatorPage from './components/Landing/CalculatorPage';
-import FeaturesPage from './components/Landing/FeaturesPage';
-import PricingPage from './components/Landing/PricingPage';
-import GetStartedPage from './components/Landing/GetStartedPage';
-import AboutUsPage from './components/Landing/AboutUsPage';
-import Register from './components/Auth/Register';
 import Login from './components/Auth/Login';
-import ResetPassword from './components/Auth/ResetPassword';
-import ConfirmedPage from './components/Auth/ConfirmedPage';
-import AdminDashboard from './components/Admin/AdminDashboard';
-import QuoteAcceptPage from './components/Wizard/QuoteAcceptPage';
-import EstimateAcceptPage from './components/Wizard/EstimateAcceptPage';
-import MinubaIntegration from './components/Dashboard/MinubaIntegration';
+import Register from './components/Auth/Register';
+
+// Tunge sider lazy-loades, så koden først hentes når ruten besøges (hurtigere mobil-load).
+const Wizard = lazy(() => import('./components/Wizard/Wizard'));
+const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
+const LandingPage = lazy(() => import('./components/Landing/LandingPage'));
+const CalculatorPage = lazy(() => import('./components/Landing/CalculatorPage'));
+const FeaturesPage = lazy(() => import('./components/Landing/FeaturesPage'));
+const PricingPage = lazy(() => import('./components/Landing/PricingPage'));
+const GetStartedPage = lazy(() => import('./components/Landing/GetStartedPage'));
+const AboutUsPage = lazy(() => import('./components/Landing/AboutUsPage'));
+const ResetPassword = lazy(() => import('./components/Auth/ResetPassword'));
+const ConfirmedPage = lazy(() => import('./components/Auth/ConfirmedPage'));
+const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
+const QuoteAcceptPage = lazy(() => import('./components/Wizard/QuoteAcceptPage'));
+const EstimateAcceptPage = lazy(() => import('./components/Wizard/EstimateAcceptPage'));
+const MinubaIntegration = lazy(() => import('./components/Dashboard/MinubaIntegration'));
 import { supabase } from './supabaseClient';
 import { isStandalonePWA } from './utils/pwa';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 // Protected Route Komponent
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -175,6 +177,11 @@ const AnimatedRoutes = ({ session, setSession }) => {
             window.scrollTo(0, 0);
         }
     }}>
+      <Suspense fallback={
+        <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+          <div className="animate-spin" style={{ width: '38px', height: '38px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} />
+        </div>
+      }>
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={
           session ? (
@@ -233,6 +240,7 @@ const AnimatedRoutes = ({ session, setSession }) => {
           </ProtectedRoute>
         } />
       </Routes>
+      </Suspense>
     </AnimatePresence>
   );
 };
