@@ -19,6 +19,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
   const [threadReads, setThreadReads] = useState({}); // thread_id -> last_read_at (til ulæst pr. tråd)
 
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isLoadingThreads, setIsLoadingThreads] = useState(true);
   const [mobileViewState, setMobileViewState] = useState('list'); // 'list', 'chat', 'info'
 
   const messagesEndRef = useRef(null);

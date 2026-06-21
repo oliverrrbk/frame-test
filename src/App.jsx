@@ -49,7 +49,7 @@ class ErrorBoundary extends React.Component {
           >
             🔄 Genindlæs Appen Nu
           </button>
-          <pre style={{ background: '#fef2f2', padding: '10px', borderRadius: '8px', overflowX: 'auto', border: '1px solid #fca5a5' }}>
+          <pre style={{ background: '#fef2f2', padding: '10px', borderRadius: '8px', overflowX: 'auto', border: '1px solid #fca5a5', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {this.state.error && this.state.error.toString()}
           </pre>
           <pre style={{ marginTop: '10px', background: '#fef2f2', padding: '10px', borderRadius: '8px', overflowX: 'auto', fontSize: '12px', color: '#7f1d1d', flex: 1 }}>
