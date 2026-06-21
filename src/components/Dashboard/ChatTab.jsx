@@ -18,30 +18,50 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
   const [teammates, setTeammates] = useState([]);
   const [threadReads, setThreadReads] = useState({}); // thread_id -> last_read_at (til ulæst pr. tråd)
 
-  // Hent min læse-status pr. tråd (best-effort — fejler stille hvis last_read_at ikke findes endnu).
-  useEffect(() => {
-    if (!profile?.id || threads.length === 0) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from('chat_participants')
-          .select('thread_id, last_read_at')
-          .eq('user_id', profile.id);
-        if (error || cancelled || !data) return;
-        const map = {};
-        data.forEach(p => { map[p.thread_id] = p.last_read_at; });
-        setThreadReads(map);
-      } catch { /* kolonne mangler måske endnu */ }
-    })();
-    return () => { cancelled = true; };
-  }, [threads, profile?.id]);
-  const [isLoadingThreads, setIsLoadingThreads] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [mobileViewState, setMobileViewState] = useState('list'); // 'list', 'chat', 'info'
 
   const messagesEndRef = useRef(null);
-  const realtimeChannelRef = useRef(null);
+  const activeThreadRef = useRef(null);
+
+  useEffect(() => {
+    activeThreadRef.current = activeThread;
+  }, [activeThread]);
+
+  // Global Realtime Subscription for ALL threads
+  useEffect(() => {
+    const channel = supabase
+      .channel('global-chat-listener')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        (payload) => {
+          const newMsg = payload.new;
+
+          // If the message belongs to the currently open chat, append it
+          if (activeThreadRef.current && newMsg.thread_id === activeThreadRef.current.id) {
+            setMessages((prev) => {
+              if (prev.some(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+          }
+
+          // Always update the last message in the thread list for unread badges
+          setThreads((prevThreads) => 
+            prevThreads.map((t) => 
+              t.id === newMsg.thread_id 
+                ? { ...t, lastMessage: newMsg } 
+                : t
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -156,7 +176,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
     if (profile && profile.id) {
       loadTeammatesAndThreads();
     }
-  }, [profile?.id, leads]);
+  }, [profile?.id]);
 
   // Scroll to bottom whenever messages list updates
   const scrollToBottom = () => {
@@ -182,19 +202,14 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
     }
   };
   
-  // Subscribe to realtime messages for the active thread
+  // Handle switching active thread
   useEffect(() => {
     if (activeThread) {
       loadMessages(activeThread.id);
-      subscribeToRealtimeMessages(activeThread.id);
       markThreadRead(activeThread.id);
     } else {
       setMessages([]);
     }
-
-    return () => {
-      unsubscribeRealtimeMessages();
-    };
   }, [activeThread]);
 
   // Markér tråden som læst (last_read_at = nu) og bed forælderen om at opdatere ulæst-badgen.
@@ -229,11 +244,19 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
       if (teamError) throw teamError;
       setTeammates(teamData || []);
 
-      // 2. Fetch threads for this company
+      // 2. Fetch threads for this company with nested relations (eliminates N+1 issue)
       const { data: threadData, error: threadError } = await supabase
         .from('chat_threads')
-        .select('*')
+        .select(`
+          *,
+          chat_participants ( user_id, last_read_at ),
+          chat_messages (
+            text_content, created_at, sender_id, message_type, media_url
+          )
+        `)
         .eq('company_id', companyId)
+        .order('created_at', { foreignTable: 'chat_messages', ascending: false })
+        .limit(1, { foreignTable: 'chat_messages' })
         .order('created_at', { ascending: false });
 
       if (threadError) throw threadError;
@@ -251,36 +274,30 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
           .single();
 
         if (!createError && newCompanyThread) {
+          newCompanyThread.chat_participants = [];
+          newCompanyThread.chat_messages = [];
           finalThreads = [newCompanyThread, ...finalThreads];
         }
       }
 
-      // Fetch participants for each thread to enrich info
-      const enrichedThreads = await Promise.all(
-        finalThreads.map(async (thread) => {
-          const { data: participants } = await supabase
-            .from('chat_participants')
-            .select('user_id')
-            .eq('thread_id', thread.id);
+      // Format threads and extract last_read_at
+      const newThreadReads = {};
+      const enrichedThreads = finalThreads.map((thread) => {
+        const participantIds = (thread.chat_participants || []).map(p => {
+          if (p.user_id === profile.id && p.last_read_at) {
+            newThreadReads[thread.id] = p.last_read_at;
+          }
+          return p.user_id;
+        });
+        
+        return {
+          ...thread,
+          participantIds,
+          lastMessage: thread.chat_messages?.[0] || null
+        };
+      });
 
-          const participantIds = (participants || []).map(p => p.user_id);
-          
-          // Get the last message in this thread
-          const { data: lastMsg } = await supabase
-            .from('chat_messages')
-            .select('text_content, created_at, sender_id')
-            .eq('thread_id', thread.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          return {
-            ...thread,
-            participantIds,
-            lastMessage: lastMsg?.[0] || null
-          };
-        })
-      );
-
+      setThreadReads(prev => ({ ...prev, ...newThreadReads }));
       setThreads(enrichedThreads);
     } catch (error) {
       console.error('Error loading chat info:', error);
@@ -309,44 +326,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
     }
   };
 
-  const subscribeToRealtimeMessages = (threadId) => {
-    unsubscribeRealtimeMessages();
 
-    realtimeChannelRef.current = supabase
-      .channel(`chat-room:${threadId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `thread_id=eq.${threadId}`
-        },
-        (payload) => {
-          setMessages((prev) => {
-            if (prev.some(m => m.id === payload.new.id)) return prev;
-            return [...prev, payload.new];
-          });
-
-          // Update last message in the threads list
-          setThreads((prevThreads) => 
-            prevThreads.map((t) => 
-              t.id === threadId 
-                ? { ...t, lastMessage: payload.new } 
-                : t
-            )
-          );
-        }
-      )
-      .subscribe();
-  };
-
-  const unsubscribeRealtimeMessages = () => {
-    if (realtimeChannelRef.current) {
-      supabase.removeChannel(realtimeChannelRef.current);
-      realtimeChannelRef.current = null;
-    }
-  };
 
   const startDirectMessage = async (teammate) => {
     try {

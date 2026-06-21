@@ -4838,7 +4838,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     </button>
                 ))}
                 
-                <div style={{ width: 1, height: 24, backgroundColor: '#e2e8f0', margin: '0 6px' }} />
+                <div className="drawing-toolbar-divider" style={{ width: 1, height: 24, backgroundColor: '#e2e8f0', margin: '0 6px' }} />
 
                 <button
                     onClick={() => fileInputRef.current?.click()}
