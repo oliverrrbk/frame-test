@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { useLoadScript } from '@react-google-maps/api';
 import { Toaster } from 'react-hot-toast';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
@@ -134,7 +133,6 @@ const PublicWizardPage = () => {
   );
 };
 
-const MAP_LIBRARIES = ['places'];
 
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
@@ -270,12 +268,8 @@ function App() {
     }
   });
 
-  // Global Google Maps script loader
-  const { isLoaded: _isLoaded, loadError } = useLoadScript({
-      googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-      id: 'google-map-script',
-      libraries: MAP_LIBRARIES
-  });
+  // Google Maps-scriptet loades nu kun i Dashboard's kort-fane (egen useLoadScript),
+  // så @react-google-maps ikke hentes på marketing/login.
 
   useEffect(() => {
     // Tjek nuværende session ved start for at sikre gyldighed
@@ -314,10 +308,6 @@ function App() {
         </div>
       </div>
     );
-  }
-
-  if (loadError) {
-    console.error("Google Maps failed to load API");
   }
 
   return (
