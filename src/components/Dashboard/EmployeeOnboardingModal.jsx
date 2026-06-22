@@ -88,6 +88,7 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
     };
 
     const handleFinish = () => {
+        localStorage.setItem('bison_pwa_onboarding_seen', 'true');
         onComplete();
     };
 
@@ -296,9 +297,9 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
                                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-500 mx-auto mb-4">
                                         <Check size={32} />
                                     </div>
-                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Du er nu oprettet! 🎉</h2>
+                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Du er nu oprettet!</h2>
                                     <p className="text-slate-600 text-sm mb-4">
-                                        Din profil er gemt. Systemet fungerer dog bedst som app på din telefon, så du har sagerne lige ved hånden.
+                                        Få appen på din telefon, så du altid har dine sager lige ved hånden.
                                     </p>
                                 </div>
 
@@ -343,14 +344,14 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
                                 </div>
                                 
                                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center mt-6">
-                                    <p className="text-sm text-blue-800 font-medium m-0">Når du har tilføjet appen, kan du bare lukke browseren og åbne appen direkte fra din hjemmeskærm!</p>
+                                    <p className="text-sm text-blue-800 font-medium m-0">Luk denne side, når du har tilføjet appen til din hjemmeskærm.</p>
                                 </div>
 
                                 <button 
                                     onClick={handleFinish}
                                     className="w-full py-3 mt-4 font-semibold rounded-xl transition-all flex justify-center items-center gap-2 bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                                 >
-                                    Fortsæt i browseren (Ikke anbefalet)
+                                    Gå til systemet
                                 </button>
                             </motion.div>
                         )}

@@ -82,7 +82,7 @@ const PushNotificationPrompt = () => {
 
             if (error && error.code !== '23505') throw error;
 
-            toast.success('Notifikationer aktiveret! 🎉');
+            toast.success('Notifikationer aktiveret!');
             localStorage.setItem('bison_push_prompt_dismissed', 'true');
             setShowPrompt(false);
         } catch (error) {
