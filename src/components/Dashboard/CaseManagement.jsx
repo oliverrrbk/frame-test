@@ -3298,67 +3298,83 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     {/* CASE WORKSPACE TABS */}
                                         {/* MODERN HORIZONTAL TABS (2026 DESIGN) */}
                     {(() => {
+                        const caseTabs = [
+                            { id: 'todo', label: selectedCase.status === 'Afbrudt Sag' ? 'Bygge To-Do (Låst)' : 'Bygge To-Do (KS)', mobileLabel: 'To-Do', icon: <CheckSquare size={isMobile ? 22 : 18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: true },
+                            { id: 'materials', label: 'Materialer & Indkøb', mobileLabel: 'Materialer', icon: <PackageCheck size={isMobile ? 22 : 18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: true },
+                            { id: 'logs', label: 'Byggeproces', mobileLabel: 'Proces', icon: <ClipboardList size={isMobile ? 22 : 18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
+                            { id: 'timesheet', label: 'Timeregistrering', mobileLabel: 'Timer', icon: <Clock size={isMobile ? 22 : 18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
+                            { id: 'invoices', label: 'Bilag', mobileLabel: 'Bilag', icon: <Receipt size={isMobile ? 22 : 18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
+                            { id: 'extra-work', label: selectedCase.status === 'Afbrudt Sag' ? 'Aftalesedler (Låst)' : 'Aftalesedler', mobileLabel: 'Aftaler', icon: <PenTool size={isMobile ? 22 : 18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' },
+                            { id: 'drawings', label: 'Tegninger', mobileLabel: 'Tegninger', icon: <FileImage size={isMobile ? 22 : 18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: true }
+                        ].filter(tab => tab.show);
+
                         const tabContent = (
                             <div className="case-workspace-tabs modern-tab-scroll" style={{ 
                                 display: 'flex', 
-                                gap: isMobile ? '0px' : '10px', 
+                                gap: isMobile ? '4px' : '10px', 
                                 flexWrap: isMobile ? 'nowrap' : 'wrap', 
-                                paddingTop: isMobile ? '4px' : '4px', 
-                                paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : '8px', 
+                                paddingTop: isMobile ? '7px' : '4px', 
+                                paddingBottom: isMobile ? '7px' : '8px', 
                                 WebkitOverflowScrolling: 'touch', 
                                 scrollbarWidth: 'none', 
                                 msOverflowStyle: 'none', 
                                 marginBottom: isMobile ? '0' : '16px', 
                                 marginTop: isMobile ? '0' : '24px',
-                                overflowX: 'auto',
+                                overflowX: isMobile ? 'visible' : 'auto',
                                 
-                                /* Instagram Bottom Tab Bar Styles */
+                                /* Mobile bottom navigation */
                                 ...(isMobile ? {
                                     position: 'fixed',
-                                    bottom: 0,
-                                    left: 0,
-                                    right: 0,
-                                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                                    backdropFilter: 'blur(16px)',
-                                    borderTop: '1px solid #e2e8f0',
-                                    zIndex: 99999, /* Extremely high z-index and portal to escape parents */
-                                    paddingLeft: '0',
-                                    paddingRight: '0',
-                                    justifyContent: 'space-around', /* Distribute evenly */
-                                    alignItems: 'center',
-                                    height: 'calc(65px + env(safe-area-inset-bottom))'
+                                    bottom: 'max(12px, env(safe-area-inset-bottom))',
+                                    left: '10px',
+                                    right: '10px',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+                                    backdropFilter: 'blur(22px)',
+                                    WebkitBackdropFilter: 'blur(22px)',
+                                    border: '1px solid rgba(226, 232, 240, 0.9)',
+                                    borderRadius: '24px',
+                                    zIndex: 99999,
+                                    paddingLeft: '7px',
+                                    paddingRight: '7px',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'stretch',
+                                    minHeight: '74px',
+                                    boxShadow: '0 18px 55px rgba(15, 23, 42, 0.16), 0 4px 14px rgba(15, 23, 42, 0.08)',
+                                    touchAction: 'manipulation',
+                                    boxSizing: 'border-box'
                                 } : {})
                             }}>
                                 <style>{`
                                     .modern-tab-scroll::-webkit-scrollbar { display: none; }
                                 `}</style>
-                                {[
-                                    { id: 'todo', label: selectedCase.status === 'Afbrudt Sag' ? 'Bygge To-Do (Låst)' : 'Bygge To-Do (KS)', icon: <CheckSquare size={isMobile ? 24 : 18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: true },
-                                    { id: 'materials', label: 'Materialer & Indkøb', icon: <PackageCheck size={isMobile ? 24 : 18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: true },
-                                    { id: 'logs', label: 'Byggeproces', icon: <ClipboardList size={isMobile ? 24 : 18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
-                                    { id: 'timesheet', label: 'Timeregistrering', icon: <Clock size={isMobile ? 24 : 18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
-                                    { id: 'invoices', label: 'Bilag', icon: <Receipt size={isMobile ? 24 : 18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
-                                    { id: 'extra-work', label: selectedCase.status === 'Afbrudt Sag' ? 'Aftalesedler (Låst)' : 'Aftalesedler', icon: <PenTool size={isMobile ? 24 : 18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' },
-                                    { id: 'drawings', label: 'Tegninger', icon: <FileImage size={isMobile ? 24 : 18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: true }
-                                ].filter(tab => tab.show).map(tab => {
+                                {caseTabs.map(tab => {
                                     const isActive = activeSubTab === tab.id;
                                     return (
                                         <button
                                             key={tab.id}
                                             onClick={() => handleSubTabChange(tab.id)}
+                                            aria-label={tab.label}
+                                            aria-current={isActive ? 'page' : undefined}
                                             style={isMobile ? {
-                                                /* MOBILE TAB STYLES (No text, evenly spaced icons) */
+                                                /* MOBILE TAB STYLES */
                                                 display: 'flex', 
                                                 flexDirection: 'column', 
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                background: 'none', 
-                                                border: 'none', 
-                                                padding: '8px', 
+                                                gap: '4px',
+                                                background: isActive ? tab.activeBg : 'transparent', 
+                                                border: isActive ? `1px solid ${tab.activeColor}22` : '1px solid transparent', 
+                                                borderRadius: '18px',
+                                                padding: '7px 3px', 
                                                 cursor: 'pointer', 
-                                                transition: 'all 0.2s', 
-                                                flex: 1,
-                                                color: isActive ? tab.activeColor : '#94a3b8'
+                                                transition: 'background 0.18s ease, color 0.18s ease, transform 0.18s ease, border-color 0.18s ease', 
+                                                flex: '1 1 0',
+                                                minWidth: '48px',
+                                                minHeight: '60px',
+                                                color: isActive ? tab.activeColor : '#64748b',
+                                                WebkitTapHighlightColor: 'transparent',
+                                                touchAction: 'manipulation',
+                                                boxShadow: isActive ? '0 8px 18px rgba(15, 23, 42, 0.08)' : 'none'
                                             } : { 
                                                 /* DESKTOP TAB STYLES */
                                                 display: 'flex', 
@@ -3378,6 +3394,15 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 flex: '1 1 auto',
                                                 justifyContent: 'center'
                                             }}
+                                            onPointerDown={isMobile ? (e) => {
+                                                e.currentTarget.style.transform = 'scale(0.96)';
+                                            } : undefined}
+                                            onPointerUp={isMobile ? (e) => {
+                                                e.currentTarget.style.transform = 'scale(1)';
+                                            } : undefined}
+                                            onPointerLeave={isMobile ? (e) => {
+                                                e.currentTarget.style.transform = 'scale(1)';
+                                            } : undefined}
                                             onMouseEnter={isMobile ? undefined : (e) => {
                                                 if (!isActive) {
                                                     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.6)'; e.currentTarget.style.backdropFilter = 'blur(12px)';
@@ -3393,9 +3418,29 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 }
                                             }}
                                         >
-                                            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{tab.icon}</span>
+                                            <span style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: isMobile ? '26px' : 'auto',
+                                                height: isMobile ? '24px' : 'auto'
+                                            }}>{tab.icon}</span>
                                             {!isMobile && tab.label}
-                                            {isMobile && <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: tab.activeColor, marginTop: '4px', opacity: isActive ? 1 : 0, transition: 'opacity 0.2s' }} />}
+                                            {isMobile && (
+                                                <span style={{
+                                                    maxWidth: '100%',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                    fontSize: '0.62rem',
+                                                    lineHeight: 1,
+                                                    fontWeight: isActive ? 800 : 700,
+                                                    letterSpacing: 0,
+                                                    color: isActive ? tab.activeColor : '#64748b'
+                                                }}>
+                                                    {tab.mobileLabel}
+                                                </span>
+                                            )}
                                         </button>
                                     );
                                 })}
