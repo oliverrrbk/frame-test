@@ -805,7 +805,6 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                                                         style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', textAlign: 'center', fontWeight: 'bold', outline: 'none', fontSize: '0.95rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'border-color 0.2s' }}
                                                                         onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
                                                                     />
-                                                                    />
                                                                     <select 
                                                                         value={item.unit || 'stk'}
                                                                         onChange={(e) => handleCellChange(originalIndex, 'unit', e.target.value)}
