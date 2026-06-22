@@ -69,7 +69,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
         const updated = [...materials];
         updated[index] = {
             ...updated[index],
-            [field]: field === 'qty' ? (parseFloat(value) || 0) : value
+            [field]: field === 'qty' ? (value === '' ? '' : value) : value
         };
         setMaterials(updated);
     };
@@ -579,11 +579,11 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                     cursor: 'pointer',
                                     borderBottom: isOpen ? '1px solid #e2e8f0' : 'none',
                                     transition: 'background-color 0.2s',
-                                    flexWrap: 'wrap',
+                                    flexWrap: 'nowrap',
                                     gap: '12px'
                                 }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, minWidth: 0 }}>
                                     <div style={{ 
                                         width: '40px', height: '40px', 
                                         borderRadius: '12px', 
@@ -640,7 +640,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
                                     {/* Fold ud / Skjul indikator */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
                                         <span>{isOpen ? 'Skjul' : 'Fold ud'}</span>
@@ -805,15 +805,21 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                                                         style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#0f172a', textAlign: 'center', fontWeight: 'bold', outline: 'none', fontSize: '0.95rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'border-color 0.2s' }}
                                                                         onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
                                                                     />
-                                                                    <input 
-                                                                        type="text" 
-                                                                        value={item.unit}
-                                                                        placeholder="Enhed"
+                                                                    />
+                                                                    <select 
+                                                                        value={item.unit || 'stk'}
                                                                         onChange={(e) => handleCellChange(originalIndex, 'unit', e.target.value)}
                                                                         onBlur={() => handleSaveList()}
-                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#64748b', textAlign: 'center', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'border-color 0.2s' }}
+                                                                        style={{ border: '1px solid transparent', background: 'transparent', width: '100%', color: '#64748b', textAlign: 'center', outline: 'none', fontSize: '0.9rem', opacity: item.status === 'Leveret' ? 0.5 : 1, padding: '4px', borderRadius: '6px', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'border-color 0.2s', appearance: 'none', cursor: 'pointer' }}
                                                                         onFocus={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
-                                                                    />
+                                                                    >
+                                                                        {(!['stk', 'sæt', 'pk', 'm2', 'm', 'lbm', 'rulle', 'kasse', 'palle', 'pose', 'plade', 'dåse', 'liter', 'kg'].includes(item.unit || 'stk')) && (
+                                                                            <option value={item.unit}>{item.unit}</option>
+                                                                        )}
+                                                                        {['stk', 'sæt', 'pk', 'm2', 'm', 'lbm', 'rulle', 'kasse', 'palle', 'pose', 'plade', 'dåse', 'liter', 'kg'].map(u => (
+                                                                            <option key={u} value={u}>{u}</option>
+                                                                        ))}
+                                                                    </select>
                                                                     {!isLead && (<button
                                                                         onClick={() => cycleItemStatus(originalIndex)}
                                                                         style={{ border: 'none', background: (item.status === 'Leveret') ? '#dcfce7' : (item.status === 'Bestilt' ? '#dbeafe' : '#f1f5f9'), color: (item.status === 'Leveret') ? '#166534' : (item.status === 'Bestilt' ? '#1e40af' : '#475569'), borderRadius: '20px', padding: '6px 14px', fontSize: '0.75rem', outline: 'none', fontWeight: 'bold', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer', transition: 'all 0.2s', minWidth: '95px' }}
@@ -893,15 +899,17 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                                         </div>
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                             <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Enhed</label>
-                                                            <input 
-                                                                type="text"
+                                                            <select
                                                                 value={newItem.unit}
                                                                 onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
-                                                                placeholder="stk / m / rulle"
-                                                                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', outline: 'none', transition: 'all 0.2s' }}
+                                                                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '12px', fontSize: '0.95rem', color: '#0f172a', outline: 'none', cursor: 'pointer', transition: 'all 0.2s', appearance: 'none', backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 16px center', backgroundSize: '16px' }}
                                                                 onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
                                                                 onBlur={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
-                                                            />
+                                                            >
+                                                                {['stk', 'sæt', 'pk', 'm2', 'm', 'lbm', 'rulle', 'kasse', 'palle', 'pose', 'plade', 'dåse', 'liter', 'kg'].map(u => (
+                                                                    <option key={u} value={u}>{u}</option>
+                                                                ))}
+                                                            </select>
                                                         </div>
                                                     </div>
 
