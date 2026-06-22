@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Clock, Briefcase, Calendar, MapPin, ChevronDown, Phone, X, Play, Square, Users, MessageSquare, AlertCircle, CheckCircle2, Navigation } from 'lucide-react';
-import { startOfWeek, startOfMonth, isAfter, isSameDay, eachDayOfInterval, subDays, isWeekend, isToday, format } from 'date-fns';
+import { startOfWeek, startOfMonth, isAfter, isSameDay, addDays, isToday, format } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -89,6 +89,20 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
         return null;
     }, [activeWorkerCases, myProfile, pendingEntry, leadsData]);
 
+    // Den grønne knap åbner nu manuel timeindberetning i stedet for live-stempling.
+    // Svenden taster selv start/slut/pause ind — vi gætter ikke på pauser.
+    const openManualEntry = () => {
+        if (setActiveTab) setActiveTab('worker_timesheet');
+        // Lille forsinkelse så fanen er monteret før vi beder den åbne formularen.
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('open-add-timesheet', {
+                detail: { date: format(new Date(), 'yyyy-MM-dd') }
+            }));
+        }, 120);
+    };
+
+    // BEMÆRK: check-ind/-ud beholdes inaktivt (kaldes ikke længere fra knappen),
+    // så en igangværende stempling stadig kan stoppes, og vi nemt kan tænde igen.
     const handleGlobalCheckIn = async () => {
         if (!selectedCheckInProject) {
             toast.error('Vælg venligst et projekt først!');
@@ -224,26 +238,28 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
     }, [leadsData, myProfile]);
 
     const recentWorkDays = useMemo(() => {
+        // Altid den indeværende uges mandag→fredag (fast, ikke et glidende vindue).
         const today = new Date();
-        const pastDays = eachDayOfInterval({
-            start: subDays(today, 10), 
-            end: today
-        });
-        
-        const workDays = pastDays.filter(d => !isWeekend(d)).slice(-5);
-        
-        return workDays.map(date => {
+        const monday = startOfWeek(today, { weekStartsOn: 1 });
+        const week = [0, 1, 2, 3, 4].map(i => addDays(monday, i));
+
+        return week.map(date => {
             const hasTime = allEntries.some(entry => isSameDay(new Date(entry.date), date) && Number(entry.hours || 0) > 0);
+            const dayIsToday = isToday(date);
+            const isFuture = isAfter(date, today) && !dayIsToday;
             return {
                 date,
                 hasTime,
-                isToday: isToday(date),
-                label: isToday(date) ? 'I dag' : format(date, 'EEEE', { locale: da })
+                isToday: dayIsToday,
+                isFuture,
+                label: format(date, 'EEE', { locale: da }),
+                dayNum: format(date, 'd')
             };
         });
     }, [allEntries]);
 
-    const hasMissingPastDays = recentWorkDays.some(d => !d.hasTime && !d.isToday);
+    // "Mangler" gælder kun dage der er passeret (ikke i dag, ikke fremtidige).
+    const hasMissingPastDays = recentWorkDays.some(d => !d.hasTime && !d.isToday && !d.isFuture);
 
     // Modal States
     const [activeModal, setActiveModal] = useState(null); // 'team', 'messages', 'cases', 'time'
@@ -498,39 +514,53 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                                         </h3>
                                     </div>
                                     
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', paddingTop: '14px' }}>
                                         {recentWorkDays.map((day, idx) => {
-                                            const isRed = !day.hasTime && !day.isToday;
+                                            const isRed = !day.hasTime && !day.isToday && !day.isFuture;
                                             const isGreen = day.hasTime;
-                                            
+                                            const clickable = isRed || day.isToday;
+                                            const labelColor = isGreen ? '#059669' : isRed ? '#dc2626' : day.isToday ? '#2563eb' : '#94a3b8';
+
                                             return (
-                                                <div 
-                                                    key={idx} 
-                                                    onClick={() => { 
-                                                        if (isRed) {
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => {
+                                                        if (clickable) {
                                                             if (setActiveTab) setActiveTab('worker_timesheet');
                                                             setTimeout(() => {
                                                                 window.dispatchEvent(new CustomEvent('open-add-timesheet', { detail: { date: format(day.date, 'yyyy-MM-dd') } }));
                                                             }, 100);
-                                                        } 
+                                                        }
                                                     }}
-                                                    style={{ 
-                                                        padding: '12px 4px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-                                                        background: isGreen ? '#ecfdf5' : isRed ? '#fff' : '#f1f5f9',
-                                                        border: `1px solid ${isGreen ? '#a7f3d0' : isRed ? '#fca5a5' : '#cbd5e1'}`,
-                                                        cursor: isRed ? 'pointer' : 'default',
-                                                        boxShadow: isRed ? '0 4px 6px rgba(239,68,68,0.1)' : 'none'
+                                                    style={{
+                                                        position: 'relative',
+                                                        padding: '10px 4px 8px', borderRadius: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                                                        background: isGreen ? '#ecfdf5' : isRed ? '#fff' : day.isToday ? '#eff6ff' : '#f1f5f9',
+                                                        border: `1px solid ${isGreen ? '#a7f3d0' : isRed ? '#fca5a5' : day.isToday ? '#bfdbfe' : '#e2e8f0'}`,
+                                                        boxShadow: day.isToday ? '0 4px 12px rgba(59,130,246,0.18)' : isRed ? '0 4px 6px rgba(239,68,68,0.1)' : 'none',
+                                                        cursor: clickable ? 'pointer' : 'default',
+                                                        opacity: day.isFuture ? 0.5 : 1,
+                                                        transition: 'all 0.15s'
                                                     }}
                                                 >
-                                                    <span style={{ fontSize: '0.7rem', fontWeight: 'bold', textTransform: 'uppercase', color: isGreen ? '#059669' : isRed ? '#dc2626' : '#64748b' }}>
-                                                        {day.label.substring(0, 3)}
+                                                    {day.isToday && (
+                                                        <div style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none' }}>
+                                                            <span style={{ fontSize: '0.52rem', fontWeight: 800, color: '#fff', background: '#3b82f6', padding: '2px 7px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.04em', boxShadow: '0 2px 5px rgba(59,130,246,0.45)', whiteSpace: 'nowrap' }}>I dag</span>
+                                                            <span style={{ color: '#3b82f6', fontSize: '0.65rem', lineHeight: 1, marginTop: '-1px' }}>▾</span>
+                                                        </div>
+                                                    )}
+                                                    <span style={{ fontSize: '0.68rem', fontWeight: 'bold', textTransform: 'uppercase', color: labelColor }}>
+                                                        {day.label}
                                                     </span>
-                                                    {isGreen ? <CheckCircle2 size={20} color="#10b981" /> : isRed ? <AlertCircle size={20} color="#ef4444" /> : <Clock size={20} color="#94a3b8" />}
+                                                    {isGreen ? <CheckCircle2 size={18} color="#10b981" /> : isRed ? <AlertCircle size={18} color="#ef4444" /> : <Clock size={18} color={day.isToday ? '#3b82f6' : '#94a3b8'} />}
+                                                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: day.isToday ? '#2563eb' : '#475569' }}>
+                                                        {day.dayNum}
+                                                    </span>
                                                 </div>
                                             )
                                         })}
                                     </div>
-                                    
+
                                     {hasMissingPastDays && (
                                         <p style={{ margin: '16px 0 0', fontSize: '0.85rem', color: '#ef4444', textAlign: 'center' }}>Tryk på en rød dag for at melde fravær (syg/ferie) eller gå til din timeregistrering og indtast arbejdstimer.</p>
                                     )}
@@ -636,66 +666,29 @@ export default function WorkerOverview({ leadsData, myProfile, setActiveTab, set
                     </>
                 ) : (
                     <>
-                        <button 
-                            onClick={handleGlobalCheckIn}
-                            style={{ 
-                                width: '220px', height: '220px', borderRadius: '50%', 
+                        <button
+                            onClick={openManualEntry}
+                            style={{
+                                width: '220px', height: '220px', borderRadius: '50%',
                                 background: 'linear-gradient(145deg, #10b981, #059669)',
-                                border: 'none', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                                border: 'none', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px',
                                 boxShadow: '0 20px 40px rgba(16, 185, 129, 0.4), inset 0 2px 0 rgba(255,255,255,0.2)',
                                 cursor: 'pointer', transition: 'transform 0.1s'
                             }}
                             onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                             onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         >
-                            <Play size={48} fill="currentColor" />
-                            <span style={{ fontSize: '1.2rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '2px' }}>Start</span>
+                            <Clock size={48} />
+                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1.5px', textAlign: 'center', lineHeight: 1.2 }}>Indberet<br/>timer</span>
                         </button>
-                        
-                        <div style={{ position: 'relative', width: '100%' }}>
-                            <div 
-                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                style={{ 
-                                    padding: '16px 20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)', 
-                                    background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(10px)',
-                                    fontSize: '1rem', color: selectedCheckInProject ? '#0f172a' : '#64748b', cursor: 'pointer',
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    boxShadow: '0 8px 16px rgba(0,0,0,0.05)'
-                                }}
-                            >
-                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: selectedCheckInProject ? '700' : '500' }}>
-                                    {selectedCheckInProject 
-                                        ? (() => {
-                                            const p = activeWorkerCases.find(l => String(l.id) === String(selectedCheckInProject));
-                                            return p ? `${p.customer_name}` : 'Vælg projekt...';
-                                        })()
-                                        : 'Vælg projekt...'}
-                                </span>
-                                <ChevronDown size={20} style={{ color: '#94a3b8', transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                            </div>
-                            
-                            {isDropdownOpen && (
-                                <div style={{ 
-                                    position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: '12px', 
-                                    background: '#ffffff', borderRadius: '20px', boxShadow: '0 -10px 40px rgba(0,0,0,0.1)', 
-                                    border: '1px solid #f1f5f9', overflow: 'hidden', zIndex: 50, maxHeight: '250px', overflowY: 'auto'
-                                }}>
-                                    {activeWorkerCases.filter(l => l.status !== 'Historik').length === 0 ? (
-                                        <div style={{ padding: '20px', color: '#64748b', textAlign: 'center' }}>Ingen aktive sager.</div>
-                                    ) : (
-                                        activeWorkerCases.filter(l => l.status !== 'Historik').map(lead => (
-                                            <div 
-                                                key={lead.id}
-                                                onClick={() => { setSelectedCheckInProject(lead.id); setIsDropdownOpen(false); }}
-                                                style={{ padding: '16px 20px', cursor: 'pointer', borderBottom: '1px solid #f8fafc', color: '#0f172a' }}
-                                            >
-                                                <div style={{ fontWeight: '700' }}>{lead.customer_name}</div>
-                                                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>Sag #{lead.case_number || String(lead.id).substring(0,6)}</div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
+
+                        <div style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', padding: '14px 20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.5)', textAlign: 'center', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                            <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569', fontWeight: '600' }}>
+                                Tast dine timer ind for dagen
+                            </p>
+                            <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                                Vælg sag, start- og sluttid
+                            </p>
                         </div>
                     </>
                 )}

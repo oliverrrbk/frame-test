@@ -3720,7 +3720,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     );
 
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000000, backgroundColor: '#f8fafc', width: '100vw', height: '100vh', overflow: 'hidden' }}>
             
             <div 
                 ref={containerRef}

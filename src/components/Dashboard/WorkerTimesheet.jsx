@@ -5,11 +5,12 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { isWeekendOrHoliday } from '../../utils/holidays';
-import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil, getConfig, suggestedBreakMinutes } from '../../utils/payroll';
+import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
 import { mutateTimeEntries } from '../../utils/timeEntries';
 import TimeRegistrationReminder from './TimeRegistrationReminder';
+import QuarterTimePicker, { snapToQuarter } from '../ui/QuarterTimePicker';
 
-const CustomSelect = ({ value, onChange, options, placeholder }) => {
+const CustomSelect = ({ value, onChange, options, placeholder, minWidth = '180px' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -27,7 +28,7 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
     const label = selectedOption ? selectedOption.label : placeholder;
 
     return (
-        <div ref={dropdownRef} style={{ position: 'relative', width: '100%', minWidth: '180px' }}>
+        <div ref={dropdownRef} style={{ position: 'relative', width: '100%', minWidth }}>
             <div 
                 onClick={() => setIsOpen(!isOpen)}
                 style={{ 
@@ -176,18 +177,9 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
         }
     }, [formData.startTime, formData.endTime, formData.pauseMinutes]);
 
-    // Tærskel-bevidst standard-pause ved NY registrering (firmaets regel, fx 30 min over 5 t).
-    // Rører ikke en eksisterende registrering man redigerer, og kan altid overskrives manuelt.
-    useEffect(() => {
-        if (!isAdding || !formData.startTime || !formData.endTime) return;
-        const [sH, sM] = formData.startTime.split(':').map(Number);
-        const [eH, eM] = formData.endTime.split(':').map(Number);
-        let gross = (eH + eM / 60) - (sH + sM / 60);
-        if (gross < 0) gross += 24;
-        const suggested = suggestedBreakMinutes(gross, getConfig(payrollSettings));
-        setFormData(prev => (String(prev.pauseMinutes) === String(suggested) ? prev : { ...prev, pauseMinutes: String(suggested) }));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formData.startTime, formData.endTime, isAdding, payrollSettings]);
+    // Bevidst: ingen auto-pause-tvang. Pausen sættes som standard (30 min) når
+    // formularen åbnes, men svenden bestemmer selv — vi overskriver den ikke når
+    // start/slut ændres. (Lønnen følger de faktiske timer, ikke en antaget pause.)
 
     // Opsamling af alle registreringer for DENNE ENE medarbejder
     const allEntries = useMemo(() => {
@@ -558,8 +550,8 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
             desc: entry.desc || '',
             hours: entry.hours !== undefined && entry.hours !== '' ? entry.hours : computeHours(entry.startTime || '', entry.endTime || '', entry.pauseMinutes !== undefined ? String(entry.pauseMinutes) : '0'),
             km: entry.km || '',
-            startTime: (entry.startTime || '').replace('.', ':'),
-            endTime: (entry.endTime || '').replace('.', ':'),
+            startTime: entry.startTime ? snapToQuarter(entry.startTime) : '',
+            endTime: entry.endTime ? snapToQuarter(entry.endTime) : '',
             pauseMinutes: entry.pauseMinutes !== undefined ? String(entry.pauseMinutes) : '0'
         });
         setEditingEntry(entry);
@@ -1009,38 +1001,50 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
 
                             {!(formData.regType === 'internal' && ['Ferie', 'Skole'].includes(formData.absenceType)) && (
                                 <>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Start tid *</label>
-                                            <input 
-                                                type="time" 
-                                                required
+                                            <QuarterTimePicker
                                                 value={formData.startTime}
-                                                onChange={(e) => setFormData({...formData, startTime: e.target.value, hours: computeHours(e.target.value, formData.endTime, formData.pauseMinutes)})}
-                                                style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
+                                                onChange={(val) => setFormData(prev => ({ ...prev, startTime: val }))}
                                             />
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Slut tid *</label>
-                                            <input 
-                                                type="time" 
-                                                required
+                                            <QuarterTimePicker
                                                 value={formData.endTime}
-                                                onChange={(e) => setFormData({...formData, endTime: e.target.value, hours: computeHours(formData.startTime, e.target.value, formData.pauseMinutes)})}
-                                                style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
+                                                onChange={(val) => setFormData(prev => ({ ...prev, endTime: val }))}
                                             />
                                         </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '16px', alignItems: 'end' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Pause (min.)</label>
-                                            <input 
-                                                type="number" 
-                                                min="0"
-                                                placeholder="F.eks. 30"
-                                                value={formData.pauseMinutes}
-                                                onChange={(e) => setFormData({...formData, pauseMinutes: e.target.value, hours: computeHours(formData.startTime, formData.endTime, e.target.value)})}
-                                                style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
+                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Pause</label>
+                                            <CustomSelect
+                                                minWidth="0"
+                                                value={String(formData.pauseMinutes)}
+                                                placeholder="Vælg pause"
+                                                options={[
+                                                    { value: '0', label: 'Ingen pause' },
+                                                    { value: '15', label: '15 min' },
+                                                    { value: '30', label: '30 min' },
+                                                    { value: '45', label: '45 min' },
+                                                    { value: '60', label: '60 min' },
+                                                ]}
+                                                onChange={(val) => setFormData(prev => ({ ...prev, pauseMinutes: val }))}
                                             />
                                         </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, startTime: '07:00', endTime: '15:00', pauseMinutes: '30' }))}
+                                            title="Nulstil til en standard arbejdsdag (07:00–15:00, 30 min pause)"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                                        >
+                                            <RotateCcw size={16} /> Nulstil tider
+                                        </button>
                                     </div>
 
                                     <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1070,11 +1074,10 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
                             )}
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Beskrivelse / Type Fravær</label>
-                                <textarea 
-                                    required={!(formData.regType === 'internal' && ['Ferie', 'Skole'].includes(formData.absenceType))}
+                                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Beskrivelse <span style={{ color: '#94a3b8', fontWeight: '500' }}>(valgfri)</span></label>
+                                <textarea
                                     rows="3"
-                                    placeholder={formData.regType === 'internal' ? "Valgfri note til fraværet..." : "F.eks. 'Opsat gipslofter og spartlet'"}
+                                    placeholder={formData.regType === 'internal' ? "Valgfri note til fraværet..." : "Valgfri — fx 'Opsat gipslofter og spartlet'"}
                                     value={formData.desc}
                                     onChange={(e) => setFormData({...formData, desc: e.target.value})}
                                     style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', fontFamily: 'inherit', resize: 'vertical', color: '#1e293b' }}

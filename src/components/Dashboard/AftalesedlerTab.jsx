@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { PenTool, CheckCircle, FileText, Download, X, Save, Plus, Loader2, Edit3 } from 'lucide-react';
+import { PenTool, CheckCircle, FileText, Download, X, Save, Plus, Loader2, Edit3, Mic, MicOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
+import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 
 export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, isMobile = false }) {
     const [agreements, setAgreements] = useState(selectedCase?.raw_data?.extra_agreements || []);
@@ -17,6 +18,9 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
     
     const canvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
+    const descriptionDictation = useVoiceDictation((text) => {
+        setDescription(prev => `${prev ? `${prev.trim()} ` : ''}${text}`.trim());
+    });
     
     useEffect(() => {
         setAgreements(selectedCase?.raw_data?.extra_agreements || []);
@@ -72,6 +76,63 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
         setDescription('');
         setAmount('');
         setPriceType('fast_pris');
+    };
+
+    const sanitizePdfFilename = (value) => {
+        const cleaned = String(value || 'Aftaleseddel')
+            .trim()
+            .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+            .replace(/\s+/g, '_')
+            .slice(0, 80);
+        return cleaned || 'Aftaleseddel';
+    };
+
+    const dataUriToBlob = (dataUri) => {
+        const [meta, data] = String(dataUri || '').split(',');
+        if (!meta || !data) throw new Error('PDF-data mangler eller er ugyldig');
+
+        const mime = meta.match(/^data:([^;]+)/)?.[1] || 'application/pdf';
+        const isBase64 = meta.includes(';base64');
+        const raw = isBase64 ? atob(data) : decodeURIComponent(data);
+        const bytes = new Uint8Array(raw.length);
+
+        for (let i = 0; i < raw.length; i += 1) {
+            bytes[i] = raw.charCodeAt(i);
+        }
+
+        return new Blob([bytes], { type: mime });
+    };
+
+    const handleDownloadAgreementPdf = (agreement) => {
+        if (!agreement?.pdf_data) {
+            toast.error('PDF mangler på denne aftaleseddel.');
+            return;
+        }
+
+        try {
+            const filename = `${sanitizePdfFilename(agreement.title)}.pdf`;
+
+            if (typeof agreement.pdf_data === 'string' && !agreement.pdf_data.startsWith('data:')) {
+                window.open(agreement.pdf_data, '_blank', 'noopener,noreferrer');
+                return;
+            }
+
+            const blob = dataUriToBlob(agreement.pdf_data);
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = filename;
+            link.rel = 'noopener';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
+            toast.success('PDF hentet.');
+        } catch (error) {
+            console.error('Aftaleseddel PDF download fejl:', error);
+            toast.error('Kunne ikke hente PDF. Prøv at åbne aftalesedlen igen.');
+        }
     };
 
     // --- CANVAS DRAWING LOGIC ---
@@ -308,14 +369,14 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
                                     </div>
                                 </div>
                             </div>
-                            <a 
-                                href={agr.pdf_data} 
-                                download={`Aftaleseddel_${agr.title.replace(/\s+/g, '_')}.pdf`}
+                            <button
+                                type="button"
+                                onClick={() => handleDownloadAgreementPdf(agr)}
                                 className="hover-lift"
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: isMobile ? '14px 20px' : '10px 16px', width: isMobile ? '100%' : 'auto', backgroundColor: '#f1f5f9', color: '#3b82f6', borderRadius: isMobile ? '14px' : '10px', textDecoration: 'none', fontWeight: 'bold', fontSize: isMobile ? '1rem' : '0.9rem' }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: isMobile ? '14px 20px' : '10px 16px', width: isMobile ? '100%' : 'auto', backgroundColor: '#f1f5f9', color: '#3b82f6', borderRadius: isMobile ? '14px' : '10px', textDecoration: 'none', fontWeight: 'bold', fontSize: isMobile ? '1rem' : '0.9rem', border: 'none', cursor: 'pointer' }}
                             >
                                 <Download size={isMobile ? 18 : 16} /> Hent PDF
-                            </a>
+                            </button>
                         </div>
                     ))
                 )}
@@ -363,9 +424,40 @@ export default function AftalesedlerTab({ selectedCase, profile, onUpdateCase, i
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    <label style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#475569' }}>Beskrivelse af aftalen</label>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                        <label style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#475569' }}>Beskrivelse af aftalen</label>
+                                        <button
+                                            type="button"
+                                            onClick={descriptionDictation.isProcessing ? undefined : descriptionDictation.toggle}
+                                            disabled={descriptionDictation.isProcessing}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '8px',
+                                                minHeight: '38px',
+                                                padding: '9px 13px',
+                                                borderRadius: '999px',
+                                                border: descriptionDictation.isRecording ? '1px solid #fecaca' : '1px solid #c7d2fe',
+                                                background: descriptionDictation.isRecording ? '#fef2f2' : (descriptionDictation.isProcessing ? '#f8fafc' : '#eef2ff'),
+                                                color: descriptionDictation.isRecording ? '#dc2626' : (descriptionDictation.isProcessing ? '#64748b' : '#4f46e5'),
+                                                fontWeight: 800,
+                                                fontSize: '0.82rem',
+                                                cursor: descriptionDictation.isProcessing ? 'wait' : 'pointer',
+                                                boxShadow: descriptionDictation.isRecording ? '0 0 0 4px rgba(239, 68, 68, 0.08)' : 'none',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            {descriptionDictation.isProcessing
+                                                ? <Loader2 size={16} className="animate-spin" />
+                                                : (descriptionDictation.isRecording ? <MicOff size={16} /> : <Mic size={16} />)}
+                                            {descriptionDictation.isProcessing
+                                                ? 'Skriver...'
+                                                : (descriptionDictation.isRecording ? 'Stop optagelse' : 'Indtal')}
+                                        </button>
+                                    </div>
                                     <textarea 
-                                        placeholder="Beskriv kort hvad der er aftalt..."
+                                        placeholder="Beskriv kort hvad der er aftalt... eller tryk Indtal."
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
                                         rows={3}

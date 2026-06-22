@@ -302,7 +302,16 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         let leads = scheduledLeads.filter(lead => {
             const start = new Date(lead.raw_data.start_date); start.setHours(0,0,0,0);
             const end = new Date(lead.raw_data.end_date); end.setHours(23,59,59,999);
-            return checkDate >= start && checkDate <= end;
+            if (checkDate >= start && checkDate <= end) {
+                const isWeekend = checkDate.getDay() === 0 || checkDate.getDay() === 6;
+                const allowWeekends = lead.raw_data.include_weekends === true;
+                const allowHolidays = lead.raw_data.include_holidays === true;
+                if ((isWeekend && !allowWeekends) || (isHoliday && !allowHolidays)) {
+                    return false;
+                }
+                return true;
+            }
+            return false;
         });
 
         let absences = allAbsences.filter(a => {
@@ -569,16 +578,26 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const handleDropLead = (targetDateObj) => {
         if (!draggedLead || !isManager) return;
         
-        // Find varighed
+        // Find varighed i hverdage
         let daysDuration = 1;
+        const allowWeekends = draggedLead.raw_data?.include_weekends === true;
+        const allowHolidays = draggedLead.raw_data?.include_holidays === true;
+
         if (draggedLead.raw_data?.start_date && draggedLead.raw_data?.end_date) {
-             const s = new Date(draggedLead.raw_data.start_date);
-             const e = new Date(draggedLead.raw_data.end_date);
-             daysDuration = Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
+             const s = new Date(draggedLead.raw_data.start_date); s.setHours(0,0,0,0);
+             const e = new Date(draggedLead.raw_data.end_date); e.setHours(0,0,0,0);
+             let count = 0;
+             for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+                 const isWknd = d.getDay() === 0 || d.getDay() === 6;
+                 const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                 const isHol = getDanishHolidays(d.getFullYear()).has(dStr);
+                 if (!(isWknd && !allowWeekends) && !(isHol && !allowHolidays)) count++;
+             }
+             daysDuration = Math.max(1, count);
         } else {
              const laborHours = draggedLead.raw_data?.calc_data?.laborHours || 0;
              const weeks = Math.max(1, Math.ceil(laborHours / 37));
-             daysDuration = weeks * 5;
+             daysDuration = weeks * 5; // arbejdsdage
         }
 
         // Tjek for ferie kollision
@@ -655,15 +674,15 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         if (draggedEvent) handleDropEvent(targetDateObj);
     };
 
-    const confirmScheduleLead = async (lead, start, end) => {
-        const updatedLead = { ...lead, raw_data: { ...lead.raw_data, start_date: start.toISOString(), end_date: end.toISOString() } };
+    const confirmScheduleLead = async (lead, start, end, allowWeekends, allowHolidays) => {
+        const updatedLead = { ...lead, raw_data: { ...lead.raw_data, start_date: start.toISOString(), end_date: end.toISOString(), include_weekends: allowWeekends, include_holidays: allowHolidays } };
         setLeadsData(prev => prev.map(l => l.id === lead?.id ? updatedLead : l));
         setCollisionWarning(null);
         try {
             // Genhent frisk raw_data og flet KUN datoerne ind, så samtidige ændringer
             // på sagen (checkliste, timer, bilag) ikke overskrives.
             const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', lead?.id).single();
-            const merged = { ...(latest?.raw_data || lead.raw_data || {}), start_date: start.toISOString(), end_date: end.toISOString() };
+            const merged = { ...(latest?.raw_data || lead.raw_data || {}), start_date: start.toISOString(), end_date: end.toISOString(), include_weekends: allowWeekends, include_holidays: allowHolidays };
             await supabase.from('leads').update({ raw_data: merged }).eq('id', lead?.id);
             toast.success('Sag planlagt');
         } catch (error) {
@@ -686,17 +705,34 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         }
         return estimatFraTimer(lead);
     };
-    const endFromDuration = (startStr, days) => {
-        const start = new Date(startStr + 'T00:00:00');
-        const end = new Date(start);
-        end.setDate(end.getDate() + Math.max(1, days) - 1);
-        return end;
+    const endFromDuration = (startStr, days, allowWeekends = false, allowHolidays = false) => {
+        let current = new Date(startStr + 'T00:00:00');
+        let daysAdded = 0;
+        
+        while (true) {
+            const isWeekend = current.getDay() === 0 || current.getDay() === 6;
+            const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+            const isHoliday = getDanishHolidays(current.getFullYear()).has(dateStr);
+            
+            const skipDay = (isWeekend && !allowWeekends) || (isHoliday && !allowHolidays);
+            if (!skipDay) {
+                daysAdded++;
+            }
+            if (daysAdded >= Math.max(1, days)) break;
+            current.setDate(current.getDate() + 1);
+        }
+        return current;
     };
-    const checkCollision = (lead, start, end) => {
+    const checkCollision = (lead, start, end, allowWeekends = false, allowHolidays = false) => {
         const assigned = lead?.raw_data?.assigned_workers || [];
         const s = new Date(start); s.setHours(0, 0, 0, 0);
         const e = new Date(end); e.setHours(0, 0, 0, 0);
         for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+            const isWknd = d.getDay() === 0 || d.getDay() === 6;
+            const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const isHol = getDanishHolidays(d.getFullYear()).has(dStr);
+            if ((isWknd && !allowWeekends) || (isHol && !allowHolidays)) continue;
+
             const items = getItemsForDay(new Date(d));
             if (items.absences.some(a => assigned.includes(a.employeeId))) return true;
             if (items.leads.filter(l => l.id !== lead.id).length > 0) return true;
@@ -704,14 +740,16 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         return false;
     };
     const openScheduleConfirm = (lead, startStr, days, mode = 'new') => {
-        setScheduleConfirm({ lead, startDate: startStr, durationDays: Math.max(1, days), mode });
+        const allowWeekends = lead?.raw_data?.include_weekends === true;
+        const allowHolidays = lead?.raw_data?.include_holidays === true;
+        setScheduleConfirm({ lead, startDate: startStr, durationDays: Math.max(1, days), mode, allowWeekends, allowHolidays });
     };
     const saveSchedule = () => {
         if (!scheduleConfirm) return;
-        const { lead, startDate, durationDays } = scheduleConfirm;
+        const { lead, startDate, durationDays, allowWeekends, allowHolidays } = scheduleConfirm;
         const start = new Date(startDate + 'T00:00:00');
-        const end = endFromDuration(startDate, durationDays);
-        confirmScheduleLead(lead, start, end);
+        const end = endFromDuration(startDate, durationDays, allowWeekends, allowHolidays);
+        confirmScheduleLead(lead, start, end, allowWeekends, allowHolidays);
         setScheduleConfirm(null);
         setShowCasePicker(false);
     };
@@ -2212,8 +2250,10 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             const lead = scheduleConfirm.lead;
                             const startStr = scheduleConfirm.startDate;
                             const days = scheduleConfirm.durationDays;
-                            const end = endFromDuration(startStr, days);
-                            const collision = checkCollision(lead, new Date(startStr + 'T00:00:00'), end);
+                            const allowWknd = scheduleConfirm.allowWeekends;
+                            const allowHol = scheduleConfirm.allowHolidays;
+                            const end = endFromDuration(startStr, days, allowWknd, allowHol);
+                            const collision = checkCollision(lead, new Date(startStr + 'T00:00:00'), end, allowWknd, allowHol);
                             return (
                                 <>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
@@ -2246,6 +2286,17 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                             <AlertCircle size={16} style={{ flexShrink: 0 }} /> Der er allerede ferie eller en anden sag i perioden.
                                         </div>
                                     )}
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '18px', background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: '#334155', cursor: 'pointer', fontWeight: 600 }}>
+                                            <input type="checkbox" checked={allowWknd} onChange={e => setScheduleConfirm(s => ({...s, allowWeekends: e.target.checked}))} style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0f172a' }} />
+                                            Inkludér weekender
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: '#334155', cursor: 'pointer', fontWeight: 600 }}>
+                                            <input type="checkbox" checked={allowHol} onChange={e => setScheduleConfirm(s => ({...s, allowHolidays: e.target.checked}))} style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0f172a' }} />
+                                            Inkludér helligdage
+                                        </label>
+                                    </div>
 
                                     <div style={{ display: 'flex', gap: '12px', marginTop: '22px' }}>
                                         <button onClick={() => setScheduleConfirm(null)} style={{ flex: '0 0 auto', padding: '14px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
