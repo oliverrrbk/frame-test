@@ -107,16 +107,16 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="glass-panel rounded-2xl shadow-2xl w-full max-w-md relative bg-white overflow-hidden"
+                className="glass-panel rounded-2xl shadow-2xl w-full max-w-md relative bg-white overflow-hidden flex flex-col max-h-[90vh]"
             >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-slate-100">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-slate-100 shrink-0">
                     <div 
                         className="h-full bg-blue-500 transition-all duration-500 ease-out"
                         style={{ width: `${(step / 3) * 100}%` }}
                     />
                 </div>
 
-                <div className="p-8 relative z-10">
+                <div className="p-6 sm:p-8 relative z-10 overflow-y-auto flex-1">
                     <AnimatePresence mode="wait">
                         {step === 1 && (
                             <motion.div 
@@ -307,8 +307,9 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
                                         <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0 border border-slate-100 text-blue-500">
                                             <span className="font-bold text-sm">1</span>
                                         </div>
-                                        <p className="text-sm text-slate-600 mt-1.5">
-                                            Åbn Safari på din iPhone eller Chrome på din Android telefon.
+                                        <p className="text-sm text-slate-600 mt-1">
+                                            <span className="font-semibold text-slate-800 block mb-0.5">Åbnet fra f.eks. Mail eller Messenger?</span>
+                                            Tryk på de tre prikker (•••) og vælg <strong>Åbn i Safari</strong> (iPhone) eller <strong>Åbn i Chrome</strong> (Android).
                                         </p>
                                     </div>
                                     
@@ -337,16 +338,6 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
                                             </span> 
                                         </p>
                                     </div>
-                                </div>
-                                
-                                <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3">
-                                    <h3 className="font-semibold text-slate-800 text-center mb-1 flex items-center justify-center gap-2">
-                                        <Bell size={18} className="text-blue-500" /> Vigtigt: Push Notifikationer
-                                    </h3>
-                                    <p className="text-sm text-slate-600 text-center mb-3">
-                                        Slå notifikationer til for at modtage vigtige påmindelser, f.eks. hvis du har glemt at registrere timer.
-                                    </p>
-                                    <PushSubscriber />
                                 </div>
 
                                 <button 
