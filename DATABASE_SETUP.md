@@ -45,6 +45,7 @@ afløser/supplerer hinanden.
 | `supabase/setup_chat.sql` | Frame Chat-system: tabeller, indexes + RLS til sikker real-time chat |
 | `supabase/fix_chat_rls.sql` | Rettelse af chat-RLS-politikker |
 | `supabase/setup_chat_notifications.sql` | Chat: `last_read_at` (ulæst) + push-trigger på nye beskeder (kør sidst, efter setup_chat) |
+| `setup_error_logs.sql` | In-house fejlfinder: `error_logs`-tabel + RLS (alle må logge, kun superadmin må læse) |
 
 ### 3) RPC'er (funktioner)
 | Fil | Formål |
