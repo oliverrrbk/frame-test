@@ -20,6 +20,7 @@ const EstimateAcceptPage = lazy(() => import('./components/Wizard/EstimateAccept
 const MinubaIntegration = lazy(() => import('./components/Dashboard/MinubaIntegration'));
 import { supabase } from './supabaseClient';
 import { isStandalonePWA } from './utils/pwa';
+import { logError } from './utils/errorLogger';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 // Protected Route Komponent
 class ErrorBoundary extends React.Component {
@@ -35,6 +36,11 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, info) {
     console.error("Dashboard crashed:", error, info);
     this.setState({ info });
+    logError({
+      message: error?.message || 'Dashboard crash',
+      stack: `${error?.stack || ''}\n${info?.componentStack || ''}`,
+      source: typeof location !== 'undefined' ? location.pathname : '',
+    });
   }
 
   render() {

@@ -2,6 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { installGlobalErrorLogging } from './utils/errorLogger';
+
+// Usynlig fejl-opsamling (fanger uventede fejl + afviste promises på alle enheder).
+installGlobalErrorLogging();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

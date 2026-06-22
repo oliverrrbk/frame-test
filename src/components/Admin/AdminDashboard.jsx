@@ -4,6 +4,7 @@ import { ArrowLeft, Shield, Users, Power, Lock, CheckCircle, ExternalLink, Copy,
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AiTrainingView from '../Dashboard/AiTrainingView';
+import ErrorLogPanel from './ErrorLogPanel';
 
 const AdminDashboard = () => {
     const [carpenters, setCarpenters] = useState([]);
@@ -165,6 +166,12 @@ const AdminDashboard = () => {
                         style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', background: activeTab === 'csv-import' ? '#f59e0b' : '#1e293b', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' }}
                     >
                         <Upload size={18} /> CSV Import (Historiske tilbud)
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('errors')}
+                        style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', background: activeTab === 'errors' ? '#ef4444' : '#1e293b', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' }}
+                    >
+                        🐞 Fejlfinder
                     </button>
                 </div>
 
@@ -454,6 +461,9 @@ const AdminDashboard = () => {
 
                 {activeTab === 'csv-import' && (
                     <CsvImportPanel onImported={fetchLeads} />
+                )}
+                {activeTab === 'errors' && (
+                    <ErrorLogPanel />
                 )}
             </div>
 
