@@ -634,6 +634,15 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                 <span style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '9999px', background: 'var(--surface-bg)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>
                                                                     {getRoleLabel(member.role)}
                                                                 </span>
+                                                                {member.requires_password_change ? (
+                                                                    <span title="Medarbejderen har endnu ikke logget ind og oprettet sin adgangskode. Mind dem om at oprette sig på Bison Frame." style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '9999px', background: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e' }}>
+                                                                        ⏳ Afventer oprettelse
+                                                                    </span>
+                                                                ) : (
+                                                                    <span title="Medarbejderen har logget ind og er aktiv." style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '9999px', background: '#dcfce7', border: '1px solid #86efac', color: '#166534' }}>
+                                                                        ✓ Aktiv
+                                                                    </span>
+                                                                )}
                                                             </h4>
                                                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
                                                                 <a href={`mailto:${member.email}`} onClick={e => e.stopPropagation()} className="flex items-center gap-2 hover:text-blue-500 transition-colors" style={{ padding: '6px 12px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '8px', width: 'fit-content' }}>
