@@ -1174,19 +1174,6 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
             </div>
             )}
 
-            {/* GLOBAL GEM KNAP */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px', paddingBottom: '24px', zIndex: 10 }}>
-                <button 
-                    onClick={() => handleSaveList()}
-                    disabled={isSaving}
-                    className="btn-primary"
-                    style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '16px 24px', borderRadius: '16px', fontSize: '1.05rem', fontWeight: 'bold', cursor: 'pointer', backgroundColor: '#10b981', color: 'white', border: 'none', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)', width: '100%', maxWidth: '500px', transition: 'all 0.2s' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#059669'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 30px -5px rgba(16, 185, 129, 0.5)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#10b981'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(16, 185, 129, 0.4)'; }}
-                >
-                    {isSaving ? <><Loader2 size={18} className="animate-spin" /> Gemmer...</> : <><Save size={18} /> GEM ALLE LISTER PÅ SAGEN</>}
-                </button>
-            </div>
 
             {/* SLET LISTE MODAL */}
             {listToDelete && createPortal(
