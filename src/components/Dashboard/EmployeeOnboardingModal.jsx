@@ -55,7 +55,7 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
         }
     };
 
-    const handleNextStep2 = () => {
+    const handleNextStep2 = async () => {
         if (!name.trim()) {
             toast.error("Indtast venligst dit navn.");
             return;
@@ -64,10 +64,7 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
             toast.error("Du skal acceptere vilkårene for at fortsætte.");
             return;
         }
-        setStep(3);
-    };
-
-    const handleFinish = async () => {
+        
         setIsSaving(true);
         try {
             const { error: dbError } = await supabase
@@ -81,13 +78,17 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
                 .eq('id', profile.id);
 
             if (dbError) throw dbError;
-            onComplete();
+            setStep(3);
         } catch (err) {
             console.error("Fejl ved afslutning:", err);
             toast.error('Der opstod en fejl. Prøv igen.');
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleFinish = () => {
+        onComplete();
     };
 
     const renderRoleName = (role) => {
@@ -274,10 +275,11 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
 
                                 <button 
                                     onClick={handleNextStep2}
+                                    disabled={isSaving || !name || !accepted}
                                     className={`w-full py-3.5 font-semibold rounded-xl transition-all flex justify-center items-center gap-2
                                         ${name && accepted ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30' : 'bg-slate-100 text-slate-400'}`}
                                 >
-                                    Næste <ChevronRight size={18} />
+                                    {isSaving ? <Loader2 size={20} className="animate-spin" /> : <>Næste <ChevronRight size={18} /></>}
                                 </button>
                             </motion.div>
                         )}
@@ -294,9 +296,9 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
                                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-500 mx-auto mb-4">
                                         <Check size={32} />
                                     </div>
-                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Du er næsten klar!</h2>
+                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Du er nu oprettet! 🎉</h2>
                                     <p className="text-slate-600 text-sm mb-4">
-                                        Systemet fungerer bedst som en app på din telefon, så du altid har dine sager lige ved hånden på farten.
+                                        Din profil er gemt. Systemet fungerer dog bedst som app på din telefon, så du har sagerne lige ved hånden.
                                     </p>
                                 </div>
 
@@ -339,13 +341,16 @@ const EmployeeOnboardingModal = ({ profile, onComplete }) => {
                                         </p>
                                     </div>
                                 </div>
+                                
+                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center mt-6">
+                                    <p className="text-sm text-blue-800 font-medium m-0">Når du har tilføjet appen, kan du bare lukke browseren og åbne appen direkte fra din hjemmeskærm!</p>
+                                </div>
 
                                 <button 
                                     onClick={handleFinish}
-                                    disabled={isSaving}
-                                    className="w-full py-3.5 font-semibold rounded-xl transition-all flex justify-center items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20"
+                                    className="w-full py-3 mt-4 font-semibold rounded-xl transition-all flex justify-center items-center gap-2 bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                                 >
-                                    {isSaving ? <Loader2 size={20} className="animate-spin" /> : 'Afslut og gå til systemet'}
+                                    Fortsæt i browseren (Ikke anbefalet)
                                 </button>
                             </motion.div>
                         )}

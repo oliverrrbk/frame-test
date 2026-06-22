@@ -38,6 +38,7 @@ import CustomProjectCreator from './CustomProjectCreator';
 import DrawingsGallery from '../Drawings/DrawingsGallery';
 import CalendarView from './CalendarView';
 import PwaOnboarding from './PwaOnboarding';
+import PushNotificationPrompt from './PushNotificationPrompt';
 import AccountSettingsView from './AccountSettingsView';
 import ChatTab from './ChatTab';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
@@ -6641,6 +6642,7 @@ const Dashboard = () => {
             )}
 
             {!carpenterProfile?.requires_password_change && <PwaOnboarding />}
+            <PushNotificationPrompt />
         </div>
     );
 };
