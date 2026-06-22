@@ -18,6 +18,7 @@ import { getRoleLabel } from '../../utils/roles';
 import { buildCaseMessage, mutateCaseMessages } from '../../utils/caseMessages';
 import { getChecklistForCategory, buildPhasesChecklist } from '../../utils/checklistGenerator';
 import UserAvatar from '../ui/UserAvatar';
+import QuarterTimePicker, { snapToQuarter } from '../ui/QuarterTimePicker';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 
 import toast from 'react-hot-toast';
@@ -1482,8 +1483,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         const finalHours = (newTime.hours !== '' && newTime.hours != null && !isNaN(manualHours)) ? manualHours : diffHours;
 
         const fields = {
-            startTime: newTime.startTime,
-            endTime: newTime.endTime,
+            startTime: snapToQuarter(newTime.startTime),
+            endTime: snapToQuarter(newTime.endTime),
             hours: finalHours,
             date: newTime.date,
             desc: (newTime.desc || '').trim() || 'Almindeligt tømrerarbejde',
@@ -3968,20 +3969,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                         <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Starttid</label>
-                                                        <input 
-                                                            type="time"
+                                                        <QuarterTimePicker
                                                             value={newTime.startTime}
-                                                            onChange={(e) => setNewTime({ ...newTime, startTime: e.target.value })}
-                                                            style={{ padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '1rem', color: '#0f172a', width: '100%', boxSizing: 'border-box', backgroundColor: '#f8fafc' }}
+                                                            onChange={(val) => setNewTime(prev => ({ ...prev, startTime: val }))}
                                                         />
                                                     </div>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                         <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Sluttid</label>
-                                                        <input 
-                                                            type="time"
+                                                        <QuarterTimePicker
                                                             value={newTime.endTime}
-                                                            onChange={(e) => setNewTime({ ...newTime, endTime: e.target.value })}
-                                                            style={{ padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '1rem', color: '#0f172a', width: '100%', boxSizing: 'border-box', backgroundColor: '#f8fafc' }}
+                                                            onChange={(val) => setNewTime(prev => ({ ...prev, endTime: val }))}
                                                         />
                                                     </div>
                                                 </div>
