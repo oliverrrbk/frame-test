@@ -122,16 +122,16 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
     useEffect(() => {
         const handleOpenAdd = (e) => {
             const date = e.detail?.date || new Date().toISOString().substring(0, 10);
-            setFormData({ 
-                date: date, 
+            setFormData({
+                date: date,
                 endDate: date,
                 regType: 'project',
-                leadId: '', 
+                leadId: '',
                 absenceType: 'Sygdom',
-                desc: '', 
-                hours: '', 
-                km: '', 
-                startTime: '07:00', 
+                desc: '',
+                hours: computeHours('07:00', '15:00', '30'),
+                km: '',
+                startTime: '07:00',
                 endTime: '15:00',
                 pauseMinutes: '30'
             });
@@ -161,21 +161,26 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
         pauseMinutes: '30'
     });
 
-    // Auto-beregn timer ud fra start og slut og pause
+    // Auto-beregn timer ud fra start og slut og pause.
+    // Kører også når formularen ÅBNES (isAdding/editingEntry) — ellers ville
+    // hours ikke blive beregnet hvis start/slut tilfældigvis er uændret fra sidst
+    // (det var derfor "Timer i alt" nogle gange stod tom når man åbnede fra banneret).
     useEffect(() => {
         if (formData.startTime && formData.endTime) {
             const [sH, sM] = formData.startTime.split(':').map(Number);
             const [eH, eM] = formData.endTime.split(':').map(Number);
             let diffHours = (eH + eM/60) - (sH + sM/60);
             if (diffHours < 0) diffHours += 24; // If crossing midnight
-            
+
             const pauseHours = (parseInt(formData.pauseMinutes) || 0) / 60;
             let finalHours = diffHours - pauseHours;
             if (finalHours < 0) finalHours = 0;
-            
-            setFormData(prev => ({ ...prev, hours: (Math.round(finalHours * 4) / 4).toString() }));
+
+            const computed = (Math.round(finalHours * 4) / 4).toString();
+            setFormData(prev => (prev.hours === computed ? prev : { ...prev, hours: computed }));
         }
-    }, [formData.startTime, formData.endTime, formData.pauseMinutes]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.startTime, formData.endTime, formData.pauseMinutes, isAdding, editingEntry]);
 
     // Bevidst: ingen auto-pause-tvang. Pausen sættes som standard (30 min) når
     // formularen åbnes, men svenden bestemmer selv — vi overskriver den ikke når
@@ -490,10 +495,12 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
             } else {
                 const finalEntry = {
                     id: isAdding ? `time-${Date.now()}` : editingEntry.id,
-                    startTime: formData.startTime || '',
-                    endTime: formData.endTime || '',
+                    startTime: formData.startTime ? snapToQuarter(formData.startTime) : '',
+                    endTime: formData.endTime ? snapToQuarter(formData.endTime) : '',
                     pauseMinutes: parseInt(formData.pauseMinutes) || 0,
-                    hours: parseFloat(formData.hours) || 0,
+                    // Sikkerhedsnet: hvis hours skulle være tom, beregn den fra tiderne,
+                    // så vi aldrig gemmer 0 timer når start/slut er udfyldt.
+                    hours: parseFloat(formData.hours) || computeHours(formData.startTime, formData.endTime, formData.pauseMinutes) || 0,
                     date: formData.date,
                     desc: formData.desc || '',
                     employeeId: myProfile.id,

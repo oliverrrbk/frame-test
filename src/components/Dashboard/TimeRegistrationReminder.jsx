@@ -4,9 +4,9 @@ import {
     AlertCircle, CheckCircle2, Clock, CalendarDays, 
     X, PlusCircle, Activity
 } from 'lucide-react';
-import { 
-    isWeekend, subDays, eachDayOfInterval, 
-    format, isSameDay, isToday, getHours 
+import {
+    isWeekend, startOfWeek, addDays, isAfter,
+    format, isSameDay, isToday, getHours
 } from 'date-fns';
 import { da } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -49,30 +49,30 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
         return entries;
     }, [leadsData, myProfile]);
 
-    // Find de seneste 5 hverdage
+    // Altid indeværende uges mandag→fredag (fast, ikke et glidende vindue).
     const recentWorkDays = useMemo(() => {
         const today = new Date();
-        const pastDays = eachDayOfInterval({
-            start: subDays(today, 10), // Kig 10 dage tilbage for at være sikker på at ramme 5 hverdage
-            end: today
-        });
-        
-        // Filtrer weekender fra og tag de seneste 5
-        const workDays = pastDays.filter(d => !isWeekend(d)).slice(-5);
-        
-        return workDays.map(date => {
+        const monday = startOfWeek(today, { weekStartsOn: 1 });
+        const week = [0, 1, 2, 3, 4].map(i => addDays(monday, i));
+
+        return week.map(date => {
             // Har medarbejderen registreret tid denne dag?
             const hasTime = allEntries.some(entry => isSameDay(new Date(entry.date), date) && Number(entry.hours || 0) > 0);
+            const dayIsToday = isToday(date);
+            const isFuture = isAfter(date, today) && !dayIsToday;
             return {
                 date,
                 hasTime,
-                isToday: isToday(date),
-                label: isToday(date) ? 'I dag' : format(date, 'EEEE', { locale: da })
+                isToday: dayIsToday,
+                isFuture,
+                label: format(date, 'EEE', { locale: da }),
+                dayNum: format(date, 'd')
             };
         });
     }, [allEntries]);
 
-    const hasMissingPastDays = recentWorkDays.some(d => !d.hasTime && !d.isToday);
+    // "Mangler" gælder kun passerede dage (ikke i dag, ikke fremtidige).
+    const hasMissingPastDays = recentWorkDays.some(d => !d.hasTime && !d.isToday && !d.isFuture);
 
     // "Smart 15:00" Notifikation Logik
     useEffect(() => {
@@ -170,7 +170,12 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
                     </div>
                     {hasMissingPastDays && (
                         <button
-                            onClick={() => { if(setActiveTab) setActiveTab('worker_timesheet'); }}
+                            onClick={() => {
+                                if (setActiveTab) setActiveTab('worker_timesheet');
+                                setTimeout(() => {
+                                    window.dispatchEvent(new CustomEvent('open-add-timesheet', { detail: { date: format(new Date(), 'yyyy-MM-dd') } }));
+                                }, 100);
+                            }}
                             style={{ padding: isMobile ? '14px 16px' : '8px 16px', width: isMobile ? '100%' : 'auto', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: isMobile ? '12px' : '8px', fontSize: isMobile ? '0.95rem' : '0.9rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(239,68,68,0.2)' }}
                         >
                             {isMobile ? <><Clock size={18} /> Registrér timer</> : 'Gå til tidsregistrering'}
@@ -178,53 +183,65 @@ export default function TimeRegistrationReminder({ leadsData, myProfile, setActi
                     )}
                 </div>
 
-                {/* Grid med hverdage */}
-                <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px', overflowX: isMobile ? 'visible' : 'auto', paddingBottom: isMobile ? 0 : '4px' }}>
+                {/* Grid med hverdage (altid man–fre, med dato + pil på i dag) */}
+                <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px', overflowX: isMobile ? 'visible' : 'auto', paddingTop: '14px', paddingBottom: isMobile ? 0 : '4px' }}>
                     {recentWorkDays.map((day, idx) => {
-                        const isRed = !day.hasTime && !day.isToday;
+                        const isRed = !day.hasTime && !day.isToday && !day.isFuture;
                         const isGreen = day.hasTime;
-                        const isNeutral = !day.hasTime && day.isToday;
-                        const dayLabel = (isMobile && !day.isToday) ? day.label.slice(0, 3) : day.label;
+                        const clickable = isRed || day.isToday;
+                        const labelColor = isGreen ? '#059669' : isRed ? '#dc2626' : day.isToday ? '#2563eb' : '#94a3b8';
 
                         return (
                             <div
                                 key={idx}
                                 style={{
+                                    position: 'relative',
                                     flex: '1',
                                     minWidth: isMobile ? 0 : '80px',
-                                    padding: isMobile ? '10px 4px' : '12px 8px',
+                                    padding: isMobile ? '10px 4px 8px' : '12px 8px 10px',
                                     borderRadius: isMobile ? '14px' : '12px',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
-                                    gap: isMobile ? '6px' : '8px',
-                                    background: isGreen ? '#ecfdf5' : isRed ? '#fef2f2' : '#f8fafc',
-                                    border: `1px solid ${isGreen ? '#a7f3d0' : isRed ? '#fecaca' : '#e2e8f0'}`,
-                                    cursor: isRed ? 'pointer' : 'default',
+                                    gap: isMobile ? '5px' : '6px',
+                                    background: isGreen ? '#ecfdf5' : isRed ? '#fef2f2' : day.isToday ? '#eff6ff' : '#f8fafc',
+                                    border: `1px solid ${isGreen ? '#a7f3d0' : isRed ? '#fecaca' : day.isToday ? '#bfdbfe' : '#e2e8f0'}`,
+                                    boxShadow: day.isToday ? '0 4px 12px rgba(59,130,246,0.18)' : 'none',
+                                    opacity: day.isFuture ? 0.5 : 1,
+                                    cursor: clickable ? 'pointer' : 'default',
                                     transition: 'transform 0.2s'
                                 }}
                                 onClick={() => {
-                                    if (isRed) {
+                                    if (clickable) {
                                         if (setActiveTab) setActiveTab('worker_timesheet');
                                         setTimeout(() => {
                                             window.dispatchEvent(new CustomEvent('open-add-timesheet', { detail: { date: format(day.date, 'yyyy-MM-dd') } }));
                                         }, 100);
                                     }
                                 }}
-                                onMouseEnter={(e) => { if (isRed) e.currentTarget.style.transform = 'scale(1.05)' }}
-                                onMouseLeave={(e) => { if (isRed) e.currentTarget.style.transform = 'scale(1)' }}
-                                title={isRed ? "Klik for at registrere timer" : ""}
+                                onMouseEnter={(e) => { if (clickable) e.currentTarget.style.transform = 'scale(1.05)' }}
+                                onMouseLeave={(e) => { if (clickable) e.currentTarget.style.transform = 'scale(1)' }}
+                                title={isRed ? "Klik for at registrere timer" : (day.isToday ? "I dag" : "")}
                             >
-                                <span style={{ fontSize: isMobile ? '0.65rem' : '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: isMobile ? '0.02em' : 'normal', color: isGreen ? '#059669' : isRed ? '#dc2626' : '#64748b' }}>
-                                    {dayLabel}
+                                {day.isToday && (
+                                    <div style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none' }}>
+                                        <span style={{ fontSize: '0.52rem', fontWeight: 800, color: '#fff', background: '#3b82f6', padding: '2px 7px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.04em', boxShadow: '0 2px 5px rgba(59,130,246,0.45)', whiteSpace: 'nowrap' }}>I dag</span>
+                                        <span style={{ color: '#3b82f6', fontSize: '0.65rem', lineHeight: 1, marginTop: '-1px' }}>▾</span>
+                                    </div>
+                                )}
+                                <span style={{ fontSize: isMobile ? '0.65rem' : '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: isMobile ? '0.02em' : 'normal', color: labelColor }}>
+                                    {day.label}
                                 </span>
                                 {isGreen ? (
                                     <CheckCircle2 size={isMobile ? 20 : 24} color="#10b981" />
                                 ) : isRed ? (
                                     <AlertCircle size={isMobile ? 20 : 24} color="#ef4444" />
                                 ) : (
-                                    <Clock size={isMobile ? 20 : 24} color="#94a3b8" />
+                                    <Clock size={isMobile ? 20 : 24} color={day.isToday ? '#3b82f6' : '#94a3b8'} />
                                 )}
+                                <span style={{ fontSize: isMobile ? '0.72rem' : '0.8rem', fontWeight: 800, color: day.isToday ? '#2563eb' : '#475569' }}>
+                                    {day.dayNum}
+                                </span>
                             </div>
                         )
                     })}
