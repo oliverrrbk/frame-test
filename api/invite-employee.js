@@ -49,7 +49,7 @@ export default async function handler(req, res) {
         // Verificér at kalderen er admin i det firma der inviteres til
         const { data: callerProfile, error: profileErr } = await supabase
             .from('carpenters')
-            .select('id, role, company_id')
+            .select('id, role, company_id, company_name')
             .eq('id', caller.id)
             .single();
         if (profileErr || !callerProfile) {
@@ -146,7 +146,7 @@ export default async function handler(req, res) {
                 name.split(' ')[0], // Brug kun fornavn
                 email,
                 finalPassword,
-                { company_name: callerProfile?.company_name || 'Bison Frame' }
+                { company_name: callerProfile?.company_name || 'virksomheden' }
             );
 
             try {

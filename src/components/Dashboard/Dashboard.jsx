@@ -6640,7 +6640,7 @@ const Dashboard = () => {
                 document.body
             )}
 
-            <PwaOnboarding />
+            {!carpenterProfile?.requires_password_change && <PwaOnboarding />}
         </div>
     );
 };
