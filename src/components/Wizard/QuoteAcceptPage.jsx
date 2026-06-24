@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { CheckCircle, CalendarDays, Phone, Mail, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 
@@ -246,41 +247,55 @@ const QuoteAcceptPage = () => {
                 
                 {(accepted || lead.status === 'Bekræftet opgave') && (() => {
                     const firstName = carpenter?.owner_name ? carpenter.owner_name.split(' ')[0] : (carpenter?.company_name || 'tømreren');
+                    const confirmedAt = new Date(lead.updated_at || Date.now()).toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                     const steps = [
-                        { icon: '📅', title: 'Vi planlægger opstart', text: `${carpenter?.company_name || 'Vi'} sætter nu opgaven i kalenderen og vender tilbage med en opstartsdato.` },
-                        { icon: '📞', title: 'Vi ringer dig op', text: `Vi kontakter dig${carpenter?.phone ? ` (du kan også selv ringe på ${carpenter.phone})` : ''} for at aftale de sidste praktiske detaljer.` },
-                        { icon: '✅', title: 'Du behøver ikke gøre mere', text: 'Læn dig tilbage — du hører fra os. Du har modtaget en bekræftelse på mail.' },
+                        { Icon: CalendarDays, title: 'Vi planlægger opstart', text: `${carpenter?.company_name || 'Vi'} sætter nu opgaven i kalenderen og vender tilbage med en opstartsdato.` },
+                        { Icon: Phone, title: 'Vi kontakter dig', text: 'Vi tager fat i dig for at aftale de sidste praktiske detaljer omkring opgaven.' },
+                        { Icon: ShieldCheck, title: 'Du behøver ikke gøre mere', text: 'Læn dig tilbage — du hører fra os. Du har også modtaget en bekræftelse på mail.' },
                     ];
                     return (
-                    <div style={{ backgroundColor: '#ecfdf5', borderBottom: '1px solid #10b981', padding: '28px 32px' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
-                            <div style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, marginTop: '4px' }}>✓</div>
-                            <div>
-                                <h2 style={{ margin: '0 0 4px 0', color: '#065f46', fontSize: '1.4rem' }}>Tak — opgaven er bekræftet!</h2>
-                                <p style={{ margin: 0, color: '#047857', fontSize: '0.95rem' }}>
-                                    Du bekræftede opgaven den {lead.updated_at ? new Date(lead.updated_at).toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.
-                                </p>
-                            </div>
+                    <div style={{ padding: '48px 32px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
+                        <div style={{ marginBottom: '20px', position: 'relative', display: 'inline-flex' }}>
+                            <CheckCircle size={64} color="#10b981" />
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#10b981', filter: 'blur(28px)', opacity: 0.18, zIndex: 0, borderRadius: '50%' }}></div>
                         </div>
-                        <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #d1fae5', padding: '20px 24px' }}>
-                            <h3 style={{ margin: '0 0 16px 0', color: '#065f46', fontSize: '1.05rem', fontWeight: 700 }}>Hvad sker der nu?</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                {steps.map((s, i) => (
-                                    <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#ecfdf5', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '16px' }}>{s.icon}</div>
-                                        <div>
-                                            <p style={{ margin: '0 0 2px 0', color: '#0f172a', fontWeight: 600, fontSize: '0.95rem' }}>{i + 1}. {s.title}</p>
-                                            <p style={{ margin: 0, color: '#475569', fontSize: '0.9rem', lineHeight: '1.5' }}>{s.text}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            {carpenter?.phone && (
-                                <div style={{ marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #f1f5f9', fontSize: '0.9rem', color: '#065f46' }}>
-                                    Spørgsmål til opstart? Ring til {firstName} på <a href={`tel:${carpenter.phone}`} style={{ color: '#047857', fontWeight: 700, textDecoration: 'none' }}>{carpenter.phone}</a>.
+
+                        <h2 style={{ margin: '0 0 12px', color: '#0f172a', fontSize: '2rem', letterSpacing: '-0.02em', fontWeight: 800 }}>Tak for din bekræftelse</h2>
+                        <p style={{ margin: '0 auto 4px', color: '#475569', fontSize: '1.1rem', lineHeight: '1.6', maxWidth: '520px' }}>
+                            Vi har modtaget din bekræftelse, og opgaven er nu sat i gang. Du er i trygge hænder — herfra tager {firstName} over.
+                        </p>
+                        <p style={{ margin: '0 auto 36px', color: '#94a3b8', fontSize: '0.85rem' }}>Bekræftet den {confirmedAt}</p>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', maxWidth: '640px', margin: '0 auto 32px', textAlign: 'left' }}>
+                            {steps.map((s, i) => (
+                                <div key={i} style={{ backgroundColor: '#f8fafc', padding: '22px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                                    <s.Icon size={26} color="#3b82f6" style={{ marginBottom: '14px' }} />
+                                    <h4 style={{ margin: '0 0 6px', color: '#0f172a', fontSize: '1rem' }}>{i + 1}. {s.title}</h4>
+                                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem', lineHeight: '1.5' }}>{s.text}</p>
                                 </div>
-                            )}
+                            ))}
                         </div>
+
+                        {(carpenter?.phone || carpenter?.email) && (
+                            <div style={{ maxWidth: '520px', margin: '0 auto', padding: '24px', backgroundColor: '#eff6ff', borderRadius: '16px', border: '1px dashed #bfdbfe' }}>
+                                <strong style={{ display: 'block', color: '#1e40af', marginBottom: '6px', fontSize: '1.05rem' }}>Har du spørgsmål til opstart?</strong>
+                                <p style={{ color: '#1e3a8a', margin: '0 0 18px', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                                    Du er altid velkommen til at kontakte {firstName} direkte.
+                                </p>
+                                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                    {carpenter?.phone && (
+                                        <a href={`tel:${carpenter.phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#1d4ed8', color: '#fff', borderRadius: '10px', textDecoration: 'none', fontWeight: 600, fontSize: '0.95rem' }}>
+                                            <Phone size={18} /> Ring til {firstName}
+                                        </a>
+                                    )}
+                                    {carpenter?.email && (
+                                        <a href={`mailto:${carpenter.email}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#fff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '10px', textDecoration: 'none', fontWeight: 600, fontSize: '0.95rem' }}>
+                                            <Mail size={18} /> Skriv en mail
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     );
                 })()}
