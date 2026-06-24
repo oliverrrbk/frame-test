@@ -114,9 +114,18 @@ export default function ManualMaterialsView({ lead, profile, onUpdate }) {
 
     const openInvoice = async (inv) => {
         if (inv.file_path) {
+            const newWindow = window.open('', '_blank');
             const { data, error } = await supabase.storage.from('bilag').createSignedUrl(inv.file_path, 3600);
-            if (error || !data?.signedUrl) { toast.error('Kunne ikke åbne filen'); return; }
-            window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+            if (error || !data?.signedUrl) { 
+                if (newWindow) newWindow.close();
+                toast.error('Kunne ikke åbne filen'); 
+                return; 
+            }
+            if (newWindow) {
+                newWindow.location.href = data.signedUrl;
+            } else {
+                window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+            }
         } else if (inv.file_url || inv.file_data) {
             window.open(inv.file_url || inv.file_data, '_blank', 'noopener,noreferrer');
         } else {
