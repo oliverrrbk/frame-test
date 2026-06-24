@@ -3358,11 +3358,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     {(() => {
                         const caseTabs = [
                             { id: 'todo', label: selectedCase.status === 'Afbrudt Sag' ? 'Bygge To-Do (Låst)' : 'Bygge To-Do (KS)', mobileLabel: 'To-Do', icon: <CheckSquare size={isMobile ? 22 : 18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: true },
-                            { id: 'materials', label: 'Materialer & Indkøb', mobileLabel: 'Materialer', icon: <PackageCheck size={isMobile ? 22 : 18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: true },
+                            { id: 'materials', label: 'Materialer & Indkøb', mobileLabel: 'Materialer', icon: <PackageCheck size={isMobile ? 22 : 18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
                             { id: 'logs', label: 'Byggeproces', mobileLabel: 'Proces', icon: <ClipboardList size={isMobile ? 22 : 18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
                             { id: 'timesheet', label: 'Timeregistrering', mobileLabel: 'Timer', icon: <Clock size={isMobile ? 22 : 18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
                             { id: 'invoices', label: 'Bilag', mobileLabel: 'Bilag', icon: <Receipt size={isMobile ? 22 : 18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
-                            { id: 'extra-work', label: selectedCase.status === 'Afbrudt Sag' ? 'Aftalesedler (Låst)' : 'Aftalesedler', mobileLabel: 'Aftaler', icon: <PenTool size={isMobile ? 22 : 18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'apprentice' },
+                            { id: 'extra-work', label: selectedCase.status === 'Afbrudt Sag' ? 'Aftalesedler (Låst)' : 'Aftalesedler', mobileLabel: 'Aftaler', icon: <PenTool size={isMobile ? 22 : 18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
                             { id: 'drawings', label: 'Tegninger', mobileLabel: 'Tegninger', icon: <FileImage size={isMobile ? 22 : 18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: true }
                         ].filter(tab => tab.show);
 
@@ -3604,7 +3604,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         )}
 
                         {/* TAB 2: MATERIALER — PDF-først for manuelle tilbud, ellers redigerbar liste */}
-                        {activeSubTab === 'materials' && (
+                        {activeSubTab === 'materials' && profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
                             selectedCase?.raw_data?.is_manual_quote ? (
                                 <ManualMaterialsView
                                     lead={selectedCase}
@@ -4131,7 +4131,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         )}
 
                         {/* TAB 6: AFTALESEDLER (EKSTRAARBEJDE) */}
-                        {activeSubTab === 'extra-work' && (
+                        {activeSubTab === 'extra-work' && profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
                             <div className="case-tab-content" style={{ pointerEvents: selectedCase.status === 'Afbrudt Sag' ? 'none' : 'auto', opacity: selectedCase.status === 'Afbrudt Sag' ? 0.7 : 1 }}>
                                 <AftalesedlerTab
                                     selectedCase={selectedCase}

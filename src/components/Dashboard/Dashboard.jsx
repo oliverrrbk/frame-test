@@ -43,6 +43,7 @@ import PushNotificationPrompt from './PushNotificationPrompt';
 import AccountSettingsView from './AccountSettingsView';
 import ChatTab from './ChatTab';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import SmtpIntegration from './SmtpIntegration';
 
 // Konfiguration til det nye Google Map
 const MAP_LIBRARIES = ['places'];
@@ -6502,6 +6503,11 @@ const Dashboard = () => {
                                     </div>
                                     )}
                                 </div>
+                                    <SmtpIntegration 
+                                        carpenterProfile={carpenterProfile} 
+                                        expandedIntegration={expandedIntegration} 
+                                        setExpandedIntegration={setExpandedIntegration} 
+                                    />
                                     </div>
                                 </div> {/* Close card-body */}
                             </div> {/* Close settings-card */}

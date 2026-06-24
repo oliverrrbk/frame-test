@@ -167,7 +167,8 @@ const QuoteAcceptPage = () => {
                                     subject: `Dit tilbud fra ${carpenterName} er bekræftet!`,
                                     html: getCustomerOfferAcceptedTemplate(customerName, categoryName, carpenter, lead.raw_data?.quote_pdf_url, lead.case_number || String(lead.id).substring(0,8)),
                                     fromName: senderName,
-                                    replyTo: carpenter.email
+                                    replyTo: carpenter.email,
+                                    quoteToken: isUUID ? lead_id : undefined
                                 });
                             }
                             
@@ -179,7 +180,8 @@ const QuoteAcceptPage = () => {
                                     subject: `Tilbud accepteret: ${categoryName} - ${lead.customer_name}`,
                                     html: getCarpenterOfferAcceptedTemplate(carpenter.company_name, lead.customer_name, categoryName, appUrl, carpenter, lead.id),
                                     fromName: carpenterName,
-                                    replyTo: lead.customer_email
+                                    replyTo: lead.customer_email,
+                                    quoteToken: isUUID ? lead_id : undefined
                                 });
                             }
                         });
