@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 // Initialer ud fra navn: "Hans Pedersen" -> "HP", "Hans" -> "HA".
-export function getInitials(name = '') {
+function getInitials(name = '') {
     const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return '?';
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();

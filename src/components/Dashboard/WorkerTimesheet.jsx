@@ -8,7 +8,8 @@ import { isWeekendOrHoliday } from '../../utils/holidays';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
 import { mutateTimeEntries } from '../../utils/timeEntries';
 import TimeRegistrationReminder from './TimeRegistrationReminder';
-import QuarterTimePicker, { snapToQuarter } from '../ui/QuarterTimePicker';
+import QuarterTimePicker from '../ui/QuarterTimePicker';
+import { snapToQuarter } from '../../utils/timeUtils';
 
 const CustomSelect = ({ value, onChange, options, placeholder, minWidth = '180px' }) => {
     const [isOpen, setIsOpen] = useState(false);

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, CalendarDays, Phone, Mail, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import { computeQuoteExpiry } from '../../utils/quoteExpiry';
 
 const QuoteAcceptPage = () => {
     const { lead_id } = useParams();
@@ -224,8 +225,7 @@ const QuoteAcceptPage = () => {
     const moms = totalPris * 0.25;
     const totalMedMoms = totalPris + moms;
 
-    const validityDays = settings?.validityDays || 45;
-    const isExpired = lead?.created_at ? new Date() > new Date(new Date(lead.created_at).getTime() + validityDays * 24 * 60 * 60 * 1000) : false;
+    const { isExpired, validityDays } = computeQuoteExpiry(lead);
 
     return (
         <div className="accept-page-wrapper" style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' }}>

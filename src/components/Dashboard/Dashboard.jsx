@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Droplets, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown, Play } from 'lucide-react';
+import { Home, Droplets, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown, Play, X, CalendarClock } from 'lucide-react';
 // jsPDF + html2canvas udskydes (dynamisk import i PDF-handlerne) for hurtigere load
 import { GoogleMap, useLoadScript, Marker, InfoWindow, MarkerClusterer } from '@react-google-maps/api';
 import { supabase } from '../../supabaseClient';
@@ -34,6 +34,7 @@ import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { computeQuoteExpiry } from '../../utils/quoteExpiry';
 import { getRoleLabel } from '../../utils/roles';
 import CustomProjectCreator from './CustomProjectCreator';
 import DrawingsGallery from '../Drawings/DrawingsGallery';
@@ -469,6 +470,177 @@ export const isConfirmedCase = (lead) => {
     return false;
 };
 
+// ───────────────────────────────────────────────────────────────────────────
+// Forlæng-tilbud dialog — Bison Frame-stil, lækker/interaktiv med bounce.
+// ───────────────────────────────────────────────────────────────────────────
+const ExtendQuoteModal = ({ lead, onClose, onConfirm, isExtending }) => {
+    const PRESETS = [7, 14, 30];
+    const [choice, setChoice] = useState(14);          // antal dage (preset) eller 'date'
+    const [customDate, setCustomDate] = useState('');  // YYYY-MM-DD ved valg af dato
+    const [resend, setResend] = useState(true);
+
+    const expiry = computeQuoteExpiry(lead);
+    const expiredDaysAgo = expiry.daysLeft != null ? Math.abs(expiry.daysLeft) : null;
+
+    // Min-dato for dato-vælger = i morgen.
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const computeValidUntil = () => {
+        if (choice === 'date') {
+            if (!customDate) return null;
+            // Sæt til slutningen af den valgte dag, så hele dagen er gyldig.
+            const d = new Date(`${customDate}T23:59:59`);
+            return Number.isNaN(d.getTime()) ? null : d.toISOString();
+        }
+        return new Date(Date.now() + choice * 24 * 60 * 60 * 1000).toISOString();
+    };
+
+    const validUntilISO = computeValidUntil();
+    const canConfirm = !!validUntilISO && !isExtending;
+
+    const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+
+    return createPortal(
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 100000,
+                background: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(7px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+            }}
+        >
+            <motion.div
+                initial={{ opacity: 0, y: 24, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                    width: 'min(480px, 100%)', background: '#fff', borderRadius: 22,
+                    boxShadow: '0 30px 80px rgba(15,23,42,0.45)', overflow: 'hidden'
+                }}
+            >
+                {/* Header */}
+                <div style={{ position: 'relative', padding: '20px 24px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1d4ed8 140%)', color: '#fff' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <CalendarClock size={20} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.2 }}>Forlæng tilbud</div>
+                            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>
+                                {lead?.customer_name || 'Kunde'}
+                                {expiry.isExpired && expiredDaysAgo != null
+                                    ? ` · udløbet for ${expiredDaysAgo} ${expiredDaysAgo === 1 ? 'dag' : 'dage'} siden`
+                                    : expiry.daysLeft != null ? ` · udløber om ${expiry.daysLeft} ${expiry.daysLeft === 1 ? 'dag' : 'dage'}` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <button onClick={onClose} title="Luk" style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 10, color: 'rgba(255,255,255,0.85)', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <X size={17} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    <div>
+                        <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, color: '#64748b', marginBottom: 10 }}>Forlæng med</div>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            {PRESETS.map(days => {
+                                const active = choice === days;
+                                return (
+                                    <button
+                                        key={days}
+                                        onClick={() => setChoice(days)}
+                                        style={{
+                                            flex: '1 1 0', minWidth: 90, padding: '14px 10px', borderRadius: 14, cursor: 'pointer',
+                                            border: active ? '2px solid #2563eb' : '2px solid #e2e8f0',
+                                            background: active ? 'rgba(37,99,235,0.08)' : '#fff',
+                                            color: active ? '#1d4ed8' : '#334155', fontWeight: 800,
+                                            transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), border-color 0.15s, background 0.15s',
+                                            transform: active ? 'translateY(-2px)' : 'none'
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-3px) scale(1.03)'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.transform = active ? 'translateY(-2px)' : 'none'; }}
+                                    >
+                                        <div style={{ fontSize: 22, lineHeight: 1 }}>+{days}</div>
+                                        <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.8, marginTop: 4 }}>dage</div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Specifik dato */}
+                    <div>
+                        <button
+                            onClick={() => setChoice('date')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '12px 14px', borderRadius: 14, cursor: 'pointer',
+                                border: choice === 'date' ? '2px solid #2563eb' : '2px solid #e2e8f0',
+                                background: choice === 'date' ? 'rgba(37,99,235,0.08)' : '#fff', color: '#334155', fontWeight: 700, fontSize: 14
+                            }}
+                        >
+                            <Calendar size={16} /> Vælg en bestemt dato
+                        </button>
+                        {choice === 'date' && (
+                            <input
+                                type="date"
+                                value={customDate}
+                                min={tomorrow}
+                                onChange={(e) => setCustomDate(e.target.value)}
+                                style={{ marginTop: 10, width: '100%', padding: '12px 14px', borderRadius: 12, border: '2px solid #e2e8f0', fontSize: 14, fontWeight: 600, color: '#0f172a', outline: 'none' }}
+                            />
+                        )}
+                    </div>
+
+                    {/* Resultat-preview */}
+                    <div style={{ background: '#f8fafc', borderRadius: 12, padding: '12px 14px', fontSize: 13, color: '#475569', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Clock size={15} style={{ color: '#2563eb', flexShrink: 0 }} />
+                        {validUntilISO ? <span>Nyt udløb: <strong style={{ color: '#0f172a' }}>{fmtDate(validUntilISO)}</strong></span> : <span>Vælg en dato for at fortsætte</span>}
+                    </div>
+
+                    {/* Gensend mail */}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                        <input type="checkbox" checked={resend} onChange={(e) => setResend(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#2563eb', cursor: 'pointer' }} />
+                        <span style={{ fontSize: 14, color: '#334155', fontWeight: 600 }}>Send nyt link til kunden</span>
+                    </label>
+                </div>
+
+                {/* Footer */}
+                <div style={{ padding: '0 24px 24px', display: 'flex', gap: 12 }}>
+                    <button
+                        onClick={onClose}
+                        style={{ flex: '0 0 auto', padding: '13px 18px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}
+                    >
+                        Annullér
+                    </button>
+                    <button
+                        onClick={() => canConfirm && onConfirm(validUntilISO, resend)}
+                        disabled={!canConfirm}
+                        style={{
+                            flex: 1, padding: '13px 18px', borderRadius: 14, border: 'none',
+                            background: canConfirm ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#cbd5e1',
+                            color: '#fff', fontWeight: 800, fontSize: 14, cursor: canConfirm ? 'pointer' : 'not-allowed',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                            boxShadow: canConfirm ? '0 8px 20px rgba(37,99,235,0.30)' : 'none',
+                            transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s'
+                        }}
+                        onMouseOver={(e) => { if (canConfirm) e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; }}
+                    >
+                        <RefreshCw size={16} className={isExtending ? 'spin' : ''} /> {isExtending ? 'Forlænger…' : 'Forlæng tilbud'}
+                    </button>
+                </div>
+            </motion.div>
+        </motion.div>,
+        document.body
+    );
+};
+
 const Dashboard = () => {
     const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const impersonateId = urlParams ? urlParams.get('impersonate') : null;
@@ -491,6 +663,8 @@ const Dashboard = () => {
     const [leadFilter, setLeadFilter] = useState('Ny forespørgsel');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLead, setSelectedLead] = useState(null);
+    const [extendLead, setExtendLead] = useState(null);   // lead hvis tilbud forlænges
+    const [isExtending, setIsExtending] = useState(false);
     const [isCustomerChoicesOpen, setIsCustomerChoicesOpen] = useState(false);
     const [isPriceBasisOpen, setIsPriceBasisOpen] = useState(false);
     const [isMaterialListOpen, setIsMaterialListOpen] = useState(false);
@@ -2123,7 +2297,11 @@ const Dashboard = () => {
             const validityDays = extraRawData?.quote_settings?.validityDays
                 || currentRawData?.quote_settings?.validityDays
                 || quoteValidityDays || 14;
-            newRawData.quote_settings = { ...(newRawData.quote_settings || {}), validityDays };
+            // Stempl afsendelsestidspunkt → gyldigheden løber herfra. Ryd evt. tidligere
+            // forlængelse (validUntil), så en frisk afsendelse får ren gyldighed igen.
+            const { validUntil: _droppedValidUntil, ...keptQuoteSettings } = newRawData.quote_settings || {};
+            newRawData.quote_settings = { ...keptQuoteSettings, validityDays };
+            newRawData.quote_sent_at = new Date().toISOString();
 
             const { error: updateError } = await supabase
                 .from('leads')
@@ -2164,6 +2342,51 @@ const Dashboard = () => {
             toast.error('Fejl ved upload af PDF til Supabase: Glem ikke RLS og publik indstillinger på bucket.\n' + error.message);
         } finally {
             setIsUploadingPdf(false);
+        }
+    };
+
+    // Forlæng et (evt. udløbet) tilbud: sæt nyt udløb (quote_settings.validUntil) og
+    // gensend evt. linket. Mester ejer leadet → almindelig opdatering, ingen RPC nødvendig.
+    const handleExtendQuote = async (leadId, newValidUntilISO, resend) => {
+        const targetLead = leadsData.find(l => l.id === leadId);
+        if (!targetLead || !newValidUntilISO) return;
+        setIsExtending(true);
+        try {
+            const currentRawData = targetLead.raw_data || {};
+            const newRawData = {
+                ...currentRawData,
+                quote_settings: { ...(currentRawData.quote_settings || {}), validUntil: newValidUntilISO }
+            };
+
+            const { error } = await supabase.from('leads').update({ raw_data: newRawData }).eq('id', leadId);
+            if (error) throw error;
+
+            setLeadsData(prev => prev.map(l => l.id === leadId ? { ...l, raw_data: newRawData } : l));
+            if (selectedLead && selectedLead.id === leadId) {
+                setSelectedLead(prev => ({ ...prev, raw_data: newRawData }));
+            }
+
+            if (resend && targetLead.customer_email && targetLead.customer_email !== 'Ukendt') {
+                const { sendEmail } = await import('../../utils/sendEmail');
+                const carpenterName = carpenterProfile?.company_name || carpenterProfile?.owner_name || 'Din Tømrer';
+                const senderName = getCarpenterSenderName(carpenterProfile);
+                const quoteUrl = `${window.location.origin}/${carpenterProfile?.slug || 't'}/tilbud/${targetLead.quote_token || leadId}`;
+                const newDays = Math.max(1, Math.ceil((new Date(newValidUntilISO).getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+                sendEmail({
+                    to: targetLead.customer_email,
+                    subject: `Dit tilbud fra ${carpenterName} er forlænget`,
+                    html: getCustomerOfferSentTemplate(targetLead.customer_name, quoteUrl, targetLead.project_category, carpenterProfile, targetLead.raw_data?.quote_pdf_url || null, true, targetLead.case_number || String(targetLead.id).substring(0, 8), null, newDays),
+                    fromName: senderName,
+                    replyTo: carpenterProfile?.email
+                });
+            }
+
+            toast.success(resend ? 'Tilbud forlænget — nyt link sendt til kunden!' : 'Tilbud forlænget!');
+            setExtendLead(null);
+        } catch (err) {
+            toast.error('Kunne ikke forlænge tilbuddet: ' + (err.message || 'ukendt fejl'));
+        } finally {
+            setIsExtending(false);
         }
     };
 
@@ -3616,6 +3839,41 @@ const Dashboard = () => {
                                                             </span>
                                                         )
                                                     )}
+                                                    {(lead.status === 'Sendt tilbud') && (() => {
+                                                        const exp = computeQuoteExpiry(lead);
+                                                        if (exp.expiresAt == null) return null;
+                                                        const expired = exp.isExpired;
+                                                        const absDays = exp.daysLeft != null ? Math.abs(exp.daysLeft) : 0;
+                                                        const label = expired
+                                                            ? `Udløbet for ${absDays} ${absDays === 1 ? 'dag' : 'dage'} siden`
+                                                            : exp.daysLeft <= 0 ? 'Udløber i dag' : `Udløber om ${exp.daysLeft} ${exp.daysLeft === 1 ? 'dag' : 'dage'}`;
+                                                        const soon = !expired && exp.daysLeft <= 3;
+                                                        const col = expired ? '#ef4444' : soon ? '#f59e0b' : '#10b981';
+                                                        return (
+                                                            <>
+                                                                <span style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '20px', backgroundColor: `${col}1a`, color: col, display: 'flex', alignItems: 'center', gap: '6px', border: `1px solid ${col}66`, fontWeight: 600 }}>
+                                                                    <CalendarClock size={14} /> {label}
+                                                                </span>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); setExtendLead(lead); }}
+                                                                    className="extend-quote-btn"
+                                                                    style={{
+                                                                        fontSize: '0.8rem', padding: '6px 12px', borderRadius: '20px', cursor: 'pointer', fontWeight: 700,
+                                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                                        border: expired ? 'none' : '1px solid #cbd5e1',
+                                                                        background: expired ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#fff',
+                                                                        color: expired ? '#fff' : '#334155',
+                                                                        boxShadow: expired ? '0 6px 16px rgba(37,99,235,0.28)' : 'none',
+                                                                        transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s'
+                                                                    }}
+                                                                    onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.04)'; }}
+                                                                    onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; }}
+                                                                >
+                                                                    <RefreshCw size={13} /> Forlæng
+                                                                </button>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                             

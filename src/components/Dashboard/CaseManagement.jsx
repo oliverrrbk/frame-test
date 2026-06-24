@@ -19,7 +19,8 @@ import { getRoleLabel } from '../../utils/roles';
 import { buildCaseMessage, mutateCaseMessages } from '../../utils/caseMessages';
 import { getChecklistForCategory, buildPhasesChecklist } from '../../utils/checklistGenerator';
 import UserAvatar from '../ui/UserAvatar';
-import QuarterTimePicker, { snapToQuarter } from '../ui/QuarterTimePicker';
+import QuarterTimePicker from '../ui/QuarterTimePicker';
+import { snapToQuarter } from '../../utils/timeUtils';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 
 import toast from 'react-hot-toast';

@@ -3016,6 +3016,58 @@ button:focus-visible {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   KPI-KORT — Bison Frame lækker/interaktiv stil m. hoppeeffekt
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes kpiPop {
+    0%   { opacity: 0; transform: translateY(16px) scale(0.96); }
+    60%  { opacity: 1; transform: translateY(-4px) scale(1.01); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.kpi-card {
+    animation: kpiPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+    will-change: transform;
+}
+.kpi-card:hover {
+    transform: translateY(-6px) scale(1.025);
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
+}
+.kpi-card:active {
+    transform: translateY(-2px) scale(0.99);
+    transition-duration: 0.12s;
+}
+.kpi-bg-icon {
+    transform: rotate(-15deg);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+}
+.kpi-card:hover .kpi-bg-icon {
+    transform: rotate(-6deg) scale(1.14);
+    opacity: 0.09 !important;
+}
+.kpi-chip {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.kpi-card:hover .kpi-chip {
+    transform: scale(1.15) rotate(-7deg);
+}
+.kpi-value {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.kpi-card:hover .kpi-value {
+    transform: scale(1.04);
+    transform-origin: left center;
+}
+@media (prefers-reduced-motion: reduce) {
+    .kpi-card, .kpi-bg-icon, .kpi-chip, .kpi-value { animation: none; transition: none; }
+}
+/* 5 kort på desktop → 3 på tablet (mobil 2x sættes nedenfor) */
+@media (max-width: 1100px) {
+    .kpi-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    MOBILE DISPLAY SCALING (DASHBOARD)
    ═══════════════════════════════════════════════════════════════ */
 .mobile-only {

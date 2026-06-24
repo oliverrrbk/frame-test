@@ -221,51 +221,44 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
             </div>
 
             {/* NY SEKTION: Top-Level KPI Kort */}
-            <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+            <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
                 {[
                     metrics.won_revenue,
                     metrics.active_cases,
+                    metrics.quotes_sent,
                     metrics.new_leads,
                     metrics.conversion_rate
                 ].map((m, i) => (
-                    <div 
-                        key={i} 
-                        className="glass-panel" 
-                        style={{ 
-                            padding: '24px', 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            gap: '12px', 
-                            borderTop: `4px solid ${m.color}`, 
-                            position: 'relative', 
+                    <div
+                        key={i}
+                        className="glass-panel kpi-card"
+                        style={{
+                            padding: '22px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
+                            borderTop: `4px solid ${m.color}`,
+                            position: 'relative',
                             overflow: 'hidden',
                             cursor: m.tab ? 'pointer' : 'default',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                            animationDelay: `${i * 70}ms`
                         }}
                         onClick={() => {
                             if (m.tab && setActiveTab) setActiveTab(m.tab);
                         }}
-                        onMouseOver={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-4px)';
-                            e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.06)';
-                        }}
-                        onMouseOut={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)';
-                        }}
                     >
                         {/* Baggrundsikon (subtilt) */}
-                        <m.icon size={120} style={{ position: 'absolute', right: '-20px', bottom: '-20px', color: m.color, opacity: 0.04, transform: 'rotate(-15deg)' }} />
-                        
+                        <m.icon className="kpi-bg-icon" size={120} style={{ position: 'absolute', right: '-20px', bottom: '-20px', color: m.color, opacity: 0.05 }} />
+
                         <div className="kpi-label-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ padding: '6px', borderRadius: '8px', background: `${m.color}15`, color: m.color }}>
+                            <div className="kpi-chip" style={{ padding: '6px', borderRadius: '8px', background: `${m.color}15`, color: m.color, display: 'flex' }}>
                                 <m.icon size={18} />
                             </div>
-                            <h3 className="kpi-label" style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <h3 className="kpi-label" style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                 {m.label}
                             </h3>
                         </div>
-                        <div className="kpi-value" style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                        <div className="kpi-value" style={{ fontSize: '2.1rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                             {m.format === 'currency' ? m.value.toLocaleString('da-DK') : m.value}
                             <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>{m.suffix}</span>
                         </div>
