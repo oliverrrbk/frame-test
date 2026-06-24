@@ -25,6 +25,7 @@ afløser/supplerer hinanden.
 | `add_columns.sql` | Diverse kolonne-tilføjelser på `leads` |
 | `add_integration_columns.sql` | Integrations-id-kolonner (ordrestyring/apacta/minuba) |
 | `add_minuba_secret.sql` | Minuba-nøgle-kolonne |
+| `add_smtp_settings.sql` | `smtp_settings` (JSONB) på `carpenter_secrets` — egen SMTP-mailopsætning |
 | `add_ai_curation_columns.sql` | AI-kuration-kolonner på `leads` |
 | `add_digital_quotes.sql` | Kolonner til digitale web-tilbud |
 | `supabase/add_case_number.sql` | Sekvens + `case_number` (starter ved 1000) |
