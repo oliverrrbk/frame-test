@@ -2,21 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X, Loader2 } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-
-const PUBLIC_VAPID_KEY = 'BKLNPYR40nKRfERxXXWctbVztLnvUJTBMaacXoOr_z16Jf-1T7Ou-oBWZNoJ5W7c_av8L3G3qNlww5KJr15u36U';
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+import { isPushSupported, subscribeToPush } from '../../utils/pushSubscription';
 
 const PushNotificationPrompt = () => {
     const [showPrompt, setShowPrompt] = useState(false);
@@ -27,7 +14,7 @@ const PushNotificationPrompt = () => {
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
         
         if (!isStandalone) return;
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        if (!isPushSupported()) return;
         
         // Wait a bit before checking, so it doesn't pop up immediately on first open and startle the user
         const timer = setTimeout(() => {
@@ -57,30 +44,12 @@ const PushNotificationPrompt = () => {
     const handleSubscribe = async () => {
         setIsLoading(true);
         try {
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') {
-                toast.error('Du afviste notifikationer i browseren.');
+            const { ok, reason } = await subscribeToPush();
+            if (!ok) {
+                if (reason === 'denied') toast.error('Du afviste notifikationer i browseren.');
                 handleDismiss();
                 return;
             }
-
-            const registration = await navigator.serviceWorker.ready;
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-            });
-
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Du er ikke logget ind");
-
-            const { error } = await supabase
-                .from('push_subscriptions')
-                .insert([{
-                    user_id: user.id,
-                    subscription_data: JSON.parse(JSON.stringify(subscription))
-                }]);
-
-            if (error && error.code !== '23505') throw error;
 
             toast.success('Notifikationer aktiveret!');
             localStorage.setItem('bison_push_prompt_dismissed', 'true');

@@ -1,25 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, BellOff, Loader } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-
-// OBS: Udskiftes med rigtig public VAPID key fra backend
-const PUBLIC_VAPID_KEY = 'BKLNPYR40nKRfERxXXWctbVztLnvUJTBMaacXoOr_z16Jf-1T7Ou-oBWZNoJ5W7c_av8L3G3qNlww5KJr15u36U';
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+import { isPushSupported, hasActiveSubscription, subscribeToPush, unsubscribeFromPush } from '../../utils/pushSubscription';
 
 const PushSubscriber = () => {
     const [isSubscribed, setIsSubscribed] = useState(false);
@@ -27,7 +9,7 @@ const PushSubscriber = () => {
     const [isSupported, setIsSupported] = useState(false);
 
     useEffect(() => {
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
+        if (isPushSupported()) {
             setIsSupported(true);
             checkSubscription();
         } else {
@@ -37,9 +19,7 @@ const PushSubscriber = () => {
 
     const checkSubscription = async () => {
         try {
-            const registration = await navigator.serviceWorker.ready;
-            const subscription = await registration.pushManager.getSubscription();
-            setIsSubscribed(!!subscription);
+            setIsSubscribed(await hasActiveSubscription());
         } catch (error) {
             console.error('Error checking push subscription:', error);
         } finally {
@@ -50,34 +30,13 @@ const PushSubscriber = () => {
     const subscribeUser = async () => {
         setIsLoading(true);
         try {
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') {
-                toast.error('Du afviste notifikationer i browseren.');
-                setIsLoading(false);
+            const { ok, reason } = await subscribeToPush();
+            if (!ok) {
+                toast.error(reason === 'denied'
+                    ? 'Du afviste notifikationer i browseren.'
+                    : 'Din enhed understøtter ikke notifikationer.');
                 return;
             }
-
-            const registration = await navigator.serviceWorker.ready;
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-            });
-
-            // Gem i Supabase
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Du er ikke logget ind");
-
-            const { error } = await supabase
-                .from('push_subscriptions')
-                .insert([{
-                    user_id: user.id,
-                    subscription_data: JSON.parse(JSON.stringify(subscription))
-                }]);
-
-            if (error && error.code !== '23505') { // Ignore unique constraint error
-                throw error;
-            }
-
             setIsSubscribed(true);
             toast.success('Notifikationer aktiveret!');
         } catch (error) {
@@ -91,21 +50,7 @@ const PushSubscriber = () => {
     const unsubscribeUser = async () => {
         setIsLoading(true);
         try {
-            const registration = await navigator.serviceWorker.ready;
-            const subscription = await registration.pushManager.getSubscription();
-            if (subscription) {
-                await subscription.unsubscribe();
-                
-                // Fjern fra Supabase
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    await supabase
-                        .from('push_subscriptions')
-                        .delete()
-                        .eq('user_id', user.id)
-                        .eq('subscription_data->>endpoint', subscription.endpoint);
-                }
-            }
+            await unsubscribeFromPush();
             setIsSubscribed(false);
             toast.success('Notifikationer slået fra.');
         } catch (error) {

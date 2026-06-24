@@ -22,6 +22,7 @@ const MinubaIntegration = lazy(() => import('./components/Dashboard/MinubaIntegr
 import { supabase } from './supabaseClient';
 import { isStandalonePWA } from './utils/pwa';
 import { logError } from './utils/errorLogger';
+import { ensurePushSubscription } from './utils/pushSubscription';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 // Protected Route Komponent
 class ErrorBoundary extends React.Component {
@@ -302,6 +303,15 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Selvhelende push: har brugeren tidligere slået notifikationer til, gen-tilmelder
+  // vi lydløst ved hver app-start, hvis abonnementet er udløbet/forsvundet. Så skal
+  // svend/lærling/tømrer aldrig selv ind og trykke "til" igen efter en opdatering.
+  useEffect(() => {
+    if (session?.user?.id) {
+      ensurePushSubscription();
+    }
+  }, [session?.user?.id]);
 
   if (isInitializing) {
     return (

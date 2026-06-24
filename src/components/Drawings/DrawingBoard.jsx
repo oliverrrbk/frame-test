@@ -2972,7 +2972,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     w,
                     h,
                     rotation: 0,
-                    locked: true,
+                    locked: false,
                     dataUrl: event.target.result
                 };
                 const updatedElements = [newElement, ...activeElementsRef.current];
