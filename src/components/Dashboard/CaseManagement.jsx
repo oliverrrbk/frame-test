@@ -1022,9 +1022,17 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             return;
         }
 
+        // Ved bekræftelse sættes confirmed_at, så "dagen efter"-påmindelsen om
+        // kalender-planlægning kan regne korrekt (kun hvis det ikke allerede er sat).
+        const updatePayload = { status: newStatus };
+        if (newStatus === 'Bekræftet opgave' && !selectedCase.raw_data?.confirmed_at) {
+            const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', selectedCase.id).single();
+            updatePayload.raw_data = { ...(latest?.raw_data || selectedCase.raw_data || {}), confirmed_at: new Date().toISOString() };
+        }
+
         const { error } = await supabase
             .from('leads')
-            .update({ status: newStatus })
+            .update(updatePayload)
             .eq('id', selectedCase.id);
 
         if (error) {

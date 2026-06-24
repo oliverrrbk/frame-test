@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
-import { FileText, Upload, Plus, Trash2, ExternalLink, Package, Loader2 } from 'lucide-react';
+import { FileText, Upload, Plus, Trash2, ExternalLink, Package, Loader2, Truck } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+
+// Indkøbs-/leveringsstatus pr. materiale — samme værdier som beregner-sagerne,
+// så sags-overblikkets "Bestilt/Leveret" også virker på manuelle sager.
+const MAT_STATUSES = ['Ikke bestilt', 'Bestilt', 'Leveret'];
+const STATUS_STYLE = {
+    'Ikke bestilt': { color: '#64748b', bg: '#f1f5f9', dot: '#cbd5e1' },
+    'Bestilt': { color: '#2563eb', bg: '#eff6ff', dot: '#3b82f6' },
+    'Leveret': { color: '#166534', bg: '#f0fdf4', dot: '#22c55e' }
+};
 
 // ============================================================================
 // ManualMaterialsView — PDF-først materialevisning for MANUELLE tilbud.
@@ -19,6 +28,7 @@ export default function ManualMaterialsView({ lead, profile, onUpdate }) {
     const [items, setItems] = useState((rd.material_list || []).filter(m => m && m.item));
     const [uploading, setUploading] = useState(false);
     const [newItem, setNewItem] = useState({ item: '', qty: '', unit: 'stk' });
+    const [deliveryDate, setDeliveryDate] = useState(rd.delivery_info?.date || '');
 
     const budget = Number(rd.calc_data?.materialCostBase ?? rd.manual_quote?.materialCost ?? 0);
 
@@ -62,7 +72,7 @@ export default function ManualMaterialsView({ lead, profile, onUpdate }) {
 
     const addItem = async () => {
         if (!newItem.item.trim()) return;
-        const next = [...items, { ...newItem, listId: 'manual' }];
+        const next = [...items, { ...newItem, status: 'Ikke bestilt', listId: 'manual' }];
         setItems(next);
         setNewItem({ item: '', qty: '', unit: 'stk' });
         await persist({ material_list: next });
@@ -72,6 +82,23 @@ export default function ManualMaterialsView({ lead, profile, onUpdate }) {
         const next = items.filter((_, i) => i !== idx);
         setItems(next);
         await persist({ material_list: next });
+    };
+
+    // Cykl indkøbs-/leveringsstatus: Ikke bestilt → Bestilt → Leveret → ...
+    const cycleStatus = async (idx) => {
+        const next = items.map((m, i) => {
+            if (i !== idx) return m;
+            const cur = MAT_STATUSES.indexOf(m.status || 'Ikke bestilt');
+            return { ...m, status: MAT_STATUSES[(cur + 1) % MAT_STATUSES.length] };
+        });
+        setItems(next);
+        await persist({ material_list: next });
+    };
+
+    // Gem leveringsdato på sagen (samme felt som beregner-sagerne).
+    const saveDeliveryDate = async (val) => {
+        setDeliveryDate(val);
+        await persist({ delivery_info: { ...(rd.delivery_info || {}), date: val } });
     };
 
     const card = { background: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #e8e6e1' };
@@ -88,6 +115,23 @@ export default function ManualMaterialsView({ lead, profile, onUpdate }) {
                     </div>
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', maxWidth: '260px' }}>Forbrug spores under fanen <strong>Bilag</strong>, hvor du lægger dine kvitteringer ind.</div>
+            </div>
+
+            {/* Leveringsdato */}
+            <div style={{ ...card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Truck size={22} color="#10b981" /></div>
+                    <div>
+                        <div style={{ fontSize: '0.95rem', color: '#0f172a', fontWeight: 800 }}>Leveringsdato</div>
+                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Hvornår skal materialerne være på pladsen?</div>
+                    </div>
+                </div>
+                <input
+                    type="date"
+                    value={deliveryDate}
+                    onChange={(e) => saveDeliveryDate(e.target.value)}
+                    style={{ padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#0f172a', fontWeight: 600 }}
+                />
             </div>
 
             {/* Dokumenter (PDF-først) */}
@@ -128,13 +172,26 @@ export default function ManualMaterialsView({ lead, profile, onUpdate }) {
                 <h4 style={{ margin: '0 0 12px', fontSize: '1.1rem', color: '#0f172a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={20} color="#64748b" /> Ekstra materialer (valgfrit)</h4>
                 {items.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
-                        {items.map((m, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: '#f8fafc', borderRadius: '10px' }}>
-                                <span style={{ flex: 1, color: '#0f172a', fontWeight: 600 }}>{m.item}</span>
+                        {items.map((m, i) => {
+                            const st = m.status || 'Ikke bestilt';
+                            const s = STATUS_STYLE[st] || STATUS_STYLE['Ikke bestilt'];
+                            return (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: '#f8fafc', borderRadius: '10px', flexWrap: 'wrap' }}>
+                                <span style={{ flex: 1, minWidth: '120px', color: '#0f172a', fontWeight: 600 }}>{m.item}</span>
                                 <span style={{ color: '#64748b', fontSize: '0.9rem' }}>{m.qty} {m.unit}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => cycleStatus(i)}
+                                    title="Skift status (Ikke bestilt → Bestilt → Leveret)"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '999px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', color: s.color, background: s.bg }}
+                                >
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.dot }} />
+                                    {st}
+                                </button>
                                 <button onClick={() => removeItem(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1' }}><Trash2 size={16} /></button>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

@@ -114,9 +114,11 @@ const QuoteAcceptPage = () => {
 
             // Klargør raw_data med audit trail. Integrationer køres fra appen,
             // hvor der findes bruger-auth og fakturalinjer.
-            const newRawData = { 
-                ...(lead?.raw_data || {}), 
-                audit_trail: auditTrail
+            // confirmed_at bruges til "dagen efter"-påmindelsen om at planlægge sagen i kalenderen.
+            const newRawData = {
+                ...(lead?.raw_data || {}),
+                audit_trail: auditTrail,
+                confirmed_at: new Date().toISOString()
             };
 
             if (isUUID) {

@@ -85,6 +85,11 @@ afløser/supplerer hinanden.
 - **Push-notifikationer** sendes af `send-push-reminders` (edge-funktion), trigget af
   `tr_on_lead_push_notify` (DB-trigger) ved status-skift/tildeling/besked. Der findes
   ingen separat "push-on-accept"-funktion (med vilje — DB-triggeren dækker alt).
+- **"Dagen efter"-påmindelse om kalender-planlægning**: `send-push-reminders` har en
+  `unplanned_case`-blok (kører via det daglige cron-kald kl. 08) der finder sager med
+  status `Bekræftet opgave` UDEN `raw_data.start_date`, hvor `raw_data.confirmed_at`
+  (sat ved bekræftelse) ligger på en tidligere dag — og pinger mester + admins. Kræver
+  KUN `supabase functions deploy send-push-reminders` (ingen SQL/cron-ændring).
 - **Edge-funktioner** (i `supabase/functions/`) deployes separat med
   `supabase functions deploy <navn>` — ikke via SQL.
 

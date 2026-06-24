@@ -1255,6 +1255,41 @@ const Dashboard = () => {
         };
     }, [myProfile]);
 
+    // Blid "dagen efter"-påmindelse i appen: bekræftede sager der endnu ikke er lagt i
+    // kalenderen. Vises tidligst dagen efter bekræftelsen (ikke straks, så det ikke
+    // bliver irriterende) og kun én gang pr. dag. Push'en dækker når appen er lukket;
+    // denne sikrer en venlig reminder næste gang man åbner appen.
+    useEffect(() => {
+        if (!myProfile || !Array.isArray(leadsData) || leadsData.length === 0) return;
+        const role = simulatedRole || myProfile.role;
+        if (!['admin', 'boss', 'accountant'].includes(role)) return;
+
+        const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD i lokal tid
+        const overdue = leadsData.filter(l => {
+            if ((l.status || '') !== 'Bekræftet opgave') return false;
+            if (l.raw_data?.start_date) return false;
+            const stamp = l.raw_data?.confirmed_at || l.created_at;
+            if (!stamp) return false;
+            return new Date(stamp).toLocaleDateString('en-CA') < todayStr; // mindst dagen efter
+        });
+        if (overdue.length === 0) return;
+
+        if (localStorage.getItem('bison_unplanned_reminder') === todayStr) return;
+
+        const timer = setTimeout(() => {
+            localStorage.setItem('bison_unplanned_reminder', todayStr);
+            const msg = overdue.length === 1
+                ? 'Hov — en bekræftet sag mangler stadig at blive lagt i kalenderen.'
+                : `Hov — ${overdue.length} bekræftede sager mangler stadig at blive lagt i kalenderen.`;
+            toast(msg, {
+                icon: '📅',
+                duration: 8000,
+                style: { background: '#0f172a', color: '#fff', fontWeight: 600 },
+            });
+        }, 2500);
+        return () => clearTimeout(timer);
+    }, [myProfile, leadsData, simulatedRole]);
+
 
     const initProfileAndData = async (authUser) => {
         const userId = authUser.id;

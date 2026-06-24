@@ -625,6 +625,59 @@ serve(async (req) => {
             }
         }
 
+        // C. Påmindelse: bekræftede sager der mangler at blive planlagt i kalenderen.
+        //    Sendes tidligst DAGEN EFTER bekræftelsen (ikke med det samme), så det føles
+        //    som et venligt "hov — den skal lige i kalenderen", ikke som spam.
+        if ((type === "all" && hour === 8) || type === "unplanned_case") {
+            const { data: leads } = await supabaseClient
+                .from("leads")
+                .select("id, project_category, customer_name, carpenter_id, created_at, raw_data")
+                .eq("status", "Bekræftet opgave");
+
+            // Kun sager uden startdato, hvor bekræftelsen lå på en tidligere kalenderdag.
+            const overdue = (leads || []).filter((lead: any) => {
+                if (lead.raw_data?.start_date) return false;
+                const stamp = lead.raw_data?.confirmed_at || lead.created_at;
+                if (!stamp) return false;
+                return getLocalDate(new Date(stamp)) < todayStr; // mindst dagen efter
+            });
+
+            // Modtagere pr. firma: ejeren (mester) + admins/bogholdere, som planlægger.
+            const plannerCache = new Map<string, string[]>();
+            const getPlanners = async (ownerId: string) => {
+                if (plannerCache.has(ownerId)) return plannerCache.get(ownerId)!;
+                const { data: team } = await supabaseClient
+                    .from("carpenters")
+                    .select("id, role")
+                    .eq("company_id", ownerId);
+                const planners = [...new Set([
+                    String(ownerId),
+                    ...((team || []).filter((m: any) => ["admin", "accountant"].includes(m.role)).map((m: any) => String(m.id)))
+                ])];
+                plannerCache.set(ownerId, planners);
+                return planners;
+            };
+
+            for (const lead of overdue) {
+                if (!lead.carpenter_id) continue;
+                const planners = await getPlanners(String(lead.carpenter_id));
+                const projectTitle = lead.raw_data?.project_title || lead.project_category || "en sag";
+                for (const userId of planners) {
+                    await sendToUser(supabaseClient, stats, {
+                        userId,
+                        type: "unplanned_case",
+                        relatedId: String(lead.id),
+                        slot: `unplanned-${todayStr}`,
+                        payload: {
+                            title: "Sag mangler planlægning",
+                            body: `Husk at lægge "${projectTitle}"${lead.customer_name ? ` for ${lead.customer_name}` : ""} ind i kalenderen.`,
+                            url: "/dashboard?tab=calendar"
+                        }
+                    });
+                }
+            }
+        }
+
         if (type === "calendar" || type === "all") {
             const { data: carpenters } = await supabaseClient
                 .from("carpenters")
