@@ -374,72 +374,92 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
 
         {/* --- HELP MODAL --- */}
         {showHelpModal && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', backdropFilter: 'blur(4px)' }} onClick={() => setShowHelpModal(false)}>
-                <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', backdropFilter: 'blur(8px)' }} onClick={() => setShowHelpModal(false)}>
+                <div style={{ backgroundColor: '#fff', borderRadius: '24px', width: '100%', maxWidth: '1100px', maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={(e) => e.stopPropagation()}>
                     
-                    <div style={{ position: 'sticky', top: 0, background: '#fff', padding: '24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
-                        <h2 style={{ margin: 0, fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}><BookOpen color="#db2777" /> Guide: Egen E-mail (SMTP)</h2>
-                        <button onClick={() => setShowHelpModal(false)} style={{ background: '#f1f5f9', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', color: '#64748b' }}>
-                            <X size={20} />
+                    <div style={{ position: 'sticky', top: 0, background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', padding: '30px 40px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <h2 style={{ margin: 0, fontSize: '1.8rem', display: 'flex', alignItems: 'center', gap: '12px', color: '#0f172a' }}>
+                                <BookOpen color="#db2777" size={28} /> Guide til Egen E-mail (SMTP)
+                            </h2>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '15px' }}>Sådan giver du systemet tilladelse til at sende fra din mail.</p>
+                        </div>
+                        <button onClick={() => setShowHelpModal(false)} style={{ background: '#f1f5f9', border: 'none', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={(e) => e.currentTarget.style.background = '#f1f5f9'}>
+                            <X size={24} />
                         </button>
                     </div>
 
-                    <div style={{ padding: '24px', color: '#334155', lineHeight: '1.6' }}>
-                        <p style={{ marginTop: 0, fontSize: '15px' }}>
-                            For at systemet kan sende tilbud fra din mail, skal den have tilladelse til at logge ind på din mailserver. Fremgangsmåden afhænger af, hvem du har din e-mail hos.
+                    <div style={{ padding: '40px', color: '#334155', lineHeight: '1.6' }}>
+                        <p style={{ marginTop: 0, fontSize: '16px', marginBottom: '30px', maxWidth: '800px' }}>
+                            For at systemet kan sende tilbud direkte fra din egen mail-indbakke, skal den have tilladelse til at logge ind på din mailserver. Fremgangsmåden afhænger fuldstændig af, hvem du har din e-mail hos. Find din udbyder herunder:
                         </p>
 
-                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-                            <h3 style={{ margin: '0 0 10px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#3b82f6' }}></div>
-                                Microsoft 365 (Outlook)
-                            </h3>
-                            <p style={{ fontSize: '14px', margin: '0 0 12px 0' }}>Microsoft blokerer af sikkerhedsmæssige årsager for, at du kan bruge dit normale kodeord. Du skal oprette en <strong>App-adgangskode</strong>.</p>
-                            <ol style={{ fontSize: '14px', margin: '0 0 16px 0', paddingLeft: '20px' }}>
-                                <li style={{ marginBottom: '6px' }}>Log ind på din Microsoft-konto (Sikkerhed).</li>
-                                <li style={{ marginBottom: '6px' }}>Gå til "Avancerede sikkerhedsindstillinger".</li>
-                                <li style={{ marginBottom: '6px' }}>Under "App-adgangskoder", klik på "Opret en ny app-adgangskode".</li>
-                                <li>Kopier koden og sæt den ind i adgangskode-feltet i Bison Frame.</li>
-                            </ol>
-                            <a href="https://support.microsoft.com/da-dk/account-billing/brug-appadgangskoder-sammen-med-apps-der-ikke-underst%C3%B8tter-totrinsbekr%C3%A6ftelse-5896ed9b-4263-e681-128a-a6f2979a7944" target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>
-                                Læs Microsofts guide her <ExternalLink size={14} />
-                            </a>
-                            <div style={{ marginTop: '12px', fontSize: '13px', color: '#64748b' }}>
-                                <strong>Server:</strong> smtp.office365.com | <strong>Port:</strong> 587
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+                            
+                            {/* Microsoft Box */}
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+                                <h3 style={{ margin: '0 0 16px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px' }}>
+                                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#3b82f6' }}></div>
+                                    Microsoft 365 (Outlook)
+                                </h3>
+                                <p style={{ fontSize: '14px', margin: '0 0 16px 0', flexGrow: 1 }}>Microsoft blokerer for, at du kan bruge dit normale kodeord. Du skal oprette en <strong>App-adgangskode</strong>.</p>
+                                <ol style={{ fontSize: '14px', margin: '0 0 20px 0', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <li>Log ind på din Microsoft-konto (Sikkerhed).</li>
+                                    <li>Gå til "Avancerede sikkerhedsindstillinger".</li>
+                                    <li>Find "App-adgangskoder" og tryk opret.</li>
+                                    <li>Kopier koden og sæt den ind i Bison Frame.</li>
+                                </ol>
+                                <div style={{ marginTop: 'auto' }}>
+                                    <a href="https://support.microsoft.com/da-dk/account-billing/brug-appadgangskoder-sammen-med-apps-der-ikke-underst%C3%B8tter-totrinsbekr%C3%A6ftelse-5896ed9b-4263-e681-128a-a6f2979a7944" target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#2563eb', textDecoration: 'none', fontWeight: 'bold', background: '#eff6ff', padding: '8px 12px', borderRadius: '8px', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#dbeafe'} onMouseOut={(e) => e.currentTarget.style.background = '#eff6ff'}>
+                                        Læs Microsofts guide <ExternalLink size={16} />
+                                    </a>
+                                    <div style={{ marginTop: '16px', fontSize: '13px', color: '#64748b', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                        <strong>Server:</strong> smtp.office365.com<br/><strong>Port:</strong> 587
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-                            <h3 style={{ margin: '0 0 10px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981' }}></div>
-                                Google Workspace (Gmail)
-                            </h3>
-                            <p style={{ fontSize: '14px', margin: '0 0 12px 0' }}>Ligesom Microsoft kræver Google, at du bruger en <strong>App-adgangskode</strong> i stedet for dit normale kodeord.</p>
-                            <ol style={{ fontSize: '14px', margin: '0 0 16px 0', paddingLeft: '20px' }}>
-                                <li style={{ marginBottom: '6px' }}>Gå til din Google-konto &gt; Sikkerhed.</li>
-                                <li style={{ marginBottom: '6px' }}>Sørg for at "2-trins-bekræftelse" er slået til.</li>
-                                <li style={{ marginBottom: '6px' }}>Søg efter "App-adgangskoder" og opret en ny.</li>
-                                <li>Kopier den 16-cifrede kode og sæt den ind i adgangskode-feltet i Bison Frame.</li>
-                            </ol>
-                            <a href="https://support.google.com/accounts/answer/185833?hl=da" target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>
-                                Læs Googles guide her <ExternalLink size={14} />
-                            </a>
-                            <div style={{ marginTop: '12px', fontSize: '13px', color: '#64748b' }}>
-                                <strong>Server:</strong> smtp.gmail.com | <strong>Port:</strong> 587
+                            {/* Google Box */}
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+                                <h3 style={{ margin: '0 0 16px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px' }}>
+                                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#10b981' }}></div>
+                                    Google Workspace
+                                </h3>
+                                <p style={{ fontSize: '14px', margin: '0 0 16px 0', flexGrow: 1 }}>Ligesom Microsoft kræver Google, at du bruger en speciel <strong>App-adgangskode</strong> i stedet for dit normale kodeord.</p>
+                                <ol style={{ fontSize: '14px', margin: '0 0 20px 0', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <li>Gå til Google-konto &gt; Sikkerhed.</li>
+                                    <li>Slå "2-trins-bekræftelse" til, hvis det er slået fra.</li>
+                                    <li>Søg efter "App-adgangskoder" og opret en ny.</li>
+                                    <li>Kopier koden og sæt den ind i Bison Frame.</li>
+                                </ol>
+                                <div style={{ marginTop: 'auto' }}>
+                                    <a href="https://support.google.com/accounts/answer/185833?hl=da" target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#10b981', textDecoration: 'none', fontWeight: 'bold', background: '#ecfdf5', padding: '8px 12px', borderRadius: '8px', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#d1fae5'} onMouseOut={(e) => e.currentTarget.style.background = '#ecfdf5'}>
+                                        Læs Googles guide <ExternalLink size={16} />
+                                    </a>
+                                    <div style={{ marginTop: '16px', fontSize: '13px', color: '#64748b', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                        <strong>Server:</strong> smtp.gmail.com<br/><strong>Port:</strong> 587
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
-                            <h3 style={{ margin: '0 0 10px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b' }}></div>
-                                Simply.com / DanDomain / One.com
-                            </h3>
-                            <p style={{ fontSize: '14px', margin: '0 0 12px 0' }}>Hvis du har din mail via et normalt webhotel, er det meget nemmere. Her skal du blot bruge dit <strong>helt normale e-mail kodeord</strong>, fuldstændig som når du logger ind på din mail.</p>
-                            <div style={{ marginTop: '12px', fontSize: '13px', color: '#64748b' }}>
-                                <strong>Server:</strong> fx websmtp.simply.com eller dandomain.dk | <strong>Port:</strong> 587
+                            {/* Standard Webhotel Box */}
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+                                <h3 style={{ margin: '0 0 16px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px' }}>
+                                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#f59e0b' }}></div>
+                                    Webhoteller (Simply mv.)
+                                </h3>
+                                <p style={{ fontSize: '14px', margin: '0 0 16px 0', flexGrow: 1 }}>
+                                    Gælder <strong>Simply.com, DanDomain, One.com</strong> mv.<br/><br/>
+                                    Hvis du har din mail via et normalt webhotel, er det meget nemmere. Her skal du blot bruge dit <strong>helt normale e-mail kodeord</strong>, fuldstændig som når du logger ind på din mail normalt.
+                                </p>
+                                <div style={{ marginTop: 'auto' }}>
+                                    <div style={{ marginTop: '16px', fontSize: '13px', color: '#64748b', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                        <strong>Server:</strong> fx websmtp.simply.com<br/>eller dandomain.dk<br/><strong>Port:</strong> 587
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
+                        </div>
                     </div>
                 </div>
             </div>

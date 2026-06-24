@@ -557,6 +557,8 @@ const isConfirmedCase = (lead) => {
 
 export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile }) {
     const [activeCases, setActiveCases] = useState([]);
+    const [caseViewTab, setCaseViewTab] = useState('mine'); // 'mine' = mine sager (standard), 'all' = alle firmaets bekræftede sager
+    const [caseSearch, setCaseSearch] = useState('');
     const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
     const selectedCase = activeCases.find(c => c.id === selectedCaseIdState) || null;
     const [stepToDelete, setStepToDelete] = useState(null);
@@ -826,23 +828,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     // Indlæs data
     useEffect(() => {
         const confirmed = leads.filter(l => isConfirmedCase(l));
-        
-        if (['worker', 'apprentice', 'sales'].includes(profile?.role)) {
-            if (simulatedRole) {
-                setActiveCases(confirmed);
-            } else {
-                const filtered = confirmed.filter(c => {
-                    if (c.status === 'Afbrudt Sag' && profile.role !== 'sales') return false;
-                    const workers = c.raw_data?.assigned_workers || [];
-                    const pm = c.raw_data?.assigned_pm;
-                    const pmArray = Array.isArray(pm) ? pm : (pm ? [pm] : []);
-                    return workers.includes(profile.id) || pmArray.includes(profile.id);
-                });
-                setActiveCases(filtered);
-            }
-        } else {
-            setActiveCases(confirmed);
-        }
+
+        // Alle i firmaet kan nu se alle bekræftede sager (RLS afgrænser til eget firma).
+        // Svende/lærlinge ser dog ikke tabte/afbrudte sager (irrelevant støj) — sælgere/ledere ser alt.
+        const isFieldRole = ['worker', 'apprentice'].includes(profile?.role);
+        const visible = (isFieldRole && !simulatedRole)
+            ? confirmed.filter(c => c.status !== 'Afbrudt Sag')
+            : confirmed;
+        setActiveCases(visible);
 
         // Hent teamet (carpenters)
         fetchTeam();
@@ -1896,6 +1889,138 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     const totalInvoiceExVat = invoiceLines.reduce((sum, line) => sum + Number(line.priceExVat || 0), 0);
     const totalInvoiceVat = isReverseCharge ? 0 : Math.round(totalInvoiceExVat * 0.25);
+
+    // --- Sagsoverblik: Mine/Alle + søgning + Aktive/Afsluttede ---
+    const isMyCase = (c) => {
+        if (!profile?.id) return false;
+        const workers = c.raw_data?.assigned_workers || [];
+        const pm = c.raw_data?.assigned_pm;
+        const pmArr = Array.isArray(pm) ? pm : (pm ? [pm] : []);
+        if (workers.includes(profile.id) || pmArr.includes(profile.id)) return true;
+        // Eller jeg har selv ført timer på sagen
+        return (c.raw_data?.time_entries || []).some(t => t.employeeId === profile.id);
+    };
+    const matchesCaseSearch = (c) => {
+        const q = caseSearch.trim().toLowerCase();
+        if (!q) return true;
+        return [
+            c.case_number, c.id, c.customer_name, c.customer_address,
+            c.customer_phone, c.customer_email, c.project_category,
+            c.raw_data?.project_title
+        ].some(f => f != null && String(f).toLowerCase().includes(q));
+    };
+    const ACTIVE_STATUSES = ['Bekræftet opgave', 'Sæt i bero'];
+    const myCasesCount = activeCases.filter(isMyCase).length;
+    const baseCaseList = caseViewTab === 'mine' ? activeCases.filter(isMyCase) : activeCases;
+    const searchedCases = baseCaseList.filter(matchesCaseSearch);
+    const aktiveSager = searchedCases.filter(c => ACTIVE_STATUSES.includes(c.status));
+    const afsluttedeSager = searchedCases.filter(c => !ACTIVE_STATUSES.includes(c.status));
+
+    const renderCaseCard = (c) => {
+        const todos = c.raw_data?.checklist || [];
+        const comp = todos.filter(t => t.done).length;
+        const pct = todos.length > 0 ? Math.round((comp / todos.length) * 100) : 0;
+        const hrs = (c.raw_data?.time_entries || []).reduce((sum, item) => sum + item.hours, 0);
+        const estHrs = parseFloat(c.raw_data?.calc_data?.laborHours) || 40;
+
+        return (
+            <div
+                key={c.id}
+                onClick={() => setSelectedCaseIdState(c.id)}
+                style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}
+                className="hover:scale-[1.01] hover:shadow-lg"
+            >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    {c.status === 'Sæt i bero' ? (
+                        <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#fff7ed', color: '#ea580c', border: '1px solid #fdba74' }}>
+                            Sat i bero
+                        </span>
+                    ) : c.status === 'Historik' ? (
+                        <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>
+                            Afsluttet
+                        </span>
+                    ) : c.status === 'Afbrudt Sag' ? (
+                        <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5' }}>
+                            Tabt / Afvist
+                        </span>
+                    ) : (
+                        <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
+                            Aktiv Sag
+                        </span>
+                    )}
+                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                        {new Date(c.created_at).toLocaleDateString('da-DK')}
+                    </span>
+                </div>
+
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '1.05rem', fontWeight: 'bold', color: '#1a1a1a' }}>
+                    Sag {c.case_number || String(c.id).substring(0,8)} - {c.raw_data?.project_title || c.project_category}
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {c.raw_data?.customerDetails?.customerType === 'erhverv' ? (
+                            <>
+                                <span style={{ background: '#e2e8f0', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>Erhverv</span>
+                                {c.customer_name || 'Virksomhed'}
+                            </>
+                        ) : (
+                            <>Kunde: {c.customer_name || 'Privatkunde'}</>
+                        )}
+                    </span>
+                    <span style={{ fontSize: '0.825rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <MapPin size={14} style={{ color: '#94a3b8' }} /> <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.customer_address || '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{c.customer_address || 'Adresse ikke angivet'}</a>
+                    </span>
+                </div>
+
+                {/* Færdiggørelses-bar */}
+                <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#4b5563', marginBottom: '4px', fontWeight: '500' }}>
+                        <span>Fremdrift (To-Do)</span>
+                        <strong>{pct}%</strong>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: '#10b981', transition: 'width 0.3s' }} />
+                    </div>
+                </div>
+
+                {/* Time status */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#6b7280', borderTop: '1px solid #f1f1ef', paddingTop: '12px', marginBottom: '12px' }}>
+                    <span>Timer registreret:</span>
+                    <strong style={{ color: (!c.raw_data?.is_manual_quote && hrs > estHrs) ? '#ef4444' : '#1e293b' }}>
+                        {hrs} t{c.raw_data?.is_manual_quote ? '' : ` / ${estHrs} t`}
+                    </strong>
+                </div>
+
+                {/* Mandskab overblik */}
+                {(c.raw_data?.assigned_pm?.length > 0 || c.raw_data?.assigned_workers?.length > 0) && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', borderTop: '1px solid #f1f1ef', paddingTop: '12px' }}>
+                        {/* PMs */}
+                        {(Array.isArray(c.raw_data.assigned_pm) ? c.raw_data.assigned_pm : [c.raw_data.assigned_pm]).map(pmId => {
+                            const m = team.find(t => t.id === pmId);
+                            if (!m) return null;
+                            return (
+                                <span key={pmId} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: '#eff6ff', color: '#1d4ed8', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '500' }}>
+                                    <UserAvatar name={m.owner_name || m.company_name || ''} avatarUrl={m.avatar_url} size={16} ring={false} />
+                                    {m.owner_name || m.company_name || 'Ukendt'} (PM)
+                                </span>
+                            );
+                        })}
+                        {/* Workers */}
+                        {(c.raw_data.assigned_workers || []).map(wId => {
+                            const m = team.find(t => t.id === wId);
+                            if (!m) return null;
+                            return (
+                                <span key={wId} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: '#f8fafc', color: '#475569', borderRadius: '6px', fontSize: '0.75rem', border: '1px solid #e2e8f0' }}>
+                                    <UserAvatar name={m.owner_name || m.company_name || ''} avatarUrl={m.avatar_url} size={16} ring={false} />
+                                    {m.owner_name || m.company_name || 'Ukendt'}
+                                </span>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className="dashboard-workspace case-management-view" style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
-import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, CircleDashed, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate, Trash2, ClipboardList, Share } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, Type, Square, ArrowRight, Eraser, PenTool, MousePointer2, Undo, Ruler, FileImage, Minus, Circle, CircleDashed, Shapes, Triangle, Hexagon, Diamond, Maximize2, Grid3X3, Palette, Copy, Lock, Unlock, Layers, AlertTriangle, LibraryBig, DoorOpen, Columns3, Rows3, Hammer, RotateCw, FlipHorizontal2, FlipVertical2, Group, Ungroup, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignHorizontalSpaceBetween, AlignVerticalSpaceBetween, Magnet, House, Waves, SlidersHorizontal, ArrowDownWideNarrow, LayoutTemplate, Trash2, ClipboardList, Share, Keyboard, X } from 'lucide-react';
 import { getElementBounds, getElementAtPosition, rotatePoint, findSnapPoint, getConnectedModule } from './engineUtils';
 import { getDrawingBounds, renderElementsToCanvas } from './renderUtils';
 
@@ -843,7 +843,15 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const angleGuideRef = useRef(null);
     // Igangværende streg i klik-flyt-klik mode (efter første klik, før låsende klik)
     const pendingLineRef = useRef(null);
+    // Genvejs-panel: Shift-hold-timer + om panelet er åbnet via knap (pinned) eller Shift.
+    const shiftHoldTimerRef = useRef(null);
+    const shiftDownRef = useRef(false);
+    const shortcutsPinnedRef = useRef(false);
+    const shortcutsViaShiftRef = useRef(false);
+    // Sand mens en pointer-handling er i gang (tegning/træk) — bruges til at undgå Shift-popup midt i en streg.
+    const pointerActiveRef = useRef(false);
     const [showShapesMenu, setShowShapesMenu] = useState(false);
+    const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [showColorMenu, setShowColorMenu] = useState(false);
     const [showSymbolsMenu, setShowSymbolsMenu] = useState(false);
     const [showTemplatesMenu, setShowTemplatesMenu] = useState(false);
@@ -1915,6 +1923,24 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     useEffect(() => {
         const handleKeyDown = (e) => {
             const isTyping = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+
+            // Hold Shift (i tomgang) → genvejs-panelet glider ind efter et kort øjeblik.
+            // Mens man tegner/redigerer gør Shift kun sit normale (45°-lås) — intet popup.
+            if (e.key === 'Shift' && !shiftDownRef.current) {
+                shiftDownRef.current = true;
+                const idle = !isTyping && !appState.editingTextId && !pointerActiveRef.current
+                    && !pendingLineRef.current && !shortcutsPinnedRef.current;
+                if (idle) {
+                    shiftHoldTimerRef.current = setTimeout(() => {
+                        // Tjek igen ved udløb — start ikke en popup hvis man nåede at begynde at tegne.
+                        if (!pointerActiveRef.current && !pendingLineRef.current && !shortcutsPinnedRef.current) {
+                            shortcutsViaShiftRef.current = true;
+                            setShortcutsOpen(true);
+                        }
+                    }, 350);
+                }
+            }
+
             if (e.key === 'Escape') {
                 e.preventDefault();
                 // Annuller en igangværende klik-flyt-klik streg
@@ -1926,6 +1952,10 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     pendingLineRef.current = null;
                     angleGuideRef.current = null;
                 }
+                // Luk genvejs-panelet hvis det er åbent
+                shortcutsPinnedRef.current = false;
+                shortcutsViaShiftRef.current = false;
+                setShortcutsOpen(false);
                 setShowShapesMenu(false);
                 setShowColorMenu(false);
                 setShowSymbolsMenu(false);
@@ -2003,6 +2033,18 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         const handleKeyUp = (e) => {
             if (e.code === 'Space') {
                 setAppState(s => ({ ...s, isSpaceDown: false }));
+            }
+            if (e.key === 'Shift') {
+                shiftDownRef.current = false;
+                if (shiftHoldTimerRef.current) {
+                    clearTimeout(shiftHoldTimerRef.current);
+                    shiftHoldTimerRef.current = null;
+                }
+                // Luk kun hvis panelet blev åbnet med Shift (ikke hvis det er fastgjort via knappen).
+                if (shortcutsViaShiftRef.current && !shortcutsPinnedRef.current) {
+                    shortcutsViaShiftRef.current = false;
+                    setShortcutsOpen(false);
+                }
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -2487,6 +2529,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         const pos = getPointerPos(e);
         lastActionPointRef.current = pos;
         dragHistoryPushedRef.current = false;
+        pointerActiveRef.current = true;
+
+        // Et klik lukker et Shift-åbnet genvejs-panel, så det ikke er i vejen.
+        if (shortcutsViaShiftRef.current && !shortcutsPinnedRef.current) {
+            shortcutsViaShiftRef.current = false;
+            setShortcutsOpen(false);
+        }
 
         // Klik-flyt-klik: hvis en streg "flyder" (efter første klik), låser dette klik enden.
         if (pendingLineRef.current) {
@@ -2862,6 +2911,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     };
 
     const handlePointerUp = (e) => {
+        pointerActiveRef.current = false;
         if (e?.pointerType === 'touch') {
             activeTouchPointersRef.current.delete(e.pointerId);
             if (activeTouchPointersRef.current.size < 2) {
