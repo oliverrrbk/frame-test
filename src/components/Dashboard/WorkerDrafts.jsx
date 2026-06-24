@@ -143,10 +143,8 @@ const WorkerDrafts = ({ profile, carpenterProfile, supabase, leadsData, setLeads
             async () => {
                 try {
                     toast.loading("Sletter kladde...", { id: "delete_draft" });
-                    const { error } = await supabase
-                        .from('leads')
-                        .update({ status: 'Slettet' })
-                        .eq('id', draftId);
+                    // Via RPC så sletningen er pålidelig (ikke rullet tilbage af beskyttelses-triggeren).
+                    const { error } = await supabase.rpc('soft_delete_lead', { p_lead_id: draftId });
 
                     if (error) throw error;
 

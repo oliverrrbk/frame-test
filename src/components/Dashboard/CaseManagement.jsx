@@ -1646,12 +1646,15 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         });
 
         // Fratræk allerede faktureret som en negativ linje hvis vi vil (eller vi lader bare Mester rette)
+        // invoiced_amount er allerede gemt EKSKL. moms (= summen af fakturalinjerne),
+        // og linjerne her er også ekskl. moms — så fradraget skal være 1:1 (ingen /1.25,
+        // ellers underfradrages aconto/efterfølgende fakturaer med momsens andel).
         const invoicedAmount = selectedCase?.raw_data?.invoiced_amount || 0;
         if (invoicedAmount > 0) {
             lines.push({
                 id: 'already_invoiced',
                 description: 'Allerede faktureret (Aconto) fratrækkes',
-                priceExVat: -Math.round(invoicedAmount / 1.25)
+                priceExVat: -Math.round(invoicedAmount)
             });
         }
 

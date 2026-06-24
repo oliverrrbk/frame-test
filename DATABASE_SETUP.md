@@ -58,6 +58,7 @@ afløser/supplerer hinanden.
 | `setup_time_entries_rpc.sql` | `mutate_time_entries` (atomisk timeregistrering) |
 | `setup_calendar_events_rpc.sql` | `mutate_calendar_events` (atomisk kalender) |
 | `setup_case_messages_rpc.sql` | `mutate_case_messages` (atomiske sags-beskeder) |
+| `supabase/soft_delete_lead.sql` | `soft_delete_lead(p_lead_id)` — pålidelig soft-delete af tilbud/kladder (autoriserer ejer/opretter/sales; nægter bekræftede sager for ikke-ejere). **Opdaterer også `protect_lead_sensitive_fields()`** med en `app.allow_delete`-undtagelse → **kør EFTER `add_lead_push_trigger.sql`** så den kanoniske trigger-version vinder |
 
 ### 4) RLS-hærdning (efter fundament + tabeller)
 | Fil | Formål |

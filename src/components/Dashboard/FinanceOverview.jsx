@@ -4,6 +4,7 @@ import {
     ArrowRight, PackageCheck, AlertCircle, CheckCircle2 
 } from 'lucide-react';
 import InvoiceEditor from './InvoiceEditor';
+import { computeCaseFinance } from '../../utils/caseFinance';
 
 const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounting, onUpdateLead, targetInvoiceCaseId, clearTargetInvoiceCase, isMobile = false }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -14,64 +15,38 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
         let totalInvoiced = 0;
         let totalMissingInvoice = 0;
         let totalPaid = 0;
+        let totalBookedRevenue = 0;
         let pendingCases = [];
         let completedCases = [];
 
         cases.forEach(c => {
-            // Hent basis pris
-            let basePrice = 0;
-            if (c.raw_data?.calc_data?.totalPrice) {
-                basePrice = parseFloat(c.raw_data.calc_data.totalPrice) || 0;
-            } else if (c.raw_data?.actual_quote_price) {
-                basePrice = typeof c.raw_data.actual_quote_price === 'number' 
-                    ? c.raw_data.actual_quote_price 
-                    : parseInt(String(c.raw_data.actual_quote_price).replace(/[^0-9]/g, '')) || 0;
-            } else {
-                const priceStr = c.price_estimate || '0';
-                const firstPricePart = priceStr.split('-')[0] || priceStr;
-                basePrice = parseInt(firstPricePart.replace(/[^0-9]/g, '')) || 0;
+            // Konsistent moms-håndtering via fælles helper: total OG faktureret vises
+            // inkl. moms, så en fuldt faktureret sag viser 0 i rest.
+            const f = computeCaseFinance(c);
+
+            const isCancelled = c.status === 'Afbrudt Sag' || c.status === 'Afvist' || c.status === 'Fortrudt';
+            if (!isCancelled) {
+                totalRevenue += f.caseTotalInclVat;
+                totalMissingInvoice += f.remainingInclVat;
             }
+            totalInvoiced += f.invoicedInclVat;
+            totalPaid += f.paidExVat;
+            totalBookedRevenue += f.bookedRevenueExVat;
 
-            // Aftalesedler (Merpris)
-            const logsList = c.raw_data?.case_logs || [];
-            const logExtra = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraPrice || 0), 0);
-            
-            const extraAgreements = c.raw_data?.extra_agreements || [];
-            // Kun bekræftede aftalesedler tæller med ('bekraeftet' eller legacy 'Godkendt').
-            // Fast pris bruger beløbet; "efter regning" bruger den registrerede endelige pris.
-            const isAgrConfirmed = (a) => a.status === 'bekraeftet' || a.status === 'Godkendt';
-            const agrExtra = extraAgreements
-                .filter(isAgrConfirmed)
-                .reduce((sum, item) => {
-                    if (item.priceType === 'fast_pris') return sum + (Number(item.amount) || 0);
-                    if (item.priceType === 'efter_regning') return sum + (Number(item.final_amount) || 0);
-                    return sum;
-                }, 0);
-
-            const extraPrice = logExtra + agrExtra;
-            
-            const caseTotal = basePrice + extraPrice;
-            const invoiced = c.raw_data?.invoiced_amount || 0;
-            const remaining = caseTotal - invoiced;
-
-            const history = c.raw_data?.invoice_history || [];
-            const casePaid = history.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
-
-            if (c.status !== 'Afbrudt Sag' && c.status !== 'Afvist' && c.status !== 'Fortrudt') {
-                totalRevenue += caseTotal;
-                if (remaining > 0) {
-                    totalMissingInvoice += remaining;
-                }
-            }
-            totalInvoiced += invoiced;
-            totalPaid += casePaid;
-            
             const caseData = {
                 ...c,
-                finance: { caseTotal, invoiced, remaining, extraPrice, casePaid }
+                finance: {
+                    caseTotal: f.caseTotalInclVat,
+                    invoiced: f.invoicedInclVat,
+                    remaining: f.remainingInclVat,
+                    extraPrice: f.extraPriceInclVat,
+                    casePaid: f.paidExVat,
+                    bookedRevenue: f.bookedRevenueExVat,
+                    isFullyInvoiced: f.isFullyInvoiced,
+                }
             };
 
-            if (remaining > 0 || c.status === 'Afbrudt Sag') {
+            if (f.remainingInclVat > 0 || c.status === 'Afbrudt Sag') {
                 pendingCases.push(caseData);
             } else {
                 completedCases.push(caseData);
@@ -81,7 +56,7 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
         // Sorter så de med størst manglende fakturering ligger øverst
         pendingCases.sort((a, b) => b.finance.remaining - a.finance.remaining);
 
-        return { totalRevenue, totalInvoiced, totalMissingInvoice, totalPaid, pendingCases, completedCases };
+        return { totalRevenue, totalInvoiced, totalMissingInvoice, totalPaid, totalBookedRevenue, pendingCases, completedCases };
     }, [cases]);
 
     React.useEffect(() => {
@@ -157,6 +132,20 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                             <div style={{ fontSize: isMobile ? '1.4rem' : '2.5rem', fontWeight: '800', color: '#e11d48' }}>
                                 {financeData.totalMissingInvoice.toLocaleString('da-DK')} kr.
                             </div>
+                        </div>
+
+                        {/* Bogført omsætning: tæller kun fakturaer der er bogført/betalt/manuelt registreret (ekskl. moms) */}
+                        <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '24px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '12px', color: '#64748b' }}>
+                                <div style={{ padding: isMobile ? '8px' : '10px', backgroundColor: '#eef2ff', borderRadius: '12px', color: '#4f46e5' }}>
+                                    <PackageCheck size={isMobile ? 20 : 24} />
+                                </div>
+                                <span style={{ fontSize: isMobile ? '0.85rem' : '1.1rem', fontWeight: '600' }}>{isMobile ? 'Bogført' : 'Bogført omsætning'}</span>
+                            </div>
+                            <div style={{ fontSize: isMobile ? '1.4rem' : '2.5rem', fontWeight: '800', color: '#4f46e5' }}>
+                                {financeData.totalBookedRevenue.toLocaleString('da-DK')} kr.
+                            </div>
+                            <span style={{ fontSize: isMobile ? '0.72rem' : '0.8rem', color: '#94a3b8' }}>Faktisk bogført i regnskab (ekskl. moms)</span>
                         </div>
                     </div>
 

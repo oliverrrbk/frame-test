@@ -6742,7 +6742,8 @@ const Dashboard = () => {
                             </button>
                             <button 
                                 onClick={async () => {
-                                    const { error } = await supabase.from('leads').update({ status: 'Slettet' }).eq('id', selectedLead.id);
+                                    // Via RPC så sletningen er pålidelig (ikke rullet tilbage af beskyttelses-triggeren).
+                                    const { error } = await supabase.rpc('soft_delete_lead', { p_lead_id: selectedLead.id });
                                     if (error) {
                                         toast.error("Kunne ikke fjerne kunden.");
                                     } else {

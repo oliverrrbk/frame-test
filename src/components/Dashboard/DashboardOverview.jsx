@@ -13,7 +13,8 @@ import {
     Copy,
     ArrowRight,
     MapPin,
-    Phone
+    Phone,
+    Send
 } from 'lucide-react';
 import {
     AreaChart,
@@ -38,6 +39,7 @@ import {
 import { da } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import CalculatorWorkflowSteps from './CalculatorWorkflowSteps';
+import { computeCaseFinance } from '../../utils/caseFinance';
 
 export default function DashboardOverview({ leadsData, carpenterProfile, myProfile, setActiveTab, setSelectedLead, setTargetCaseId }) {
     const [timeframe, setTimeframe] = useState('30d'); // '7d', '30d', 'ytd', 'all'
@@ -81,39 +83,26 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
         return (minPrice + maxPrice) / 2;
     };
 
-    const calcWonRevenue = (lead) => {
-        if (!lead) return 0;
-        if (lead.raw_data?.calc_data?.totalPrice) {
-            return parseFloat(lead.raw_data.calc_data.totalPrice) || 0;
-        }
-        if (lead.raw_data?.actual_quote_price) {
-            return typeof lead.raw_data.actual_quote_price === 'number' 
-                ? lead.raw_data.actual_quote_price 
-                : parseInt(String(lead.raw_data.actual_quote_price).replace(/[^0-9]/g, '')) || 0;
-        } else if (typeof lead.price_estimate === 'number') {
-            return lead.price_estimate;
-        } else if (lead.price_estimate) {
-            const priceStr = lead.price_estimate || '0';
-            const firstPricePart = priceStr.split('-')[0] || priceStr;
-            return parseInt(firstPricePart.replace(/[^0-9]/g, '')) || 0;
-        }
-        
-        // Final fallback if absolutely no price is found
-        const mat = parseFloat(lead.raw_data?.calc_data?.materialCost || 0);
-        const labor = parseFloat(lead.raw_data?.calc_data?.laborCost || (lead.raw_data?.calc_data?.laborHours * lead.raw_data?.calc_data?.hourlyRate) || 0);
-        return mat + labor;
-    };
-
     // Calculate Metric Totals
     const metrics = useMemo(() => {
         const newLeads = filteredLeads.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel').length;
         
         const estValue = filteredLeads.reduce((acc, l) => acc + calcLeadValue(l), 0);
         
-        const activeCases = filteredLeads.filter(l => ['Sendt tilbud', 'Bekræftet opgave'].includes(l.status || '')).length;
-        
+        // Aktive sager = kun bekræftede opgaver i ordrestyring (matcher "Sager i drift").
+        const activeCases = filteredLeads.filter(l => (l.status || '') === 'Bekræftet opgave').length;
+
+        // Tilbud sendt = alle afsendte tilbud i perioden (afventende + bekræftede + arkiverede),
+        // afgrænset til leads hvor der faktisk er sendt et tilbud (pris/PDF/afsendt-stempel).
+        const quotesSent = filteredLeads.filter(l => {
+            if (!['Sendt tilbud', 'Bekræftet opgave', 'Historik'].includes(l.status || '')) return false;
+            const rd = l.raw_data || {};
+            return !!(rd.quote_sent_at || rd.actual_quote_price || rd.quote_pdf_url);
+        }).length;
+
         const wonLeads = filteredLeads.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status || ''));
-        const wonRevenue = wonLeads.reduce((acc, l) => acc + calcWonRevenue(l), 0);
+        // Omsætning = kun faktisk bogført/betalt/manuelt registreret (ekskl. moms) — ikke blot accepterede tilbud.
+        const wonRevenue = filteredLeads.reduce((acc, l) => acc + computeCaseFinance(l).bookedRevenueExVat, 0);
         
         const timeSaved = Math.round(filteredLeads.length * 1.5);
         
@@ -130,6 +119,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
         return {
             new_leads: { label: 'Nye Forespørgsler', value: newLeads, suffix: '', format: 'number', icon: Inbox, color: '#3b82f6', tab: 'leads' },
             active_cases: { label: 'Aktive Sager', value: activeCases, suffix: '', format: 'number', icon: Briefcase, color: '#f59e0b', tab: 'cases' },
+            quotes_sent: { label: 'Tilbud Sendt', value: quotesSent, suffix: '', format: 'number', icon: Send, color: '#6366f1', tab: 'leads' },
             won_revenue: { label: 'Omsætning', value: wonRevenue, suffix: ' DKK', format: 'currency', icon: CheckCircle, color: '#10b981' },
             time_saved: { label: 'Tid Besparet', value: timeSaved, suffix: ' timer', format: 'number', icon: Clock, color: '#f97316' },
             conversion_rate: { label: 'Konverteringsrate', value: conversionRate, suffix: '%', format: 'number', icon: TrendingUp, color: '#14b8a6' },
@@ -167,8 +157,8 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
 
             let value = 0;
             if (selectedMetric === 'new_leads') value = periodLeads.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel').length;
-            if (selectedMetric === 'active_cases') value = periodLeads.filter(l => ['Sendt tilbud', 'Bekræftet opgave'].includes(l.status || '')).length;
-            if (selectedMetric === 'won_revenue') value = wonPeriodLeads.reduce((acc, l) => acc + calcWonRevenue(l), 0);
+            if (selectedMetric === 'active_cases') value = periodLeads.filter(l => (l.status || '') === 'Bekræftet opgave').length;
+            if (selectedMetric === 'won_revenue') value = periodLeads.reduce((acc, l) => acc + computeCaseFinance(l).bookedRevenueExVat, 0);
             if (selectedMetric === 'time_saved') value = periodLeads.length * 1.5;
             if (selectedMetric === 'conversion_rate') value = periodLeads.length > 0 ? Math.round((wonPeriodLeads.length / periodLeads.length) * 100) : 0;
             if (selectedMetric === 'avg_response') {

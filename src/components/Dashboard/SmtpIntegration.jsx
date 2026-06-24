@@ -327,16 +327,16 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                             </button>
                             <button 
                                 onClick={handleSave}
-                                disabled={isSaving || !testResult?.success}
+                                disabled={isSaving}
                                 style={{ 
                                     flex: 1, 
                                     padding: '12px', 
-                                    background: testResult?.success ? '#db2777' : '#94a3b8', 
+                                    background: '#db2777', 
                                     color: 'white', 
                                     border: 'none', 
                                     borderRadius: '8px', 
                                     fontWeight: 'bold', 
-                                    cursor: testResult?.success ? 'pointer' : 'not-allowed',
+                                    cursor: 'pointer',
                                     display: 'flex',
                                     justifyContent: 'center',
                                     alignItems: 'center',
