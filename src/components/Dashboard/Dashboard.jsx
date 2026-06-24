@@ -6776,6 +6776,18 @@ const Dashboard = () => {
                 </div>
             </main>
 
+            {/* Forlæng-tilbud dialog */}
+            <AnimatePresence>
+                {extendLead && (
+                    <ExtendQuoteModal
+                        lead={extendLead}
+                        isExtending={isExtending}
+                        onClose={() => { if (!isExtending) setExtendLead(null); }}
+                        onConfirm={(validUntilISO, resend) => handleExtendQuote(extendLead.id, validUntilISO, resend)}
+                    />
+                )}
+            </AnimatePresence>
+
             {/* Feedback Modal Portal */}
             {isFeedbackModalOpen && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => setIsFeedbackModalOpen(false)}>
