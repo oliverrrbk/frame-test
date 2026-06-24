@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Mail, Info, HelpCircle, X, ExternalLink, BookOpen } from 'lucide-react';
+import { Mail, Info, HelpCircle, X, ExternalLink, BookOpen, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Tooltip = ({ text }) => {
     return (
@@ -69,6 +70,8 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
     const [testResult, setTestResult] = useState(null);
     const [isConfigured, setIsConfigured] = useState(false);
     const [showHelpModal, setShowHelpModal] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -137,7 +140,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
 
             if (error) throw error;
             setIsConfigured(true);
-            alert('E-mail indstillinger blev gemt sikkert!');
+            setShowSuccessModal(true);
         } catch (error) {
             console.error('Kunne ikke gemme indstillinger:', error);
             alert('Der skete en fejl ved gemning: ' + error.message);
@@ -146,9 +149,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
         }
     };
 
-    const handleDisconnect = async () => {
-        if (!window.confirm('Er du sikker på, at du vil fjerne din egen mailopsætning? Mails vil fremover blive sendt fra info@bisonframe.dk.')) return;
-        
+    const confirmDisconnect = async () => {
         setIsSaving(true);
         try {
             const { error } = await supabase
@@ -162,11 +163,16 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
             setSettings({ smtp_host: '', smtp_port: '', smtp_user: '', smtp_pass: '', smtp_from_email: '' });
             setIsConfigured(false);
             setTestResult(null);
+            setShowDisconnectModal(false);
         } catch (error) {
             alert('Kunne ikke afbryde: ' + error.message);
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleDisconnect = () => {
+        setShowDisconnectModal(true);
     };
 
     return (
@@ -450,6 +456,168 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                 </div>
             </div>
         , document.body)}
+
+            {/* --- MEGA LÆKKER SUCCESS MODAL --- */}
+            <AnimatePresence>
+                {showSuccessModal && createPortal(
+                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 999999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(12px)' }}
+                            onClick={() => setShowSuccessModal(false)}
+                        />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            style={{ 
+                                position: 'relative', 
+                                background: 'rgba(255, 255, 255, 0.85)', 
+                                backdropFilter: 'blur(20px)',
+                                borderRadius: '24px', 
+                                padding: '40px 30px', 
+                                width: '90%', 
+                                maxWidth: '420px', 
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 1)',
+                                border: '1px solid rgba(255, 255, 255, 0.6)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                textAlign: 'center'
+                            }}
+                        >
+                            <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                                style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', marginBottom: '24px', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.5)' }}
+                            >
+                                <CheckCircle2 size={44} strokeWidth={2.5} />
+                            </motion.div>
+                            <h2 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px' }}>Gemt med succes!</h2>
+                            <p style={{ margin: '0 0 30px 0', color: '#475569', fontSize: '15px', lineHeight: '1.6' }}>
+                                Dine e-mail indstillinger er nu blevet krypteret og gemt sikkert. Systemet vil fremover sende tilbud fra din egen mail.
+                            </p>
+                            <button 
+                                onClick={() => setShowSuccessModal(false)}
+                                style={{ 
+                                    background: '#0f172a', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    padding: '14px 24px', 
+                                    borderRadius: '14px', 
+                                    fontWeight: 'bold', 
+                                    fontSize: '16px', 
+                                    width: '100%', 
+                                    cursor: 'pointer',
+                                    boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.2)',
+                                    transition: 'transform 0.2s, background 0.2s'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = '#1e293b'}
+                                onMouseOut={(e) => e.currentTarget.style.background = '#0f172a'}
+                                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
+                                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                                Fedt, tak!
+                            </button>
+                        </motion.div>
+                    </div>
+                , document.body)}
+            </AnimatePresence>
+
+            {/* --- MEGA LÆKKER DISCONNECT MODAL --- */}
+            <AnimatePresence>
+                {showDisconnectModal && createPortal(
+                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 999999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(12px)' }}
+                            onClick={() => setShowDisconnectModal(false)}
+                        />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            style={{ 
+                                position: 'relative', 
+                                background: 'rgba(255, 255, 255, 0.85)', 
+                                backdropFilter: 'blur(20px)',
+                                borderRadius: '24px', 
+                                padding: '40px 30px', 
+                                width: '90%', 
+                                maxWidth: '420px', 
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 1)',
+                                border: '1px solid rgba(255, 255, 255, 0.6)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                textAlign: 'center'
+                            }}
+                        >
+                            <motion.div 
+                                initial={{ rotate: -20 }}
+                                animate={{ rotate: 0 }}
+                                transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                                style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', marginBottom: '24px', boxShadow: '0 10px 25px -5px rgba(225, 29, 72, 0.5)' }}
+                            >
+                                <AlertTriangle size={38} strokeWidth={2.5} />
+                            </motion.div>
+                            <h2 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px' }}>Er du sikker?</h2>
+                            <p style={{ margin: '0 0 30px 0', color: '#475569', fontSize: '15px', lineHeight: '1.6' }}>
+                                Hvis du fjerner din egen mailopsætning, vil fremtidige tilbud blive sendt fra <strong>info@bisonframe.dk</strong> i stedet.
+                            </p>
+                            
+                            <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                                <button 
+                                    onClick={() => setShowDisconnectModal(false)}
+                                    style={{ 
+                                        background: '#f1f5f9', 
+                                        color: '#334155', 
+                                        border: '1px solid #cbd5e1', 
+                                        padding: '14px', 
+                                        borderRadius: '14px', 
+                                        fontWeight: 'bold', 
+                                        fontSize: '15px', 
+                                        flex: 1, 
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                >
+                                    Annuller
+                                </button>
+                                <button 
+                                    onClick={confirmDisconnect}
+                                    style={{ 
+                                        background: '#e11d48', 
+                                        color: 'white', 
+                                        border: 'none', 
+                                        padding: '14px', 
+                                        borderRadius: '14px', 
+                                        fontWeight: 'bold', 
+                                        fontSize: '15px', 
+                                        flex: 1, 
+                                        cursor: 'pointer',
+                                        boxShadow: '0 10px 15px -3px rgba(225, 29, 72, 0.2)',
+                                        transition: 'background 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.background = '#be123c'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = '#e11d48'}
+                                >
+                                    Ja, fjern den
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                , document.body)}
+            </AnimatePresence>
         </>
     );
 };
