@@ -251,9 +251,15 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                             />
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', marginTop: '6px', background: '#fffbeb', padding: '10px', borderRadius: '6px', border: '1px solid #fde68a' }}>
                                 <Info size={16} color="#d97706" style={{ flexShrink: 0, marginTop: '2px' }} />
-                                <span style={{ fontSize: '12px', color: '#92400e', lineHeight: '1.4' }}>
-                                    <strong>Bruger du Microsoft 365 eller Google?</strong><br/> Så skal du logge ind hos dem og oprette en "App-adgangskode", som du sætter ind her. Læs vores guide i toppen.
-                                </span>
+                                <div style={{ fontSize: '12px', color: '#92400e', lineHeight: '1.4' }}>
+                                    <strong>Bruger du Microsoft 365 eller Google?</strong><br/> Så skal du logge ind hos dem og oprette en "App-adgangskode", som du sætter ind her. 
+                                    <button 
+                                        onClick={() => setShowHelpModal(true)}
+                                        style={{ display: 'inline-block', marginTop: '6px', padding: '4px 8px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                        Vis simpel guide til App-kode
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -422,11 +428,11 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
                             <h3 style={{ margin: '0 0 10px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b' }}></div>
-                                Simply.com / Unoeuro / Webhoteller
+                                Simply.com / DanDomain / One.com
                             </h3>
-                            <p style={{ fontSize: '14px', margin: '0 0 12px 0' }}>Hvis du har din mail via et normalt webhotel, er det meget nemmere. Her skal du blot bruge dit <strong>helt normale e-mail kodeord</strong>.</p>
+                            <p style={{ fontSize: '14px', margin: '0 0 12px 0' }}>Hvis du har din mail via et normalt webhotel, er det meget nemmere. Her skal du blot bruge dit <strong>helt normale e-mail kodeord</strong>, fuldstændig som når du logger ind på din mail.</p>
                             <div style={{ marginTop: '12px', fontSize: '13px', color: '#64748b' }}>
-                                <strong>Server:</strong> websmtp.simply.com | <strong>Port:</strong> 587
+                                <strong>Server:</strong> fx websmtp.simply.com eller dandomain.dk | <strong>Port:</strong> 587
                             </div>
                         </div>
 

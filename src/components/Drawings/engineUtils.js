@@ -360,17 +360,23 @@ export const getElementPoints = (el) => {
     return [];
 };
 
-export const findSnapPoint = (pos, elements, ignoreId = null) => {
+// Forrang ved snap: midtpunkter er "klæbrigst", så de vinder over en nærliggende ende.
+const SNAP_PRIORITY_BIAS = { midpoint: 7, center: 6, endpoint: 4, corner: 2 };
+
+export const findSnapPoint = (pos, elements, ignoreId = null, threshold = 15) => {
     let bestSnap = null;
-    let minDist = 15; // Snap threshold
+    let bestScore = Infinity;
 
     elements.forEach(el => {
-        if (el.id === ignoreId) return;
+        if (el.id === ignoreId || el.type === 'settings') return;
         const pts = getElementPoints(el);
         pts.forEach(p => {
             const dist = Math.hypot(p.x - pos.x, p.y - pos.y);
-            if (dist < minDist) {
-                minDist = dist;
+            if (dist > threshold) return;
+            // Træk biasen fra afstanden, så foretrukne punkttyper får forrang.
+            const score = dist - (SNAP_PRIORITY_BIAS[p.type] || 0);
+            if (score < bestScore) {
+                bestScore = score;
                 bestSnap = { ...p };
             }
         });

@@ -570,9 +570,10 @@ const parseMeasurementText = (text) => {
 
 const formatPhysicalLength = (meters) => {
     if (!Number.isFinite(meters)) return '';
-    if (meters >= 1) return `${formatMeasurementNumber(meters)} m`;
-    if (meters >= 0.01) return `${formatMeasurementNumber(meters * 100)} cm`;
-    return `${formatMeasurementNumber(meters * 1000)} mm`;
+    // Alt vises generelt i millimeter (afrundet til hele mm fra 1 mm og op).
+    const mm = meters * 1000;
+    if (mm >= 1) return `${Math.round(mm)} mm`;
+    return `${formatMeasurementNumber(mm)} mm`;
 };
 
 const getDrawingSettings = (elements = []) => (
@@ -838,6 +839,10 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
     const dragHistoryPushedRef = useRef(false);
     const activeTouchPointersRef = useRef(new Map());
     const pinchRef = useRef(null);
+    // Hjælpe-linje der tegnes når en streg "hakker" på en vinkel (45/90/135° osv.)
+    const angleGuideRef = useRef(null);
+    // Igangværende streg i klik-flyt-klik mode (efter første klik, før låsende klik)
+    const pendingLineRef = useRef(null);
     const [showShapesMenu, setShowShapesMenu] = useState(false);
     const [showColorMenu, setShowColorMenu] = useState(false);
     const [showSymbolsMenu, setShowSymbolsMenu] = useState(false);
@@ -895,18 +900,68 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         setHistory(prev => [...prev, newElements]);
     }, []);
 
+    const ANGLE_SNAP_STEP = Math.PI / 4;          // hjælpehakker hver 45° (0/45/90/135 …)
+    const ANGLE_SNAP_TOLERANCE_DEG = 4;            // bløde hakker fanger inden for ±4°
+
     const constrainAngle = (origin, point) => {
         const dx = point.x - origin.x;
         const dy = point.y - origin.y;
         const distance = Math.hypot(dx, dy);
         if (!distance) return point;
-        const snap = Math.PI / 4;
         const angle = Math.atan2(dy, dx);
-        const snappedAngle = Math.round(angle / snap) * snap;
+        const snappedAngle = Math.round(angle / ANGLE_SNAP_STEP) * ANGLE_SNAP_STEP;
         return {
             x: origin.x + Math.cos(snappedAngle) * distance,
             y: origin.y + Math.sin(snappedAngle) * distance
         };
+    };
+
+    // Blød/magnetisk vinkel-snap: hakker kun ind når man er TÆT på en hak-vinkel,
+    // ellers fri (så 43°/44° osv. stadig kan sættes).
+    const softSnapAngle = (origin, point, toleranceDeg = ANGLE_SNAP_TOLERANCE_DEG) => {
+        const dx = point.x - origin.x;
+        const dy = point.y - origin.y;
+        const distance = Math.hypot(dx, dy);
+        if (!distance) return { point, snapped: false };
+        const angle = Math.atan2(dy, dx);
+        const nearest = Math.round(angle / ANGLE_SNAP_STEP) * ANGLE_SNAP_STEP;
+        let diff = angle - nearest;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff)); // normaliser til [-π, π]
+        if (Math.abs(diff) <= (toleranceDeg * Math.PI) / 180) {
+            return {
+                point: { x: origin.x + Math.cos(nearest) * distance, y: origin.y + Math.sin(nearest) * distance },
+                snapped: true
+            };
+        }
+        return { point, snapped: false };
+    };
+
+    // Zoom-afhængig snap-afstand så det føles ens uanset zoom (~12 skærm-px).
+    const getSnapThreshold = () => 12 / (activeZoomRef.current || 1);
+
+    // Fælles resolver for en streg-endes position: punkt-snap (anden streg) har forrang,
+    // derefter hård 45°-lås (Shift), derefter bløde hakker (standard). Alt slår alt fra.
+    // Sætter samtidig angleGuideRef til hjælpe-linjen og returnerer evt. snapPoint.
+    const resolveLineEndpoint = (origin, raw, e, ignoreId) => {
+        const snap = appState.snapEnabled && !e.altKey
+            ? findSnapPoint(raw, activeElementsRef.current, ignoreId, getSnapThreshold())
+            : null;
+        if (snap) {
+            angleGuideRef.current = null;
+            return { point: snap, snapPoint: snap };
+        }
+        if (e.shiftKey) {
+            const pt = constrainAngle(origin, raw);
+            angleGuideRef.current = { origin, x: pt.x, y: pt.y };
+            return { point: pt, snapPoint: null };
+        }
+        if (!e.altKey) {
+            const res = softSnapAngle(origin, raw);
+            angleGuideRef.current = res.snapped ? { origin, x: res.point.x, y: res.point.y } : null;
+            return { point: res.point, snapPoint: null };
+        }
+        angleGuideRef.current = null;
+        return { point: raw, snapPoint: null };
     };
 
     const getSelectedIds = useCallback(() => {
@@ -1421,7 +1476,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         }
 
         if (!physicalMeters) {
-            toast.error('Skriv et rigtigt mål først, fx 250 cm eller 5 m.');
+            toast.error('Skriv et rigtigt mål først, fx 2500 mm eller 250 cm.');
             return;
         }
 
@@ -1862,6 +1917,15 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             const isTyping = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
             if (e.key === 'Escape') {
                 e.preventDefault();
+                // Annuller en igangværende klik-flyt-klik streg
+                if (pendingLineRef.current) {
+                    const pid = pendingLineRef.current.id;
+                    const filtered = activeElementsRef.current.filter(el => el.id !== pid);
+                    activeElementsRef.current = filtered;
+                    setElements(filtered);
+                    pendingLineRef.current = null;
+                    angleGuideRef.current = null;
+                }
                 setShowShapesMenu(false);
                 setShowColorMenu(false);
                 setShowSymbolsMenu(false);
@@ -2140,6 +2204,22 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
 
             ctx.restore();
         });
+
+        // Hjælpe-linje når en streg "hakker" på en vinkel (45/90/135° …) — vises kun under tegning.
+        const guide = angleGuideRef.current;
+        if (guide) {
+            const guideAngle = Math.atan2(guide.y - guide.origin.y, guide.x - guide.origin.x);
+            const ext = 4000 / zoom;
+            ctx.save();
+            ctx.setLineDash([6 / zoom, 5 / zoom]);
+            ctx.lineWidth = 1.2 / zoom;
+            ctx.strokeStyle = 'rgba(37, 99, 235, 0.55)';
+            ctx.beginPath();
+            ctx.moveTo(guide.origin.x - Math.cos(guideAngle) * ext, guide.origin.y - Math.sin(guideAngle) * ext);
+            ctx.lineTo(guide.origin.x + Math.cos(guideAngle) * ext, guide.origin.y + Math.sin(guideAngle) * ext);
+            ctx.stroke();
+            ctx.restore();
+        }
     }, [appState.editingTextId, appState.showGrid]); // Element changes redraw through activeElementsRef.
 
     const fitDrawingToView = useCallback((sourceElements = activeElementsRef.current) => {
@@ -2315,6 +2395,56 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         };
     };
 
+    // Afslut en netop tegnet streg — samme logik uanset om den blev trukket eller klik-flyt-klikket.
+    const finalizeActiveDrawing = (id) => {
+        const activeEl = activeElementsRef.current.find(e => e.id === id);
+        setElements(activeElementsRef.current);
+
+        if (activeEl) {
+            const isLineType = ['arrow', 'dimension', 'line'].includes(activeEl.type);
+            const lineTiny = isLineType && Math.abs(activeEl.endX - activeEl.x) < 5 && Math.abs(activeEl.endY - activeEl.y) < 5;
+
+            // For lille → fjern igen
+            if (lineTiny) {
+                const filtered = activeElementsRef.current.filter(e => e.id !== activeEl.id);
+                activeElementsRef.current = filtered;
+                setElements(filtered);
+                setAppState(s => ({ ...s, tool: 'select', dragging: false, snapPoint: null }));
+                return;
+            }
+            // Callout → opret tilknyttet note-tekst
+            if (activeEl.callout) {
+                const textId = generateId();
+                const notePos = getLineNotePosition(activeEl, { x: activeEl.endX, y: activeEl.endY }, appState.fontSize || 20);
+                const newText = {
+                    id: textId,
+                    type: 'text',
+                    attachedToId: activeEl.id,
+                    isLineNote: true,
+                    text: '',
+                    color: appState.color,
+                    x: notePos.x,
+                    y: notePos.y,
+                    w: 140,
+                    h: Math.max(30, (appState.fontSize || 20) + 12),
+                    fontSize: appState.fontSize || 20
+                };
+                const updatedElements = [...activeElementsRef.current, newText];
+                activeElementsRef.current = updatedElements;
+                setElements(updatedElements);
+                setAppState(s => ({ ...s, tool: 'select', dragging: false, snapPoint: null, selectedElementId: textId, selectedElementIds: [], editingTextId: textId }));
+                return;
+            }
+            // Mållinje → åbn tekst-redigering med det samme
+            if (activeEl.type === 'dimension') {
+                setAppState(s => ({ ...s, tool: 'select', dragging: false, snapPoint: null, selectedElementId: activeEl.id, editingTextId: activeEl.id }));
+                return;
+            }
+        }
+
+        setAppState(s => ({ ...s, tool: 'select', dragging: false, snapPoint: null, selectedElementId: id }));
+    };
+
     // Pointer Events
     const handlePointerDown = (e) => {
         if (e.pointerType === 'touch') {
@@ -2357,6 +2487,30 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         const pos = getPointerPos(e);
         lastActionPointRef.current = pos;
         dragHistoryPushedRef.current = false;
+
+        // Klik-flyt-klik: hvis en streg "flyder" (efter første klik), låser dette klik enden.
+        if (pendingLineRef.current) {
+            const pend = pendingLineRef.current;
+            const el = activeElementsRef.current.find(x => x.id === pend.id);
+            const stillDrawingLines = ['arrow', 'dimension', 'line', 'callout'].includes(appState.tool);
+            if (el && stillDrawingLines) {
+                const { point: endPos } = resolveLineEndpoint({ x: el.x, y: el.y }, pos, e, el.id);
+                const updated = activeElementsRef.current.map(x => x.id === pend.id ? { ...x, endX: endPos.x, endY: endPos.y } : x);
+                activeElementsRef.current = updated;
+                pendingLineRef.current = null;
+                angleGuideRef.current = null;
+                finalizeActiveDrawing(pend.id);
+                return;
+            }
+            // Værktøj skiftet eller element væk → ryd den flydende streg og fortsæt normalt.
+            if (el) {
+                const filtered = activeElementsRef.current.filter(x => x.id !== pend.id);
+                activeElementsRef.current = filtered;
+                setElements(filtered);
+            }
+            pendingLineRef.current = null;
+            angleGuideRef.current = null;
+        }
 
         if (appState.tool.startsWith(SYMBOL_TOOL_PREFIX)) {
             insertSymbol(appState.tool.replace(SYMBOL_TOOL_PREFIX, ''), pos);
@@ -2514,6 +2668,22 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             return;
         }
 
+        // Klik-flyt-klik: lad den "flydende" streg følge musen uden knap nede.
+        if (pendingLineRef.current && !appState.dragging) {
+            const pos = getPointerPos(e);
+            const pend = pendingLineRef.current;
+            let nextSnap = null;
+            activeElementsRef.current = activeElementsRef.current.map(el => {
+                if (el.id !== pend.id) return el;
+                const { point: endPos, snapPoint } = resolveLineEndpoint({ x: el.x, y: el.y }, pos, e, el.id);
+                nextSnap = snapPoint;
+                return { ...el, endX: endPos.x, endY: endPos.y };
+            });
+            setAppState(s => ({ ...s, snapPoint: nextSnap }));
+            redraw();
+            return;
+        }
+
         if (!appState.dragging && !appState.rotating && !appState.resizing) return;
         const pos = getPointerPos(e);
 
@@ -2537,17 +2707,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                 
                 if (el.type === 'arrow' || el.type === 'dimension' || el.type === 'line') {
                     if (appState.resizing === 'start') {
-                        const snap = appState.snapEnabled && !e.altKey ? findSnapPoint(localPos, activeElementsRef.current, el.id) : null;
-                        setAppState(s => ({ ...s, snapPoint: snap }));
-                        const rawPos = snap || localPos;
-                        const nextPos = e.shiftKey ? constrainAngle({ x: el.endX, y: el.endY }, rawPos) : rawPos;
+                        const { point: nextPos, snapPoint } = resolveLineEndpoint({ x: el.endX, y: el.endY }, localPos, e, el.id);
+                        setAppState(s => ({ ...s, snapPoint }));
                         return { ...el, x: nextPos.x, y: nextPos.y };
                     }
                     if (appState.resizing === 'end') {
-                        const snap = appState.snapEnabled && !e.altKey ? findSnapPoint(localPos, activeElementsRef.current, el.id) : null;
-                        setAppState(s => ({ ...s, snapPoint: snap }));
-                        const rawPos = snap || localPos;
-                        const nextPos = e.shiftKey ? constrainAngle({ x: el.x, y: el.y }, rawPos) : rawPos;
+                        const { point: nextPos, snapPoint } = resolveLineEndpoint({ x: el.x, y: el.y }, localPos, e, el.id);
+                        setAppState(s => ({ ...s, snapPoint }));
                         return { ...el, endX: nextPos.x, endY: nextPos.y };
                     }
                 }
@@ -2619,7 +2785,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     return { ...el, points: [...el.points, pos] };
                 }
                 else if (['image', ...DRAWING_SHAPE_TOOLS].includes(appState.tool)) {
-                    const snap = appState.snapEnabled && !e.altKey ? findSnapPoint(pos, activeElementsRef.current, el.id) : null;
+                    const snap = appState.snapEnabled && !e.altKey ? findSnapPoint(pos, activeElementsRef.current, el.id, getSnapThreshold()) : null;
                     setAppState(s => ({ ...s, snapPoint: snap }));
                     const endPos = snap || pos;
                     let w = endPos.x - el.x;
@@ -2632,10 +2798,8 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     return { ...el, w, h };
                 }
                 else if (['arrow', 'dimension', 'line', 'callout'].includes(appState.tool)) {
-                    const snap = appState.snapEnabled && !e.altKey ? findSnapPoint(pos, activeElementsRef.current, el.id) : null;
-                    setAppState(s => ({ ...s, snapPoint: snap }));
-                    const rawEndPos = snap || pos;
-                    const endPos = e.shiftKey ? constrainAngle({ x: el.x, y: el.y }, rawEndPos) : rawEndPos;
+                    const { point: endPos, snapPoint } = resolveLineEndpoint({ x: el.x, y: el.y }, pos, e, el.id);
+                    setAppState(s => ({ ...s, snapPoint }));
                     return { ...el, endX: endPos.x, endY: endPos.y };
                 }
                 return el;
@@ -2706,6 +2870,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         }
 
         setAppState(s => ({ ...s, snapPoint: null, dragGuide: null }));
+        angleGuideRef.current = null;
         if (appState.panning) {
             setAppState(s => ({ ...s, panning: false, pan: { ...activePanRef.current } }));
         }
@@ -2750,6 +2915,16 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             
             const activeEl = activeElementsRef.current.find(e => e.id === appState.selectedElementId);
             if (activeEl && appState.tool !== 'select') {
+                const isLineType = ['arrow', 'dimension', 'line'].includes(activeEl.type);
+                const lineTiny = isLineType && Math.abs(activeEl.endX - activeEl.x) < 5 && Math.abs(activeEl.endY - activeEl.y) < 5;
+
+                // Klik-flyt-klik: et klik uden reel trækbevægelse starter en "flydende" streg
+                // (i stedet for at slette den). Næste klik på lærredet låser enden.
+                if (lineTiny && !pendingLineRef.current && ['arrow', 'dimension', 'line', 'callout'].includes(appState.tool)) {
+                    pendingLineRef.current = { id: activeEl.id, tool: appState.tool };
+                    return; // bliv i tegneværktøjet — skift IKKE til select
+                }
+
                 // If drawing a rect/arrow that is tiny, remove it
                 if (DRAWING_SHAPE_TOOLS.includes(activeEl.type) && Math.abs(activeEl.w) < 5 && Math.abs(activeEl.h) < 5) {
                     const filtered = activeElementsRef.current.filter(e => e.id !== activeEl.id);
