@@ -6596,15 +6596,17 @@ const Dashboard = () => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
                                         setActiveTab('leads');
-                                        setLeadFilter(lead?.status === 'Sendt tilbud' ? 'Sendt tilbud' : 'Ny forespørgsel');
+                                        // Kladde → Tilbudskladder-fanen; sendt → Sendt tilbud. Lander på LISTEN.
+                                        setLeadFilter(lead?.status === 'Sendt tilbud' ? 'Sendt tilbud' : 'Tilbudskladder');
                                         setSearchQuery('');
-                                        // Vis den nye lead med det samme (optimistisk) — uafhængigt af refetch-timing
+                                        // Vis kladden i listen med det samme (optimistisk) — men ÅBN IKKE
+                                        // detalje-/beregner-modalen. Man ser blot kladden ligge der og kan
+                                        // klikke ind på den igen for at sende.
                                         if (lead?.id) {
                                             rememberLocalLead(lead);
-                                            setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev : [lead, ...prev]);
-                                            setSelectedLead(lead);
+                                            setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev.map(l => l.id === lead.id ? lead : l) : [lead, ...prev]);
                                         }
-                                        await refreshLeadsData({ ensureLead: lead, selectLead: true });
+                                        await refreshLeadsData({ ensureLead: lead, selectLead: false });
                                     }}
                                 />
                             )}
