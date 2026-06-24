@@ -115,7 +115,7 @@ serve(async (req) => {
     // 4. Opret kladde-bilaget (én finansbilags-postering: udgiftskonto mod modkonto)
     const financeVoucher: Record<string, unknown> = {
       text: description || `Bilag: ${fileName || 'udgift'}`,
-      amount: Number(amount),
+      amount: Math.round((Number(amount) || 0) * 100) / 100,
       account: { accountNumber: Number(accountNumber) },
       contraAccount: { accountNumber: Number(contraAccountNumber) },
       currency: { code: "DKK" },

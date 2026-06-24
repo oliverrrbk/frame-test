@@ -107,10 +107,13 @@ serve(async (req) => {
 
     console.log("KontaktGuid:", contactGuid);
 
+    // Rund beløb til 2 decimaler, så floating-point-haler ikke giver valideringsfejl.
+    const round2 = (n: any) => Math.round((Number(n) || 0) * 100) / 100;
+
     // 4. Opret Fakturakladde
     const mappedLines = invoiceLines.map(line => ({
       Description: line.description,
-      BaseAmountValue: Number(line.priceExVat || 0),
+      BaseAmountValue: round2(line.priceExVat),
       Quantity: 1,
       AccountNumber: 1000,
       Unit: "parts"

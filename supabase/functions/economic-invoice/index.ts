@@ -147,10 +147,14 @@ serve(async (req) => {
     if (!products || products.collection.length === 0) throw new Error("Fandt ingen varer i e-conomic. Opret venligst en standardvare i dit regnskabsprogram.");
     const productNumber = products.collection[0].productNumber;
 
+    // e-conomic kræver max 2 decimaler på unitNetPrice — rund af, så floating-point-haler
+    // (fx 389978.04000000004) ikke giver en valideringsfejl (E04740).
+    const round2 = (n: any) => Math.round((Number(n) || 0) * 100) / 100;
+
     let mappedLines = invoiceLines.map((line: any) => ({
       description: line.description,
       quantity: 1,
-      unitNetPrice: Number(line.priceExVat || 0),
+      unitNetPrice: round2(line.priceExVat),
       product: { productNumber }
     }));
 
