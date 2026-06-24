@@ -731,7 +731,6 @@ const AiTrainingView = ({ carpenterId }) => {
                                                         style={{ 
                                                             padding: '8px', 
                                                             borderRadius: '8px', 
-                                                            border: 'none', 
                                                             background: curationStatus === 'qualified' ? '#10b981' : '#0f172a',
                                                             color: '#fff',
                                                             fontWeight: '600',
@@ -751,7 +750,6 @@ const AiTrainingView = ({ carpenterId }) => {
                                                         style={{ 
                                                             padding: '8px', 
                                                             borderRadius: '8px', 
-                                                            border: 'none', 
                                                             background: curationStatus === 'rejected' ? '#ef4444' : '#0f172a',
                                                             color: '#fff',
                                                             fontWeight: '600',

@@ -488,7 +488,7 @@ export default function AftalesedlerTab({ selectedCase, profile, carpenterProfil
                             <PenTool size={32} />
                         </div>
                         <h3 style={{ fontSize: '1.2rem', color: '#334155', margin: '0 0 8px 0' }}>Ingen aftalesedler endnu</h3>
-                        <p style={{ color: '#64748b', margin: 0, maxWidth: '400px', margin: '0 auto' }}>Når kunden beder om noget ekstra, kan du oprette en aftaleseddel her og få deres underskrift med det samme.</p>
+                        <p style={{ color: '#64748b', maxWidth: '400px', margin: '0 auto' }}>Når kunden beder om noget ekstra, kan du oprette en aftaleseddel her og få deres underskrift med det samme.</p>
                     </div>
                 ) : (
                     agreements.map((agr) => {

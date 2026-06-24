@@ -478,12 +478,15 @@ const ExtendQuoteModal = ({ lead, onClose, onConfirm, isExtending }) => {
     const [choice, setChoice] = useState(14);          // antal dage (preset) eller 'date'
     const [customDate, setCustomDate] = useState('');  // YYYY-MM-DD ved valg af dato
     const [resend, setResend] = useState(true);
+    // Fastfrys "nu" ved åbning, så afledte datoer er rene (ingen Date.now() under render).
+    const [nowMs] = useState(() => Date.now());
+    const DAY_MS = 24 * 60 * 60 * 1000;
 
-    const expiry = computeQuoteExpiry(lead);
+    const expiry = computeQuoteExpiry(lead, new Date(nowMs));
     const expiredDaysAgo = expiry.daysLeft != null ? Math.abs(expiry.daysLeft) : null;
 
     // Min-dato for dato-vælger = i morgen.
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const tomorrow = new Date(nowMs + DAY_MS).toISOString().split('T')[0];
 
     const computeValidUntil = () => {
         if (choice === 'date') {
@@ -492,7 +495,7 @@ const ExtendQuoteModal = ({ lead, onClose, onConfirm, isExtending }) => {
             const d = new Date(`${customDate}T23:59:59`);
             return Number.isNaN(d.getTime()) ? null : d.toISOString();
         }
-        return new Date(Date.now() + choice * 24 * 60 * 60 * 1000).toISOString();
+        return new Date(nowMs + choice * DAY_MS).toISOString();
     };
 
     const validUntilISO = computeValidUntil();
