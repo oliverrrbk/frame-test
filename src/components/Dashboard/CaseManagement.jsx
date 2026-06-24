@@ -1775,11 +1775,34 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const isOverBudget = budgetRemaining < 0;
 
     const materialListForOverview = selectedCase?.raw_data?.material_list || [];
-    const totalMaterials = materialListForOverview.length;
-    const orderedMaterials = materialListForOverview.filter(m => m.status === 'Bestilt' || m.status === 'Leveret').length;
-    const deliveredMaterials = materialListForOverview.filter(m => m.status === 'Leveret').length;
+    // Materialeposter (bilag m. kategori Materialer) der har en leveringsstatus tæller også med —
+    // så manuelle sagers materialelister vises korrekt i overblikket. Kvitteringer uden
+    // delivery_status (fx beregner-sagernes bilag) påvirker IKKE status, så intet regresser.
+    const trackedMaterialInvoices = supplierInvoices.filter(inv => (inv.category === 'Materialer' || !inv.category) && inv.delivery_status);
+    const totalMaterials = materialListForOverview.length + trackedMaterialInvoices.length;
+    const orderedMaterials = materialListForOverview.filter(m => m.status === 'Bestilt' || m.status === 'Leveret').length
+        + trackedMaterialInvoices.filter(inv => inv.delivery_status === 'Bestilt' || inv.delivery_status === 'Leveret').length;
+    const deliveredMaterials = materialListForOverview.filter(m => m.status === 'Leveret').length
+        + trackedMaterialInvoices.filter(inv => inv.delivery_status === 'Leveret').length;
     const notOrderedMaterials = totalMaterials - orderedMaterials;
     const materialProgress = totalMaterials > 0 ? Math.round((orderedMaterials / totalMaterials) * 100) : 0;
+
+    // Marker alle materialer (liste + materialeposter) som leveret — direkte fra overblikskortet.
+    const handleMarkAllMaterialsDelivered = async (e) => {
+        e?.stopPropagation?.();
+        const rdNow = selectedCase?.raw_data || {};
+        const nextList = (rdNow.material_list || []).map(m => ({ ...m, status: 'Leveret' }));
+        const nextInvoices = (rdNow.supplier_invoices || []).map(inv => ((inv.category === 'Materialer' || !inv.category) && inv.delivery_status) ? { ...inv, delivery_status: 'Leveret' } : inv);
+        const merged = { ...rdNow, material_list: nextList, supplier_invoices: nextInvoices };
+        try {
+            const { error } = await supabase.from('leads').update({ raw_data: merged }).eq('id', selectedCase.id);
+            if (error) throw error;
+            onUpdateLead && onUpdateLead({ ...selectedCase, raw_data: merged });
+            toast.success('Alle materialer markeret som leveret');
+        } catch (err) {
+            toast.error('Kunne ikke opdatere materialer');
+        }
+    };
     const existingDeliveryEvent = Array.isArray(carpenterProfile?.raw_data?.calendar_events)
         ? carpenterProfile.raw_data.calendar_events.find(ev => ev.type === 'Materialelevering' && String(ev.relatedLeadId) === String(selectedCase?.id))
         : null;
@@ -2892,6 +2915,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             <>
                                                 {pill(allOrdered, 'Bestilt', 'Ikke bestilt endnu')}
                                                 {pill(allDelivered, 'Leveret', 'Ikke leveret endnu')}
+                                                {!allDelivered && (
+                                                    <button
+                                                        onClick={handleMarkAllMaterialsDelivered}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '999px', fontSize: '0.85rem', fontWeight: 700, color: '#fff', backgroundColor: '#10b981', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#059669'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#10b981'; }}
+                                                    >
+                                                        <CheckCircle size={15} /> Marker alle leveret
+                                                    </button>
+                                                )}
                                             </>
                                         );
                                     })()}
