@@ -568,8 +568,9 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
                 updatedProjectData.leadId = leadId;
             }
 
-            if (insertedData && customerDetails?.email && !draftCreator) {
+            if (insertedData && customerDetails?.email && !draftCreator && !isManualCreation) {
                 // SEND EMAIL MED OVERSLAGET TIL KUNDEN
+                // (!isManualCreation: interne beregninger fra dashboardet må ALDRIG maile kunden)
                 import('../../utils/sendEmail').then(({ sendEmail }) => {
                     import('../../utils/emailTemplates').then(({ getCustomerEstimateTemplate, getCustomerUpdatedEstimateTemplate, getCarpenterSenderName }) => {
                         const carpenterCompanyName = carpenter?.company_name || 'Tømreren';

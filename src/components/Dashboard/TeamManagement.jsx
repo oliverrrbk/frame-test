@@ -573,7 +573,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                             toIds(l.raw_data?.assigned_pm).includes(mid)
                                         );
                                         // Kladder tæller ikke som tildelte opgaver — kun rigtige sager.
-                                        const DRAFT_STATUSES = ['Kladde', 'Intern Kladde', 'Sendt Kladde', 'Slettet'];
+                                        const DRAFT_STATUSES = ['Kladde', 'Intern Kladde', 'Tilbudskladder', 'Sendt Kladde', 'Slettet'];
                                         const assignedJobs = assignedLeads.filter(l => !DRAFT_STATUSES.includes(l.status));
                                         const wonLeads = assignedLeads.filter(l => ['Bekræftet opgave', 'Historik'].includes(l.status));
                                         const lostLeads = assignedLeads.filter(l => ['Afvist', 'Fortrudt', 'Afbrudt Sag'].includes(l.status));

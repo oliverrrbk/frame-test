@@ -655,6 +655,8 @@ const Dashboard = () => {
     const [dbDebugLog, setDbDebugLog] = useState('');
     const [selectedPdfFile, setSelectedPdfFile] = useState(null);
     const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+    // Hvor mange dage et manuelt udsendt tilbud (vedhæftet PDF) er gyldigt.
+    const [quoteValidityDays, setQuoteValidityDays] = useState(14);
     const [teamMembers, setTeamMembers] = useState([]);
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [showSetPassword, setShowSetPassword] = useState(false);
@@ -666,6 +668,8 @@ const Dashboard = () => {
     const [isCreateLeadModalOpen, setIsCreateLeadModalOpen] = useState(false);
     const [showCreateLeadCancelConfirm, setShowCreateLeadCancelConfirm] = useState(false);
     const [createLeadMode, setCreateLeadMode] = useState(null);
+    // Når en gemt tilbudskladde (selvlavet hurtigt tilbud) åbnes, redigeres den i QuickQuoteBuilder.
+    const [editQuoteLead, setEditQuoteLead] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [mapFilters, setMapFilters] = useState({ showNew: true, showSent: true, showConfirmed: true, showOnHold: true });
     const [selectedMapLead, setSelectedMapLead] = useState(null); // lead vist i info-boblen på kortet
@@ -700,6 +704,9 @@ const Dashboard = () => {
     const [session, setSession] = useState(null);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const profileMenuRef = useRef(null);
+    // Husker leads vi netop har ændret/oprettet lokalt, så en (evt. forsinket) realtime-refetch
+    // ikke ruller ændringen tilbage pga. read-after-write lag. Map: leadId -> { lead, until }.
+    const recentLocalWritesRef = useRef(new Map());
     // Luk profil-menuen ved klik/tap udenfor eller Escape.
     useClickOutside(profileMenuRef, () => setIsProfileMenuOpen(false), isProfileMenuOpen);
 
@@ -1076,6 +1083,134 @@ const Dashboard = () => {
         if (session?.user) {
             await initProfileAndData(session.user);
         }
+    };
+
+    // Marker en lead som "netop ændret lokalt" i ~8 sek., så realtime-refetch ikke overskriver den.
+    const rememberLocalLead = (lead) => {
+        if (lead?.id) recentLocalWritesRef.current.set(lead.id, { lead, until: Date.now() + 8000 });
+    };
+
+    // Optimistisk opdatering af én lead: opdater state med det samme OG husk ændringen.
+    const applyLocalLeadUpdate = (updated) => {
+        if (!updated?.id) return;
+        rememberLocalLead(updated);
+        setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
+        setSelectedLead(prev => (prev && prev.id === updated.id ? updated : prev));
+    };
+
+    const refreshLeadsData = async ({ ensureLead = null, selectLead = false } = {}) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const authUser = session?.user;
+        const currentProfile = carpenterProfile || myProfile;
+
+        if (!authUser || !currentProfile) {
+            if (ensureLead?.id) {
+                setLeadsData(prev => prev.some(l => l.id === ensureLead.id) ? prev : [ensureLead, ...prev]);
+                if (selectLead) setSelectedLead(ensureLead);
+            }
+            return;
+        }
+
+        let targetId = currentProfile.company_id || currentProfile.id || authUser.id;
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const impId = urlParams ? urlParams.get('impersonate') : null;
+        if (impId && authUser.email === 'team@bisoncompany.dk') {
+            targetId = impId;
+        }
+
+        const isDevEnv = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const maskForWorker = !isDevEnv && !impersonateId && (currentProfile.role === 'worker' || currentProfile.role === 'apprentice');
+
+        let workingLeads = [];
+        if (maskForWorker) {
+            const { data: maskedLeads } = await supabase.rpc('get_visible_leads');
+            workingLeads = maskedLeads || [];
+        } else {
+            const { data: companyLeads, error } = await supabase
+                .from('leads')
+                .select('*')
+                .eq('carpenter_id', targetId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            workingLeads = companyLeads || [];
+
+            if (currentProfile.role !== 'admin' && currentProfile.company_id && targetId !== currentProfile.id) {
+                const { data: strandedLeads } = await supabase
+                    .from('leads')
+                    .select('*')
+                    .eq('carpenter_id', currentProfile.id)
+                    .order('created_at', { ascending: false });
+                if (strandedLeads?.length) {
+                    workingLeads = [...workingLeads, ...strandedLeads];
+                }
+            }
+        }
+
+        workingLeads = workingLeads.filter(l => l.status !== 'Slettet');
+
+        const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (!isDev) {
+            const userRole = currentProfile.role;
+            const userPermissions = currentProfile.permissions || {};
+            const isSelf = !impersonateId;
+            const userId = authUser.id;
+
+            if (isSelf && userRole !== 'admin' && !userPermissions.view_all_leads) {
+                if (userRole === 'accountant') {
+                    const confirmedStatuses = ['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'];
+                    workingLeads = workingLeads.filter(l => confirmedStatuses.includes(l.status));
+                } else if (userRole === 'sales') {
+                    workingLeads = workingLeads.filter(l => {
+                        const pmData = l.raw_data?.assigned_pm;
+                        const pmArray = Array.isArray(pmData) ? pmData : (pmData ? [pmData] : []);
+                        const workerData = l.raw_data?.assigned_workers;
+                        const workerArray = Array.isArray(workerData) ? workerData : (workerData ? [workerData] : []);
+                        return pmArray.includes(userId) || workerArray.includes(userId) || l.assigned_to === userId || l.raw_data?.created_by === userId || l.raw_data?.draft_mode === true;
+                    });
+                } else if (userRole === 'worker' || userRole === 'apprentice') {
+                    workingLeads = workingLeads.filter(l => {
+                        const pmData = l.raw_data?.assigned_pm;
+                        const pmArray = Array.isArray(pmData) ? pmData : (pmData ? [pmData] : []);
+                        const workerData = l.raw_data?.assigned_workers;
+                        const workerArray = Array.isArray(workerData) ? workerData : (workerData ? [workerData] : []);
+                        return pmArray.includes(userId) || workerArray.includes(userId) || l.raw_data?.created_by === userId || l.raw_data?.draft_mode === true;
+                    });
+                }
+            }
+        }
+
+        if (ensureLead?.id && !workingLeads.some(l => l.id === ensureLead.id)) {
+            workingLeads = [ensureLead, ...workingLeads];
+        }
+
+        // Flet nylige lokale ændringer ind, så en forsinket refetch ikke ruller dem tilbage.
+        {
+            const now = Date.now();
+            const pending = recentLocalWritesRef.current;
+            for (const [id, entry] of pending) {
+                if (!entry || entry.until < now) { pending.delete(id); continue; }
+                if (entry.lead?.status === 'Slettet') continue;
+                const idx = workingLeads.findIndex(l => l.id === id);
+                if (idx >= 0) workingLeads[idx] = entry.lead;
+                else workingLeads = [entry.lead, ...workingLeads];
+            }
+        }
+
+        const uniqueLeads = Array.from(new Map(workingLeads.map(lead => [lead.id, lead])).values())
+            .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+        setLeadsData(uniqueLeads);
+        setSelectedLead(prev => {
+            if (selectLead && ensureLead?.id) {
+                return uniqueLeads.find(l => l.id === ensureLead.id) || ensureLead;
+            }
+            if (prev) {
+                return uniqueLeads.find(l => l.id === prev.id) || prev;
+            }
+            return prev;
+        });
+        setIsLeadsLoading(false);
     };
     
     const { isRefreshing, pullProgress } = usePullToRefresh(refreshData);
@@ -1562,7 +1697,21 @@ const Dashboard = () => {
                 }
             }
         }
-        
+
+        // Flet nylige lokale ændringer ind, så en forsinket refetch ikke ruller dem tilbage
+        // (fx en sag der lige er bekræftet, eller en netop oprettet lead). Udløbne fjernes.
+        {
+            const now = Date.now();
+            const pending = recentLocalWritesRef.current;
+            for (const [id, entry] of pending) {
+                if (!entry || entry.until < now) { pending.delete(id); continue; }
+                if (entry.lead?.status === 'Slettet') continue; // lad sletning gå igennem
+                const idx = workingLeads.findIndex(l => l.id === id);
+                if (idx >= 0) workingLeads[idx] = entry.lead;
+                else workingLeads = [entry.lead, ...workingLeads];
+            }
+        }
+
         setLeadsData(workingLeads);
         setSelectedLead(prev => {
             if (prev) {
@@ -1854,6 +2003,17 @@ const Dashboard = () => {
     };
 
     const handleSelectLead = async (lead) => {
+        // Selvlavede hurtige tilbud åbnes i selve tilbuds-editoren — både kladder OG allerede
+        // sendte tilbud (sidstnævnte kan man så rette og sende en opdateret mail på). Så man kan
+        // rette data/materialer, se PDF + mail, og sende derfra (ikke lave en ny).
+        if (lead?.raw_data?.is_manual_quote && ['Tilbudskladder', 'Intern Kladde', 'Sendt tilbud'].includes(lead.status)) {
+            if (lead.is_read === false) {
+                setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...l, is_read: true } : l));
+                supabase.from('leads').update({ is_read: true }).eq('id', lead.id).then(() => {}, () => {});
+            }
+            setEditQuoteLead(lead);
+            return;
+        }
         setSelectedLead(lead);
         setIsCustomerChoicesOpen(false);
         setIsMaterialListOpen(false);
@@ -1923,6 +2083,11 @@ const Dashboard = () => {
             if (finalPrice !== null) {
                 newRawData.actual_quote_price = finalPrice;
             }
+            // Gyldighed: behold evt. eksisterende, ellers brug det valgte antal dage.
+            const validityDays = extraRawData?.quote_settings?.validityDays
+                || currentRawData?.quote_settings?.validityDays
+                || quoteValidityDays || 14;
+            newRawData.quote_settings = { ...(newRawData.quote_settings || {}), validityDays };
 
             const { error: updateError } = await supabase
                 .from('leads')
@@ -1943,7 +2108,7 @@ const Dashboard = () => {
                     sendEmail({
                         to: targetLead.customer_email,
                         subject: subjectText,
-                        html: getCustomerOfferSentTemplate(targetLead.customer_name, quoteUrl, targetLead.project_category, carpenterProfile, publicUrl, isUpdate, targetLead.case_number || String(targetLead.id).substring(0,8)),
+                        html: getCustomerOfferSentTemplate(targetLead.customer_name, quoteUrl, targetLead.project_category, carpenterProfile, publicUrl, isUpdate, targetLead.case_number || String(targetLead.id).substring(0,8), null, validityDays),
                         fromName: senderName,
                         replyTo: carpenterProfile?.email
                     });
@@ -2286,7 +2451,7 @@ const Dashboard = () => {
 
     const filteredLeads = roleFilteredLeads.filter(l => {
         const currentStatus = l.status || 'Ny forespørgsel';
-        const matchesStatus = currentStatus === leadFilter || (leadFilter === 'Ny forespørgsel' && currentStatus === 'Intern Kladde');
+        const matchesStatus = currentStatus === leadFilter || (leadFilter === 'Tilbudskladder' && currentStatus === 'Intern Kladde');
         if (!searchQuery) return matchesStatus;
         
         const query = searchQuery.toLowerCase();
@@ -3076,12 +3241,7 @@ const Dashboard = () => {
                                     setChatTargetLeadId(caseId);
                                     setActiveTab('chat');
                                 }}
-                                onUpdateLead={(updated) => {
-                                    setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
-                                    if (selectedLead && selectedLead.id === updated.id) {
-                                        setSelectedLead(updated);
-                                    }
-                                }} 
+                                onUpdateLead={(updated) => applyLocalLeadUpdate(updated)} 
                             />
                         </div>
                     )}
@@ -3126,12 +3286,7 @@ const Dashboard = () => {
                                     setTargetCaseId(caseId);
                                     setActiveTab('cases');
                                 }}
-                                onUpdateLead={(updated) => {
-                                    setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
-                                    if (selectedLead && selectedLead.id === updated.id) {
-                                        setSelectedLead(updated);
-                                    }
-                                }}
+                                onUpdateLead={(updated) => applyLocalLeadUpdate(updated)}
                             />
                         </div>
                     )}
@@ -3155,7 +3310,7 @@ const Dashboard = () => {
                                     {/* Pipeline Menu with Action Button */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingBottom: '10px', flexWrap: 'wrap', gap: '16px' }}>
                                     <div className="desktop-filters" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-                                        {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag', 'Historik']
+                                        {['Ny forespørgsel', 'Tilbudskladder', 'Sendt tilbud', 'Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag', 'Historik']
                                             .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Sæt i bero' || status === 'Historik')
                                             .map(status => (
                                             <button 
@@ -3169,13 +3324,13 @@ const Dashboard = () => {
                                                     borderRadius: '20px',
                                                     border: '1px solid',
                                                     borderColor: leadFilter === status 
-                                                        ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Sæt i bero' ? '#f97316' : status === 'Historik' ? '#6b7280' : '#ef4444') 
+                                                        ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Tilbudskladder' ? '#8b5cf6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Sæt i bero' ? '#f97316' : status === 'Historik' ? '#6b7280' : '#ef4444')
                                                         : 'rgba(255,255,255,0.2)',
-                                                    backgroundColor: leadFilter === status 
-                                                        ? (status === 'Ny forespørgsel' ? 'rgba(59, 130, 246, 0.1)' : status === 'Sendt tilbud' ? 'rgba(234, 179, 8, 0.1)' : status === 'Bekræftet opgave' ? 'rgba(16, 185, 129, 0.1)' : status === 'Sæt i bero' ? 'rgba(249, 115, 22, 0.1)' : status === 'Historik' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)') 
+                                                    backgroundColor: leadFilter === status
+                                                        ? (status === 'Ny forespørgsel' ? 'rgba(59, 130, 246, 0.1)' : status === 'Tilbudskladder' ? 'rgba(139, 92, 246, 0.1)' : status === 'Sendt tilbud' ? 'rgba(234, 179, 8, 0.1)' : status === 'Bekræftet opgave' ? 'rgba(16, 185, 129, 0.1)' : status === 'Sæt i bero' ? 'rgba(249, 115, 22, 0.1)' : status === 'Historik' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)')
                                                         : 'rgba(255,255,255,0.05)',
-                                                    color: leadFilter === status 
-                                                        ? (status === 'Ny forespørgsel' ? '#60a5fa' : status === 'Sendt tilbud' ? '#facc15' : status === 'Bekræftet opgave' ? '#34d399' : status === 'Sæt i bero' ? '#fb923c' : status === 'Historik' ? '#9ca3af' : '#f87171') 
+                                                    color: leadFilter === status
+                                                        ? (status === 'Ny forespørgsel' ? '#60a5fa' : status === 'Tilbudskladder' ? '#a78bfa' : status === 'Sendt tilbud' ? '#facc15' : status === 'Bekræftet opgave' ? '#34d399' : status === 'Sæt i bero' ? '#fb923c' : status === 'Historik' ? '#9ca3af' : '#f87171')
                                                         : 'var(--text-primary)',
                                                     fontWeight: leadFilter === status ? 'bold' : 'normal',
                                                     cursor: 'pointer',
@@ -3185,10 +3340,10 @@ const Dashboard = () => {
                                                 }}
                                             >
                                                 {status}
-                                                <span style={{ marginLeft: '8px', background: leadFilter === status ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Sæt i bero' ? '#f97316' : status === 'Historik' ? '#6b7280' : '#ef4444') : 'rgba(255,255,255,0.2)', color: leadFilter === status ? '#fff' : 'var(--text-secondary)', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem' }}>
+                                                <span style={{ marginLeft: '8px', background: leadFilter === status ? (status === 'Ny forespørgsel' ? '#3b82f6' : status === 'Tilbudskladder' ? '#8b5cf6' : status === 'Sendt tilbud' ? '#eab308' : status === 'Bekræftet opgave' ? '#10b981' : status === 'Sæt i bero' ? '#f97316' : status === 'Historik' ? '#6b7280' : '#ef4444') : 'rgba(255,255,255,0.2)', color: leadFilter === status ? '#fff' : 'var(--text-secondary)', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem' }}>
                                                     {leadsData.filter(l => {
                                                         const s = l.status || 'Ny forespørgsel';
-                                                        return s === status || (status === 'Ny forespørgsel' && s === 'Intern Kladde');
+                                                        return s === status || (status === 'Tilbudskladder' && s === 'Intern Kladde');
                                                     }).length}
                                                 </span>
                                             </button>
@@ -3227,7 +3382,7 @@ const Dashboard = () => {
                                                 }}>
                                                     {leadsData.filter(l => {
                                                         const s = l.status || 'Ny forespørgsel';
-                                                        return s === leadFilter || (leadFilter === 'Ny forespørgsel' && s === 'Intern Kladde');
+                                                        return s === leadFilter || (leadFilter === 'Tilbudskladder' && s === 'Intern Kladde');
                                                     }).length}
                                                 </span>
                                             </div>
@@ -3248,7 +3403,7 @@ const Dashboard = () => {
                                                 zIndex: 50,
                                                 overflow: 'hidden'
                                             }}>
-                                                {['Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Afbrudt Sag', 'Historik']
+                                                {['Ny forespørgsel', 'Tilbudskladder', 'Sendt tilbud', 'Bekræftet opgave', 'Afbrudt Sag', 'Historik']
                                                     .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
                                                     .map(status => (
                                                         <button
@@ -3400,9 +3555,9 @@ const Dashboard = () => {
                                                     )}
                                                     <span style={{ 
                                                         fontSize: '0.8rem', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold',
-                                                        backgroundColor: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? 'rgba(37,99,235,0.1)' : ((lead.status || '') === 'Sendt tilbud' ? 'rgba(202,138,4,0.1)' : (lead.status || '') === 'Bekræftet opgave' ? 'rgba(5,150,105,0.1)' : (lead.status === 'Intern Kladde' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(220,38,38,0.1)')),
-                                                        color: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#3b82f6' : ((lead.status || '') === 'Sendt tilbud' ? '#eab308' : (lead.status || '') === 'Bekræftet opgave' ? '#10b981' : (lead.status === 'Intern Kladde' ? '#059669' : '#ef4444')),
-                                                        border: `1px solid ${(lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#3b82f6' : ((lead.status || '') === 'Sendt tilbud' ? '#eab308' : (lead.status || '') === 'Bekræftet opgave' ? '#10b981' : (lead.status === 'Intern Kladde' ? '#10b981' : '#ef4444'))}40`
+                                                        backgroundColor: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? 'rgba(37,99,235,0.1)' : ((lead.status || '') === 'Sendt tilbud' ? 'rgba(202,138,4,0.1)' : (lead.status || '') === 'Bekræftet opgave' ? 'rgba(5,150,105,0.1)' : ((lead.status === 'Intern Kladde' || lead.status === 'Tilbudskladder') ? 'rgba(139, 92, 246, 0.1)' : 'rgba(220,38,38,0.1)')),
+                                                        color: (lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#3b82f6' : ((lead.status || '') === 'Sendt tilbud' ? '#eab308' : (lead.status || '') === 'Bekræftet opgave' ? '#10b981' : ((lead.status === 'Intern Kladde' || lead.status === 'Tilbudskladder') ? '#8b5cf6' : '#ef4444')),
+                                                        border: `1px solid ${(lead.status || 'Ny forespørgsel') === 'Ny forespørgsel' ? '#3b82f6' : ((lead.status || '') === 'Sendt tilbud' ? '#eab308' : (lead.status || '') === 'Bekræftet opgave' ? '#10b981' : ((lead.status === 'Intern Kladde' || lead.status === 'Tilbudskladder') ? '#8b5cf6' : '#ef4444'))}40`
                                                     }}>{lead.status || 'Ny forespørgsel'}</span>
                                                     {(lead.status === 'Sendt tilbud') && (
                                                         lead.opened_at ? (
@@ -4751,10 +4906,7 @@ const Dashboard = () => {
                                                          <MaterialList isLead={true} 
                                                              lead={selectedLead} 
                                                              profile={carpenterProfile} 
-                                                             onUpdate={(updated) => {
-                                                                 setLeadsData(prev => prev.map(l => l.id === updated.id ? updated : l));
-                                                                 setSelectedLead(updated);
-                                                             }} 
+                                                             onUpdate={(updated) => applyLocalLeadUpdate(updated)}
                                                          />
                                                          <button 
                                                              onClick={() => setIsMaterialListOpen(false)}
@@ -5069,6 +5221,17 @@ const Dashboard = () => {
                                                         {selectedLead.status !== 'Sendt tilbud' && (
                                                             <div style={{ marginTop: '24px', borderTop: '1px solid #cbd5e1', paddingTop: '20px' }}>
                                                                 <p style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#6b7280', textAlign: 'center', fontWeight: '500' }}>— Eller brug dit eget vante system —</p>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                                                    <label style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '500' }}>Tilbuddet gælder i</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        value={quoteValidityDays}
+                                                                        onChange={(e) => setQuoteValidityDays(Math.max(1, parseInt(e.target.value) || 1))}
+                                                                        style={{ width: '70px', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 'bold' }}
+                                                                    />
+                                                                    <label style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '500' }}>dage</label>
+                                                                </div>
                                                                 <div className="upload-system-grid">
                                                                     <input 
                                                                         type="file" 
@@ -6408,17 +6571,15 @@ const Dashboard = () => {
                                         toast.success('Ny kunde oprettet!');
                                         setActiveTab('leads');
                                         setLeadFilter('Ny forespørgsel');
+                                        setSearchQuery('');
                                         // Vis den nye lead med det samme (optimistisk) — uafhængigt af refetch-timing
                                         if (newLead?.id) {
+                                            rememberLocalLead(newLead);
                                             setLeadsData(prev => prev.some(l => l.id === newLead.id) ? prev : [newLead, ...prev]);
                                             setSelectedLead(newLead); // Vælg og åbn det nyeste lead automatisk!
                                         }
-                                        // Reconcilér i baggrunden med fuld firma-scope (strandede leads + rolle-filter)
-                                        await refreshData();
-                                        // Sikr at den nye lead stadig er med, selv hvis refetch ikke nåede at se den
-                                        if (newLead?.id) {
-                                            setLeadsData(prev => prev.some(l => l.id === newLead.id) ? prev : [newLead, ...prev]);
-                                        }
+                                        // Reconcilér direkte på leads-listen, så alle forespørgsler vises uden manuel refresh.
+                                        await refreshLeadsData({ ensureLead: newLead, selectLead: true });
                                     }}
                                 />
                             )}
@@ -6436,15 +6597,14 @@ const Dashboard = () => {
                                         setCreateLeadMode(null);
                                         setActiveTab('leads');
                                         setLeadFilter(lead?.status === 'Sendt tilbud' ? 'Sendt tilbud' : 'Ny forespørgsel');
+                                        setSearchQuery('');
                                         // Vis den nye lead med det samme (optimistisk) — uafhængigt af refetch-timing
                                         if (lead?.id) {
+                                            rememberLocalLead(lead);
                                             setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev : [lead, ...prev]);
                                             setSelectedLead(lead);
                                         }
-                                        await refreshData();
-                                        if (lead?.id) {
-                                            setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev : [lead, ...prev]);
-                                        }
+                                        await refreshLeadsData({ ensureLead: lead, selectLead: true });
                                     }}
                                 />
                             )}
@@ -6464,18 +6624,45 @@ const Dashboard = () => {
                                         toast.success('Skræddersyet kunde oprettet!');
                                         setActiveTab('leads');
                                         setLeadFilter('Ny forespørgsel');
+                                        setSearchQuery('');
                                         // Vis den nye lead med det samme (optimistisk) — uafhængigt af refetch-timing
                                         if (newLead?.id) {
+                                            rememberLocalLead(newLead);
                                             setLeadsData(prev => prev.some(l => l.id === newLead.id) ? prev : [newLead, ...prev]);
                                             setSelectedLead(newLead);
                                         }
-                                        await refreshData();
-                                        if (newLead?.id) {
-                                            setLeadsData(prev => prev.some(l => l.id === newLead.id) ? prev : [newLead, ...prev]);
-                                        }
+                                        await refreshLeadsData({ ensureLead: newLead, selectLead: true });
                                     }}
                                 />
                             )}
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Rediger Tilbudskladde — åbner det gemte hurtige tilbud i editoren igen */}
+            {editQuoteLead && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'stretch' : 'center', zIndex: 100000, padding: isMobile ? '0' : '20px' }} onClick={() => setEditQuoteLead(null)}>
+                    <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: isMobile ? '0' : '20px', width: '100%', maxWidth: isMobile ? '100%' : '1000px', height: isMobile ? '100dvh' : 'auto', maxHeight: isMobile ? '100dvh' : '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setEditQuoteLead(null)} style={{ position: isMobile ? 'fixed' : 'absolute', top: isMobile ? 'calc(env(safe-area-inset-top) + 12px)' : '20px', right: isMobile ? '16px' : '20px', background: '#f3f1ed', border: 'none', fontSize: isMobile ? '1.4rem' : '1.2rem', width: isMobile ? '42px' : '36px', height: isMobile ? '42px' : '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100001 }}>×</button>
+                        <div style={{ padding: '0' }}>
+                            <QuickQuoteBuilder
+                                carpenter={carpenterProfile}
+                                isMobile={isMobile}
+                                initialLead={editQuoteLead}
+                                onCancel={() => setEditQuoteLead(null)}
+                                onComplete={async (lead) => {
+                                    setEditQuoteLead(null);
+                                    setActiveTab('leads');
+                                    setLeadFilter(lead?.status === 'Sendt tilbud' ? 'Sendt tilbud' : 'Tilbudskladder');
+                                    if (lead?.id) {
+                                        rememberLocalLead(lead);
+                                        setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev.map(l => l.id === lead.id ? lead : l) : [lead, ...prev]);
+                                    }
+                                    await refreshLeadsData({ ensureLead: lead, selectLead: false });
+                                }}
+                            />
                         </div>
                     </div>
                 </div>,

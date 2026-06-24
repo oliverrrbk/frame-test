@@ -244,19 +244,46 @@ const QuoteAcceptPage = () => {
             {/* Document Container */}
             <div className="accept-page-card" style={{ maxWidth: '800px', width: '100%', background: '#fff', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 
-                {(accepted || lead.status === 'Bekræftet opgave') && (
-                    <div style={{ backgroundColor: '#ecfdf5', borderBottom: '1px solid #10b981', padding: '24px 32px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                        <div style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, marginTop: '4px' }}>✓</div>
-                        <div>
-                            <h2 style={{ margin: '0 0 4px 0', color: '#065f46', fontSize: '1.4rem' }}>Tilbuddet er bekræftet</h2>
-                            <p style={{ margin: '0 0 8px 0', color: '#047857', fontSize: '0.95rem' }}>Mange tak for din accept. Vi glæder os til at gå i gang med opgaven.</p>
-                            <p style={{ margin: 0, color: '#065f46', fontSize: '0.85rem', opacity: 0.8 }}>
-                                Du bekræftede denne opgave den {lead.updated_at ? new Date(lead.updated_at).toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.<br/>
-                                Har du spørgsmål til opstart, kan du altid ringe direkte til {carpenter?.owner_name ? carpenter.owner_name.split(' ')[0] : (carpenter?.company_name || 'tømreren')}{carpenter?.phone ? ` på ${carpenter.phone}` : ''}.
-                            </p>
+                {(accepted || lead.status === 'Bekræftet opgave') && (() => {
+                    const firstName = carpenter?.owner_name ? carpenter.owner_name.split(' ')[0] : (carpenter?.company_name || 'tømreren');
+                    const steps = [
+                        { icon: '📅', title: 'Vi planlægger opstart', text: `${carpenter?.company_name || 'Vi'} sætter nu opgaven i kalenderen og vender tilbage med en opstartsdato.` },
+                        { icon: '📞', title: 'Vi ringer dig op', text: `Vi kontakter dig${carpenter?.phone ? ` (du kan også selv ringe på ${carpenter.phone})` : ''} for at aftale de sidste praktiske detaljer.` },
+                        { icon: '✅', title: 'Du behøver ikke gøre mere', text: 'Læn dig tilbage — du hører fra os. Du har modtaget en bekræftelse på mail.' },
+                    ];
+                    return (
+                    <div style={{ backgroundColor: '#ecfdf5', borderBottom: '1px solid #10b981', padding: '28px 32px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
+                            <div style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, marginTop: '4px' }}>✓</div>
+                            <div>
+                                <h2 style={{ margin: '0 0 4px 0', color: '#065f46', fontSize: '1.4rem' }}>Tak — opgaven er bekræftet!</h2>
+                                <p style={{ margin: 0, color: '#047857', fontSize: '0.95rem' }}>
+                                    Du bekræftede opgaven den {lead.updated_at ? new Date(lead.updated_at).toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleDateString('da-DK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.
+                                </p>
+                            </div>
+                        </div>
+                        <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #d1fae5', padding: '20px 24px' }}>
+                            <h3 style={{ margin: '0 0 16px 0', color: '#065f46', fontSize: '1.05rem', fontWeight: 700 }}>Hvad sker der nu?</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                {steps.map((s, i) => (
+                                    <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#ecfdf5', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '16px' }}>{s.icon}</div>
+                                        <div>
+                                            <p style={{ margin: '0 0 2px 0', color: '#0f172a', fontWeight: 600, fontSize: '0.95rem' }}>{i + 1}. {s.title}</p>
+                                            <p style={{ margin: 0, color: '#475569', fontSize: '0.9rem', lineHeight: '1.5' }}>{s.text}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {carpenter?.phone && (
+                                <div style={{ marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #f1f5f9', fontSize: '0.9rem', color: '#065f46' }}>
+                                    Spørgsmål til opstart? Ring til {firstName} på <a href={`tel:${carpenter.phone}`} style={{ color: '#047857', fontWeight: 700, textDecoration: 'none' }}>{carpenter.phone}</a>.
+                                </div>
+                            )}
                         </div>
                     </div>
-                )}
+                    );
+                })()}
 
                 {/* Opgavebeskrivelse */}
                 <div style={{ padding: '32px', borderBottom: '1px solid #f1f5f9' }}>

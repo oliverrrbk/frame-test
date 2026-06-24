@@ -1712,7 +1712,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const totalActualHours = timeEntries
         .filter(item => ['worker', 'apprentice', 'sales'].includes(profile?.role) ? item.employeeId === profile.id : true)
         .reduce((sum, item) => sum + item.hours, 0);
-    const baseBudgetedHours = parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) || 40; 
+    const baseBudgetedHours = parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) || 40;
+    // Selvlavede tilbud har ikke et beregnet timeestimat — vis kun de FAKTISKE timer.
+    const isManualCase = !!selectedCase?.raw_data?.is_manual_quote;
     const getBasePrice = (lead) => {
         if (!lead) return 0;
         if (lead.raw_data?.calc_data?.totalPrice) {
@@ -2003,8 +2005,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         {/* Time status */}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#6b7280', borderTop: '1px solid #f1f1ef', paddingTop: '12px', marginBottom: '12px' }}>
                                             <span>Timer registreret:</span>
-                                            <strong style={{ color: hrs > estHrs ? '#ef4444' : '#1e293b' }}>
-                                                {hrs} t / {estHrs} t
+                                            <strong style={{ color: (!c.raw_data?.is_manual_quote && hrs > estHrs) ? '#ef4444' : '#1e293b' }}>
+                                                {hrs} t{c.raw_data?.is_manual_quote ? '' : ` / ${estHrs} t`}
                                             </strong>
                                         </div>
 
@@ -2182,7 +2184,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         
                                         {infoSheetType === 'time' && (
                                             <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center' }}>
-                                                <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{totalActualHours} <span style={{ fontSize: '1rem', color: '#94a3b8' }}>/ {parseFloat(selectedCase.raw_data?.calc_data?.laborHours) || 40} t.</span></h1>
+                                                <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{totalActualHours} <span style={{ fontSize: '1rem', color: '#94a3b8' }}>{isManualCase ? 't.' : <>/ {parseFloat(selectedCase.raw_data?.calc_data?.laborHours) || 40} t.</>}</span></h1>
                                                 <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Registrerede timer af holdet</p>
                                                 <button onClick={() => { setInfoSheetType(null); handleSubTabChange('timesheet'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#d97706', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Timeregistrering</button>
                                             </div>
@@ -2820,7 +2822,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
                                 <div>
                                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a1a1a' }}>
-                                        {totalActualHours} {['worker', 'apprentice'].includes(profile?.role) ? 'timer' : <span style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 'normal' }}>/ {budgetedHours} timer</span>}
+                                        {totalActualHours} {(['worker', 'apprentice'].includes(profile?.role) || isManualCase) ? 'timer' : <span style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 'normal' }}>/ {budgetedHours} timer</span>}
                                     </div>
                                 </div>
                                 {!['worker', 'apprentice'].includes(profile?.role) && <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: isOvertime ? '#ef4444' : '#10b981' }}>{Math.round(hourBudgetRatio * 100)}%</span>}
@@ -2897,7 +2899,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     </div>
 
                     {/* ANOMALI ADVARSEL HVIS TIMER SKRIDER */}
-                    {hasTimeAnomalies && (
+                    {hasTimeAnomalies && !isManualCase && (
                         <div style={{ padding: '16px 20px', backgroundColor: '#fffbeb', borderRadius: '12px', border: '1px solid #fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <ShieldAlert size={24} />
                             <div>
@@ -3826,7 +3828,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         </div>
                                                         <div style={{ textAlign: 'center' }}>
                                                             <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Forbrug</div>
-                                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: totalActualHours > budgetedHours ? '#ef4444' : '#0f172a' }}>{totalActualHours} <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>/ {budgetedHours} t</span></div>
+                                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: (!isManualCase && totalActualHours > budgetedHours) ? '#ef4444' : '#0f172a' }}>{totalActualHours} <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>{isManualCase ? 't' : <>/ {budgetedHours} t</>}</span></div>
                                                         </div>
                                                     </div>
                                                     )}
@@ -3841,7 +3843,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         </div>
                                                     </div>
 
-                                                    {!isWorker && (
+                                                    {!isWorker && !isManualCase && (
                                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                                                         <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff1f2', color: '#e11d48', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                             <TrendingUp size={22} />

@@ -125,31 +125,40 @@ const PREVIEW_CSS = `
   .qqb-spin{animation:qqbspin .8s linear infinite;}
 `;
 
-export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete }) {
+export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, initialLead = null }) {
     const [busy, setBusy] = useState(false);
 
-    const [title, setTitle] = useState('');
+    // Redigerer vi en eksisterende tilbudskladde? Forudfyld så alt fra den gemte lead.
+    const isEditing = !!initialLead?.id;
+    // Redigerer vi et tilbud der ALLEREDE er sendt? Så kan man kun sende en opdateret mail.
+    const wasSent = initialLead?.status === 'Sendt tilbud';
+    const mq0 = initialLead?.raw_data?.manual_quote || {};
+
+    const [title, setTitle] = useState(initialLead?.project_category && initialLead.project_category !== 'Manuelt tilbud' ? initialLead.project_category : '');
     // Materialer
-    const [materialCost, setMaterialCost] = useState('');   // indkøbspris ekskl. moms
-    const [markup, setMarkup] = useState('35');             // avance %
+    const [materialCost, setMaterialCost] = useState(mq0.materialCost ? String(mq0.materialCost) : '');   // indkøbspris ekskl. moms
+    const [markup, setMarkup] = useState(mq0.materialMarkupPct != null ? String(mq0.materialMarkupPct) : '35');             // avance %
     // Arbejde
-    const [laborMode, setLaborMode] = useState('fixed');    // 'fixed' | 'hourly'
-    const [laborFixed, setLaborFixed] = useState('');
-    const [laborRate, setLaborRate] = useState(String(carpenter?.hourly_rate || carpenter?.raw_data?.hourly_rate || '550'));
-    const [laborHours, setLaborHours] = useState('');
+    const [laborMode, setLaborMode] = useState(mq0.laborMode || 'fixed');    // 'fixed' | 'hourly'
+    const [laborFixed, setLaborFixed] = useState(mq0.laborFixed ? String(mq0.laborFixed) : '');
+    const [laborRate, setLaborRate] = useState(String(mq0.laborRate || carpenter?.hourly_rate || carpenter?.raw_data?.hourly_rate || '550'));
+    const [laborHours, setLaborHours] = useState(mq0.laborHours ? String(mq0.laborHours) : '');
     // Tillæg + arbejdsbeskrivelse (rich-text)
-    const [extras, setExtras] = useState([{ id: uid(), desc: '', amount: '' }]);
-    const [workDescHtml, setWorkDescHtml] = useState('');
+    const [extras, setExtras] = useState((mq0.extras && mq0.extras.length) ? mq0.extras.map(e => ({ id: uid(), desc: e.desc || '', amount: e.amount != null ? String(e.amount) : '' })) : [{ id: uid(), desc: '', amount: '' }]);
+    const [workDescHtml, setWorkDescHtml] = useState(mq0.workHtml || '');
     const workEditorRef = useRef(null);
     // Kunde
-    const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '' });
+    const [customer, setCustomer] = useState({ name: initialLead?.customer_name || '', email: initialLead?.customer_email || '', phone: initialLead?.customer_phone || '', address: initialLead?.customer_address || '' });
     // Davidsen-PDF
     const [materialFile, setMaterialFile] = useState(null);
     // Personlige beskeder — adskilt: én på tilbuddet (PDF), én i mailen.
-    const [pdfNote, setPdfNote] = useState('');
-    const [emailMessage, setEmailMessage] = useState(STANDARD_EMAIL_MSG);
-    const pdfNoteTouched = useRef(false);
-    const emailMsgTouched = useRef(false);
+    const [pdfNote, setPdfNote] = useState(mq0.noteHtml || '');
+    const [emailMessage, setEmailMessage] = useState(initialLead?.raw_data?.custom_message || STANDARD_EMAIL_MSG);
+    // Hvor mange dage tilbuddet er gyldigt (vises i PDF + mail, og styrer udløb på kunde-siden).
+    const [validityDays, setValidityDays] = useState(initialLead?.raw_data?.quote_settings?.validityDays || mq0.validityDays || 14);
+    // Ved redigering er beskeden allerede skrevet — undlad at overskrive med standard-hilsen.
+    const pdfNoteTouched = useRef(isEditing);
+    const emailMsgTouched = useRef(isEditing);
     const pdfNoteRef = useRef(null);
     // Preview-fane (kun på mobil) + live-regenerering af PDF
     const [previewTab, setPreviewTab] = useState('edit'); // 'edit' | 'pdf' | 'mail'
@@ -169,6 +178,15 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         setPdfNote(html);
         if (pdfNoteRef.current) pdfNoteRef.current.innerHTML = html;
     }, [customer.name]);
+
+    // Ved redigering af en gemt kladde: indsæt det gemte rich-text-indhold i editorerne
+    // (contentEditable er ukontrolleret, så det skal sættes imperativt efter mount).
+    useEffect(() => {
+        if (!isEditing) return;
+        if (pdfNoteRef.current) pdfNoteRef.current.innerHTML = mq0.noteHtml || '';
+        if (workEditorRef.current) workEditorRef.current.innerHTML = mq0.workHtml || '';
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // ---- Live-beregning ----
     const calc = useMemo(() => {
@@ -200,6 +218,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         totalIncVat: calc.totalIncVat,
         noteHtml: pdfNote,
         note: htmlToPlainLines(pdfNote).join('\n'),
+        validityDays: num(validityDays) || 14,
     });
 
     // ---- Preview af PDF + mail ----
@@ -224,9 +243,9 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const emailHtml = useMemo(() => {
         return getCustomerOfferSentTemplate(
             customer.name || 'kunde', '#', title || 'dit projekt', carpenter,
-            'PDF', false, null, emailMessage
+            'PDF', false, null, emailMessage, num(validityDays) || 14
         );
-    }, [customer.name, title, carpenter, emailMessage]);
+    }, [customer.name, title, carpenter, emailMessage, validityDays]);
 
     // Live-regenerér PDF-preview (debounced) når noget i tilbuddet ændres.
     const quoteSig = JSON.stringify(buildQuoteObj()) + '|' + title + '|' + JSON.stringify(customer);
@@ -261,7 +280,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             return toast.error('Udfyld en gyldig email for at sende tilbuddet.');
         }
         setBusy(true);
-        const quoteToken = uid();
+        // Genbrug det eksisterende quote_token ved redigering, så kundens link forbliver gyldigt.
+        const quoteToken = initialLead?.quote_token || uid();
         try {
             const quoteObj = buildQuoteObj();
 
@@ -287,20 +307,24 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 }
             } catch (e) { /* PDF er ikke kritisk for at gemme */ }
 
-            // 3) Indsæt lead
-            const status = sendToCustomer ? 'Sendt tilbud' : 'Intern Kladde';
+            // 3) Gem lead — opdater eksisterende kladde eller indsæt ny
+            // Et allerede sendt tilbud forbliver "Sendt tilbud" — det hopper ikke tilbage til kladde.
+            const status = (sendToCustomer || wasSent) ? 'Sendt tilbud' : 'Tilbudskladder';
+            const existingPdfs = initialLead?.raw_data?.material_pdfs || [];
             const raw_data = {
+                ...(initialLead?.raw_data || {}),
                 is_manual_quote: true,
                 manual_quote: quoteObj,
+                quote_settings: { ...(initialLead?.raw_data?.quote_settings || {}), validityDays: num(validityDays) || 14 },
                 custom_message: emailMessage,
                 calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: num(laborHours), hourlyRate: num(laborRate) },
                 actual_quote_price: calc.totalExVat,
-                quote_pdf_url: quotePdfUrl ? `${quotePdfUrl}?t=${Date.now()}` : undefined,
-                material_pdfs: materialPdfs,
-                checklist: seedChecklist(quoteObj.workLines),
+                quote_pdf_url: quotePdfUrl ? `${quotePdfUrl}?t=${Date.now()}` : (initialLead?.raw_data?.quote_pdf_url),
+                material_pdfs: materialFile ? [...existingPdfs, ...materialPdfs] : existingPdfs,
+                checklist: initialLead?.raw_data?.checklist || seedChecklist(quoteObj.workLines),
             };
 
-            const { data: lead, error } = await supabase.from('leads').insert([{
+            const fields = {
                 customer_name: customer.name,
                 customer_email: customer.email || null,
                 customer_phone: customer.phone || null,
@@ -311,7 +335,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 carpenter_id: carpenter.id,
                 status,
                 raw_data,
-            }]).select().single();
+            };
+
+            let lead, error;
+            if (isEditing) {
+                ({ data: lead, error } = await supabase.from('leads').update(fields).eq('id', initialLead.id).select().single());
+            } else {
+                ({ data: lead, error } = await supabase.from('leads').insert([fields]).select().single());
+            }
             if (error) throw error;
 
             // 4) Send mail til kunden
@@ -322,14 +353,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 const carpenterName = carpenter?.company_name || carpenter?.owner_name || 'Din Tømrer';
                 await sendEmail({
                     to: customer.email,
-                    subject: `Dit tilbud fra ${carpenterName} er klar`,
-                    html: getCustomerOfferSentTemplate(customer.name, quoteUrl, title || 'dit projekt', carpenter, quotePdfUrl, false, lead?.case_number || null, emailMessage),
+                    subject: wasSent ? `Dit opdaterede tilbud fra ${carpenterName} er klar` : `Dit tilbud fra ${carpenterName} er klar`,
+                    html: getCustomerOfferSentTemplate(customer.name, quoteUrl, title || 'dit projekt', carpenter, quotePdfUrl, wasSent, lead?.case_number || null, emailMessage, num(validityDays) || 14),
                     fromName: getCarpenterSenderName(carpenter),
                     replyTo: carpenter?.email,
                 });
             }
 
-            toast.success(sendToCustomer ? 'Tilbuddet er sendt til kunden! 🎉' : 'Kladden er gemt.');
+            toast.success(sendToCustomer ? (wasSent ? 'Opdateret tilbud sendt til kunden! 🎉' : 'Tilbuddet er sendt til kunden! 🎉') : 'Kladden er gemt.');
             onComplete && onComplete(lead);
         } catch (e) {
             toast.error('Noget gik galt: ' + (e.message || e));
@@ -554,6 +585,19 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     {renderTitleInput()}
                 </div>
                 <div style={editSection}>
+                    <label style={label}>Tilbuddet er gyldigt i (dage)</label>
+                    <input
+                        className="qqb-input"
+                        style={{ ...input, maxWidth: '160px' }}
+                        type="number"
+                        min="1"
+                        inputMode="numeric"
+                        value={validityDays}
+                        onChange={(e) => setValidityDays(Math.max(1, parseInt(e.target.value) || 1))}
+                    />
+                    <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Vises på tilbuddet og i mailen. Efter {validityDays} dage markeres tilbuddet som udløbet for kunden.</p>
+                </div>
+                <div style={editSection}>
                     <label style={label}>Besked på tilbuddet</label>
                     {renderRichEditor(pdfNoteRef, (h) => { pdfNoteTouched.current = true; setPdfNote(h); }, 'Skriv en kort intro til kunden — fx "Hermed fremsendes tilbud på følgende arbejde:"', '80px')}
                 </div>
@@ -677,11 +721,13 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         <div style={{ fontSize: isMobile ? '1.4rem' : '1.7rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>{kr(calc.totalIncVat)} kr</div>
                     </div>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        {!wasSent && (
                         <button className="qqb-ghost" disabled={busy} onClick={() => save(false)} style={{ padding: '14px 22px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Save size={18} /> Gem kladde
                         </button>
+                        )}
                         <button className="qqb-send" disabled={busy} onClick={() => save(true)} style={{ padding: '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
-                            <Send size={18} /> {busy ? 'Sender…' : 'Send tilbud'}
+                            <Send size={18} /> {busy ? 'Sender…' : (wasSent ? 'Send opdateret tilbud' : 'Send tilbud')}
                         </button>
                     </div>
                 </div>

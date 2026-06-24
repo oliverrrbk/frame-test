@@ -407,7 +407,7 @@ export const getAdminNewSignupTemplate = (companyName, cvr, ownerName, email, ph
     return getBaseTemplate("Ny Tømrer Oprettet", content, `Ny bruger: ${companyName}`);
 };
 
-export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null, isUpdate = false, caseNumber = null, customMessage = null) => {
+export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null, isUpdate = false, caseNumber = null, customMessage = null, validityDays = 14) => {
     const signatureName = getCarpenterSenderName(carpenter);
     // Personlig besked fra tømreren (manuelle tilbud). Newlines → <br>.
     const personalHtml = (customMessage && String(customMessage).trim())
@@ -440,7 +440,9 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
         </div>
         
         <p style="color: #334155; font-size: 14px;"><em>Linket fører dig til en sikker portal, hvor du kan læse hele tilbuddet og bekræfte opgaven direkte til os, når du er klar.</em></p>
-        
+
+        <p style="color: #64748b; font-size: 13px; text-align: center;">Tilbuddet er gyldigt i <strong>${validityDays} dage</strong> fra dato.</p>
+
         <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 32px 0; text-align: left;">
             <h3 style="margin: 0 0 8px 0; color: #1e40af; font-size: 16px;">Har du spørgsmål eller ændringer?</h3>
             <p style="margin: 0; color: #334155; font-size: 14px; line-height: 1.6;">

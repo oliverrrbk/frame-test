@@ -238,6 +238,14 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     pdf.text('I ALT INKL. MOMS', left, y);
     pdf.text(`${kr(quote?.totalIncVat)} kr`, right, y, { align: 'right' });
 
+    // ---- Gyldighed ----
+    const validityDays = quote?.validityDays || 14;
+    y += 9;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(...muted);
+    pdf.text(`Tilbuddet er gyldigt i ${validityDays} dage fra dato.`, left, y);
+
     // ---- Footer ----
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8);
