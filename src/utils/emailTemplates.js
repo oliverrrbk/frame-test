@@ -53,27 +53,29 @@ const footerStyle = `
 `;
 
 const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
-    // Dynamisk Header: Logo eller Firmanavn (Udenfor kortet, mørk tekst)
-    const headerContent = carpenter?.logo_url 
-        ? `<img src="${carpenter.logo_url}" alt="${carpenter.company_name}" style="max-height: 60px; max-width: 200px; display: inline-block; vertical-align: middle;" />`
-        : `<h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #0f172a;">
-            ${carpenter?.company_name || 'BISON FRAME'}
-            <img src="https://bisonframe.dk/clean-transparent.png" alt="Logo" style="height: 26px; width: auto; vertical-align: middle; margin-left: 6px; margin-top: -4px;" />
-           </h1>`;
+    // Dynamisk Header: Logo eller Firmanavn (Udenfor kortet, mørk tekst).
+    // White-label: når mailen er fra en tømrer (carpenter sat), viser vi KUN
+    // tømrerens logo/firmanavn — intet Bison-logo. Kun rene interne mails
+    // (carpenter = null) falder tilbage til Bison-branding.
+    const headerContent = carpenter?.logo_url
+        ? `<img src="${carpenter.logo_url}" alt="${carpenter.company_name || ''}" style="max-height: 60px; max-width: 200px; display: inline-block; vertical-align: middle;" />${carpenter.company_name ? `<div style="margin-top: 10px; font-size: 16px; font-weight: 700; letter-spacing: 0.3px; color: #0f172a;">${carpenter.company_name}</div>` : ''}`
+        : `<h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #0f172a;">${carpenter?.company_name || 'BISON FRAME'}</h1>`;
 
-    // Dynamisk Footer
+    // Dynamisk Footer (white-label: ingen "leveret af Bison Frame" til kunden).
     const footerContent = carpenter
         ? `
             <div style="margin-bottom: 16px;">
-                <p style="margin: 0; font-weight: 600; color: #334155;">${carpenter.company_name}</p>
+                <p style="margin: 0; font-weight: 600; color: #334155;">${carpenter.company_name || ''}</p>
                 <p style="margin: 2px 0; color: #64748b;">${carpenter.phone || ''} | ${carpenter.email || ''}</p>
                 <p style="margin: 2px 0; color: #64748b;">${carpenter.address || ''}</p>
             </div>
-            <p style="margin: 0 0 8px 0; font-size: 12px;">Dette tilbudssystem er leveret af Bison Frame - Din sikkerhed for en professionel byggeproces.</p>
             <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8; font-style: italic;">Denne e-mail indeholder persondata. Ønsker du at gøre brug af din ret til at få slettet dine oplysninger (GDPR), kan du blot besvare denne e-mail direkte til virksomheden.</p>
           `
         : `<p style="margin: 0 0 8px 0;">Denne e-mail er sendt via Bison Frame - Din professionelle tilbudsplatform.</p>
            <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8; font-style: italic;">Denne e-mail indeholder persondata. Ønsker du at gøre brug af din ret til at få slettet dine oplysninger (GDPR), kan du blot besvare denne e-mail direkte til virksomheden.</p>`;
+
+    // Copyright: tømrerens eget navn til kunden, ellers Bison (interne mails).
+    const copyrightName = carpenter?.company_name || 'Bison Frame';
 
     return `
 <!DOCTYPE html>
@@ -96,7 +98,7 @@ const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
         </div>
         <div style="${footerStyle}">
             ${footerContent}
-            <p style="margin: 0; font-size: 12px; color: #94a3b8;">© ${new Date().getFullYear()} Bison Frame. Alle rettigheder forbeholdes.</p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">© ${new Date().getFullYear()} ${copyrightName}. Alle rettigheder forbeholdes.</p>
         </div>
     </div>
 </body>
@@ -132,6 +134,53 @@ export const getCustomerRequestReceivedTemplate = (customerName, categoryName, c
         <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
     `;
     return getBaseTemplate("Tak for din forespørgsel", content, "Vi glæder os til at kigge på dit projekt.", carpenter);
+};
+
+// Aftaleseddel sendt til kunden. Hvis confirmUrl er angivet (sedlen er ikke bekræftet
+// endnu), vises en "Bekræft aftale"-knap til den sikre bekræftelses-side. Ellers sendes
+// blot en kopi. PDF'en vedhæftes altid mailen.
+export const getAgreementEmailTemplate = (customerName, agreementTitle, carpenter, confirmUrl = null, customMessage = null) => {
+    const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
+    const signatureName = getCarpenterSenderName(carpenter);
+
+    // Personlig besked (redigerbar i preview). Escapes + linjeskift bevares.
+    const defaultIntro = 'Som aftalt sender vi hermed en aftaleseddel på det ekstraarbejde, vi har talt om:';
+    const rawIntro = (customMessage != null && String(customMessage).trim()) ? String(customMessage) : defaultIntro;
+    const introHtml = rawIntro
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br/>');
+
+    const confirmBlock = confirmUrl ? `
+        <p style="color: #334155;">Du bedes bekræfte aftalen ved at trykke på knappen nedenfor. Så er vi enige om det aftalte, og beløbet medtages på den endelige faktura fra <strong>${carpenterCompanyName}</strong>.</p>
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${confirmUrl}" style="${buttonStyle}; padding: 18px 36px; font-size: 18px;">Bekræft aftale her</a>
+            <p style="color: #64748b; font-size: 13px; margin-top: 12px;">Den fulde aftaleseddel er også vedhæftet som PDF.</p>
+        </div>
+    ` : `
+        <p style="color: #334155;">Du finder den fulde aftaleseddel som PDF vedhæftet denne mail. Den indeholder beskrivelsen og den aftalte pris.</p>
+        <p style="color: #334155;">Beløbet medtages på den endelige faktura fra <strong>${carpenterCompanyName}</strong>. Har du spørgsmål, er du altid velkommen til at svare direkte på denne mail.</p>
+    `;
+
+    const content = `
+        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Hej ${customerName},</h2>
+        <p style="color: #334155;">${introHtml}</p>
+
+        <div style="background-color: #f5f3ff; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #ddd6fe;">
+            <p style="margin: 0; color: #6d28d9; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Ekstraarbejde</p>
+            <p style="margin: 6px 0 0 0; color: #0f172a; font-size: 18px; font-weight: 700;">${agreementTitle}</p>
+        </div>
+
+        ${confirmBlock}
+
+        <p style="color: #334155; margin-bottom: 0;">De bedste hilsner,</p>
+        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
+    `;
+    return getBaseTemplate(
+        confirmUrl ? "Bekræft din aftaleseddel" : "Din aftaleseddel",
+        content,
+        confirmUrl ? `Bekræft aftale: ${agreementTitle}` : `Aftaleseddel: ${agreementTitle}`,
+        carpenter
+    );
 };
 
 export const getCustomerEstimateTemplate = (customerName, categoryName, priceEstimate, carpenter, quoteUrl, projectDetailsHtml = '') => {
@@ -358,8 +407,12 @@ export const getAdminNewSignupTemplate = (companyName, cvr, ownerName, email, ph
     return getBaseTemplate("Ny Tømrer Oprettet", content, `Ny bruger: ${companyName}`);
 };
 
-export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null, isUpdate = false, caseNumber = null) => {
+export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryName, carpenter, pdfUrl = null, isUpdate = false, caseNumber = null, customMessage = null) => {
     const signatureName = getCarpenterSenderName(carpenter);
+    // Personlig besked fra tømreren (manuelle tilbud). Newlines → <br>.
+    const personalHtml = (customMessage && String(customMessage).trim())
+        ? String(customMessage).trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+        : null;
 
     const title = isUpdate ? "Dit opdaterede tilbud er klar!" : "Dit tilbud er klar!";
     const headerTitle = isUpdate ? `Opdateret tilbud${caseNumber ? ` (Sag ${caseNumber})` : ''}` : `Dit tilbud er klar${caseNumber ? ` (Sag ${caseNumber})` : ''}`;
@@ -377,14 +430,23 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
         </div>` : ''}
 
         <p style="color: #334155;">Hej ${customerName},</p>
-        <p style="color: #334155;">Vi har nu gennemgået dine ønsker vedrørende dit projekt (<strong>${categoryName}</strong>) og har udarbejdet et officielt tilbud til dig.</p>
-        
+        ${personalHtml
+            ? `<p style="color: #334155; line-height: 1.6;">${personalHtml}</p>`
+            : `<p style="color: #334155;">Vi har nu gennemgået dine ønsker vedrørende dit projekt (<strong>${categoryName}</strong>) og har udarbejdet et officielt tilbud til dig.</p>`}
+
         <div style="text-align: center; margin: 32px 0;">
             ${pdfUrl ? `<div style="margin-bottom: 16px;"><a href="${pdfUrl}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #f1f5f9; color: #334155; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; border: 1px solid #cbd5e1;">Se som PDF</a></div>` : ''}
             <div><a href="${quoteUrl}" style="${buttonStyle}; padding: 18px 36px; font-size: 18px;">Bekræft tilbud her</a></div>
         </div>
         
         <p style="color: #334155; font-size: 14px;"><em>Linket fører dig til en sikker portal, hvor du kan læse hele tilbuddet og bekræfte opgaven direkte til os, når du er klar.</em></p>
+        
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 32px 0; text-align: left;">
+            <h3 style="margin: 0 0 8px 0; color: #1e40af; font-size: 16px;">Har du spørgsmål eller ændringer?</h3>
+            <p style="margin: 0; color: #334155; font-size: 14px; line-height: 1.6;">
+                Hvis der er noget i tilbuddet, vi skal have rettet til, eller hvis vi snakkede om noget andet, <strong>kan du blot besvare denne e-mail</strong>. Så kigger vi på det og sender en opdateret version til dig.
+            </p>
+        </div>
         
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
         

@@ -1,13 +1,13 @@
 import React from 'react';
-import { Calculator, Mic, Hammer, ChevronRight } from 'lucide-react';
+import { Calculator, Mic, Hammer, FileText, ChevronRight } from 'lucide-react';
 
-const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, isMobile = false }) => {
+const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, isMobile = false }) => {
     return (
         <div className="create-lead-selector" style={{ padding: isMobile ? '64px 16px 24px' : '20px' }}>
             <h2 style={{ textAlign: 'center', marginBottom: '10px', fontSize: isMobile ? '1.7rem' : '2rem', color: '#0f172a' }}>Opret ny sag</h2>
             <p style={{ textAlign: 'center', color: '#64748b', marginBottom: isMobile ? '24px' : '40px', fontSize: isMobile ? '1rem' : '1.1rem' }}>Vælg hvordan du vil oprette</p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '24px', maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? '16px' : '24px', maxWidth: '1080px', margin: '0 auto' }}>
                 {/* Klassisk Beregner */}
                 <div 
                     onClick={onSelectClassic}
@@ -85,6 +85,46 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, isMobile = false 
                     </div>
                     <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontWeight: 'bold' }}>
                         Opret fra bunden <ChevronRight size={18} />
+                    </div>
+                </div>
+
+                {/* Hurtigt tilbud (manuelt) */}
+                <div
+                    onClick={onSelectQuick}
+                    style={{
+                        backgroundColor: '#fff',
+                        borderRadius: '20px',
+                        padding: isMobile ? '24px' : '32px',
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+                        border: '2px solid transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        gap: '16px'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-5px)';
+                        e.currentTarget.style.borderColor = '#f59e0b';
+                        e.currentTarget.style.boxShadow = '0 20px 40px rgba(245, 158, 11, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.borderColor = 'transparent';
+                        e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.05)';
+                    }}
+                >
+                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <FileText size={40} color="#f59e0b" />
+                    </div>
+                    <div>
+                        <h3 style={{ fontSize: '1.4rem', color: '#1e293b', marginBottom: '8px' }}>Hurtigt tilbud</h3>
+                        <p style={{ color: '#64748b', lineHeight: '1.5' }}>{isMobile ? 'Materialepris + avance + send. Du styrer tallene.' : 'Smid din materialepris ind, sæt din avance og send et tilbud med det samme. Vedhæft din liste fra Davidsen — du har hands-on kontrol.'}</p>
+                    </div>
+                    <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', fontWeight: 'bold' }}>
+                        Lav tilbud <ChevronRight size={18} />
                     </div>
                 </div>
             </div>

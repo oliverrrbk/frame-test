@@ -3520,3 +3520,8 @@ button:focus-visible {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.5; }
 }
+
+/* Skjul mobil bundmenu når tegnebrættet er åbent */
+body.drawing-board-open .case-bottom-nav {
+    display: none !important;
+}

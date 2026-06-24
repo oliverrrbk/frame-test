@@ -6,7 +6,13 @@
 import { useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 
-export function useVoiceDictation(onTranscript) {
+// options:
+//   mode: 'transcribe' (standard) → onResult kaldes med den rene tekst (string).
+//         'aftaleseddel'          → onResult kaldes med hele det strukturerede
+//                                   svar-objekt ({ title, description, priceType, amount }).
+//   processingMessage / successMessage: valgfrie toast-tekster.
+export function useVoiceDictation(onResult, options = {}) {
+    const { mode = 'transcribe', processingMessage, successMessage } = options;
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const mediaRecorderRef = useRef(null);
@@ -20,7 +26,7 @@ export function useVoiceDictation(onTranscript) {
             }
             setIsRecording(false);
             setIsProcessing(true);
-            toast('Skriver det ned...', { icon: '⚙️' });
+            toast(processingMessage || 'Skriver det ned...', { icon: '⚙️' });
             return;
         }
 
@@ -40,17 +46,21 @@ export function useVoiceDictation(onTranscript) {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'voice.webm');
-                formData.append('mode', 'transcribe');
+                formData.append('mode', mode);
 
                 try {
                     const response = await fetch('/api/process-voice', { method: 'POST', body: formData });
                     if (!response.ok) throw new Error('Netværksfejl ved transskribering');
                     const result = await response.json();
                     if (result.error) throw new Error(result.error);
-                    if (result.transcription && typeof onTranscript === 'function') {
-                        onTranscript(result.transcription);
+                    if (typeof onResult === 'function') {
+                        if (mode === 'transcribe') {
+                            if (result.transcription) onResult(result.transcription);
+                        } else {
+                            onResult(result);
+                        }
                     }
-                    toast.success('Tale indsat!');
+                    toast.success(successMessage || 'Tale indsat!');
                 } catch (error) {
                     console.error('Voice dictation error:', error);
                     toast.error('Kunne ikke behandle tale: ' + error.message);

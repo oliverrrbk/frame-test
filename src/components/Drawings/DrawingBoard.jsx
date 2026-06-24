@@ -1848,6 +1848,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         setElements(previousState);
         setAppState(s => ({ ...s, selectedElementId: null, selectedElementIds: [], editingTextId: null }));
     };
+    // Mount/Unmount effects
+    useEffect(() => {
+        document.body.classList.add('drawing-board-open');
+        return () => {
+            document.body.classList.remove('drawing-board-open');
+        };
+    }, []);
 
     // Keyboard Shortcuts
     useEffect(() => {

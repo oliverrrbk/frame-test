@@ -17,6 +17,7 @@ const ConfirmedPage = lazy(() => import('./components/Auth/ConfirmedPage'));
 const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
 const QuoteAcceptPage = lazy(() => import('./components/Wizard/QuoteAcceptPage'));
 const EstimateAcceptPage = lazy(() => import('./components/Wizard/EstimateAcceptPage'));
+const AgreementConfirmPage = lazy(() => import('./components/Wizard/AgreementConfirmPage'));
 const MinubaIntegration = lazy(() => import('./components/Dashboard/MinubaIntegration'));
 import { supabase } from './supabaseClient';
 import { isStandalonePWA } from './utils/pwa';
@@ -227,6 +228,7 @@ const AnimatedRoutes = ({ session, setSession }) => {
         <Route path="/:slug" element={<PublicWizardPage />} />
         <Route path="/:slug/overslag/:lead_id" element={<EstimateAcceptPage />} />
         <Route path="/:slug/tilbud/:lead_id" element={<QuoteAcceptPage />} />
+        <Route path="/:slug/aftale/:token/:agreementId" element={<AgreementConfirmPage />} />
         <Route path="/bekraeftet" element={<ConfirmedPage />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/minuba-login" element={<MinubaIntegration />} />

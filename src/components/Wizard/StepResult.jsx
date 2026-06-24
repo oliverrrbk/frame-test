@@ -152,7 +152,18 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
             
             window.scrollTo(0, 0);
             if (onComplete) {
-                onComplete();
+                // Hent den færdige lead, så oversigten kan vise den med det samme
+                // (uafhængigt af refetch-timing / replica-lag).
+                // VIGTIGT: newLeadId er normalt et quote_token (UUID) — ikke primærnøglen id.
+                // Kun i fallback-oprettelsen ovenfor er det det egentlige id (BIGINT).
+                let createdLead = null;
+                if (newLeadId) {
+                    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(newLeadId));
+                    const query = supabase.from('leads').select('*');
+                    const { data: leadRow } = await (isUUID ? query.eq('quote_token', newLeadId) : query.eq('id', newLeadId)).maybeSingle();
+                    createdLead = leadRow;
+                }
+                onComplete(createdLead);
             } else {
                 nextStep(); // Gå til Landing page (Step 5)
             }
@@ -418,7 +429,12 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                     alignItems: 'flex-start'
                 }}>
                     <div>
-                        {needsPhysicalInspection ? (
+                        {isManualCreation ? (
+                            <>
+                                <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Klar til at oprette kunden?</strong>
+                                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Overslaget er klar. Når du går videre, oprettes kunden som et lead med dette overslag — så du kan sende et tilbud bagefter.</p>
+                            </>
+                        ) : needsPhysicalInspection ? (
                             <>
                                 <strong style={{ display: 'block', marginBottom: '8px', fontSize: '1.1rem' }}>Få besøg af {carpenter?.company_name || 'os'}</strong>
                                 <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>Går du videre herfra, sender du opgaven direkte til os. Vi ringer dig efterfølgende op for at aftale en besigtigelse, så vi kan give dig en fast pris.</p>
@@ -483,14 +499,22 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                                 }} 
                                 onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                                 onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                disabled={isManualCreation && isSaving}
                                 onClick={() => {
+                                    // Manuel mode (mester): opret leadet direkte — spring kundens booking-trin over.
+                                    if (isManualCreation) {
+                                        submitFinalQuote();
+                                        return;
+                                    }
                                     setWantsQuote(true);
                                     setTimeout(() => {
                                         bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                     }, 100);
                                 }}
                             >
-                                {needsPhysicalInspection ? 'Send oplysninger og bliv ringet op' : `Vælg ${carpenter?.company_name || 'os'} til at udføre opgaven`}
+                                {isManualCreation
+                                    ? (isSaving ? 'Arbejder...' : 'Opret kunde gennem overslag')
+                                    : (needsPhysicalInspection ? 'Send oplysninger og bliv ringet op' : `Vælg ${carpenter?.company_name || 'os'} til at udføre opgaven`)}
                             </button>
                             <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
                                 <button className="wizard-btn wizard-btn-secondary" style={{ width: '100%', justifyContent: 'center', border: 'none', background: 'transparent', color: '#94a3b8', fontSize: '0.9rem' }} onClick={resetWizard}>

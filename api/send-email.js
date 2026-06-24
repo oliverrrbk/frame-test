@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { to, subject, html, fromName, replyTo } = req.body;
+        const { to, subject, html, fromName, replyTo, attachments } = req.body;
 
         if (!to || !subject || !html) {
             return res.status(400).json({ error: 'Missing required fields' });
@@ -26,6 +26,25 @@ export default async function handler(req, res) {
         }
         if (replyTo && (typeof replyTo !== 'string' || !emailRegex.test(replyTo))) {
             return res.status(400).json({ error: 'Ugyldig reply-to adresse' });
+        }
+
+        // Valider vedhæftninger: max 5 filer, samlet base64-størrelse under ~8 MB.
+        let validAttachments;
+        if (attachments != null) {
+            if (!Array.isArray(attachments) || attachments.length > 5) {
+                return res.status(400).json({ error: 'Ugyldige vedhæftninger' });
+            }
+            let totalSize = 0;
+            for (const att of attachments) {
+                if (!att || typeof att.filename !== 'string' || typeof att.content !== 'string') {
+                    return res.status(400).json({ error: 'Ugyldig vedhæftning' });
+                }
+                totalSize += att.content.length;
+            }
+            if (totalSize > 8_000_000) {
+                return res.status(400).json({ error: 'Vedhæftninger er for store' });
+            }
+            validAttachments = attachments.map(att => ({ filename: att.filename, content: att.content }));
         }
 
         const resendApiKey = process.env.RESEND_API_KEY;
@@ -49,7 +68,8 @@ export default async function handler(req, res) {
                 to: [to],
                 subject: subject,
                 html: html,
-                ...(replyTo && { reply_to: replyTo })
+                ...(replyTo && { reply_to: replyTo }),
+                ...(validAttachments && validAttachments.length > 0 && { attachments: validAttachments })
             })
         });
 

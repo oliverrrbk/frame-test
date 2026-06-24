@@ -52,6 +52,7 @@ afløser/supplerer hinanden.
 |-----|--------|
 | `add_rpc_for_quotes.sql` | Kunde henter tilbud via hemmeligt token |
 | `setup_public_quotes_rpc.sql` | `quote_token` + offentlige quote-RPC'er |
+| `setup_agreement_confirm_rpc.sql` | `confirm_agreement_by_token` — kunde bekræfter én aftaleseddel via mail-link (offentlig side `/:slug/aftale/:token/:agreementId`). Kræver `get_lead_by_token` fra `setup_public_quotes_rpc.sql`. |
 | `supabase/create_accept_estimate_rpc.sql` | `accept_estimate_by_token` (offentlig accept) |
 | `setup_time_entries_rpc.sql` | `mutate_time_entries` (atomisk timeregistrering) |
 | `setup_calendar_events_rpc.sql` | `mutate_calendar_events` (atomisk kalender) |

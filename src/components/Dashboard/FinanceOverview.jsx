@@ -37,9 +37,16 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
             const logExtra = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraPrice || 0), 0);
             
             const extraAgreements = c.raw_data?.extra_agreements || [];
+            // Kun bekræftede aftalesedler tæller med ('bekraeftet' eller legacy 'Godkendt').
+            // Fast pris bruger beløbet; "efter regning" bruger den registrerede endelige pris.
+            const isAgrConfirmed = (a) => a.status === 'bekraeftet' || a.status === 'Godkendt';
             const agrExtra = extraAgreements
-                .filter(a => a.status === 'Godkendt' && a.priceType === 'fast_pris')
-                .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+                .filter(isAgrConfirmed)
+                .reduce((sum, item) => {
+                    if (item.priceType === 'fast_pris') return sum + (Number(item.amount) || 0);
+                    if (item.priceType === 'efter_regning') return sum + (Number(item.final_amount) || 0);
+                    return sum;
+                }, 0);
 
             const extraPrice = logExtra + agrExtra;
             

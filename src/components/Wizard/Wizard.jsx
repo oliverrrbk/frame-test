@@ -776,7 +776,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
             )}
 
             {/* Sticky Tømrer Profil for Steps 2-4 */}
-            {activeStepNum > 1 && activeStepNum < 5 && (
+            {activeStepNum > 1 && activeStepNum < 5 && !isManualCreation && (
                 <div className="sticky-carpenter-profile" style={{ maxWidth: '800px', margin: '0 auto 24px auto', display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px' }}>
                     <img className="sticky-carpenter-avatar" src={carpenter?.portrait_url || `https://ui-avatars.com/api/?name=${carpenter?.owner_name || 'Tømrer'}&background=0f172a&color=fff&size=250`} alt="Tømrer" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', flexShrink: 0 }} />
                     <div className="sticky-carpenter-details" style={{ flex: 1, minWidth: 0 }}>
@@ -816,7 +816,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
                 />
             )}
             {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} onAddAnotherProject={projectData.category !== 'special' ? handleAddAnotherProject : null} projects={projects} />}
-            {currentStep === 3 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} isTestMode={isTestMode} />}
+            {currentStep === 3 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} isTestMode={isTestMode} isManualCreation={isManualCreation} />}
             {currentStep === 4 && <StepResult projectData={projectData} notes={projectData.details?.notes || ''} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} isTestMode={isTestMode} draftCreator={draftCreator} />}
             {currentStep === 5 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
 

@@ -58,6 +58,63 @@ async function correctFagtermer(text, apiKey) {
     }
 }
 
+// Strukturér en fritalt aftaleseddel fra en tømrer til felterne i Aftalesedler-modalen.
+// Tømreren taler frit ("vi sætter to ekstra spots op i køkkenet, ca. 2 timer plus
+// materialer") og vi udfylder titel, beskrivelse, pristype og beløb/estimat, så han
+// blot skal rette efter. Fejler aldrig flowet — returnerer tomme felter ved problemer.
+async function structureAftaleseddel(text, apiKey) {
+    const systemPrompt = `Du er assistent for en dansk tømrer, der står ude hos en kunde og indtaler en aftaleseddel om EKSTRAARBEJDE.
+Du modtager en transskriberet talebesked og skal udfylde felterne i aftalesedlen.
+
+Vigtige danske byggefagtermer (forstå dem korrekt, og ret fejlhørte varianter):
+${FAGTERMER_TEXT}
+
+Returnér KUN et JSON-objekt med denne struktur:
+{
+  "title": "Kort, præcis titel på ekstraarbejdet (fx 'Montering af 2 ekstra spots i køkken'). Max ca. 60 tegn.",
+  "description": "En klar, professionel beskrivelse af hvad der er aftalt, i hele sætninger. Ret stavefejl og fagtermer.",
+  "priceType": "fast_pris ELLER efter_regning",
+  "amount": "Hvis fast_pris: KUN tallet i kroner uden tusindtalsseparator og uden 'kr' (fx '3500'). Hvis efter_regning: et kort estimat i fri tekst (fx 'Ca. 2 timer + materialer')."
+}
+
+Regler:
+- Vælg "fast_pris" KUN hvis tømreren tydeligt nævner et fast beløb/en fast pris. Ellers vælg "efter_regning".
+- Hvis intet beløb eller estimat nævnes, sæt "amount" til "" (tom streng).
+- Gæt aldrig en fast pris hvis den ikke er nævnt.
+- Skriv på dansk. Returnér KUN JSON.`;
+
+    try {
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model: 'gpt-5.5',
+                response_format: { type: 'json_object' },
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: text }
+                ]
+            })
+        });
+        if (!resp.ok) {
+            console.error('Aftaleseddel-strukturering fejlede:', await resp.text());
+            return { title: '', description: text, priceType: 'efter_regning', amount: '' };
+        }
+        const data = await resp.json();
+        const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}');
+        return {
+            title: parsed.title || '',
+            description: parsed.description || text,
+            priceType: parsed.priceType === 'fast_pris' ? 'fast_pris' : 'efter_regning',
+            amount: parsed.amount != null ? String(parsed.amount) : ''
+        };
+    } catch (e) {
+        console.error('Aftaleseddel-strukturering fejl:', e);
+        // Fald tilbage til den rå tekst som beskrivelse, så intet går tabt.
+        return { title: '', description: text, priceType: 'efter_regning', amount: '' };
+    }
+}
+
 export default async function handler(req) {
     if (req.method !== 'POST') {
         return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
@@ -96,6 +153,16 @@ export default async function handler(req) {
             if (mode === 'transcribe') {
                 const corrected = await correctFagtermer(transcription, process.env.OPENAI_API_KEY);
                 return new Response(JSON.stringify({ transcription: corrected }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // Aftaleseddel-diktering: ret fagtermer og strukturér i titel/beskrivelse/pris.
+            if (mode === 'aftaleseddel') {
+                const corrected = await correctFagtermer(transcription, process.env.OPENAI_API_KEY);
+                const structured = await structureAftaleseddel(corrected, process.env.OPENAI_API_KEY);
+                return new Response(JSON.stringify({ transcription: corrected, ...structured }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });

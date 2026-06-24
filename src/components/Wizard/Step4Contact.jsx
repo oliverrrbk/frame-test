@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Autocomplete } from '@react-google-maps/api';
 import { toast } from 'react-hot-toast';
 
-const Step4Contact = ({ calculateEstimate, prevStep, prefillData, isTestMode = false }) => {
+const Step4Contact = ({ calculateEstimate, prevStep, prefillData, isTestMode = false, isManualCreation = false }) => {
     const [email, setEmail] = useState(prefillData?.email || (isTestMode ? 'test@test.dk' : ''));
     const [fullName, setFullName] = useState(prefillData?.fullName || (isTestMode ? 'Testperson' : ''));
     const [street, setStreet] = useState(prefillData?.street || (isTestMode ? 'Testgade 1' : ''));
@@ -12,7 +12,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData, isTestMode = f
     const [customerType, setCustomerType] = useState(prefillData?.customerType || 'privat');
     const [companyName, setCompanyName] = useState(prefillData?.companyName || '');
     const [cvr, setCvr] = useState(prefillData?.cvr || '');
-    const [acceptedTerms, setAcceptedTerms] = useState(!!prefillData || isTestMode); // Accept default if prefilled or testmode
+    const [acceptedTerms, setAcceptedTerms] = useState(!!prefillData || isTestMode || isManualCreation); // Accept default if prefilled, testmode eller manuel (mester) oprettelse
     
     const nameInputRef = useRef(null);
     const inputRefs = useRef({
@@ -309,8 +309,8 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData, isTestMode = f
                 `}
             </style>
             <div className="step-header" style={{ textAlign: 'center', marginBottom: '32px' }}>
-                <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>Kontaktoplysninger</h2>
-                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>For at vi kan kontakte dig med dit personlige overslag, skal vi bruge et par oplysninger om dig.</p>
+                <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>{isManualCreation ? 'Kundens kontaktoplysninger' : 'Kontaktoplysninger'}</h2>
+                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '24px' }}>{isManualCreation ? 'Indtast kundens oplysninger, så overslaget knyttes til den rette kunde.' : 'For at vi kan kontakte dig med dit personlige overslag, skal vi bruge et par oplysninger om dig.'}</p>
             </div>
             
             <div className="premium-contact-card">
@@ -482,7 +482,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData, isTestMode = f
                 </div>
             </div>
             
-            {!isTestMode && (
+            {!isTestMode && !isManualCreation && (
                 <div className="premium-gdpr" ref={el => inputRefs.current.gdpr = el} onClick={() => setAcceptedTerms(!acceptedTerms)}>
                     <input 
                         type="checkbox" 
@@ -530,7 +530,7 @@ const Step4Contact = ({ calculateEstimate, prevStep, prefillData, isTestMode = f
                 </style>
                 <button className="wizard-btn wizard-btn-secondary" onClick={prevStep}>← Tilbage til opgaver</button>
                 <button className="wizard-btn wizard-btn-primary" onClick={handleCalculate} style={{ boxShadow: '0 10px 30px -10px rgba(59,130,246,0.5)' }}>
-                    Vis Mit Prisoverslag Nu →
+                    {isManualCreation ? 'Vis overslag →' : 'Vis Mit Prisoverslag Nu →'}
                 </button>
             </div>
         </section>

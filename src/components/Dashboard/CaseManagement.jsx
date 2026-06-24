@@ -7,6 +7,7 @@ import { DndContext, closestCenter, TouchSensor, MouseSensor, useSensor, useSens
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import MaterialList from './MaterialList';
+import ManualMaterialsView from './ManualMaterialsView';
 import AftalesedlerTab from './AftalesedlerTab';
 import CaseDrawingsTab from './CaseDrawingsTab';
 import BilagManager from './BilagManager';
@@ -1622,7 +1623,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
         // Linje ..N: Nye Aftalesedler
         const extraAgreements = selectedCase?.raw_data?.extra_agreements || [];
-        const approvedAgreements = extraAgreements.filter(a => a.status === 'Godkendt');
+        // Kun bekræftede aftalesedler kommer med på fakturaen ('bekraeftet' = underskrift
+        // eller mail-bekræftelse; 'Godkendt' beholdes for bagudkompatibilitet).
+        const approvedAgreements = extraAgreements.filter(a => a.status === 'bekraeftet' || a.status === 'Godkendt');
         approvedAgreements.forEach((agr, idx) => {
             if (agr.priceType === 'fast_pris' && Number(agr.amount) > 0) {
                 lines.push({
@@ -1631,10 +1634,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     priceExVat: Math.round(Number(agr.amount) / 1.25)
                 });
             } else if (agr.priceType === 'efter_regning') {
+                // "Efter regning": brug den endelige pris hvis den er registreret, ellers 0 (udfyldes manuelt).
+                const finalAmt = Number(agr.final_amount) || 0;
                 lines.push({
                     id: `agr_regning_${idx}`,
                     description: `Aftaleseddel (Efter regning): ${agr.title}`,
-                    priceExVat: 0 // Manual input needed for these
+                    priceExVat: finalAmt > 0 ? Math.round(finalAmt / 1.25) : 0
                 });
             }
         });
@@ -3310,7 +3315,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         ].filter(tab => tab.show);
 
                         const tabContent = (
-                            <div className="case-workspace-tabs modern-tab-scroll" style={{ 
+                            <div className="case-workspace-tabs modern-tab-scroll case-bottom-nav" style={{ 
                                 display: 'flex', 
                                 gap: isMobile ? '4px' : '10px', 
                                 flexWrap: isMobile ? 'nowrap' : 'wrap', 
@@ -3546,15 +3551,23 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             </div>
                         )}
 
-                        {/* TAB 2: REDIGERBAR MATERIALELISTE */}
+                        {/* TAB 2: MATERIALER — PDF-først for manuelle tilbud, ellers redigerbar liste */}
                         {activeSubTab === 'materials' && (
-                            <MaterialList 
-                                lead={selectedCase} 
-                                profile={profile} 
-                                onUpdate={onUpdateLead} 
-                                onAddDeliveryToCalendar={handleAddDeliveryToCalendar}
-                                existingDeliveryDate={existingDeliveryDate}
-                            />
+                            selectedCase?.raw_data?.is_manual_quote ? (
+                                <ManualMaterialsView
+                                    lead={selectedCase}
+                                    profile={profile}
+                                    onUpdate={onUpdateLead}
+                                />
+                            ) : (
+                                <MaterialList
+                                    lead={selectedCase}
+                                    profile={profile}
+                                    onUpdate={onUpdateLead}
+                                    onAddDeliveryToCalendar={handleAddDeliveryToCalendar}
+                                    existingDeliveryDate={existingDeliveryDate}
+                                />
+                            )
                         )}
 
                         {/* TAB 3: LIVE BYGGEPROCES (Apple-agtig Timeline) */}
@@ -4071,6 +4084,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 <AftalesedlerTab
                                     selectedCase={selectedCase}
                                     profile={profile}
+                                    carpenterProfile={carpenterProfile}
                                     onUpdateCase={onUpdateLead}
                                     isMobile={isMobile}
                                 />

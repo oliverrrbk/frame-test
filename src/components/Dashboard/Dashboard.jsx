@@ -32,6 +32,7 @@ import WorkerOverview from './WorkerOverview';
 import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
+import QuickQuoteBuilder from './QuickQuoteBuilder';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { getRoleLabel } from '../../utils/roles';
 import CustomProjectCreator from './CustomProjectCreator';
@@ -6368,7 +6369,7 @@ const Dashboard = () => {
             {/* Create Lead Modal */}
             {isCreateLeadModalOpen && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'stretch' : 'center', zIndex: 100000, padding: isMobile ? '0' : '20px' }} onClick={() => {
-                    if (createLeadMode === 'classic') {
+                    if (createLeadMode === 'classic' || createLeadMode === 'quick') {
                         setShowCreateLeadCancelConfirm(true);
                         return;
                     }
@@ -6380,12 +6381,12 @@ const Dashboard = () => {
                 }}>
                     <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: isMobile ? '0' : '20px', width: '100%', maxWidth: isMobile ? '100%' : '1000px', height: isMobile ? '100dvh' : 'auto', maxHeight: isMobile ? '100dvh' : '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => {
-                    if (createLeadMode === 'custom' || createLeadMode === 'classic') {
+                    if (createLeadMode === 'custom' || createLeadMode === 'classic' || createLeadMode === 'quick') {
                         setShowCreateLeadCancelConfirm(true);
                         return;
                     }
-                    setIsCreateLeadModalOpen(false); 
-                    setCreateLeadMode(null); 
+                    setIsCreateLeadModalOpen(false);
+                    setCreateLeadMode(null);
                 }} style={{ position: isMobile ? 'fixed' : 'absolute', top: isMobile ? 'calc(env(safe-area-inset-top) + 12px)' : '20px', right: isMobile ? '16px' : '20px', background: '#f3f1ed', border: 'none', fontSize: isMobile ? '1.4rem' : '1.2rem', width: isMobile ? '42px' : '36px', height: isMobile ? '42px' : '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100001, boxShadow: isMobile ? '0 2px 8px rgba(0,0,0,0.15)' : 'none' }}>×</button>
                         <div style={{ padding: '0' }}>
                             {createLeadMode === null && (
@@ -6393,6 +6394,7 @@ const Dashboard = () => {
                                     isMobile={isMobile}
                                     onSelectClassic={() => setCreateLeadMode('classic')}
                                     onSelectCustom={() => setCreateLeadMode('custom')}
+                                    onSelectQuick={() => setCreateLeadMode('quick')}
                                 />
                             )}
                             
@@ -6400,19 +6402,50 @@ const Dashboard = () => {
                                 <Wizard 
                                     carpenter={carpenterProfile} 
                                     isManualCreation={true} 
-                                    onComplete={async () => {
+                                    onComplete={async (newLead) => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
                                         toast.success('Ny kunde oprettet!');
-                                        // Genindlæs leads
-                                        const { data } = await supabase.from('leads').select('*').eq('carpenter_id', carpenterProfile.id).order('created_at', { ascending: false });
-                                        if (data && data.length > 0) {
-                                            setLeadsData(data.filter(l => l.status !== 'Slettet'));
-                                            setActiveTab('leads');
-                                            setLeadFilter('Ny forespørgsel');
-                                            setSelectedLead(data[0]); // Vælg og åbn det nyeste lead automatisk!
+                                        setActiveTab('leads');
+                                        setLeadFilter('Ny forespørgsel');
+                                        // Vis den nye lead med det samme (optimistisk) — uafhængigt af refetch-timing
+                                        if (newLead?.id) {
+                                            setLeadsData(prev => prev.some(l => l.id === newLead.id) ? prev : [newLead, ...prev]);
+                                            setSelectedLead(newLead); // Vælg og åbn det nyeste lead automatisk!
                                         }
-                                    }} 
+                                        // Reconcilér i baggrunden med fuld firma-scope (strandede leads + rolle-filter)
+                                        await refreshData();
+                                        // Sikr at den nye lead stadig er med, selv hvis refetch ikke nåede at se den
+                                        if (newLead?.id) {
+                                            setLeadsData(prev => prev.some(l => l.id === newLead.id) ? prev : [newLead, ...prev]);
+                                        }
+                                    }}
+                                />
+                            )}
+
+                            {createLeadMode === 'quick' && (
+                                <QuickQuoteBuilder
+                                    carpenter={carpenterProfile}
+                                    isMobile={isMobile}
+                                    onCancel={() => {
+                                        setIsCreateLeadModalOpen(false);
+                                        setCreateLeadMode(null);
+                                    }}
+                                    onComplete={async (lead) => {
+                                        setIsCreateLeadModalOpen(false);
+                                        setCreateLeadMode(null);
+                                        setActiveTab('leads');
+                                        setLeadFilter(lead?.status === 'Sendt tilbud' ? 'Sendt tilbud' : 'Ny forespørgsel');
+                                        // Vis den nye lead med det samme (optimistisk) — uafhængigt af refetch-timing
+                                        if (lead?.id) {
+                                            setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev : [lead, ...prev]);
+                                            setSelectedLead(lead);
+                                        }
+                                        await refreshData();
+                                        if (lead?.id) {
+                                            setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev : [lead, ...prev]);
+                                        }
+                                    }}
                                 />
                             )}
 
@@ -6425,16 +6458,20 @@ const Dashboard = () => {
                                         setCreateLeadMode(null);
                                         toast.success('Din kladde er gemt sikkert.');
                                     }}
-                                    onComplete={async () => {
+                                    onComplete={async (newLead) => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
                                         toast.success('Skræddersyet kunde oprettet!');
-                                        const { data } = await supabase.from('leads').select('*').eq('carpenter_id', carpenterProfile.id).order('created_at', { ascending: false });
-                                        if (data && data.length > 0) {
-                                            setLeadsData(data.filter(l => l.status !== 'Slettet'));
-                                            setActiveTab('leads');
-                                            setLeadFilter('Ny forespørgsel');
-                                            setSelectedLead(data[0]);
+                                        setActiveTab('leads');
+                                        setLeadFilter('Ny forespørgsel');
+                                        // Vis den nye lead med det samme (optimistisk) — uafhængigt af refetch-timing
+                                        if (newLead?.id) {
+                                            setLeadsData(prev => prev.some(l => l.id === newLead.id) ? prev : [newLead, ...prev]);
+                                            setSelectedLead(newLead);
+                                        }
+                                        await refreshData();
+                                        if (newLead?.id) {
+                                            setLeadsData(prev => prev.some(l => l.id === newLead.id) ? prev : [newLead, ...prev]);
                                         }
                                     }}
                                 />

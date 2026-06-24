@@ -266,8 +266,39 @@ const QuoteAcceptPage = () => {
                     </p>
                 </div>
 
+                {/* Manuel prisoversigt (Hurtigt tilbud) */}
+                {lead?.raw_data?.is_manual_quote && lead?.raw_data?.manual_quote && (() => {
+                    const mq = lead.raw_data.manual_quote;
+                    const Row = ({ label, amount, bold }) => (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                            <span style={{ color: bold ? '#0f172a' : '#475569', fontWeight: bold ? 700 : 400 }}>{label}</span>
+                            <span style={{ fontWeight: '600', color: '#0f172a' }}>{formatCurrency(amount)}</span>
+                        </div>
+                    );
+                    return (
+                        <div style={{ padding: '32px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#f8fafc' }}>
+                            <h3 style={{ margin: '0 0 20px 0', fontSize: '1.2rem', color: '#1e293b' }}>Samlet Tilbud</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {Number(mq.materialSell) > 0 && <Row label="Materialer" amount={mq.materialSell} />}
+                                {Number(mq.laborTotal) > 0 && <Row label={mq.laborMode === 'hourly' ? `Arbejde (${mq.laborHours || 0} timer)` : 'Arbejde (fast pris)'} amount={mq.laborTotal} />}
+                                {(mq.extras || []).map((ex, i) => (
+                                    <Row key={i} label={ex.desc || 'Tillæg'} amount={ex.amount} />
+                                ))}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', paddingTop: '8px' }}>
+                                    <span style={{ color: '#64748b' }}>Moms (25%)</span>
+                                    <span style={{ color: '#64748b' }}>{formatCurrency(mq.vat)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', marginTop: '8px' }}>
+                                    <span style={{ fontWeight: '800', color: '#1d4ed8', fontSize: '1.2rem' }}>Total inkl. moms</span>
+                                    <span style={{ fontWeight: '900', color: '#1e40af', fontSize: '1.3rem' }}>{formatCurrency(mq.totalIncVat)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+
                 {/* Digital Prisoversigt */}
-                {calcData && (
+                {calcData && !lead?.raw_data?.is_manual_quote && (
                     <div style={{ padding: '32px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#f8fafc' }}>
                         <h3 style={{ margin: '0 0 20px 0', fontSize: '1.2rem', color: '#1e293b' }}>Samlet Tilbud</h3>
                         
