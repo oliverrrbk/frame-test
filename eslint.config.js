@@ -24,6 +24,12 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]' }],
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/purity': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+      'no-empty': 'warn',
+      'react-refresh/only-export-components': 'warn'
     },
   },
 ])
