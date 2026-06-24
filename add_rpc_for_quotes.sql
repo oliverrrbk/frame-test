@@ -17,6 +17,8 @@ CREATE OR REPLACE FUNCTION update_lead_by_token(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
+SET row_security = off
 AS $$
 BEGIN
   -- Sikkerhed: Tillad KUN overgang til specifikke tilladte statusser via public token
@@ -24,9 +26,13 @@ BEGIN
     RAISE EXCEPTION 'Ugyldig statusændring via public token';
   END IF;
 
-  UPDATE leads 
-  SET 
-    status = COALESCE(new_status, status), 
+  -- Markér at denne opdatering kommer fra den sikre token-RPC (transaktions-lokalt),
+  -- så protect_lead_sensitive_fields stoler på overgangen uanset hvem der er logget ind.
+  PERFORM set_config('app.confirm_via_token', '1', true);
+
+  UPDATE leads
+  SET
+    status = COALESCE(new_status, status),
     raw_data = CASE
       WHEN new_raw_data IS NOT NULL THEN
         raw_data || jsonb_strip_nulls(jsonb_build_object(
@@ -34,7 +40,12 @@ BEGIN
           'audit_trail_opened', new_raw_data->'audit_trail_opened'
         ))
       ELSE raw_data
-    END,
+    END
+    || CASE
+         WHEN new_status = 'Bekræftet opgave' AND NOT (raw_data ? 'confirmed_at')
+         THEN jsonb_build_object('confirmed_at', COALESCE(new_raw_data->'confirmed_at', to_jsonb(now())))
+         ELSE '{}'::jsonb
+       END,
     opened_at = COALESCE(new_opened_at, opened_at)
   WHERE quote_token = token_val;
 END;

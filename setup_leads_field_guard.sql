@@ -62,6 +62,12 @@ BEGIN
         RETURN NEW; -- edge-funktioner må alt
     END IF;
 
+    -- Betroet kunde-bekræftelse via hemmeligt quote-token (RPC update_lead_by_token).
+    -- Tokenet ER autorisationen, så opdateringen tillades uanset hvem der er logget ind.
+    IF current_setting('app.confirm_via_token', true) = '1' THEN
+        RETURN NEW;
+    END IF;
+
     v_is_owner := (v_uid IS NOT NULL AND v_uid = OLD.carpenter_id);
 
     SELECT role INTO v_role FROM carpenters

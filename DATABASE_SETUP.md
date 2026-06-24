@@ -82,6 +82,12 @@ afløser/supplerer hinanden.
   og `supabase/add_lead_push_trigger.sql`. De er **identiske** (begge tillader anonyme
   kunder at acceptere + skrive `audit_trail`). Ændrer du den ene, **skal** du ændre den
   anden. Den der køres SIDST vinder — så `add_lead_push_trigger.sql` er den kanoniske.
+- **Kunde-bekræftelse af tilbud** sker via RPC'en `update_lead_by_token` (i
+  `add_rpc_for_quotes.sql`). Den kører `SET row_security = off` og sætter
+  `app.confirm_via_token`, som `protect_lead_sensitive_fields()` stoler på — så
+  'Sendt tilbud' → 'Bekræftet opgave' virker for ALLE tømrere, uanset hvem der er
+  logget ind. Hele rettelsen ligger samlet i `supabase/fix_public_quote_confirm.sql`
+  (kør den i SQL Editor). Ændrer du token-flowet, skal RPC + begge trigger-kopier følges ad.
 - **Push-notifikationer** sendes af `send-push-reminders` (edge-funktion), trigget af
   `tr_on_lead_push_notify` (DB-trigger) ved status-skift/tildeling/besked. Der findes
   ingen separat "push-on-accept"-funktion (med vilje — DB-triggeren dækker alt).
