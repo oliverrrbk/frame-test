@@ -238,13 +238,35 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     pdf.text('I ALT INKL. MOMS', left, y);
     pdf.text(`${kr(quote?.totalIncVat)} kr`, right, y, { align: 'right' });
 
-    // ---- Gyldighed ----
+    // ---- Betingelser & forbehold (samme ordlyd som det rigtige tilbud + kunde-accept-siden) ----
     const validityDays = quote?.validityDays || 14;
     y += 9;
-    pdf.setFont('helvetica', 'normal');
+    pdf.setDrawColor(...line);
+    pdf.line(left, y, right, y);
+    y += 7;
+
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
+    pdf.setTextColor(...brand);
+    pdf.text(`Tak for tilliden. Dette tilbud er gældende i ${validityDays} dage fra ovenstående dato.`, left, y);
+    y += 6;
+
+    // Estimeret varighed vises kun når der er angivet timer (timepris-tilbud).
+    const laborHours = Number(quote?.laborHours) || 0;
+    if (laborHours > 0) {
+        const weeks = Math.max(1, Math.ceil(laborHours / 37));
+        const durText = `Estimeret varighed for udførelse: Ca. ${weeks} arbejdsuger. Den præcise opstartsdato aftales nærmere, når tilbuddet er bekræftet.`;
+        const durLines = pdf.splitTextToSize(durText, right - left);
+        pdf.text(durLines, left, y);
+        y += durLines.length * 5 + 1;
+    }
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
     pdf.setTextColor(...muted);
-    pdf.text(`Tilbuddet er gyldigt i ${validityDays} dage fra dato.`, left, y);
+    const abText = 'Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.';
+    const abLines = pdf.splitTextToSize(abText, right - left);
+    pdf.text(abLines, left, y);
 
     // ---- Footer ----
     pdf.setFont('helvetica', 'normal');
