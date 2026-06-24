@@ -279,14 +279,21 @@ serve(async (req) => {
 
             const recipientIds = [String(carpenterId)];
 
-            const { data: carpenter } = await supabaseClient
+            const { data: team } = await supabaseClient
                 .from("carpenters")
-                .select("company_id")
-                .eq("id", carpenterId)
-                .single();
+                .select("id, role, company_id")
+                .eq("company_id", carpenterId);
 
-            if (carpenter && carpenter.company_id) {
-                recipientIds.push(String(carpenter.company_id));
+            if (team && team.length > 0) {
+                // Sørg for også at tilføje ejeren selv via company_id, hvis vi ikke allerede havde den
+                recipientIds.push(String(carpenterId)); 
+                
+                // Tilføj alle admins og bogholdere
+                for (const member of team) {
+                    if (["admin", "accountant"].includes(member.role)) {
+                        recipientIds.push(String(member.id));
+                    }
+                }
             }
 
             const uniqueRecipients = [...new Set(recipientIds)];
