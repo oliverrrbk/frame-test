@@ -90,7 +90,7 @@ export default function AftalesedlerTab({ selectedCase, profile, carpenterProfil
     const caseCustomer = {
         name: selectedCase?.customer_name || 'Ukendt',
         address: selectedCase?.customer_address || '',
-        caseNumber: selectedCase?.case_number || '',
+        caseNumber: selectedCase?.case_number || String(selectedCase?.id || '').substring(0, 8),
         email: selectedCase?.customer_email || ''
     };
 

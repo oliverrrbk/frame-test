@@ -49,13 +49,21 @@ export async function buildAgreementPdf(agreement, carpenter, customer = {}) {
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(71, 85, 105);
-    pdf.text(`${customer?.name || 'Ukendt'}`, 120, 55);
-    pdf.text(`${customer?.address || ''}`, 120, 60);
-    pdf.text(`Sag: ${customer?.caseNumber || ''}`, 120, 65);
+    // Kunde-blok: x=120 til højre margin (190) = 70 mm. Lange adresser ombrydes til flere
+    // linjer i stedet for at løbe ud over kanten, og efterfølgende linjer rykkes tilsvarende ned.
+    const custX = 120;
+    const custMaxW = 190 - custX;
+    let cy = 55;
+    pdf.text(`${customer?.name || 'Ukendt'}`, custX, cy);
+    cy += 5;
+    const addrLines = pdf.splitTextToSize(`${customer?.address || ''}`, custMaxW);
+    if (addrLines.length) { pdf.text(addrLines, custX, cy); cy += addrLines.length * 5; }
+    pdf.text(`Sag: ${customer?.caseNumber || ''}`, custX, cy);
 
-    // Divider
+    // Divider — placeres under den højeste af firma-/kunde-blokken (kunden kan fylde flere linjer).
+    const dividerY = Math.max(75, cy + 8);
     pdf.setDrawColor(226, 232, 240);
-    pdf.line(20, 75, 190, 75);
+    pdf.line(20, dividerY, 190, dividerY);
 
     // Agreement Details
     pdf.setFontSize(16);
