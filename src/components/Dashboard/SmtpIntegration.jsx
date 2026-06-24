@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Mail, Info, HelpCircle, X, ExternalLink, BookOpen } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -362,8 +363,8 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
         </div>
 
         {/* --- HELP MODAL --- */}
-        {showHelpModal && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', backdropFilter: 'blur(8px)' }} onClick={() => setShowHelpModal(false)}>
+        {showHelpModal && createPortal(
+            <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, padding: '20px', backdropFilter: 'blur(8px)' }} onClick={() => setShowHelpModal(false)}>
                 <div style={{ backgroundColor: '#fff', borderRadius: '24px', width: '100%', maxWidth: '1100px', maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={(e) => e.stopPropagation()}>
                     
                     <div style={{ position: 'sticky', top: 0, background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', padding: '30px 40px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
@@ -452,7 +453,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                     </div>
                 </div>
             </div>
-        )}
+        , document.body)}
         </>
     );
 };

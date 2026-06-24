@@ -3538,10 +3538,13 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         ];
 
         return (
-            <div style={{
-                position: 'absolute', left: '50%', bottom: 18, transform: 'translateX(-50%)',
-                zIndex: 90, pointerEvents: 'auto', width: 'min(620px, calc(100vw - 32px))'
-            }}>
+            <div
+                onPointerDown={(e) => e.stopPropagation()}
+                style={{
+                    position: 'absolute', left: '50%', bottom: 18, transform: 'translateX(-50%)',
+                    zIndex: 90, pointerEvents: 'auto', width: 'min(620px, calc(100vw - 32px))'
+                }}
+            >
                 <div style={{
                     background: 'rgba(255, 255, 255, 0.98)', borderRadius: 16,
                     border: '1px solid rgba(37, 99, 235, 0.18)',

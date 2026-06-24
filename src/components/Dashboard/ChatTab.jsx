@@ -3,7 +3,7 @@ import { supabase } from '../../supabaseClient';
 import { 
   MessageSquare, Send, Phone, Search, Users, User,
   Sparkles, Paperclip, Mic, ArrowLeft, ShieldAlert, CheckCircle2,
-  Megaphone, HardHat, Square, Info, Image as ImageIcon, FileText, Plus
+  Megaphone, HardHat, Square, Info, Image as ImageIcon, FileText, Plus, ChevronDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import UserAvatar from '../ui/UserAvatar';
@@ -86,92 +86,119 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
     };
   }, [isRecording]);
 
-  // Handle targetLeadId to auto-select or auto-create case chat thread
-  useEffect(() => {
-    if (!isLoadingThreads && targetLeadId && profile) {
-      const handleTargetLeadChat = async () => {
-        const leadIdStr = String(targetLeadId);
-        // Look for existing case thread
-        const existingThread = threads.find(t => t.type === 'case' && String(t.related_lead_id) === leadIdStr);
-        
-        if (existingThread) {
-          setActiveThread(existingThread);
-          setMobileViewState('chat');
-          if (clearTargetLeadId) clearTargetLeadId();
-          return;
-        }
+  // Opret manuelt en sagschat for en given sag. Kaldes KUN ved klik (aldrig automatisk),
+  // så ikke alle sager får en chat, og kun deltagere kan se den (case-chat er nu privat).
+  const createCaseChat = async (lead) => {
+    if (!lead || !profile) return null;
+    setIsCreatingCaseChat(true);
+    try {
+      const companyId = profile.company_id || profile.id;
 
-        // If not found, create a new case thread
-        try {
-          const lead = leads.find(l => String(l.id) === leadIdStr);
-          if (!lead) {
-            console.error('Lead not found for id:', targetLeadId);
-            if (clearTargetLeadId) clearTargetLeadId();
-            return;
-          }
+      // Client-genereret UUID for at omgå RLS hønen-og-ægget ved insert
+      const threadId = window.crypto.randomUUID();
+      const { error: threadError } = await supabase
+        .from('chat_threads')
+        .insert([{
+          id: threadId,
+          company_id: companyId,
+          type: 'case',
+          related_lead_id: lead.id
+        }]);
 
-          const companyId = profile.company_id || profile.id;
-          
-          // Create the thread with a client-generated UUID to bypass RLS chicken-and-egg
-          const threadId = window.crypto.randomUUID();
-          const { error: threadError } = await supabase
-            .from('chat_threads')
-            .insert([{
-              id: threadId,
-              company_id: companyId,
-              type: 'case',
-              related_lead_id: lead.id
-            }]);
+      if (threadError) throw threadError;
 
-          if (threadError) throw threadError;
+      // Indledende deltagere: mig selv + det tildelte hold (PM'er + svende). Flere kan tilføjes bagefter.
+      const pm = lead.raw_data?.assigned_pm;
+      const pmArr = Array.isArray(pm) ? pm : (pm ? [pm] : []);
+      const workers = lead.raw_data?.assigned_workers || [];
 
-          // Gather initial participants: current user, assigned workers, and PMs
-          const pm = lead.raw_data?.assigned_pm;
-          const pmArr = Array.isArray(pm) ? pm : (pm ? [pm] : []);
-          const workers = lead.raw_data?.assigned_workers || [];
-          
-          // Set of unique user IDs to add as participants
-          const participantUserIds = new Set([
-            profile.id,
-            ...pmArr.map(String),
-            ...workers.map(String)
-          ]);
+      const participantUserIds = new Set([
+        profile.id,
+        ...pmArr.map(String),
+        ...workers.map(String)
+      ]);
 
-          const participantsToInsert = Array.from(participantUserIds).map(userId => ({
-            thread_id: threadId,
-            user_id: userId
-          }));
+      const participantsToInsert = Array.from(participantUserIds).map(userId => ({
+        thread_id: threadId,
+        user_id: userId
+      }));
 
-          const { error: partError } = await supabase
-            .from('chat_participants')
-            .insert(participantsToInsert);
+      const { error: partError } = await supabase
+        .from('chat_participants')
+        .insert(participantsToInsert);
 
-          if (partError) throw partError;
+      if (partError) throw partError;
 
-          const enriched = {
-            id: threadId,
-            company_id: companyId,
-            type: 'case',
-            related_lead_id: lead.id,
-            participantIds: Array.from(participantUserIds),
-            lastMessage: null,
-            created_at: new Date().toISOString()
-          };
-
-          // Update local threads state
-          setThreads(prev => [enriched, ...prev]);
-          setActiveThread(enriched);
-          setMobileViewState('chat');
-          toast.success(`Sagschat oprettet for ${lead.raw_data?.project_title || lead.project_category}`);
-        } catch (error) {
-          console.error('Error creating case chat:', error);
-          toast.error('Kunne ikke oprette sagschat.');
-        } finally {
-          if (clearTargetLeadId) clearTargetLeadId();
-        }
+      const enriched = {
+        id: threadId,
+        company_id: companyId,
+        type: 'case',
+        related_lead_id: lead.id,
+        participantIds: Array.from(participantUserIds),
+        lastMessage: null,
+        created_at: new Date().toISOString()
       };
 
-      handleTargetLeadChat();
+      setThreads(prev => [enriched, ...prev]);
+      setActiveThread(enriched);
+      setPendingCaseChat(null);
+      setMobileViewState('chat');
+      toast.success(`Sagschat oprettet for ${lead.raw_data?.project_title || lead.project_category}`);
+      return enriched;
+    } catch (error) {
+      console.error('Error creating case chat:', error);
+      toast.error('Kunne ikke oprette sagschat.');
+      return null;
+    } finally {
+      setIsCreatingCaseChat(false);
+    }
+  };
+
+  // Tilføj en kollega til den aktive (sags)chat. chat_participants INSERT er åben (WITH CHECK true),
+  // så enhver deltager kan invitere flere ind på sagen.
+  const addParticipant = async (userId) => {
+    if (!activeThread || !userId) return;
+    if (activeThread.participantIds?.includes(userId)) return;
+    try {
+      const { error } = await supabase
+        .from('chat_participants')
+        .insert([{ thread_id: activeThread.id, user_id: userId }]);
+      if (error) throw error;
+
+      const updated = { ...activeThread, participantIds: [...(activeThread.participantIds || []), userId] };
+      setActiveThread(updated);
+      setThreads(prev => prev.map(t => t.id === updated.id ? updated : t));
+      const mate = teammates.find(m => m.id === userId);
+      toast.success(`${mate?.owner_name || mate?.company_name || 'Deltager'} tilføjet`);
+    } catch (e) {
+      console.error('Error adding participant:', e);
+      toast.error('Kunne ikke tilføje deltager.');
+    }
+  };
+
+  // Håndtér targetLeadId: åbn en EKSISTERENDE sagschat. Opret ALDRIG automatisk —
+  // hvis ingen findes, vises en "Opret chat for denne sag"-knap i hovedpanelet.
+  useEffect(() => {
+    if (!isLoadingThreads && targetLeadId && profile) {
+      const leadIdStr = String(targetLeadId);
+      const existingThread = threads.find(t => t.type === 'case' && String(t.related_lead_id) === leadIdStr);
+
+      if (existingThread) {
+        setActiveThread(existingThread);
+        setPendingCaseChat(null);
+        setMobileViewState('chat');
+      } else {
+        const lead = leads.find(l => String(l.id) === leadIdStr);
+        if (lead) {
+          setActiveThread(null);
+          setPendingCaseChat(lead);
+          setMobileViewState('chat');
+        } else {
+          console.error('Lead not found for id:', targetLeadId);
+        }
+      }
+
+      if (clearTargetLeadId) clearTargetLeadId();
     }
   }, [isLoadingThreads, targetLeadId, profile, threads, leads, clearTargetLeadId]);
 
@@ -1120,6 +1147,31 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
               </button>
             </form>
           </>
+        ) : pendingCaseChat ? (
+          <div style={{ display: 'flex', flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '14px', height: '100%', padding: '24px', textAlign: 'center' }}>
+            <button
+              onClick={() => setMobileViewState('list')}
+              style={{ position: 'absolute', top: '16px', left: '16px', background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px', color: '#64748b' }}
+              className="chat-back-btn"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(37, 99, 235, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+              <HardHat size={30} />
+            </div>
+            <span style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>Ingen chat for denne sag endnu</span>
+            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.9, maxWidth: '320px' }}>
+              Sag {pendingCaseChat.case_number || String(pendingCaseChat.id).substring(0,8)} – {pendingCaseChat.raw_data?.project_title || pendingCaseChat.project_category}.
+              Opret en chat så holdet kan koordinere. Det tildelte hold tilføjes automatisk, og du kan invitere flere bagefter.
+            </p>
+            <button
+              onClick={() => createCaseChat(pendingCaseChat)}
+              disabled={isCreatingCaseChat}
+              style={{ marginTop: '4px', padding: '10px 18px', background: isCreatingCaseChat ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '0.9rem', cursor: isCreatingCaseChat ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Plus size={16} /> {isCreatingCaseChat ? 'Opretter…' : 'Opret chat for denne sag'}
+            </button>
+          </div>
         ) : (
           <div style={{ display: 'flex', flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', gap: '12px', height: '100%' }}>
             <MessageSquare size={48} style={{ opacity: 0.3 }} />
@@ -1179,13 +1231,57 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid rgba(226, 232, 240, 0.4)', cursor: 'pointer' }}
-                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.02)'}
-                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Users size={14} color="#64748b" />
+                  <div>
+                    <div
+                      onClick={() => setShowAddParticipant(v => !v)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid rgba(226, 232, 240, 0.4)', cursor: 'pointer' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.02)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Users size={14} color="#64748b" />
+                      </div>
+                      <span style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 500, flex: 1 }}>Deltagere ({activeThread.participantIds?.length || 0})</span>
+                      <ChevronDown size={16} color="#94a3b8" style={{ transform: showAddParticipant ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                     </div>
-                    <span style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 500 }}>Deltagere ({activeThread.participantIds?.length || 0})</span>
+
+                    {showAddParticipant && (
+                      <div style={{ padding: '8px 0 12px', borderBottom: '1px solid rgba(226, 232, 240, 0.4)' }}>
+                        {/* Nuværende deltagere */}
+                        {(activeThread.participantIds || []).map(pid => {
+                          const m = teammates.find(t => t.id === pid);
+                          const isMe = pid === profile.id;
+                          return (
+                            <div key={pid} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px' }}>
+                              <UserAvatar name={m?.owner_name || m?.company_name || ''} avatarUrl={m?.avatar_url} size={24} ring={false} />
+                              <span style={{ fontSize: '0.85rem', color: '#334155' }}>{m?.owner_name || m?.company_name || 'Ukendt'}{isMe ? ' (dig)' : ''}</span>
+                            </div>
+                          );
+                        })}
+
+                        {/* Tilføj flere — kun relevant for sagschat */}
+                        {activeThread.type === 'case' && (() => {
+                          const candidates = teammates.filter(t => !activeThread.participantIds?.includes(t.id));
+                          if (candidates.length === 0) {
+                            return <p style={{ margin: '8px 4px 0', fontSize: '0.78rem', color: '#94a3b8' }}>Alle kolleger er på sagen.</p>;
+                          }
+                          return (
+                            <div style={{ marginTop: '8px' }}>
+                              <p style={{ margin: '0 4px 6px', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', fontWeight: 700 }}>Tilføj til sagen</p>
+                              {candidates.map(t => (
+                                <button key={t.id} onClick={() => addParticipant(t.id)}
+                                  style={{ display: 'flex', width: '100%', alignItems: 'center', gap: '10px', padding: '6px 4px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '8px', textAlign: 'left' }}
+                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.06)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                  <UserAvatar name={t.owner_name || t.company_name || ''} avatarUrl={t.avatar_url} size={24} ring={false} />
+                                  <span style={{ fontSize: '0.85rem', color: '#334155', flex: 1 }}>{t.owner_name || t.company_name || 'Ukendt'}</span>
+                                  <Plus size={15} color="#2563eb" />
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid rgba(226, 232, 240, 0.4)', cursor: 'pointer' }}
