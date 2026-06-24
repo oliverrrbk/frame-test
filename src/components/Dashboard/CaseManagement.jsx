@@ -1897,6 +1897,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     // --- Sagsoverblik: Mine/Alle + søgning + Aktive/Afsluttede ---
     const isMyCase = (c) => {
         if (!profile?.id) return false;
+        // Mester/ejer (admin/boss) ejer og har overblik over ALLE firmaets sager → alt er "mine sager".
+        // Respekterer simulér-rolle: tester mester som fx svend, ses svendens tildelings-udsnit i stedet.
+        const effectiveRole = simulatedRole || profile.role;
+        if (effectiveRole === 'admin' || effectiveRole === 'boss') return true;
         const workers = c.raw_data?.assigned_workers || [];
         const pm = c.raw_data?.assigned_pm;
         const pmArr = Array.isArray(pm) ? pm : (pm ? [pm] : []);
