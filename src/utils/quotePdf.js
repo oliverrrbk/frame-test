@@ -220,6 +220,10 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
         y += scopeWrapped.length * 5 + 5;
     }
 
+    // Hold totaler + betingelser samlet: hvis en lang beskrivelse har skubbet os
+    // langt ned, så start totalerne på en frisk side (PDF'en må gerne blive flersidet).
+    if (y > 232) { pdf.addPage(); y = 20; }
+
     pdf.setDrawColor(...line);
     pdf.line(left, y, right, y);
     y += 7;
@@ -266,6 +270,8 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     pdf.setTextColor(...muted);
     const abText = 'Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.';
     const abLines = pdf.splitTextToSize(abText, right - left);
+    // Undgå at betingelses-teksten lapper ind over footeren (y≈287) på en fyldt side.
+    if (y + abLines.length * 4 > 283) { pdf.addPage(); y = 20; }
     pdf.text(abLines, left, y);
 
     // ---- Footer ----

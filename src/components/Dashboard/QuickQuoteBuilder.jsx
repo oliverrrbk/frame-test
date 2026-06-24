@@ -145,7 +145,7 @@ const PREVIEW_CSS = `
   .qqb-spin{animation:qqbspin .8s linear infinite;}
 `;
 
-export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, initialLead = null }) {
+export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null }) {
     const [busy, setBusy] = useState(false);
 
     // Redigerer vi en eksisterende tilbudskladde? Forudfyld så alt fra den gemte lead.
@@ -406,11 +406,18 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             const fullAddress = [customer.address, [customer.zip, customer.city].filter(Boolean).join(' ')]
                 .filter(Boolean).join(', ').trim();
 
+            // Når tilbuddet (gen)sendes: stempl afsendelsestidspunkt (gyldigheden løber herfra)
+            // og ryd evt. tidligere forlængelse (validUntil), så gyldigheden er ren igen.
+            const isSendingNow = (sendToCustomer || wasSent);
+            const nextQuoteSettings = { ...(initialLead?.raw_data?.quote_settings || {}), validityDays: num(validityDays) || 14 };
+            if (isSendingNow) delete nextQuoteSettings.validUntil;
+
             const raw_data = {
                 ...(initialLead?.raw_data || {}),
                 is_manual_quote: true,
                 manual_quote: quoteObj,
-                quote_settings: { ...(initialLead?.raw_data?.quote_settings || {}), validityDays: num(validityDays) || 14 },
+                quote_settings: nextQuoteSettings,
+                ...(isSendingNow ? { quote_sent_at: new Date().toISOString() } : {}),
                 custom_message: emailMessage,
                 calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: num(laborHours), hourlyRate: num(laborRate) },
                 actual_quote_price: calc.totalExVat,
@@ -461,6 +468,25 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             onComplete && onComplete(lead);
         } catch (e) {
             toast.error('Noget gik galt: ' + (e.message || e));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    // ---- Slet tilbuddet helt (soft-delete via RPC — kun ved redigering af eksisterende) ----
+    const del = async () => {
+        if (!initialLead?.id) return;
+        const what = wasSent ? 'det sendte tilbud' : 'denne tilbudskladde';
+        if (!window.confirm(`Vil du slette ${what} helt? Det kan ikke fortrydes.`)) return;
+        setBusy(true);
+        try {
+            const { error } = await supabase.rpc('soft_delete_lead', { p_lead_id: initialLead.id });
+            if (error) throw error;
+            toast.success('Tilbuddet er slettet.');
+            if (onDeleted) onDeleted(initialLead.id);
+            else if (onCancel) onCancel();
+        } catch (e) {
+            toast.error('Kunne ikke slette tilbuddet: ' + (e.message || e));
         } finally {
             setBusy(false);
         }
@@ -802,8 +828,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 {/* Fanger musen under træk, så iframes ikke "stjæler" events og laver lag */}
                 {resizing && <div style={{ position: 'fixed', inset: 0, zIndex: 100060, cursor: 'col-resize' }} />}
 
-                {/* Topbjælke */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: isMobile ? '12px 16px' : '14px 22px', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+                {/* Topbjælke — safe-area-padding så titel/luk ikke gemmer sig under statusbjælken på mobil */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: isMobile ? '12px 16px' : '14px 22px', paddingTop: isMobile ? 'calc(12px + env(safe-area-inset-top))' : undefined, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
                     <div>
                         <div style={{ fontSize: isMobile ? '1rem' : '1.1rem', fontWeight: 800, color: '#0f172a' }}>Hurtigt tilbud</div>
                         {!isMobile && <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Ret tilbuddet og mailen — kunden ser det live til højre.</div>}
@@ -843,13 +869,18 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     </div>
                 )}
 
-                {/* Bundbjælke */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', padding: isMobile ? '12px 16px' : '14px 22px', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)', borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
+                {/* Bundbjælke — safe-area-padding så knapperne ikke gemmer sig bag home-indikatoren */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', padding: isMobile ? '12px 16px' : '14px 22px', paddingBottom: isMobile ? 'calc(12px + env(safe-area-inset-bottom))' : undefined, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)', borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
                     <div>
                         <div style={{ fontSize: '0.8rem', color: '#64748b' }}>I alt inkl. moms</div>
                         <div style={{ fontSize: isMobile ? '1.4rem' : '1.7rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>{kr(calc.totalIncVat)} kr</div>
                     </div>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        {isEditing && (
+                        <button className="qqb-ghost" disabled={busy} onClick={del} title="Slet tilbuddet helt" style={{ padding: '14px 18px', borderRadius: '12px', border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Trash2 size={18} /> Slet
+                        </button>
+                        )}
                         {!wasSent && (
                         <button className="qqb-ghost" disabled={busy} onClick={() => save(false)} style={{ padding: '14px 22px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Save size={18} /> Gem kladde

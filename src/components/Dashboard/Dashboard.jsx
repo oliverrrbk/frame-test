@@ -6978,6 +6978,12 @@ const Dashboard = () => {
                                 isMobile={isMobile}
                                 initialLead={editQuoteLead}
                                 onCancel={() => setEditQuoteLead(null)}
+                                onDeleted={async () => {
+                                    setEditQuoteLead(null);
+                                    setSelectedLead(null);
+                                    setActiveTab('leads');
+                                    await refreshLeadsData();
+                                }}
                                 onComplete={async (lead) => {
                                     setEditQuoteLead(null);
                                     setActiveTab('leads');
