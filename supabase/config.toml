@@ -1,0 +1,16 @@
+project_id = "zjbjupovlgwlrvojusnr"
+
+# verify_jwt styrer om Supabase-gatewayen kræver en gyldig JWT FØR funktionen rammes.
+# Sættes eksplicit her, så auto-deploy (.github/workflows/deploy-functions.yml) altid
+# rammer rigtigt og ikke ved et uheld låser eksterne webhooks ude.
+
+# Eksterne webhooks/callbacks: kaldes UDEN bruger-JWT → må ikke kræve JWT.
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.accounting-webhooks]
+verify_jwt = false
+
+# Kaldes af cron + DB-trigger med service_role-token (gyldig JWT) → behold JWT-tjek.
+[functions.send-push-reminders]
+verify_jwt = true
