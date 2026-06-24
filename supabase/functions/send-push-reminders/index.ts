@@ -1,3 +1,4 @@
+// Inkl. "unplanned_case"-påmindelse (dagen efter bekræftelse) — auto-deployet via CI.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js";
 import webPush from "npm:web-push";
