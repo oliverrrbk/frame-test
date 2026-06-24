@@ -125,10 +125,6 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
     };
 
     const handleSave = async () => {
-        if (!testResult?.success) {
-            alert('Venligst test forbindelsen succesfuldt, før du gemmer.');
-            return;
-        }
 
         setIsSaving(true);
         try {
