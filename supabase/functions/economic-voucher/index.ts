@@ -167,11 +167,14 @@ serve(async (req) => {
     const created = await fetchEconomic('POST', `/journals/${journalNumber}/vouchers`, voucherPayload)
     console.log("Kladde-bilag oprettet:", JSON.stringify(created))
 
-    // Træk voucher-nummer ud af svaret (e-conomic kan svare som array eller objekt)
+    // Træk voucher-nummer + regnskabsår ud af svaret (e-conomic kan svare som array eller objekt)
     const first = Array.isArray(created) ? created[0] : created
     const voucherNumber = first?.voucherNumber
-      ?? first?.financeVouchers?.[0]?.voucherNumber
       ?? first?.entries?.financeVouchers?.[0]?.voucherNumber
+      ?? first?.financeVouchers?.[0]?.voucherNumber
+      ?? first?.entries?.financeVouchers?.[0]?.voucher?.voucherNumber
+    // Brug årstallet fra svaret hvis det findes (mest præcist til vedhæftnings-URL'en).
+    const respYear = first?.accountingYear?.year ?? accountingYear
     if (!voucherNumber) {
       // Bilaget er oprettet, men vi kunne ikke finde nummeret til at vedhæfte billedet.
       return json({ success: true, attachmentUploaded: false, voucherNumber: null,
@@ -204,7 +207,7 @@ serve(async (req) => {
         const form = new FormData()
         form.append('file', blob, fileName || 'bilag')
 
-        const attachPath = `/journals/${journalNumber}/vouchers/${accountingYear}-${voucherNumber}/attachment/file`
+        const attachPath = `/journals/${journalNumber}/vouchers/${respYear}-${voucherNumber}/attachment/file`
         const attachRes = await fetch(`https://restapi.e-conomic.com${attachPath}`, {
           method: 'POST',
           headers: baseHeaders, // BEMÆRK: ingen Content-Type — fetch sætter multipart-boundary selv

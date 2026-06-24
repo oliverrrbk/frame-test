@@ -64,11 +64,18 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
         const sentMap = {};
         let failed = 0;
         let lastError = '';
+        let attachWarn = 0;
+        let attachMsg = '';
         try {
             for (const inv of unsentInvoices) {
                 const { data, error } = await supabase.functions.invoke(accountingFn, { body: buildVoucherBody(inv) });
                 if (!error && data?.success) {
                     sentMap[inv.id] = data.voucherNumber || null;
+                    // Posteringen kom over, men selve filen blev måske ikke vedhæftet.
+                    if (data.attachmentUploaded === false) {
+                        attachWarn++;
+                        if (!attachMsg) attachMsg = data.message || '';
+                    }
                 } else {
                     failed++;
                     lastError = error?.message || data?.error || '';
@@ -79,7 +86,9 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
             if (Object.keys(sentMap).length > 0) await markInvoicesSent(sentMap);
 
             const ok = Object.keys(sentMap).length;
-            if (failed === 0) {
+            if (failed === 0 && attachWarn > 0) {
+                toast(attachMsg || `${ok} bilag overført, men filen blev ikke vedhæftet. Tjek at bilaget har en PDF/billede.`, { icon: '⚠️', duration: 9000 });
+            } else if (failed === 0) {
                 toast.success(`${ok} bilag overført til ${accountingName}!`);
             } else if (ok > 0) {
                 toast(`${ok} bilag overført, ${failed} fejlede. Prøv de resterende igen.`, { icon: '⚠️' });
