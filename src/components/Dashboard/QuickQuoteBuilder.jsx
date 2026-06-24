@@ -1,10 +1,26 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X } from 'lucide-react';
+import { useLoadScript, Autocomplete } from '@react-google-maps/api';
+import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { buildQuotePdf } from '../../utils/quotePdf';
 import { getCustomerOfferSentTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
+
+// Stabil reference (react-google-maps kræver at libraries-arrayet ikke gendannes pr. render).
+// Samme id+libraries som Dashboard, så scriptet dedupliceres.
+const GMAPS_LIBRARIES = ['places'];
+
+// Dansk telefon-formatering (+45 XX XX XX XX) — samme mønster som i wizardens kontakttrin.
+const formatDkPhone = (raw) => {
+    let val = String(raw ?? '').replace(/[^\d+]/g, '');
+    const hasPlus45 = val.startsWith('+45');
+    const numbersOnly = hasPlus45 ? val.slice(3) : val;
+    const blocks = numbersOnly.match(/.{1,2}/g) || [];
+    let result = blocks.join(' ');
+    if (hasPlus45) result = result ? `+45 ${result}` : '+45';
+    return result;
+};
 
 const kr = (n) => (Number(n) || 0).toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const num = (v) => parseFloat(String(v ?? '').replace(/\./g, '').replace(',', '.')) || 0; // dansk input → tal
@@ -98,6 +114,10 @@ const PREVIEW_CSS = `
   .qqb-add:hover{opacity:.65;}
   .qqb-tab{transition:filter .15s ease,background .15s ease,color .15s ease;}
   .qqb-tab:hover{filter:brightness(.97);}
+  .qqb-maxbtn{transition:background .15s ease,color .15s ease,border-color .15s ease,transform .15s ease;}
+  .qqb-maxbtn:hover{transform:translateY(-1px);}
+  .qqb-maxbtn-hint{box-shadow:0 0 0 0 rgba(59,130,246,.5);animation:qqbPulse 2.4s ease-out infinite;}
+  @keyframes qqbPulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.45);}70%{box-shadow:0 0 0 7px rgba(59,130,246,0);}100%{box-shadow:0 0 0 0 rgba(59,130,246,0);}}
   .qqb-toggle{transition:border-color .15s ease,background .15s ease,color .15s ease;}
   .qqb-toggle:hover:not(.qqb-toggle-on){border-color:#0f172a !important;}
   .qqb-col::-webkit-scrollbar{width:8px;}
@@ -147,8 +167,64 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const [extras, setExtras] = useState((mq0.extras && mq0.extras.length) ? mq0.extras.map(e => ({ id: uid(), desc: e.desc || '', amount: e.amount != null ? String(e.amount) : '' })) : [{ id: uid(), desc: '', amount: '' }]);
     const [workDescHtml, setWorkDescHtml] = useState(mq0.workHtml || '');
     const workEditorRef = useRef(null);
-    // Kunde
-    const [customer, setCustomer] = useState({ name: initialLead?.customer_name || '', email: initialLead?.customer_email || '', phone: initialLead?.customer_phone || '', address: initialLead?.customer_address || '' });
+    // Kunde — strukturerede felter (gade/postnr/by) hentes fra customerDetails hvis de findes.
+    const cd0 = initialLead?.raw_data?.customerDetails || {};
+    const [customer, setCustomer] = useState({
+        name: initialLead?.customer_name || '',
+        email: initialLead?.customer_email || '',
+        phone: initialLead?.customer_phone || '',
+        address: cd0.street || initialLead?.customer_address || '',
+        zip: cd0.zip || '',
+        city: cd0.city || '',
+    });
+
+    // Auto-udfyld by ud fra postnummer (DAWA) — samme kilde som wizardens kontakttrin.
+    useEffect(() => {
+        const zip = customer.zip;
+        if (zip && zip.length === 4 && /^\d+$/.test(zip)) {
+            fetch(`https://api.dataforsyningen.dk/postnumre/${zip}`)
+                .then(res => res.ok ? res.json() : Promise.reject())
+                .then(data => { if (data && data.navn) setCustomer(c => (c.zip === zip ? { ...c, city: data.navn } : c)); })
+                .catch(() => { /* ukendt postnr — ignorér */ });
+        }
+    }, [customer.zip]);
+
+    // Google Maps adresse-autofuldførelse (samme script/bibliotek som Dashboard-kortet).
+    const { isLoaded: gmapsLoaded } = useLoadScript({
+        id: 'google-map-script',
+        googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+        libraries: GMAPS_LIBRARIES,
+    });
+    const [addressAutocomplete, setAddressAutocomplete] = useState(null);
+    const onAddressPlaceChanged = () => {
+        if (!addressAutocomplete) return;
+        const place = addressAutocomplete.getPlace();
+        if (place && place.address_components) {
+            let route = '', streetNumber = '', postalCode = '', locality = '';
+            place.address_components.forEach(comp => {
+                const t = comp.types;
+                if (t.includes('route')) route = comp.long_name;
+                if (t.includes('street_number')) streetNumber = comp.long_name;
+                if (t.includes('postal_code')) postalCode = comp.long_name;
+                if (t.includes('locality')) locality = comp.long_name;
+                if (t.includes('postal_town') && !locality) locality = comp.long_name;
+            });
+            setCustomer(c => ({
+                ...c,
+                address: route ? `${route} ${streetNumber}`.trim() : (place.name || c.address),
+                zip: postalCode || c.zip,
+                city: locality || c.city,
+            }));
+        } else if (place && place.name) {
+            setCustomer(c => ({ ...c, address: place.name }));
+        }
+    };
+
+    // Kunde-objekt til PDF'en: saml gade + postnr + by til én adresselinje.
+    const customerForPdf = () => ({
+        ...customer,
+        address: [customer.address, [customer.zip, customer.city].filter(Boolean).join(' ')].filter(Boolean).join(', ').trim(),
+    });
     // Davidsen-PDF
     const [materialFile, setMaterialFile] = useState(null);
     // Personlige beskeder — adskilt: én på tilbuddet (PDF), én i mailen.
@@ -170,6 +246,19 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const [rightW, setRightW] = useState(320);
     const [resizing, setResizing] = useState(false);
     const scrollRef = useRef(null);
+    // PDF-fokus: på bærbare skærme er midter-kolonnen for smal til at læse tilbuddet.
+    // pdfMax skjuler Rediger- og Mail-kolonnerne, så PDF'en fylder hele skærmen.
+    const [pdfMax, setPdfMax] = useState(false);
+    const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 1440);
+    useEffect(() => {
+        const onR = () => setVw(window.innerWidth);
+        window.addEventListener('resize', onR);
+        return () => window.removeEventListener('resize', onR);
+    }, []);
+    // "Bærbar": rigtig desktop-layout, men ikke nok bredde til at PDF'en kan læses i 3-kolonne-visning.
+    const isLaptop = !isMobile && vw < 1440;
+    // PDF-viewer uden mørk værktøjslinje + tilpas til bredden, så siden fylder rammen og kan læses.
+    const viewerSrc = (u) => u ? `${u}#toolbar=0&navpanes=0&statusbar=0&view=FitH` : u;
 
     // Forudfyld PDF-beskeden (med hilsen) når kundenavn ændres, indtil brugeren selv retter.
     // contentEditable er ukontrolleret, så vi sætter både state og editorens indhold imperativt.
@@ -256,7 +345,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         setRegenerating(true);
         const t = setTimeout(async () => {
             try {
-                const { blob } = await buildQuotePdf(buildQuoteObj(), carpenter, customer, { title, dateStr });
+                const { blob } = await buildQuotePdf(buildQuoteObj(), carpenter, customerForPdf(), { title, dateStr });
                 if (cancelled) return;
                 const back = 1 - frontRef.current;
                 const newUrl = URL.createObjectURL(blob);
@@ -301,7 +390,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             // 2) Generér tilbuds-PDF og upload
             let quotePdfUrl = null;
             try {
-                const { blob } = await buildQuotePdf(quoteObj, carpenter, customer, { title, dateStr });
+                const { blob } = await buildQuotePdf(quoteObj, carpenter, customerForPdf(), { title, dateStr });
                 const qfn = `manual_${quoteToken}_tilbud.pdf`;
                 const { error: qErr } = await supabase.storage.from('uploads').upload(qfn, blob, { upsert: true, cacheControl: '0', contentType: 'application/pdf' });
                 if (!qErr) {
@@ -313,6 +402,10 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             // Et allerede sendt tilbud forbliver "Sendt tilbud" — det hopper ikke tilbage til kladde.
             const status = (sendToCustomer || wasSent) ? 'Sendt tilbud' : 'Tilbudskladder';
             const existingPdfs = initialLead?.raw_data?.material_pdfs || [];
+            // Fuld adresse til visning/Google Maps-links i lead-/sagslisten.
+            const fullAddress = [customer.address, [customer.zip, customer.city].filter(Boolean).join(' ')]
+                .filter(Boolean).join(', ').trim();
+
             const raw_data = {
                 ...(initialLead?.raw_data || {}),
                 is_manual_quote: true,
@@ -321,6 +414,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 custom_message: emailMessage,
                 calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: num(laborHours), hourlyRate: num(laborRate) },
                 actual_quote_price: calc.totalExVat,
+                // Strukturerede kundefelter bevares så de kan genindlæses korrekt ved redigering.
+                customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city },
                 quote_pdf_url: quotePdfUrl ? `${quotePdfUrl}?t=${Date.now()}` : (initialLead?.raw_data?.quote_pdf_url),
                 material_pdfs: materialFile ? [...existingPdfs, ...materialPdfs] : existingPdfs,
                 checklist: initialLead?.raw_data?.checklist || seedChecklist(quoteObj.workLines),
@@ -330,7 +425,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 customer_name: customer.name,
                 customer_email: customer.email || null,
                 customer_phone: customer.phone || null,
-                customer_address: customer.address || null,
+                customer_address: fullAddress || null,
                 project_category: title || 'Manuelt tilbud',
                 price_estimate: `${kr(calc.totalIncVat)} DKK`,
                 quote_token: quoteToken,
@@ -508,9 +603,24 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const renderCustomerInputs = () => (
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
             <div><label style={label}>Navn *</label><input className="qqb-input" style={input} value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} /></div>
+            <div><label style={label}>Telefon</label><input className="qqb-input" style={input} type="tel" inputMode="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: formatDkPhone(e.target.value) })} placeholder="+45 12 34 56 78" /></div>
             <div><label style={label}>Email</label><input className="qqb-input" style={input} type="email" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} /></div>
-            <div><label style={label}>Telefon</label><input className="qqb-input" style={input} value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} /></div>
-            <div><label style={label}>Adresse</label><input className="qqb-input" style={input} value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} /></div>
+            <div>
+                <label style={label}>Adresse</label>
+                {gmapsLoaded ? (
+                    <Autocomplete
+                        onLoad={setAddressAutocomplete}
+                        onPlaceChanged={onAddressPlaceChanged}
+                        options={{ componentRestrictions: { country: 'dk' }, fields: ['address_components', 'name'] }}
+                    >
+                        <input className="qqb-input" style={input} value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} placeholder="Begynd at skrive adressen…" />
+                    </Autocomplete>
+                ) : (
+                    <input className="qqb-input" style={input} value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
+                )}
+            </div>
+            <div><label style={label}>Postnummer</label><input className="qqb-input" style={input} inputMode="numeric" maxLength={4} value={customer.zip} onChange={(e) => setCustomer({ ...customer, zip: e.target.value.replace(/[^\d]/g, '').slice(0, 4) })} /></div>
+            <div><label style={label}>By</label><input className="qqb-input" style={input} value={customer.city} onChange={(e) => setCustomer({ ...customer, city: e.target.value })} /></div>
         </div>
     );
 
@@ -564,15 +674,17 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         const mobileCol = { flex: '0 0 100%', width: '100%', scrollSnapAlign: 'start' };
         const leftStyle = { ...colBase, ...(isMobile ? mobileCol : { flex: `0 0 ${leftW}px` }), background: '#ffffff', overflowY: 'auto' };
         const midStyle = { ...colBase, ...(isMobile ? mobileCol : { flex: '1 1 auto' }), background: '#f8fafc' };
+        const pdfFocus = !isMobile && pdfMax; // hele skærmen til PDF'en (kun desktop/bærbar)
         const rightStyle = { ...colBase, ...(isMobile ? mobileCol : { flex: `0 0 ${rightW}px` }), background: '#ffffff', overflowY: 'auto' };
         const renderDivider = (type) => (
             <div className="qqb-divider" onPointerDown={(e) => startResize(type, e)}><div className="qqb-grip" /></div>
         );
 
-        const zoneHead = (icon, text, bg) => (
+        const zoneHead = (icon, text, bg, action) => (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 18px', borderBottom: '1px solid #eef2f6', position: 'sticky', top: 0, background: bg, zIndex: 2, flexShrink: 0 }}>
                 {icon}
                 <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#64748b' }}>{text}</span>
+                {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
             </div>
         );
 
@@ -582,6 +694,10 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         const leftCol = (
             <div className="qqb-col" style={leftStyle}>
                 {zoneHead(<Pencil size={16} color="#3b82f6" />, 'Rediger tilbuddet', '#ffffff')}
+                <div style={editSection}>
+                    <h3 style={editH}><User size={18} color="#0f172a" /> Kunde</h3>
+                    {renderCustomerInputs()}
+                </div>
                 <div style={editSection}>
                     <label style={label}>Opgavetitel</label>
                     {renderTitleInput()}
@@ -620,33 +736,40 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     <h3 style={editH}><Plus size={18} color="#64748b" /> Tillæg</h3>
                     {renderExtras()}
                 </div>
-                <div style={{ ...editSection, borderBottom: 'none' }}>
-                    <h3 style={editH}><User size={18} color="#0f172a" /> Kunde</h3>
-                    {renderCustomerInputs()}
-                </div>
             </div>
         );
 
+        const maxBtn = !isMobile && (
+            <button
+                onClick={() => setPdfMax(m => !m)}
+                className={`qqb-maxbtn${(isLaptop && !pdfMax) ? ' qqb-maxbtn-hint' : ''}`}
+                title={pdfMax ? 'Tilbage til redigering' : 'Vis PDF i fuld størrelse'}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '999px', border: '1px solid ' + (pdfMax ? '#0f172a' : '#cbd5e1'), background: pdfMax ? '#0f172a' : '#fff', color: pdfMax ? '#fff' : '#334155', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer' }}
+            >
+                {pdfMax ? <><Minimize2 size={14} /> Vis redigering</> : <><Maximize2 size={14} /> Forstør PDF</>}
+            </button>
+        );
+
         const midCol = (
-            <div style={midStyle}>
-                {zoneHead(<FileText size={16} color="#3b82f6" />, "Sådan ser PDF'en ud", '#f8fafc')}
-                <div style={{ flex: 1, minHeight: 0, padding: '16px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            <div style={pdfFocus ? { ...midStyle, flex: '1 1 auto' } : midStyle}>
+                {zoneHead(<FileText size={16} color="#3b82f6" />, "Sådan ser PDF'en ud", '#f8fafc', maxBtn)}
+                <div style={{ flex: 1, minHeight: 0, padding: pdfFocus ? '22px clamp(16px, 4vw, 64px)' : '16px', display: 'flex', flexDirection: 'column', alignItems: pdfFocus ? 'center' : 'stretch', position: 'relative', background: pdfFocus ? '#1e293b' : 'transparent' }}>
                     {regenerating && (
                         <div style={{ position: 'absolute', top: '26px', right: '26px', zIndex: 3, background: 'rgba(15,23,42,0.82)', color: '#fff', padding: '6px 12px', borderRadius: '999px', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '7px', backdropFilter: 'blur(4px)' }}>
                             <span className="qqb-spin" style={{ width: '11px', height: '11px', border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block' }} />
                             Opdaterer…
                         </div>
                     )}
-                    <div style={{ flex: 1, minHeight: 0, position: 'relative', borderRadius: '14px', background: '#fff', boxShadow: '0 10px 30px rgba(15,23,42,0.10)' }}>
+                    <div style={{ flex: 1, minHeight: 0, width: '100%', maxWidth: pdfFocus ? '920px' : 'none', position: 'relative', borderRadius: '14px', background: '#fff', boxShadow: pdfFocus ? '0 24px 60px rgba(0,0,0,0.45)' : '0 10px 30px rgba(15,23,42,0.10)' }}>
                         {[0, 1].map(i => slotUrls[i] ? (
-                            <iframe key={i} title={`Tilbud PDF ${i}`} src={slotUrls[i]} onLoad={() => onSlotLoaded(i)}
+                            <iframe key={i} title={`Tilbud PDF ${i}`} src={viewerSrc(slotUrls[i])} onLoad={() => onSlotLoaded(i)}
                                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: '1px solid #e2e8f0', borderRadius: '14px', background: '#fff', opacity: front === i ? 1 : 0, transition: 'opacity .18s ease', pointerEvents: (resizing || front !== i) ? 'none' : 'auto' }} />
                         ) : null)}
                         {!frontUrl && (
                             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>Genererer…</div>
                         )}
                     </div>
-                    <a className="qqb-link" href={frontUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '12px', color: '#3b82f6', fontWeight: 600, fontSize: '0.9rem', alignSelf: 'flex-start' }}>Åbn i nyt vindue ▸</a>
+                    <a className="qqb-link" href={frontUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '12px', color: pdfFocus ? '#93c5fd' : '#3b82f6', fontWeight: 600, fontSize: '0.9rem', alignSelf: pdfFocus ? 'center' : 'flex-start' }}>Åbn i nyt vindue ▸</a>
                 </div>
             </div>
         );
@@ -705,6 +828,10 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         {leftCol}
                         {midCol}
                         {rightCol}
+                    </div>
+                ) : pdfMax ? (
+                    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+                        {midCol}
                     </div>
                 ) : (
                     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
