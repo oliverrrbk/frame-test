@@ -21,6 +21,9 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingThreads, setIsLoadingThreads] = useState(true);
   const [mobileViewState, setMobileViewState] = useState('list'); // 'list', 'chat', 'info'
+  const [pendingCaseChat, setPendingCaseChat] = useState(null); // sag uden chat → tilbyd manuel oprettelse
+  const [isCreatingCaseChat, setIsCreatingCaseChat] = useState(false);
+  const [showAddParticipant, setShowAddParticipant] = useState(false); // udvid deltager-vælger i info-panelet
 
   const messagesEndRef = useRef(null);
   const activeThreadRef = useRef(null);

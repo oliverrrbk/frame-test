@@ -2082,123 +2082,78 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     </div>
 
                     {/* Sagsliste overblik */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {/* Faner (Mine / Alle) + søgning */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '12px', padding: '4px', gap: '4px' }}>
+                                <button onClick={() => setCaseViewTab('mine')} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem', background: caseViewTab === 'mine' ? '#ffffff' : 'transparent', color: caseViewTab === 'mine' ? '#0f172a' : '#64748b', boxShadow: caseViewTab === 'mine' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
+                                    Mine sager{myCasesCount > 0 ? ` (${myCasesCount})` : ''}
+                                </button>
+                                <button onClick={() => setCaseViewTab('all')} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem', background: caseViewTab === 'all' ? '#ffffff' : 'transparent', color: caseViewTab === 'all' ? '#0f172a' : '#64748b', boxShadow: caseViewTab === 'all' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
+                                    Alle sager ({activeCases.length})
+                                </button>
+                            </div>
+                            <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: '420px' }}>
+                                <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+                                <input
+                                    type="text"
+                                    value={caseSearch}
+                                    onChange={(e) => setCaseSearch(e.target.value)}
+                                    placeholder="Søg på sagsnr, kunde, adresse, telefon…"
+                                    style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                                />
+                            </div>
+                        </div>
+
                         {activeCases.length === 0 ? (
-                            <div style={{ gridColumn: 'span 3', padding: '64px', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', color: '#6b7280' }}>
+                            <div style={{ padding: '64px', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', color: '#6b7280' }}>
                                 <HardHat size={48} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
-                                <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>Ingen aktive sager endnu</p>
+                                <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>Ingen bekræftede sager endnu</p>
                                 <p style={{ margin: 0, fontSize: '0.875rem' }}>
-                                    {['worker', 'apprentice', 'sales'].includes(profile?.role) 
-                                        ? "Du mangler at få tildelt en opgave. Kontakt din mester, når du er klar til næste byggeplads." 
-                                        : "Når en kunde accepterer et tilbud, skifter status automatisk, og sagen vil fremgå her."}
+                                    Når en kunde accepterer et tilbud, skifter status automatisk, og sagen vil fremgå her for hele holdet.
                                 </p>
                             </div>
+                        ) : (caseViewTab === 'mine' && myCasesCount === 0 && !caseSearch.trim()) ? (
+                            <div style={{ padding: '48px', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', color: '#6b7280' }}>
+                                <HardHat size={40} style={{ margin: '0 auto 12px', opacity: 0.2 }} />
+                                <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>Du er ikke på nogen sager endnu</p>
+                                <p style={{ margin: 0, fontSize: '0.875rem' }}>
+                                    Skift til <button onClick={() => setCaseViewTab('all')} style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '600', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>Alle sager</button> for at finde en sag og registrere timer.
+                                </p>
+                            </div>
+                        ) : searchedCases.length === 0 ? (
+                            <div style={{ padding: '48px', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', color: '#6b7280' }}>
+                                <Search size={40} style={{ margin: '0 auto 12px', opacity: 0.2 }} />
+                                <p style={{ margin: 0, fontSize: '0.875rem' }}>Ingen sager matcher din søgning{caseSearch.trim() ? ` "${caseSearch.trim()}"` : ''}.</p>
+                            </div>
                         ) : (
-                            activeCases.map(c => {
-                                const todos = c.raw_data?.checklist || [];
-                                const comp = todos.filter(t => t.done).length;
-                                const pct = todos.length > 0 ? Math.round((comp / todos.length) * 100) : 0;
-                                const hrs = (c.raw_data?.time_entries || []).reduce((sum, item) => sum + item.hours, 0);
-                                const estHrs = parseFloat(c.raw_data?.calc_data?.laborHours) || 40;
-                                
-                                return (
-                                    <div 
-                                        key={c.id} 
-                                        onClick={() => setSelectedCaseIdState(c.id)}
-                                        style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}
-                                        className="hover:scale-[1.01] hover:shadow-lg"
-                                    >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                                            {c.status === 'Sæt i bero' ? (
-                                                <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#fff7ed', color: '#ea580c', border: '1px solid #fdba74' }}>
-                                                    Sat i bero
-                                                </span>
-                                            ) : c.status === 'Historik' ? (
-                                                <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>
-                                                    Afsluttet
-                                                </span>
-                                            ) : c.status === 'Afbrudt Sag' ? (
-                                                <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5' }}>
-                                                    Tabt / Afvist
-                                                </span>
-                                            ) : (
-                                                <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
-                                                    Aktiv Sag
-                                                </span>
-                                            )}
-                                            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                                                {new Date(c.created_at).toLocaleDateString('da-DK')}
-                                            </span>
-                                        </div>
-                                        
-                                        <h4 style={{ margin: '0 0 4px 0', fontSize: '1.05rem', fontWeight: 'bold', color: '#1a1a1a' }}>
-                                            Sag {c.case_number || String(c.id).substring(0,8)} - {c.raw_data?.project_title || c.project_category}
+                            <>
+                                {/* AKTIVE SAGER */}
+                                {aktiveSager.length > 0 && (
+                                    <div>
+                                        <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', fontWeight: 'bold', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                                            Aktive sager ({aktiveSager.length})
                                         </h4>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                {c.raw_data?.customerDetails?.customerType === 'erhverv' ? (
-                                                    <>
-                                                        <span style={{ background: '#e2e8f0', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>Erhverv</span>
-                                                        {c.customer_name || 'Virksomhed'}
-                                                    </>
-                                                ) : (
-                                                    <>Kunde: {c.customer_name || 'Privatkunde'}</>
-                                                )}
-                                            </span>
-                                            <span style={{ fontSize: '0.825rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <MapPin size={14} style={{ color: '#94a3b8' }} /> <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.customer_address || '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{c.customer_address || 'Adresse ikke angivet'}</a>
-                                            </span>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+                                            {aktiveSager.map(renderCaseCard)}
                                         </div>
-                                        
-                                        {/* Færdiggørelses-bar */}
-                                        <div style={{ marginBottom: '16px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#4b5563', marginBottom: '4px', fontWeight: '500' }}>
-                                                <span>Fremdrift (To-Do)</span>
-                                                <strong>{pct}%</strong>
-                                            </div>
-                                            <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
-                                                <div style={{ width: `${pct}%`, height: '100%', background: '#10b981', transition: 'width 0.3s' }} />
-                                            </div>
-                                        </div>
-
-                                        {/* Time status */}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#6b7280', borderTop: '1px solid #f1f1ef', paddingTop: '12px', marginBottom: '12px' }}>
-                                            <span>Timer registreret:</span>
-                                            <strong style={{ color: (!c.raw_data?.is_manual_quote && hrs > estHrs) ? '#ef4444' : '#1e293b' }}>
-                                                {hrs} t{c.raw_data?.is_manual_quote ? '' : ` / ${estHrs} t`}
-                                            </strong>
-                                        </div>
-
-                                        {/* Mandskab overblik */}
-                                        {(c.raw_data?.assigned_pm?.length > 0 || c.raw_data?.assigned_workers?.length > 0) && (
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', borderTop: '1px solid #f1f1ef', paddingTop: '12px' }}>
-                                                {/* PMs */}
-                                                {(Array.isArray(c.raw_data.assigned_pm) ? c.raw_data.assigned_pm : [c.raw_data.assigned_pm]).map(pmId => {
-                                                    const m = team.find(t => t.id === pmId);
-                                                    if (!m) return null;
-                                                    return (
-                                                        <span key={pmId} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: '#eff6ff', color: '#1d4ed8', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '500' }}>
-                                                            <UserAvatar name={m.owner_name || m.company_name || ''} avatarUrl={m.avatar_url} size={16} ring={false} />
-                                                            {m.owner_name || m.company_name || 'Ukendt'} (PM)
-                                                        </span>
-                                                    );
-                                                })}
-                                                {/* Workers */}
-                                                {(c.raw_data.assigned_workers || []).map(wId => {
-                                                    const m = team.find(t => t.id === wId);
-                                                    if (!m) return null;
-                                                    return (
-                                                        <span key={wId} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: '#f8fafc', color: '#475569', borderRadius: '6px', fontSize: '0.75rem', border: '1px solid #e2e8f0' }}>
-                                                            <UserAvatar name={m.owner_name || m.company_name || ''} avatarUrl={m.avatar_url} size={16} ring={false} />
-                                                            {m.owner_name || m.company_name || 'Ukendt'}
-                                                        </span>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
                                     </div>
-                                );
-                            })
+                                )}
+
+                                {/* AFSLUTTEDE SAGER */}
+                                {afsluttedeSager.length > 0 && (
+                                    <div>
+                                        <h4 style={{ margin: '24px 0 12px 0', fontSize: '0.95rem', fontWeight: 'bold', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#94a3b8' }} />
+                                            Afsluttede sager ({afsluttedeSager.length})
+                                        </h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+                                            {afsluttedeSager.map(renderCaseCard)}
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
 

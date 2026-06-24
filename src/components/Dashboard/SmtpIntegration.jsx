@@ -253,18 +253,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                                 placeholder="Dit kodeord eller App-adgangskode"
                                 style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '100%', marginTop: '6px' }}
                             />
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', marginTop: '6px', background: '#fffbeb', padding: '10px', borderRadius: '6px', border: '1px solid #fde68a' }}>
-                                <Info size={16} color="#d97706" style={{ flexShrink: 0, marginTop: '2px' }} />
-                                <div style={{ fontSize: '12px', color: '#92400e', lineHeight: '1.4' }}>
-                                    <strong>Bruger du Microsoft 365 eller Google?</strong><br/> Så skal du logge ind hos dem og oprette en "App-adgangskode", som du sætter ind her. 
-                                    <button 
-                                        onClick={() => setShowHelpModal(true)}
-                                        style={{ display: 'inline-block', marginTop: '6px', padding: '4px 8px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
-                                    >
-                                        Vis simpel guide til App-kode
-                                    </button>
-                                </div>
-                            </div>
+
                         </div>
 
                         <div style={{ display: 'flex', gap: '16px' }}>

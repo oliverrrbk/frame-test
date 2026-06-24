@@ -2052,6 +2052,10 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
+            if (shiftHoldTimerRef.current) {
+                clearTimeout(shiftHoldTimerRef.current);
+                shiftHoldTimerRef.current = null;
+            }
         };
     }, [appState.selectedElementId, appState.selectedElementIds, appState.editingTextId, elements, history, pushHistory, copySelectedElements, pasteElements, duplicateSelectedElements, moveSelectedElements, getSelectionWithChildren]);
 
@@ -3486,6 +3490,101 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
             });
     };
 
+    const closeShortcuts = () => {
+        shortcutsPinnedRef.current = false;
+        shortcutsViaShiftRef.current = false;
+        setShortcutsOpen(false);
+    };
+
+    const toggleShortcuts = () => {
+        const next = !shortcutsOpen;
+        shortcutsPinnedRef.current = next;
+        shortcutsViaShiftRef.current = false;
+        setShortcutsOpen(next);
+    };
+
+    // Kompakt genvejs-panel i Bison Frame-stil. Vises ved hold-Shift (i tomgang) eller via knappen.
+    const renderShortcutsPanel = () => {
+        if (!shortcutsOpen) return null;
+
+        const Key = ({ children }) => (
+            <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 20, height: 20, padding: '0 6px',
+                background: '#f1f5f9', border: '1px solid #cbd5e1', borderBottomWidth: 2,
+                borderRadius: 5, fontSize: 11, fontWeight: 800, color: '#334155',
+                lineHeight: 1, whiteSpace: 'nowrap'
+            }}>{children}</span>
+        );
+
+        const groups = [
+            { title: 'Tegning', items: [
+                { keys: ['Klik', 'Klik'], label: 'Tegn streg (klik start · klik slut)' },
+                { keys: ['⇧'], label: 'Lås til 45°' },
+                { keys: ['Alt'], label: 'Fri vinkel / snap fra' },
+                { keys: ['Esc'], label: 'Annullér streg' },
+            ]},
+            { title: 'Redigering', items: [
+                { keys: ['⌘', 'Z'], label: 'Fortryd' },
+                { keys: ['⌘', 'C'], label: 'Kopiér' },
+                { keys: ['⌘', 'V'], label: 'Indsæt' },
+                { keys: ['Delete'], label: 'Slet' },
+                { keys: ['←↑↓→'], label: 'Flyt (⇧ = 10×)' },
+            ]},
+            { title: 'Navigation', items: [
+                { keys: ['Mellemrum', 'Træk'], label: 'Flyt lærred' },
+                { keys: ['Scroll'], label: 'Zoom' },
+            ]},
+        ];
+
+        return (
+            <div style={{
+                position: 'absolute', left: '50%', bottom: 18, transform: 'translateX(-50%)',
+                zIndex: 90, pointerEvents: 'auto', width: 'min(620px, calc(100vw - 32px))'
+            }}>
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.98)', borderRadius: 16,
+                    border: '1px solid rgba(37, 99, 235, 0.18)',
+                    boxShadow: '0 18px 44px rgba(15, 23, 42, 0.22)',
+                    padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 10
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#0f172a', fontWeight: 800, fontSize: 13 }}>
+                            <Keyboard size={15} /> Genveje
+                            <span style={{ fontWeight: 600, fontSize: 11, color: '#64748b' }}>· hold ⇧ Shift</span>
+                        </div>
+                        <button
+                            onClick={closeShortcuts}
+                            title="Luk"
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 24, height: 24, borderRadius: 7, color: '#64748b',
+                                background: 'transparent', border: 'none', cursor: 'pointer'
+                            }}
+                        >
+                            <X size={15} />
+                        </button>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px 20px' }}>
+                        {groups.map(g => (
+                            <div key={g.title} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', color: '#2563eb' }}>{g.title}</div>
+                                {g.items.map((it, i) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12 }}>
+                                        <span style={{ display: 'inline-flex', gap: 3, flexShrink: 0 }}>
+                                            {it.keys.map((k, j) => <Key key={j}>{k}</Key>)}
+                                        </span>
+                                        <span style={{ color: '#475569' }}>{it.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const renderMeasurementBadge = () => {
         if (appState.tool !== 'select') return null;
         const element = activeElementsRef.current.find(el => el.id === appState.selectedElementId);
@@ -3987,6 +4086,7 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     {renderDragGuide()}
                     {textOverlay}
                 </div>
+                {renderShortcutsPanel()}
             </div>
             {templateSaveModal}
             <div className="drawing-mobile-tool-chip">
@@ -4742,8 +4842,16 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
                     <Magnet size={18} />
                 </button>
 
-                <button 
-                    onClick={handleUndo} 
+                <button
+                    onClick={toggleShortcuts}
+                    className={`p-1.5 rounded-lg transition-all active:scale-95 ${shortcutsOpen ? 'text-blue-600 bg-blue-50' : 'text-slate-500 hover:bg-slate-100'}`}
+                    title="Genveje (eller hold Shift)"
+                >
+                    <Keyboard size={18} />
+                </button>
+
+                <button
+                    onClick={handleUndo}
                     disabled={history.length === 0} 
                     className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-all active:scale-95" 
                     title="Fortryd (Undo)"
