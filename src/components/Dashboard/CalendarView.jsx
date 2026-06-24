@@ -165,12 +165,15 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     // ----------------- DATA PREPARATION -----------------
     
     // 1. Relevante bygge-sager
-    const relevantLeads = useMemo(() => {
+    // Basis: status + adgangskontrol (UDEN hold-dropdown-filter). Bruges til "Klar til
+    // planlægning", så en netop bekræftet sag uden tildelt hold ALTID dukker op her —
+    // også selvom kalenderen er filtreret til en bestemt medarbejder.
+    const accessibleLeads = useMemo(() => {
         if (!leadsData) return [];
         return leadsData.filter(lead => {
             const status = lead.status || '';
             if (!['Bekræftet opgave', 'I gang', 'Sæt i bero', 'Afbrudt Sag'].includes(status)) return false;
-            
+
             // Adgangskontrol
             if (!isManager && effectiveRole === 'sales') {
                 // Projektlederen skal se andres sager for at bedømme belægning i kalenderen.
@@ -180,27 +183,43 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 const pms = Array.isArray(lead.raw_data?.assigned_pm) ? lead.raw_data.assigned_pm : (lead.raw_data?.assigned_pm ? [lead.raw_data.assigned_pm] : []);
                 if (!workers.includes(userId) && !pms.includes(userId)) return false;
             }
+            return true;
+        });
+    }, [leadsData, isManager, effectiveRole, userId]);
 
-            // Dropdown Filter (Hold)
+    // Med hold-dropdown-filteret lagt ovenpå — bruges til planlagte sager i selve gitteret.
+    const relevantLeads = useMemo(() => {
+        return accessibleLeads.filter(lead => {
             if (!selectedEmployeeIds.includes('all') && selectedEmployeeIds.length > 0) {
                 const workers = lead.raw_data?.assigned_workers || [];
                 const pms = lead.raw_data?.assigned_pm || [];
                 if (!workers.some(w => selectedEmployeeIds.includes(String(w))) && !pms.some(p => selectedEmployeeIds.includes(String(p)))) return false;
             }
-
             return true;
         });
-    }, [leadsData, isManager, effectiveRole, userId, selectedEmployeeIds]);
+    }, [accessibleLeads, selectedEmployeeIds]);
 
     const { scheduledLeads, unscheduledLeads } = useMemo(() => {
-        const scheduled = [];
-        const unscheduled = [];
-        relevantLeads.forEach(lead => {
-            if (lead.raw_data?.start_date) scheduled.push(lead);
-            else unscheduled.push(lead);
-        });
+        // Planlagte sager følger hold-filteret (det man ser i kalenderen).
+        const scheduled = relevantLeads.filter(lead => lead.raw_data?.start_date);
+        // Uplanlagte sager ignorerer hold-filteret, så de altid kan findes og planlægges.
+        const unscheduled = accessibleLeads.filter(lead => !lead.raw_data?.start_date);
         return { scheduledLeads: scheduled, unscheduledLeads: unscheduled };
-    }, [relevantLeads]);
+    }, [relevantLeads, accessibleLeads]);
+
+    // Personer der kan sættes på en sag (mester + hold), uden dubletter.
+    const assignableMembers = useMemo(() => {
+        const out = [];
+        const seen = new Set();
+        [myProfile, ...teamMembers].forEach(m => {
+            if (!m || !m.id) return;
+            const id = String(m.id);
+            if (seen.has(id)) return;
+            seen.add(id);
+            out.push(m);
+        });
+        return out;
+    }, [myProfile, teamMembers]);
 
     // 2. Fravær og Ferie (fra Timeregistrering)
     const allAbsences = useMemo(() => {
@@ -674,15 +693,20 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         if (draggedEvent) handleDropEvent(targetDateObj);
     };
 
-    const confirmScheduleLead = async (lead, start, end, allowWeekends, allowHolidays) => {
-        const updatedLead = { ...lead, raw_data: { ...lead.raw_data, start_date: start.toISOString(), end_date: end.toISOString(), include_weekends: allowWeekends, include_holidays: allowHolidays } };
+    const confirmScheduleLead = async (lead, start, end, allowWeekends, allowHolidays, assignedWorkers) => {
+        // Felter der altid gemmes ved planlægning. Holdet (assigned_workers) flettes kun
+        // ind hvis det er angivet, så vi ikke nulstiller en eksisterende tildeling.
+        const scheduleFields = { start_date: start.toISOString(), end_date: end.toISOString(), include_weekends: allowWeekends, include_holidays: allowHolidays };
+        if (Array.isArray(assignedWorkers)) scheduleFields.assigned_workers = assignedWorkers;
+
+        const updatedLead = { ...lead, raw_data: { ...lead.raw_data, ...scheduleFields } };
         setLeadsData(prev => prev.map(l => l.id === lead?.id ? updatedLead : l));
         setCollisionWarning(null);
         try {
-            // Genhent frisk raw_data og flet KUN datoerne ind, så samtidige ændringer
-            // på sagen (checkliste, timer, bilag) ikke overskrives.
+            // Genhent frisk raw_data og flet KUN datoerne (+ evt. hold) ind, så samtidige
+            // ændringer på sagen (checkliste, timer, bilag) ikke overskrives.
             const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', lead?.id).single();
-            const merged = { ...(latest?.raw_data || lead.raw_data || {}), start_date: start.toISOString(), end_date: end.toISOString(), include_weekends: allowWeekends, include_holidays: allowHolidays };
+            const merged = { ...(latest?.raw_data || lead.raw_data || {}), ...scheduleFields };
             await supabase.from('leads').update({ raw_data: merged }).eq('id', lead?.id);
             toast.success('Sag planlagt');
         } catch (error) {
@@ -742,14 +766,15 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const openScheduleConfirm = (lead, startStr, days, mode = 'new') => {
         const allowWeekends = lead?.raw_data?.include_weekends === true;
         const allowHolidays = lead?.raw_data?.include_holidays === true;
-        setScheduleConfirm({ lead, startDate: startStr, durationDays: Math.max(1, days), mode, allowWeekends, allowHolidays });
+        const assignedWorkers = (lead?.raw_data?.assigned_workers || []).map(String);
+        setScheduleConfirm({ lead, startDate: startStr, durationDays: Math.max(1, days), mode, allowWeekends, allowHolidays, assignedWorkers });
     };
     const saveSchedule = () => {
         if (!scheduleConfirm) return;
-        const { lead, startDate, durationDays, allowWeekends, allowHolidays } = scheduleConfirm;
+        const { lead, startDate, durationDays, allowWeekends, allowHolidays, assignedWorkers } = scheduleConfirm;
         const start = new Date(startDate + 'T00:00:00');
         const end = endFromDuration(startDate, durationDays, allowWeekends, allowHolidays);
-        confirmScheduleLead(lead, start, end, allowWeekends, allowHolidays);
+        confirmScheduleLead(lead, start, end, allowWeekends, allowHolidays, assignedWorkers);
         setScheduleConfirm(null);
         setShowCasePicker(false);
     };
@@ -1749,28 +1774,60 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             </div>
 
             {/* Sidebar for Ikke-planlagte sager */}
-            {canViewTimeline && (
+            {canViewTimeline && (() => {
+                const pending = unscheduledLeads.filter(l => canEditLead(l));
+                return (
                 <div style={{ width: '340px', background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(16px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.8)', padding: '24px', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)' }}>
-                    <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: '800' }}>Klar til planlægning</h3>
-                    <p style={{ margin: '0 0 24px', fontSize: '0.9rem', color: '#64748b' }}>Træk ind i kalenderen.</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 4px' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800' }}>Klar til planlægning</h3>
+                        {pending.length > 0 && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '24px', height: '24px', padding: '0 7px', borderRadius: '999px', background: '#f59e0b', color: '#fff', fontSize: '0.8rem', fontWeight: 800, boxShadow: '0 2px 6px rgba(245,158,11,0.4)' }}>{pending.length}</span>
+                        )}
+                    </div>
+                    <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: '#64748b' }}>
+                        {pending.length > 0 ? 'Træk ind i kalenderen — eller tryk Planlæg.' : 'Træk ind i kalenderen.'}
+                    </p>
+
+                    {pending.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '12px 14px', marginBottom: '16px' }}>
+                            <AlertCircle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: '1px' }} />
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#92400e', lineHeight: 1.45 }}>
+                                {pending.length === 1 ? '1 bekræftet sag mangler at blive planlagt.' : `${pending.length} bekræftede sager mangler at blive planlagt.`}
+                            </p>
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
-                        {unscheduledLeads.filter(l => canEditLead(l)).length === 0 ? (
+                        {pending.length === 0 ? (
                             <p style={{ textAlign: 'center', color: '#94a3b8' }}>Ingen sager venter.</p>
                         ) : (
-                            unscheduledLeads.filter(l => canEditLead(l)).map(lead => (
-                                <div 
+                            pending.map(lead => {
+                                const customer = lead.customer_name || lead.raw_data?.customer_name;
+                                return (
+                                <div
                                     key={lead.id} draggable onDragStart={() => setDraggedLead(lead)}
-                                    style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', cursor: 'grab', display: 'flex', flexDirection: 'column', gap: '8px' }}
+                                    style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', cursor: 'grab', display: 'flex', flexDirection: 'column', gap: '10px' }}
                                 >
-                                    <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#64748b', background: '#f1f5f9', padding: '4px 8px', borderRadius: '8px', alignSelf: 'flex-start' }}>{lead.case_number || String(lead.id).substring(0,6)}</span>
-                                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '700' }}>{lead.raw_data?.project_title || lead.project_category}</h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#64748b', background: '#f1f5f9', padding: '4px 8px', borderRadius: '8px', alignSelf: 'flex-start' }}>Sag {lead.case_number || String(lead.id).substring(0,6)}</span>
+                                        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '700' }}>{lead.raw_data?.project_title || lead.project_category}</h4>
+                                        {customer && <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>{customer}</p>}
+                                    </div>
+                                    {isManager && (
+                                        <button
+                                            onClick={() => { const t = new Date(); const startStr = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`; openScheduleConfirm(lead, startStr, estimerDage(lead), 'new'); }}
+                                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '9px', borderRadius: '10px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
+                                            <CalendarIcon size={15} /> Planlæg
+                                        </button>
+                                    )}
                                 </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
-            )}
+                );
+            })()}
                 </div>
             )}
 
@@ -2210,7 +2267,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {(() => {
                                 const term = casePickerSearch.toLowerCase();
-                                const list = relevantLeads.filter(l => !term || (l.case_number?.toLowerCase().includes(term) || l.project_category?.toLowerCase().includes(term) || l.customer_name?.toLowerCase().includes(term) || l.raw_data?.project_title?.toLowerCase().includes(term)));
+                                // Vis alle tilgængelige sager (ikke begrænset af hold-dropdownen), så
+                                // også uplanlagte/utildelte sager kan vælges og planlægges herfra.
+                                const list = accessibleLeads.filter(l => !term || (l.case_number?.toLowerCase().includes(term) || l.project_category?.toLowerCase().includes(term) || l.customer_name?.toLowerCase().includes(term) || l.raw_data?.project_title?.toLowerCase().includes(term)));
                                 if (list.length === 0) return <p style={{ textAlign: 'center', color: '#94a3b8', marginTop: '24px' }}>Ingen sager fundet</p>;
                                 return list.map(lead => {
                                     const days = estimerDage(lead);
@@ -2297,6 +2356,37 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                             Inkludér helligdage
                                         </label>
                                     </div>
+
+                                    {isManager && assignableMembers.length > 0 && (() => {
+                                        const selected = scheduleConfirm.assignedWorkers || [];
+                                        const toggle = (id) => setScheduleConfirm(s => {
+                                            const cur = s.assignedWorkers || [];
+                                            return { ...s, assignedWorkers: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] };
+                                        });
+                                        return (
+                                            <div style={{ marginTop: '18px' }}>
+                                                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Hold på opgaven</label>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                    {assignableMembers.map(m => {
+                                                        const id = String(m.id);
+                                                        const active = selected.includes(id);
+                                                        const name = m.owner_name || m.company_name || 'Medarbejder';
+                                                        return (
+                                                            <button key={id} type="button" onClick={() => toggle(id)}
+                                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '7px 12px 7px 7px', borderRadius: '999px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600, transition: 'all 0.15s', border: active ? '1px solid #2563eb' : '1px solid #e2e8f0', background: active ? '#eff6ff' : '#fff', color: active ? '#1d4ed8' : '#475569' }}>
+                                                                <UserAvatar name={name} avatarUrl={m.avatar_url} size={22} ring={false} />
+                                                                {name.split(' ')[0]}
+                                                                {active && <CheckCircle size={15} />}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                                {selected.length === 0 && (
+                                                    <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Vælg hvem der er sat på opgaven.</p>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
 
                                     <div style={{ display: 'flex', gap: '12px', marginTop: '22px' }}>
                                         <button onClick={() => setScheduleConfirm(null)} style={{ flex: '0 0 auto', padding: '14px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>

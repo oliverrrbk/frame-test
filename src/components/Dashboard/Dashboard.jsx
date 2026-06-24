@@ -2694,8 +2694,18 @@ const Dashboard = () => {
                         </button>
                     )}
                     {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
-                        <button className={activeTab === 'calendar' ? 'active' : ''} onClick={() => { setActiveTab('calendar'); setIsMobileMenuOpen(false); }}>
+                        <button className={activeTab === 'calendar' ? 'active' : ''} onClick={() => { setActiveTab('calendar'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
                             <Calendar size={20} /> Kalender
+                            {(() => {
+                                // Bekræftede sager der endnu ikke er lagt i kalenderen (mangler planlægning).
+                                const isMgr = ['admin', 'boss', 'accountant'].includes(effectiveRole);
+                                if (!isMgr) return null;
+                                const unplanned = leadsData.filter(l => (l.status || '') === 'Bekræftet opgave' && !l.raw_data?.start_date).length;
+                                if (unplanned > 0) {
+                                    return <span className="notification-badge">{unplanned}</span>;
+                                }
+                                return null;
+                            })()}
                         </button>
                     )}
                     {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
