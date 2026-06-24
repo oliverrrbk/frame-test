@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, CheckCircle, Info, HelpCircle, X, ExternalLink, BookOpen } from 'lucide-react';
+import { Mail, Info, HelpCircle, X, ExternalLink, BookOpen } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const Tooltip = ({ text }) => {
@@ -50,6 +50,10 @@ const Tooltip = ({ text }) => {
     );
 };
 
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedIntegration }) => {
     const isExpanded = expandedIntegration === 'smtp';
     const [settings, setSettings] = useState({
@@ -65,10 +69,6 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
     const [isConfigured, setIsConfigured] = useState(false);
     const [showHelpModal, setShowHelpModal] = useState(false);
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
     useEffect(() => {
         const fetchSettings = async () => {
             if (!carpenterProfile?.id) return;
@@ -77,6 +77,10 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                 .select('smtp_settings')
                 .eq('carpenter_id', carpenterProfile.id)
                 .single();
+            
+            if (error && error.code !== 'PGRST116') {
+                console.error("Error fetching SMTP settings:", error);
+            }
             
             if (data?.smtp_settings) {
                 setSettings(data.smtp_settings);
@@ -412,7 +416,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                             </h3>
                             <p style={{ fontSize: '14px', margin: '0 0 12px 0' }}>Ligesom Microsoft kræver Google, at du bruger en <strong>App-adgangskode</strong> i stedet for dit normale kodeord.</p>
                             <ol style={{ fontSize: '14px', margin: '0 0 16px 0', paddingLeft: '20px' }}>
-                                <li style={{ marginBottom: '6px' }}>Gå til din Google-konto > Sikkerhed.</li>
+                                <li style={{ marginBottom: '6px' }}>Gå til din Google-konto &gt; Sikkerhed.</li>
                                 <li style={{ marginBottom: '6px' }}>Sørg for at "2-trins-bekræftelse" er slået til.</li>
                                 <li style={{ marginBottom: '6px' }}>Søg efter "App-adgangskoder" og opret en ny.</li>
                                 <li>Kopier den 16-cifrede kode og sæt den ind i adgangskode-feltet i Bison Frame.</li>
