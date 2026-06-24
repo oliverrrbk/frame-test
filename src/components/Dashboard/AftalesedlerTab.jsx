@@ -196,10 +196,10 @@ export default function AftalesedlerTab({ selectedCase, profile, carpenterProfil
                 return;
             }
 
-            // Robust: hvis den gemte PDF mangler, regenereres den ud fra sedlens data
-            // (virker uanset om den er "Fast Pris" eller "Efter Regning"/timer).
+            // Robust: regenerér hvis den gemte PDF mangler, ELLER hvis sedlen er bekræftet
+            // på mail (den gemte PDF blev lavet før bekræftelsen og mangler tid/IP-stemplet).
             let pdfDataUri = agreement?.pdf_data;
-            if (!pdfDataUri) {
+            if (!pdfDataUri || agreement?.confirmation?.method === 'email') {
                 const { dataUri } = await buildAgreementPdf(agreement, brand, caseCustomer);
                 pdfDataUri = dataUri;
             }
@@ -242,10 +242,11 @@ export default function AftalesedlerTab({ selectedCase, profile, carpenterProfil
         setSendingId(agreement.id);
         try {
             // PDF: skaf både en data-URI (til visning) og ren base64 (til vedhæftning).
+            // Regenerér hvis gemt PDF mangler ELLER er mail-bekræftet (så tid/IP-stemplet er med).
             let pdfDataUri = (typeof agreement?.pdf_data === 'string' && agreement.pdf_data.startsWith('data:'))
                 ? agreement.pdf_data
                 : null;
-            if (!pdfDataUri) {
+            if (!pdfDataUri || agreement?.confirmation?.method === 'email') {
                 const built = await buildAgreementPdf(agreement, brand, caseCustomer);
                 pdfDataUri = built.dataUri;
             }

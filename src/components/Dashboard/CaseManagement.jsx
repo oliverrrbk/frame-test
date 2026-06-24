@@ -2861,25 +2861,31 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Indkøbs- & leveringsstatus</span>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
-                                <div>
-                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a1a1a' }}>{orderedMaterials} <span style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 'normal' }}>/ {totalMaterials} ordrer</span></div>
+                            {/* Status uden antal: er materialerne bestilt? er de leveret? */}
+                            {totalMaterials === 0 ? (
+                                <div style={{ marginTop: 'auto', fontSize: '0.85rem', color: '#94a3b8', padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', fontStyle: 'italic' }}>
+                                    Ingen materialer tilføjet endnu
                                 </div>
-                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: deliveredMaterials > 0 ? '#10b981' : '#3b82f6' }}>{materialProgress}%</span>
-                            </div>
-                            <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px' }}>
-                                <div style={{ width: `${materialProgress}%`, height: '100%', background: deliveredMaterials > 0 ? '#10b981' : '#3b82f6', transition: 'width 0.5s ease' }} />
-                            </div>
-                            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: notOrderedMaterials > 0 ? '#b45309' : '#6b7280' }}>
-                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: notOrderedMaterials > 0 ? '#f59e0b' : '#cbd5e1' }} />
-                                    Mangler bestilling: {notOrderedMaterials}
+                            ) : (
+                                <div style={{ marginTop: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {(() => {
+                                        const allOrdered = notOrderedMaterials === 0;
+                                        const allDelivered = deliveredMaterials === totalMaterials;
+                                        const pill = (active, labelActive, labelInactive) => (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 14px', borderRadius: '999px', fontSize: '0.85rem', fontWeight: 700, color: active ? '#166534' : '#64748b', backgroundColor: active ? '#f0fdf4' : '#f1f5f9', border: `1px solid ${active ? '#bbf7d0' : '#e2e8f0'}` }}>
+                                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: active ? '#22c55e' : '#cbd5e1' }} />
+                                                {active ? labelActive : labelInactive}
+                                            </div>
+                                        );
+                                        return (
+                                            <>
+                                                {pill(allOrdered, 'Bestilt', 'Ikke bestilt endnu')}
+                                                {pill(allDelivered, 'Leveret', 'Ikke leveret endnu')}
+                                            </>
+                                        );
+                                    })()}
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#166534', fontWeight: '500' }}>
-                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
-                                    Leveret: {deliveredMaterials}
-                                </div>
-                            </div>
+                            )}
 
                             {/* Budget Oversigt */}
                             {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (

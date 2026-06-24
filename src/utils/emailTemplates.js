@@ -501,25 +501,18 @@ export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, car
 };
 
 export const getCarpenterOfferAcceptedTemplate = (carpenterName, customerName, categoryName, appUrl = 'https://app.bisonframe.dk', carpenter = null, leadId = null) => {
-    const economicLink = `<a href="https://secure.e-conomic.com/sales/invoices/drafts" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-left: 10px; margin-top: 10px;">Åbn E-conomic</a>`;
-    const dineroLink = `<a href="https://dinero.dk/app/sales/drafts" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-left: 10px; margin-top: 10px;">Åbn Dinero</a>`;
-    
     const content = `
         <div style="text-align: center; margin-bottom: 32px;">
             <div style="font-size: 48px; margin-bottom: 16px; color: #10b981;">✓</div>
             <h2 style="margin: 0; color: #10b981; font-size: 24px;">En kunde har accepteret dit tilbud!</h2>
         </div>
-        
+
         <p style="color: #334155;">Hej ${carpenterName},</p>
         <p style="color: #334155;">Gode nyheder! <strong>${customerName}</strong> har netop accepteret dit tilbud på opgaven: <strong>${categoryName}</strong>.</p>
-        <p style="color: #334155;">Opgaven er nu bekræftet og klar til at blive sat i gang. Har du tilknyttet dit regnskabsprogram eller sagsstyringssystem, ligger sagen allerede klar til dig som en kladde!</p>
-        
+        <p style="color: #334155;">Opgaven er nu bekræftet og klar til at blive sat i gang. Åbn den i ordrestyringssystemet for at komme videre. Bruger du et regnskabsprogram, kan du derfra vælge at overføre sagen — det er helt valgfrit.</p>
+
         <div style="text-align: center; margin: 32px 0;">
-            <a href="${appUrl}/dashboard?tab=Bekræftet+opgave${leadId ? `&leadId=${leadId}` : ''}" style="${buttonStyle}">Gå til Dashboard</a>
-            <br/><br/>
-            <p style="color: #64748b; font-size: 14px; margin-bottom: 12px;">Hurtig adgang til dit regnskabsprogram:</p>
-            ${economicLink}
-            ${dineroLink}
+            <a href="${appUrl}/dashboard?tab=Bekræftet+opgave${leadId ? `&leadId=${leadId}` : ''}" style="${buttonStyle}">Åbn i ordrestyringssystemet</a>
         </div>
     `;
     return getBaseTemplate("Et tilbud er blevet accepteret", content, `${customerName} har accepteret dit tilbud!`, carpenter);
