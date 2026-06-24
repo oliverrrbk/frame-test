@@ -63,6 +63,7 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
         setIsSendingAll(true);
         const sentMap = {};
         let failed = 0;
+        let lastError = '';
         try {
             for (const inv of unsentInvoices) {
                 const { data, error } = await supabase.functions.invoke(accountingFn, { body: buildVoucherBody(inv) });
@@ -70,7 +71,8 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
                     sentMap[inv.id] = data.voucherNumber || null;
                 } else {
                     failed++;
-                    console.error('Bilag fejlede:', inv.id, error?.message || data?.error);
+                    lastError = error?.message || data?.error || '';
+                    console.error('Bilag fejlede:', inv.id, lastError);
                 }
             }
 
@@ -82,7 +84,8 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
             } else if (ok > 0) {
                 toast(`${ok} bilag overført, ${failed} fejlede. Prøv de resterende igen.`, { icon: '⚠️' });
             } else {
-                toast.error(`Ingen bilag kunne overføres til ${accountingName}.`);
+                // Vis den faktiske årsag (fx manglende konto-opsætning), så den er til at handle på.
+                toast.error(lastError ? `Kunne ikke overføre til ${accountingName}: ${lastError}` : `Ingen bilag kunne overføres til ${accountingName}.`, { duration: 7000 });
             }
         } catch (err) {
             console.error("Fejl ved afsendelse af alle:", err);

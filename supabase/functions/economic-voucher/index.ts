@@ -54,13 +54,10 @@ serve(async (req) => {
       .eq('id', targetCarpenterId)
       .single()
     const cfg = companyRow?.raw_data?.economic_voucher_config || {}
-    const accountNumber = cfg.expenseAccount
-    const contraAccountNumber = cfg.contraAccount
+    let accountNumber = cfg.expenseAccount
+    let contraAccountNumber = cfg.contraAccount
     const vatCode = cfg.vatCode || null
-
-    if (!accountNumber || !contraAccountNumber) {
-      throw new Error("Manglende konto-opsætning. Vælg udgiftskonto og modkonto under Indstillinger → e-conomic, før bilag kan overføres.")
-    }
+    // Auto-valg af konti sker længere nede (efter fetchEconomic er defineret), hvis de mangler.
 
     // 1b. Hent grant token
     const { data: secret, error: dbError } = await supabaseClient
@@ -90,6 +87,41 @@ serve(async (req) => {
         throw new Error(`e-conomic API fejl (${res.status}) på ${path}: ${text}`)
       }
       return text ? JSON.parse(text) : null
+    }
+
+    // 1c. Auto-vælg standardkonti hvis de ikke er sat i Indstillinger.
+    //     Bilaget oprettes som en KLADDE i kassekladden (ikke bogført), så det er trygt
+    //     at vælge fornuftige konti automatisk og lade brugeren rette dem bagefter.
+    if (!accountNumber || !contraAccountNumber) {
+      const accountsRes = await fetchEconomic('GET', '/accounts?pagesize=1000')
+      const accounts = (accountsRes?.collection || []).filter((a: any) => a.barred !== true)
+      const pickByName = (list: any[], keys: string[]) =>
+        list.find((a) => keys.some((k) => String(a.name || '').toLowerCase().includes(k)))
+      const pl = accounts.filter((a: any) => a.accountType === 'profitAndLoss')
+      const st = accounts.filter((a: any) => a.accountType === 'status')
+
+      if (!accountNumber) {
+        const exp = pickByName(pl, ['vareforbrug', 'varekøb', 'materialer', 'fremmedarbejde', 'underleverand', 'håndværker', 'køb', 'driftsomkostning']) || pl[0]
+        accountNumber = exp?.accountNumber
+      }
+      if (!contraAccountNumber) {
+        const contra = pickByName(st, ['skyldige', 'kreditor', 'mellemregning', 'kassekredit', 'bank']) || st[0]
+        contraAccountNumber = contra?.accountNumber
+      }
+      if (!accountNumber || !contraAccountNumber) {
+        throw new Error("Kunne ikke finde standardkonti automatisk. Vælg udgiftskonto og modkonto under Indstillinger → e-conomic.")
+      }
+
+      // Gem valget, så fremtidige bilag automatisk bruger samme konti.
+      try {
+        const baseRaw = companyRow?.raw_data || {}
+        await supabaseClient.from('carpenters').update({
+          raw_data: { ...baseRaw, economic_voucher_config: { expenseAccount: String(accountNumber), contraAccount: String(contraAccountNumber), vatCode: vatCode || '' } }
+        }).eq('id', targetCarpenterId)
+        console.log('Auto-valgte bilagskonti:', accountNumber, contraAccountNumber)
+      } catch (e) {
+        console.error('Kunne ikke gemme auto-valgte konti:', (e as Error).message)
+      }
     }
 
     // 2. Find en kassekladde (journal)
