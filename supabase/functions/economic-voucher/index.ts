@@ -155,10 +155,13 @@ serve(async (req) => {
     }
     if (vatCode) financeVoucher.vatAccount = { vatCode }
 
+    // e-conomic kræver at posteringer ligger i et "entries"-objekt (fejl E04040 ellers).
     const voucherPayload = [{
       accountingYear: { year: accountingYear },
       journal: { journalNumber },
-      financeVouchers: [financeVoucher],
+      entries: {
+        financeVouchers: [financeVoucher],
+      },
     }]
 
     const created = await fetchEconomic('POST', `/journals/${journalNumber}/vouchers`, voucherPayload)
