@@ -51,8 +51,6 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
     const [formData, setFormData] = useState({
         owner_name: myProfile?.owner_name || '',
         phone: myProfile?.phone || '',
-        newPassword: '',
-        confirmPassword: '',
         // Private oplysninger (gemmes i raw_data — kun synligt for medarbejderen selv + mester)
         home_address: myProfile?.raw_data?.home_address || '',
         home_zip: myProfile?.raw_data?.home_zip || '',
@@ -113,11 +111,7 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
         setError('');
         setMessage('');
 
-        if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
-            setError('De to kodeord stemmer ikke overens!');
-            setIsSaving(false);
-            return;
-        }
+
 
         try {
             // Flet private felter ind i raw_data (overskriver ikke andet)
@@ -142,16 +136,6 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
 
             if (dbError) throw dbError;
 
-            // Opdater password hvis angivet
-            if (formData.newPassword) {
-                const { error: authError } = await supabase.auth.updateUser({
-                    password: formData.newPassword
-                });
-
-                if (authError) throw authError;
-
-                setFormData(prev => ({ ...prev, newPassword: '', confirmPassword: '' }));
-            }
 
             setMyProfile(prev => ({
                 ...prev,
@@ -400,31 +384,6 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                         </div>
                     </ProfileCard>
 
-                    {/* SIKKERHED */}
-                    <ProfileCard icon={<Lock size={19} />} title="Sikkerhed">
-                        <div style={{ display: 'grid', gridTemplateColumns: (isMobile || !formData.newPassword) ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                            <ProfileField label="Nyt kodeord (valgfrit)">
-                                <input
-                                    type="password"
-                                    placeholder="Nyt kodeord"
-                                    value={formData.newPassword}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
-                                    style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
-                                />
-                            </ProfileField>
-                            {formData.newPassword.length > 0 && (
-                                <ProfileField label="Gentag nyt kodeord">
-                                    <input
-                                        type="password"
-                                        placeholder="Gentag nyt kodeord"
-                                        value={formData.confirmPassword}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                                        style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
-                                    />
-                                </ProfileField>
-                            )}
-                        </div>
-                    </ProfileCard>
 
                     {/* GEM KNAP */}
                     <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-end' }}>

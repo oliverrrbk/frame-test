@@ -44,6 +44,7 @@ afløser/supplerer hinanden.
 | `setup_public_carpenter.sql` | Offentlig læseadgang til tømrer-profil (wizard) |
 | `supabase/setup_chat.sql` | Frame Chat-system: tabeller, indexes + RLS til sikker real-time chat |
 | `supabase/fix_chat_rls.sql` | Rettelse af chat-RLS-politikker |
+| `supabase/fix_chat_rls_case_private.sql` | **Gør sagschat (case) privat** — kun deltagere kan se den; kun `company`-chat er firma-bred. Kør EFTER `fix_chat_rls.sql` (overskriver dens case-led) |
 | `supabase/setup_chat_notifications.sql` | Chat: `last_read_at` (ulæst) + push-trigger på nye beskeder (kør sidst, efter setup_chat) |
 | `setup_error_logs.sql` | In-house fejlfinder: `error_logs`-tabel + RLS (alle må logge, kun superadmin må læse) |
 
@@ -65,6 +66,7 @@ afløser/supplerer hinanden.
 | `setup_rls_carpenters_hardening.sql` | Stram læseadgang til `carpenters` |
 | `setup_security_hardening_2.sql` | carpenter_secrets, bilag-bucket, tegninger |
 | `setup_assigned_pm_rls_fix.sql` | Tilføj `assigned_pm` til leads SELECT/UPDATE-policy |
+| `supabase/widen_leads_access_confirmed.sql` | **Udvid leads SELECT/UPDATE: alle i firmaet kan se/føre timer på BEKRÆFTEDE sager** (selvbetjent — ingen manuel tildeling). Kør EFTER `setup_assigned_pm_rls_fix.sql` (overskriver dens SELECT/UPDATE-policy). Skrivning er fortsat hærdet af `protect_lead_sensitive_fields()` |
 | `supabase/add_anonymous_update_policy.sql` | Tillad anonym kunde at acceptere via token |
 
 ### 5) Triggers & vagter (KØR SIDST — afhænger af ovenstående)

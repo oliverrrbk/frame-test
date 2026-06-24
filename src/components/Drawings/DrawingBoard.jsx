@@ -3503,83 +3503,159 @@ const DrawingBoard = ({ drawingId, leadId, onClose }) => {
         setShortcutsOpen(next);
     };
 
-    // Kompakt genvejs-panel i Bison Frame-stil. Vises ved hold-Shift (i tomgang) eller via knappen.
+    // Fuld-skærms genvejs-popup i Bison Frame-stil. Åbnes ved hold-Shift (i tomgang)
+    // eller via knappen. Klik på baggrunden, X eller Esc lukker.
     const renderShortcutsPanel = () => {
         if (!shortcutsOpen) return null;
 
         const Key = ({ children }) => (
-            <span style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                minWidth: 20, height: 20, padding: '0 6px',
-                background: '#f1f5f9', border: '1px solid #cbd5e1', borderBottomWidth: 2,
-                borderRadius: 5, fontSize: 11, fontWeight: 800, color: '#334155',
-                lineHeight: 1, whiteSpace: 'nowrap'
-            }}>{children}</span>
+            <kbd className="bison-sc-key">{children}</kbd>
         );
 
         const groups = [
-            { title: 'Tegning', items: [
-                { keys: ['Klik', 'Klik'], label: 'Tegn streg (klik start · klik slut)' },
-                { keys: ['⇧'], label: 'Lås til 45°' },
-                { keys: ['Alt'], label: 'Fri vinkel / snap fra' },
-                { keys: ['Esc'], label: 'Annullér streg' },
-            ]},
-            { title: 'Redigering', items: [
-                { keys: ['⌘', 'Z'], label: 'Fortryd' },
-                { keys: ['⌘', 'C'], label: 'Kopiér' },
-                { keys: ['⌘', 'V'], label: 'Indsæt' },
-                { keys: ['Delete'], label: 'Slet' },
-                { keys: ['←↑↓→'], label: 'Flyt (⇧ = 10×)' },
-            ]},
-            { title: 'Navigation', items: [
-                { keys: ['Mellemrum', 'Træk'], label: 'Flyt lærred' },
-                { keys: ['Scroll'], label: 'Zoom' },
-            ]},
+            {
+                title: 'Tegning', icon: <PenTool size={16} />, accent: '#2563eb', tint: 'rgba(37,99,235,0.08)',
+                items: [
+                    { keys: ['Klik', 'Klik'], label: 'Tegn streg — klik start, klik slut' },
+                    { keys: ['⇧'], label: 'Lås vinkel til 45°' },
+                    { keys: ['Alt'], label: 'Fri vinkel / slå snap fra' },
+                    { keys: ['Esc'], label: 'Annullér streg' },
+                ]
+            },
+            {
+                title: 'Redigering', icon: <Copy size={16} />, accent: '#7c3aed', tint: 'rgba(124,58,237,0.08)',
+                items: [
+                    { keys: ['⌘', 'Z'], label: 'Fortryd' },
+                    { keys: ['⌘', 'C'], label: 'Kopiér' },
+                    { keys: ['⌘', 'V'], label: 'Indsæt' },
+                    { keys: ['Delete'], label: 'Slet markeret' },
+                    { keys: ['←', '↑', '↓', '→'], label: 'Flyt (⇧ = 10×)' },
+                ]
+            },
+            {
+                title: 'Navigation', icon: <Maximize2 size={16} />, accent: '#0d9488', tint: 'rgba(13,148,136,0.08)',
+                items: [
+                    { keys: ['Mellemrum', 'Træk'], label: 'Flyt lærred' },
+                    { keys: ['Scroll'], label: 'Zoom ind / ud' },
+                    { keys: ['Magnet'], label: 'Snap fanger midt & ender' },
+                ]
+            },
         ];
 
         return (
             <div
-                onPointerDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => { e.stopPropagation(); closeShortcuts(); }}
+                className="bison-sc-backdrop"
                 style={{
-                    position: 'absolute', left: '50%', bottom: 18, transform: 'translateX(-50%)',
-                    zIndex: 90, pointerEvents: 'auto', width: 'min(620px, calc(100vw - 32px))'
+                    position: 'fixed', inset: 0, zIndex: 99999,
+                    background: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
                 }}
             >
-                <div style={{
-                    background: 'rgba(255, 255, 255, 0.98)', borderRadius: 16,
-                    border: '1px solid rgba(37, 99, 235, 0.18)',
-                    boxShadow: '0 18px 44px rgba(15, 23, 42, 0.22)',
-                    padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 10
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#0f172a', fontWeight: 800, fontSize: 13 }}>
-                            <Keyboard size={15} /> Genveje
-                            <span style={{ fontWeight: 600, fontSize: 11, color: '#64748b' }}>· hold ⇧ Shift</span>
+                <style>{`
+                    @keyframes bisonScFade { from { opacity: 0 } to { opacity: 1 } }
+                    @keyframes bisonScPop { from { opacity: 0; transform: translateY(14px) scale(.94) } to { opacity: 1; transform: translateY(0) scale(1) } }
+                    .bison-sc-backdrop { animation: bisonScFade .16s ease both; }
+                    .bison-sc-card { animation: bisonScPop .26s cubic-bezier(.18,.9,.24,1) both; }
+                    .bison-sc-key {
+                        display: inline-flex; align-items: center; justify-content: center;
+                        min-width: 26px; height: 26px; padding: 0 8px;
+                        background: linear-gradient(180deg, #ffffff, #eef2f7);
+                        border: 1px solid #cbd5e1; border-bottom: 2px solid #aab6c6;
+                        border-radius: 7px; font-size: 12px; font-weight: 800; color: #1e293b;
+                        font-family: inherit; line-height: 1; white-space: nowrap;
+                        box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset; transition: transform .1s ease;
+                    }
+                    .bison-sc-row:hover .bison-sc-key { transform: translateY(-1px); }
+                    .bison-sc-group { transition: transform .14s ease, box-shadow .14s ease; }
+                    .bison-sc-group:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(15,23,42,0.12); }
+                    .bison-sc-close { transition: background .14s ease, color .14s ease; }
+                    .bison-sc-close:hover { background: #f1f5f9; color: #0f172a; }
+                `}</style>
+
+                <div
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="bison-sc-card"
+                    style={{
+                        width: 'min(860px, 100%)', maxHeight: 'calc(100vh - 48px)', overflow: 'auto',
+                        background: '#ffffff', borderRadius: 22,
+                        border: '1px solid rgba(255,255,255,0.8)',
+                        boxShadow: '0 30px 80px rgba(15, 23, 42, 0.45)',
+                        padding: 0, display: 'flex', flexDirection: 'column'
+                    }}
+                >
+                    {/* Header med Bison-gradient */}
+                    <div style={{
+                        position: 'relative', padding: '20px 24px',
+                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1d4ed8 140%)',
+                        borderTopLeftRadius: 22, borderTopRightRadius: 22, color: '#fff'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{
+                                width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                                background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.22)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <Keyboard size={20} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.2 }}>Genveje</div>
+                                <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>
+                                    Hold <b style={{ color: '#fff' }}>⇧ Shift</b> for at åbne — klik udenfor for at lukke
+                                </div>
+                            </div>
                         </div>
                         <button
                             onClick={closeShortcuts}
-                            title="Luk"
+                            title="Luk (Esc)"
+                            className="bison-sc-close"
                             style={{
+                                position: 'absolute', top: 16, right: 16,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                width: 24, height: 24, borderRadius: 7, color: '#64748b',
-                                background: 'transparent', border: 'none', cursor: 'pointer'
+                                width: 32, height: 32, borderRadius: 10, color: 'rgba(255,255,255,0.85)',
+                                background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer'
                             }}
                         >
-                            <X size={15} />
+                            <X size={17} />
                         </button>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px 20px' }}>
+
+                    {/* Grupper */}
+                    <div style={{
+                        padding: 20, display: 'grid', gap: 16,
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', background: '#f8fafc',
+                        borderBottomLeftRadius: 22, borderBottomRightRadius: 22
+                    }}>
                         {groups.map(g => (
-                            <div key={g.title} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', color: '#2563eb' }}>{g.title}</div>
-                                {g.items.map((it, i) => (
-                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12 }}>
-                                        <span style={{ display: 'inline-flex', gap: 3, flexShrink: 0 }}>
-                                            {it.keys.map((k, j) => <Key key={j}>{k}</Key>)}
-                                        </span>
-                                        <span style={{ color: '#475569' }}>{it.label}</span>
+                            <div
+                                key={g.title}
+                                className="bison-sc-group"
+                                style={{
+                                    background: '#ffffff', borderRadius: 16, padding: '14px 16px',
+                                    border: '1px solid #e8edf3', boxShadow: '0 4px 14px rgba(15,23,42,0.05)',
+                                    display: 'flex', flexDirection: 'column', gap: 10
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                                    <div style={{
+                                        width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+                                        background: g.tint, color: g.accent,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        {g.icon}
                                     </div>
-                                ))}
+                                    <div style={{ fontSize: 13.5, fontWeight: 800, color: '#0f172a' }}>{g.title}</div>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                                    {g.items.map((it, i) => (
+                                        <div key={i} className="bison-sc-row" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                                            <span style={{ display: 'inline-flex', gap: 4, flexShrink: 0 }}>
+                                                {it.keys.map((k, j) => <Key key={j}>{k}</Key>)}
+                                            </span>
+                                            <span style={{ color: '#475569', lineHeight: 1.25 }}>{it.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         ))}
                     </div>

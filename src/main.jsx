@@ -7,14 +7,32 @@ import { installGlobalErrorLogging } from './utils/errorLogger';
 // Usynlig fejl-opsamling (fanger uventede fejl + afviste promises på alle enheder).
 installGlobalErrorLogging();
 
+// Service worker: KUN i produktion. I dev cacher den ellers stale JS-bundles
+// (filerne er ikke hash-navngivne i dev), hvilket kan crashe appen ("React er null").
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(registration => {
-      console.log('SW registered: ', registration);
-    }).catch(registrationError => {
-      console.log('SW registration failed: ', registrationError);
+  if (import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then(registration => {
+        console.log('SW registered: ', registration);
+      }).catch(registrationError => {
+        console.log('SW registration failed: ', registrationError);
+      });
     });
-  });
+  } else {
+    // Dev: ryd op efter en evt. tidligere registreret service worker + dens caches,
+    // så gamle bundles ikke serveres og crasher appen. Self-healer med ét auto-reload.
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      const had = regs.length > 0;
+      regs.forEach(reg => reg.unregister());
+      if (window.caches?.keys) {
+        caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(() => {});
+      }
+      if (had && navigator.serviceWorker.controller && !sessionStorage.getItem('sw-dev-cleared')) {
+        sessionStorage.setItem('sw-dev-cleared', '1');
+        window.location.reload();
+      }
+    }).catch(() => {});
+  }
 }
 
 createRoot(document.getElementById('root')).render(
