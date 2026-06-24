@@ -118,6 +118,16 @@ const PREVIEW_CSS = `
   .qqb-maxbtn:hover{transform:translateY(-1px);}
   .qqb-maxbtn-hint{box-shadow:0 0 0 0 rgba(59,130,246,.5);animation:qqbPulse 2.4s ease-out infinite;}
   @keyframes qqbPulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.45);}70%{box-shadow:0 0 0 7px rgba(59,130,246,0);}100%{box-shadow:0 0 0 0 rgba(59,130,246,0);}}
+  @keyframes qqbFade{from{opacity:0;}to{opacity:1;}}
+  @keyframes qqbConfirmPop{0%{opacity:0;transform:translateY(16px) scale(.92);}60%{opacity:1;transform:translateY(-4px) scale(1.01);}100%{opacity:1;transform:translateY(0) scale(1);}}
+  @keyframes qqbIconPop{0%{transform:scale(.4);}70%{transform:scale(1.12);}100%{transform:scale(1);}}
+  .qqb-confirm-backdrop{animation:qqbFade .16s ease both;}
+  .qqb-confirm-card{animation:qqbConfirmPop .3s cubic-bezier(.34,1.56,.64,1) both;}
+  .qqb-confirm-icon{animation:qqbIconPop .42s cubic-bezier(.34,1.56,.64,1) .06s both;}
+  .qqb-confirm-cancel{transition:background .15s ease,border-color .15s ease;}
+  .qqb-confirm-cancel:hover{background:#f1f5f9 !important;}
+  .qqb-confirm-delete{transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .2s ease,background .15s ease;}
+  .qqb-confirm-delete:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 12px 26px rgba(239,68,68,.4);}
   .qqb-toggle{transition:border-color .15s ease,background .15s ease,color .15s ease;}
   .qqb-toggle:hover:not(.qqb-toggle-on){border-color:#0f172a !important;}
   .qqb-col::-webkit-scrollbar{width:8px;}
@@ -147,6 +157,7 @@ const PREVIEW_CSS = `
 
 export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null }) {
     const [busy, setBusy] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     // Redigerer vi en eksisterende tilbudskladde? Forudfyld så alt fra den gemte lead.
     const isEditing = !!initialLead?.id;
@@ -474,15 +485,16 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     };
 
     // ---- Slet tilbuddet helt (soft-delete via RPC — kun ved redigering af eksisterende) ----
-    const del = async () => {
+    const del = () => { if (initialLead?.id) setConfirmDelete(true); };
+
+    const doDelete = async () => {
         if (!initialLead?.id) return;
-        const what = wasSent ? 'det sendte tilbud' : 'denne tilbudskladde';
-        if (!window.confirm(`Vil du slette ${what} helt? Det kan ikke fortrydes.`)) return;
         setBusy(true);
         try {
             const { error } = await supabase.rpc('soft_delete_lead', { p_lead_id: initialLead.id });
             if (error) throw error;
             toast.success('Tilbuddet er slettet.');
+            setConfirmDelete(false);
             if (onDeleted) onDeleted(initialLead.id);
             else if (onCancel) onCancel();
         } catch (e) {
@@ -891,6 +903,49 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         </button>
                     </div>
                 </div>
+
+                {/* Lækker fuld-skærms bekræftelse ved sletning */}
+                {confirmDelete && (
+                    <div
+                        className="qqb-confirm-backdrop"
+                        onClick={() => !busy && setConfirmDelete(false)}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100080, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 'calc(24px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
+                    >
+                        <div
+                            className="qqb-confirm-card"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: 'min(440px, 100%)', background: '#fff', borderRadius: 24, padding: '34px 30px 26px', textAlign: 'center', boxShadow: '0 30px 80px rgba(15,23,42,0.45)' }}
+                        >
+                            <div className="qqb-confirm-icon" style={{ width: 72, height: 72, borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px' }}>
+                                <Trash2 size={32} color="#ef4444" />
+                            </div>
+                            <h2 style={{ margin: '0 0 12px', fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>
+                                {wasSent ? 'Slet det sendte tilbud?' : 'Slet tilbuddet?'}
+                            </h2>
+                            <p style={{ margin: '0 0 28px', color: '#64748b', fontSize: '1rem', lineHeight: 1.55 }}>
+                                Er du sikker på, at du vil slette tilbuddet til <strong style={{ color: '#0f172a' }}>{customer.name || 'kunden'}</strong> permanent? Dette kan ikke fortrydes.
+                            </p>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                                <button
+                                    className="qqb-confirm-cancel"
+                                    disabled={busy}
+                                    onClick={() => setConfirmDelete(false)}
+                                    style={{ flex: 1, padding: '14px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
+                                >
+                                    Fortryd
+                                </button>
+                                <button
+                                    className="qqb-confirm-delete"
+                                    disabled={busy}
+                                    onClick={doDelete}
+                                    style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(239,68,68,0.32)' }}
+                                >
+                                    <Trash2 size={17} /> {busy ? 'Sletter…' : 'Ja, slet tilbud'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>,
             document.body
         );
