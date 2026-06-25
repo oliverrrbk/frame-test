@@ -598,3 +598,20 @@ export const getEmployeeInviteTemplate = (employeeName, loginEmail, loginPasswor
     `;
     return getBaseTemplate("Velkommen til Bison Frame", content, "Dine login oplysninger er klar.", carpenter);
 };
+
+// Gæste-invitation: en underentreprenør tilføjes på ÉT projekt og vælger selv sin
+// adgangskode + godkender vilkår via det personlige link (actionLink).
+export const getGuestInviteTemplate = (firstName, inviterCompanyName, projectTitle, actionLink) => {
+    const content = `
+        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Hej ${firstName || 'der'},</h2>
+        <p style="color: #334155;"><strong>${inviterCompanyName || 'En virksomhed'}</strong> har tilføjet dig som underentreprenør på projektet <strong>${projectTitle || 'et byggeprojekt'}</strong> i Bison Frame.</p>
+        <p style="color: #334155;">Du får adgang til projektets tegninger, beskrivelse og bygge-to-do — og kan nemt registrere dine egne timer direkte fra mobilen. Det er <strong>gratis</strong> for dig.</p>
+
+        <div style="margin: 32px 0; text-align: center;">
+            <a href="${actionLink}" style="${buttonStyle}">Opret adgang &amp; vælg adgangskode</a>
+        </div>
+
+        <p style="color: #64748b; font-size: 13px; text-align: center;">Linket er personligt. Når du klikker, vælger du din egen adgangskode og godkender vilkårene. Har du ikke forventet denne mail, kan du roligt ignorere den.</p>
+    `;
+    return getBaseTemplate(`Du er tilføjet på ${projectTitle || 'et projekt'}`, content, `${inviterCompanyName || ''} har tilføjet dig i Bison Frame.`, null);
+};

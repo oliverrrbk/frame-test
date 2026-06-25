@@ -10,6 +10,7 @@ const ROLE_LABELS = {
     apprentice: 'Lærling',
     accountant: 'Bogholder',
     subcontractor: 'Underleverandør',
+    guest: 'Gæst',
     super_admin: 'Admin',
 };
 
@@ -23,6 +24,7 @@ const ROLE_SHORT = {
     apprentice: 'Lærling',
     accountant: 'Bogholder',
     subcontractor: 'UL',
+    guest: 'Gæst',
     super_admin: 'Admin',
 };
 

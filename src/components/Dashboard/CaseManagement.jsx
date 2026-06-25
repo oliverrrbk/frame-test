@@ -12,6 +12,7 @@ import AftalesedlerTab from './AftalesedlerTab';
 import CaseDrawingsTab from './CaseDrawingsTab';
 import BilagManager from './BilagManager';
 import { SubcontractorModal } from './Subcontractors';
+import GuestInviteModal from '../Guest/GuestInviteModal';
 import ProfileCard from './ProfileCard';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
 import { useClickOutside } from '../../hooks/useClickOutside';
@@ -668,6 +669,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [subcontractors, setSubcontractors] = useState([]);
     const [subcontractorSearch, setSubcontractorSearch] = useState('');
     const [showInviteSubcontractorModal, setShowInviteSubcontractorModal] = useState(false);
+    const [showGuestInvite, setShowGuestInvite] = useState(false);
     
     // DAILY MESSAGE STATE
     const [isDailyMessageOpen, setIsDailyMessageOpen] = useState(false);
@@ -3125,10 +3127,23 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 );
                             })}
 
+                            {/* Send gæste-login (underentreprenør får adgang + fører egne timer) */}
+                            {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                                <button
+                                    onClick={() => setShowGuestInvite(true)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', border: '1px solid #bfdbfe', borderRadius: '12px', background: '#eff6ff', color: '#2563eb', cursor: 'pointer', fontWeight: 700, transition: 'all 0.2s', height: '100%' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
+                                    title="Inviter en underentreprenør med gæste-login til denne sag"
+                                >
+                                    📨 Send gæste-login
+                                </button>
+                            )}
+
                             {/* Tilføj Medarbejder Knap */}
                             {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
                                 <div style={{ position: 'relative' }}>
-                                    <button 
+                                    <button
                                         onClick={() => setWorkerDropdownOpen(!workerDropdownOpen)}
                                         style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', border: '1px dashed #cbd5e1', borderRadius: '12px', background: '#ffffff', color: '#475569', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s', height: '100%' }}
                                         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#94a3b8'; }}
@@ -3434,6 +3449,15 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         onClose={() => setShowInviteSubcontractorModal(false)}
                         companyId={profile.company_id || profile.id}
                         onSaved={handleSubcontractorCreated}
+                    />
+
+                    {/* Modal: send gæste-login til en underentreprenør på DENNE sag */}
+                    <GuestInviteModal
+                        open={showGuestInvite}
+                        onClose={() => setShowGuestInvite(false)}
+                        leadId={selectedCase.id}
+                        invitedByCompanyId={profile.company_id || profile.id}
+                        projectTitle={selectedCase.raw_data?.project_title || selectedCase.project_category || 'projektet'}
                     />
 
                     {/* Profil-kort (kun arbejdsinfo) */}

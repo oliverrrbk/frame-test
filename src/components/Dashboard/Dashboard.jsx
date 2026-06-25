@@ -29,6 +29,7 @@ import MyProfileView from './MyProfileView';
 import SubscriptionSettings from './SubscriptionSettings';
 const DashboardOverview = lazy(() => import('./DashboardOverview'));
 import WorkerOverview from './WorkerOverview';
+const GuestDashboard = lazy(() => import('../Guest/GuestDashboard'));
 import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
@@ -1476,7 +1477,14 @@ const Dashboard = () => {
         if (myDbProfile) {
             setMyProfile(myDbProfile);
         }
-        
+
+        // GÆST: stop her. Gæsten rendres af GuestDashboard (tidlig return i render),
+        // og skal ALDRIG ramme mester-flows: ingen trial, ingen onboarding-popup,
+        // ingen team-/firma-datakald. Gæste-adgang er gratis for evigt.
+        if (myDbProfile?.role === 'guest') {
+            return;
+        }
+
         // Find ud af hvilket firma dashboardet skal vise (targetId)
         let targetId = userId;
         if (impersonateId && authUser.email === 'team@bisoncompany.dk') {
@@ -2857,6 +2865,16 @@ const Dashboard = () => {
             </div>
         );
     };
+
+    // GÆST: en underentreprenør/gæst lander i sin egen isolerede, minimale app
+    // (kun tildelte sager + egne timer). Mester-skallen herunder røres aldrig.
+    if (myProfile?.role === 'guest') {
+        return (
+            <Suspense fallback={<div style={{ minHeight: '100dvh', background: '#f8fafc' }} />}>
+                <GuestDashboard myProfile={myProfile} />
+            </Suspense>
+        );
+    }
 
     if (!isDashboardLoaded) {
         return (
