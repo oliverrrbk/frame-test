@@ -3432,28 +3432,8 @@ const Dashboard = () => {
 
                     {activeTab === 'team' && ['admin', 'sales', 'accountant'].includes(effectiveRole) && (
                         <div className="dashboard-workspace team-overview tab-pane active" style={{ height: '100%', overflowY: 'auto', paddingRight: '10px' }}>
-                            {carpenterProfile?.tier === 'enterprise' ? (
-                                <TeamManagement profile={{ ...carpenterProfile, role: effectiveRole }} leadsData={leadsData} />
-                            ) : (
-                                <div style={{ maxWidth: '600px', margin: '60px auto', background: '#fff', borderRadius: '24px', padding: '48px', textAlign: 'center', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px -15px rgba(0,0,0,0.05)' }}>
-                                    <div style={{ width: '80px', height: '80px', background: '#fef2f2', color: '#ef4444', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 24px', border: '1px solid #fee2e2', boxShadow: '0 4px 12px rgba(239,68,68,0.1)' }}>
-                                        <Lock size={40} />
-                                    </div>
-                                    <h2 style={{ fontSize: '1.75rem', color: '#0f172a', marginBottom: '16px', fontWeight: '800', letterSpacing: '-0.5px' }}>Låst Premium Funktion</h2>
-                                    <p style={{ color: '#64748b', fontSize: '1.05rem', lineHeight: '1.6', marginBottom: '32px' }}>
-                                        "Team & Medarbejdere" funktionen er forbeholdt vores <strong>Enterprise</strong> pakkeløsning.<br/><br/>
-                                        Få fuld kontrol over dit team, tildel opgaver og styr rettigheder ned til mindste detalje.
-                                    </p>
-                                    <button 
-                                        onClick={() => setActiveTab('account_settings')}
-                                        style={{ background: '#0f172a', color: '#fff', padding: '14px 28px', borderRadius: '12px', border: 'none', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 8px 16px -4px rgba(15,23,42,0.3)' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                                    >
-                                        Opgrader i Indstillinger
-                                    </button>
-                                </div>
-                            )}
+                            {/* Rollebaseret model: team-styring er for alle — man betaler pr. sæde, ikke pr. funktion. */}
+                            <TeamManagement profile={{ ...carpenterProfile, role: effectiveRole }} leadsData={leadsData} />
                         </div>
                     )}
 

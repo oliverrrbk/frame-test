@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
 import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
 import UserAvatar from '../ui/UserAvatar';
+import { priceForAddingRole, formatKr } from '../../utils/pricing';
 
 const roles = [
     { value: 'sales', label: 'Projektleder', desc: 'Kan styre tildelte sager, oprette ordrer og se materialepriser. (Kan ikke ændre andres timer).' },
@@ -98,12 +99,34 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
         return result;
     };
 
+    // Hold Stripe-sæderne i sync med de faktiske medarbejdere. Best-effort + idempotent:
+    // funktionen regner hele holdet på ny og rører kun Stripe for betalende konti.
+    const syncSeats = () => {
+        supabase.functions.invoke('sync-subscription-seats').catch(() => {});
+    };
+
+    // Rolig, ærlig omkostnings-linje ved invitation (ikke sælgende — bare gennemsigtig).
+    const KONTOR_BILLING_ROLES = ['admin', 'boss', 'sales', 'lead', 'pm', 'accountant'];
+    const FELT_BILLING_ROLES = ['worker', 'apprentice'];
+    const inviteSeatInfo = () => {
+        const kontor = team.filter(m => KONTOR_BILLING_ROLES.includes(m.role)).length;
+        const felt = team.filter(m => FELT_BILLING_ROLES.includes(m.role)).length;
+        const current = { mester: 1, pl: kontor, bog: 0, svend: felt, laer: 0 };
+        const roleKey = FELT_BILLING_ROLES.includes(inviteData.role) ? 'svend' : 'pl';
+        const cost = priceForAddingRole(current, roleKey);
+        const status = profile.subscription_status;
+        if (status === 'exempt') return 'Gratis — I betaler ikke pr. bruger.';
+        if (status === 'active') return `+${formatKr(cost)} kr/md fra næste regning.`;
+        return `Gratis i prøveperioden — derefter +${formatKr(cost)} kr/md.`;
+    };
+
     const doRoleChange = async (member, newRole) => {
         if (newRole === member.role) { setRoleMenuFor(null); return; }
         setActionBusy(true);
         try {
             await callManage('set_role', { employeeId: member.id, role: newRole });
             setTeam(prev => prev.map(m => m.id === member.id ? { ...m, role: newRole } : m));
+            syncSeats();
             toast.success(`Rolle ændret til ${getRoleLabel(newRole)}.`);
         } catch (err) {
             toast.error(err.message);
@@ -141,6 +164,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                 await callManage('deactivate', { employeeId: removeTarget.id });
             }
             setTeam(prev => prev.filter(m => m.id !== removeTarget.id));
+            syncSeats();
             toast.success(mode === 'delete' ? 'Medarbejderen er slettet.' : 'Medarbejderen er deaktiveret.');
         } catch (err) {
             toast.error(err.message);
@@ -316,6 +340,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                 setInviteData({ name: '', email: '', phone: '', role: 'sales' });
                 if (isMobile) { setIsInviteModalOpen(false); toast.success(`Medarbejder oprettet (lønnr. ${autoLonnummer})`); }
                 fetchTeam(); // Opdater listen
+                syncSeats(); // opdatér Stripe-sæder (kun betalende konti)
             } else {
                 setErrorMsg(result.error || 'Kunne ikke invitere medarbejder.');
             }
@@ -512,14 +537,18 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                 </p>
                             </div>
 
+                            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <DollarSign size={15} style={{ flexShrink: 0, opacity: 0.7 }} />
+                                <span>{inviteSeatInfo()}</span>
+                            </div>
                             <button
                                 type="submit"
-                                disabled={isInviting || profile.tier !== 'enterprise'}
-                                className={profile.tier !== 'enterprise' ? "btn-secondary" : "btn-primary"}
-                                style={{ width: '100%', justifyContent: 'center', opacity: profile.tier !== 'enterprise' ? 0.6 : 1, cursor: profile.tier !== 'enterprise' ? 'not-allowed' : 'pointer' }}
+                                disabled={isInviting}
+                                className="btn-primary"
+                                style={{ width: '100%', justifyContent: 'center', opacity: isInviting ? 0.7 : 1, cursor: isInviting ? 'not-allowed' : 'pointer' }}
                             >
                                 {isInviting ? <Loader2 className="animate-spin" size={20} /> : <UserPlus size={20} />}
-                                {profile.tier !== 'enterprise' ? 'Kræver Enterprise' : 'Opret Medarbejder'}
+                                Opret Medarbejder
                             </button>
                         </form>
                     </div>
