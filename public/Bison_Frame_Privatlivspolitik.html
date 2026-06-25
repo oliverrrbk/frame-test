@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privatlivspolitik - Bison Frame</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #334155;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #f8fafc;
+        }
+        .document {
+            background-color: #ffffff;
+            padding: 60px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        .header img {
+            height: 48px;
+            margin-bottom: 15px;
+        }
+        h1 {
+            color: #0f172a;
+            font-size: 28px;
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+        h2 {
+            color: #1e293b;
+            font-size: 18px;
+            margin-top: 35px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        h2::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 18px;
+            background-color: #10b981;
+            border-radius: 2px;
+        }
+        p, li {
+            margin-bottom: 15px;
+            text-align: justify;
+            color: #475569;
+        }
+        ul {
+            margin-bottom: 15px;
+            color: #475569;
+        }
+        strong {
+            color: #1e293b;
+        }
+        .note {
+            background: #f8fafc;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 13px;
+            color: #94a3b8;
+            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        @media print {
+            body { background-color: #fff; padding: 0; }
+            .document { box-shadow: none; padding: 0; border: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="document">
+        <div class="header">
+            <img src="/logo.png" alt="Bison Logo" onerror="this.style.display='none'">
+            <h1>Privatlivspolitik for Bison Frame</h1>
+        </div>
+
+        <h2>1. Dataansvarlig</h2>
+        <p>Bison Company ApS, CVR 45899713, Jens Baggesens Vej 71, st, 8200 Aarhus N, er dataansvarlig for behandlingen af de personoplysninger, der er beskrevet i denne politik. Kontakt: team@bisoncompany.dk.</p>
+
+        <h2>2. Hvilke oplysninger vi behandler</h2>
+        <ul>
+            <li><strong>Kontooplysninger:</strong> Navn, firmanavn, CVR, e-mail, telefonnummer og adresse på vores kunder og deres brugere.</li>
+            <li><strong>Betalingsoplysninger:</strong> Faktureringsdata. Selve kortoplysningerne håndteres af Stripe — vi opbevarer ikke kortnumre.</li>
+            <li><strong>Brugs- og logdata:</strong> Tekniske oplysninger om brug af platformen, herunder IP-adresse og enhedsoplysninger, til drift og sikkerhed.</li>
+            <li><strong>Supporthenvendelser:</strong> Indhold af din kommunikation med os.</li>
+        </ul>
+        <div class="note">Behandler vi personoplysninger om <strong>dine egne slutkunder/leads</strong>, sker det som databehandler på dine vegne — se <a href="/Bison_Frame_Databehandleraftale.html" target="_blank" style="color: #10b981; text-decoration: underline;">Databehandleraftalen</a>.</div>
+
+        <h2>3. Formål og retsgrundlag</h2>
+        <ul>
+            <li><strong>Opfyldelse af aftalen</strong> (GDPR art. 6, stk. 1, litra b): oprettelse, levering og administration af abonnementet.</li>
+            <li><strong>Legitim interesse</strong> (art. 6, stk. 1, litra f): drift, sikkerhed, support og forbedring af platformen.</li>
+            <li><strong>Retlig forpligtelse</strong> (art. 6, stk. 1, litra c): opbevaring af regnskabsbilag efter bogføringsloven.</li>
+        </ul>
+
+        <h2>4. Videregivelse og databehandlere</h2>
+        <p>Vi anvender betroede databehandlere til hosting, betaling, e-mail og AI-funktioner — herunder Supabase, Vercel, Stripe, Resend, OpenAI, Anthropic og Google. Visse af disse er etableret uden for EU/EØS (fx i USA), hvor overførsel sker på et gyldigt overførselsgrundlag (Standard Contractual Clauses eller EU-U.S. Data Privacy Framework). Vi sælger ikke dine personoplysninger.</p>
+
+        <h2>5. Opbevaring</h2>
+        <p>Vi opbevarer dine oplysninger, så længe du har et aktivt kundeforhold, og derefter kun så længe det er nødvendigt. Regnskabsbilag opbevares i 5 år som krævet af bogføringsloven.</p>
+
+        <h2>6. Dine rettigheder</h2>
+        <p>Du har ret til indsigt, berigtigelse, sletning, begrænsning, dataportabilitet samt til at gøre indsigelse mod behandlingen. Henvend dig til team@bisoncompany.dk. Du kan klage til Datatilsynet (datatilsynet.dk).</p>
+
+        <h2>7. Sikkerhed</h2>
+        <p>Vi træffer passende tekniske og organisatoriske foranstaltninger for at beskytte dine oplysninger mod uautoriseret adgang, tab eller ændring.</p>
+
+        <h2>8. Ændringer</h2>
+        <p>Vi kan opdatere denne politik løbende. Den til enhver tid gældende version er tilgængelig på vores hjemmeside.</p>
+
+        <div class="footer">
+            <div>Bison Company ApS · CVR: 45899713</div>
+            <div>Senest opdateret: Juni 2026</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -79,6 +79,26 @@
             margin-bottom: 25px;
             border: 1px solid #e2e8f0;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+            color: #475569;
+        }
+        th {
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
         .footer {
             margin-top: 50px;
             padding-top: 20px;
@@ -102,13 +122,13 @@
             <img src="/logo.png" alt="Bison Logo" onerror="this.style.display='none'">
             <h1>Databehandleraftale (DPA)</h1>
         </div>
-        
+
         <p>Denne databehandleraftale ("Aftalen") er indgået i overensstemmelse med Europa-Parlamentets og Rådets forordning (EU) 2016/679 (Databeskyttelsesforordningen / GDPR).</p>
 
         <div class="party">
             <strong>Mellem:</strong><br><br>
             <strong>Den dataansvarlige:</strong><br>
-            Kunden (den tømrervirksomhed der opretter sig i Bison Frame systemet).<br><br>
+            Kunden (den håndværksvirksomhed der opretter sig i Bison Frame systemet).<br><br>
             <strong>Og Databehandleren:</strong><br>
             Bison Company ApS<br>
             CVR: 45899713<br>
@@ -118,32 +138,34 @@
 
         <h2>1. Baggrund og Formål</h2>
         <p>1.1. Denne aftale fastsætter de rettigheder og forpligtelser, som finder anvendelse, når databehandleren (Bison Company ApS) behandler personoplysninger på vegne af den dataansvarlige (Kunden).</p>
-        <p>1.2. Databehandlerens behandling sker udelukkende med det formål at levere SaaS-platformen "Bison Frame", så Kunden kan håndtere leads, udarbejde tilbud og styre sager vedrørende håndværksmæssige opgaver.</p>
+        <p>1.2. Databehandlerens behandling sker udelukkende med det formål at levere SaaS-platformen "Bison Frame", så Kunden kan håndtere leads, udarbejde tilbud og styre sager vedrørende håndværksmæssige opgaver. Den nærmere beskrivelse af behandlingen fremgår af Bilag A.</p>
 
         <h2>2. Den Dataansvarliges Rettigheder og Pligter</h2>
         <p>2.1. Den dataansvarlige har ansvaret for, at der foreligger lovlig hjemmel til behandlingen, f.eks. ved indsamling af oplysninger fra slutkunder via tilbudsformularen.</p>
 
         <h2>3. Databehandlerens Forpligtelser (Instruks og Fortrolighed)</h2>
-        <p>3.1. Databehandleren behandler udelukkende personoplysninger efter dokumenteret instruks fra den dataansvarlige, som fastsat gennem Kundens brug af systemet.</p>
+        <p>3.1. Databehandleren behandler udelukkende personoplysninger efter dokumenteret instruks fra den dataansvarlige, som fastsat gennem Kundens brug af systemet og Bilag A.</p>
         <p>3.2. Databehandleren sikrer, at autoriserede medarbejdere, der behandler personoplysninger, er underlagt fuld fortrolighed og lovbestemt tavshedspligt.</p>
+        <p>3.3. <strong>Ulovlig instruks:</strong> Databehandleren underretter omgående den dataansvarlige, hvis en instruks efter Databehandlerens vurdering er i strid med GDPR eller anden databeskyttelseslovgivning.</p>
 
-        <h2>4. Behandlingssikkerhed og Inspektionsret</h2>
-        <p>4.1. Databehandleren iværksætter passende tekniske og organisatoriske sikkerhedsforanstaltninger for at sikre et beskyttelsesniveau, der passer til de risici, der er forbundet med behandlingen (jf. GDPR artikel 32).</p>
+        <h2>4. Behandlingssikkerhed, Bistand og Inspektionsret</h2>
+        <p>4.1. Databehandleren iværksætter passende tekniske og organisatoriske sikkerhedsforanstaltninger for at sikre et beskyttelsesniveau, der passer til de risici, der er forbundet med behandlingen (jf. GDPR artikel 32). De konkrete foranstaltninger fremgår af Bilag C.</p>
         <p>4.2. Adgangskoder krypteres altid. Databehandleren sikrer vedvarende fortrolighed og tager løbende backup af Kundens data for at beskytte mod tab.</p>
-        <p>4.3. <strong>Inspektionsret (Audit):</strong> Den Dataansvarlige har til enhver tid ret til for egen regning at foretage eller få foretaget revisioner og inspektioner (af en uafhængig tredjepart) for at bekræfte Databehandlerens overholdelse af denne Aftale og GDPR (jf. GDPR Art. 28, stk. 3, litra h).</p>
+        <p>4.3. <strong>Bistand til den dataansvarlige:</strong> Databehandleren bistår, under hensyntagen til behandlingens karakter og så vidt muligt, den dataansvarlige med passende tekniske og organisatoriske foranstaltninger med opfyldelse af den dataansvarliges forpligtelse til at besvare anmodninger fra registrerede om udøvelse af deres rettigheder (indsigt, berigtigelse, sletning, begrænsning, dataportabilitet og indsigelse), jf. GDPR art. 28, stk. 3, litra e, samt med overholdelse af forpligtelserne efter art. 32-36.</p>
+        <p>4.4. <strong>Inspektionsret (Audit):</strong> Den Dataansvarlige har til enhver tid ret til for egen regning at foretage eller få foretaget revisioner og inspektioner (af en uafhængig tredjepart) for at bekræfte Databehandlerens overholdelse af denne Aftale og GDPR (jf. GDPR Art. 28, stk. 3, litra h).</p>
 
         <h2>5. Brug af Underdatabehandlere</h2>
-        <p>5.1. Ved accept af denne aftale giver den dataansvarlige en generel godkendelse til, at databehandleren gør brug af underdatabehandlere til hosting og drift (bl.a. Supabase og Vercel). Databehandleren sikrer, at underdatabehandlere er underlagt minimum samme databeskyttelsesforpligtelser som fastsat i denne Aftale.</p>
+        <p>5.1. Ved accept af denne aftale giver den dataansvarlige en generel godkendelse til, at databehandleren gør brug af underdatabehandlere. De til enhver tid anvendte underdatabehandlere fremgår af Bilag B. Databehandleren sikrer, at underdatabehandlere er underlagt minimum samme databeskyttelsesforpligtelser som fastsat i denne Aftale.</p>
         <p>5.2. <strong>Varsling:</strong> Databehandleren skal underrette den Dataansvarlige via e-mail om eventuelle planlagte ændringer vedrørende tilføjelse eller erstatning af underdatabehandlere med mindst 30 dages varsel. Den Dataansvarlige har hermed mulighed for at gøre indsigelse mod sådanne ændringer. Hvis indsigelsen er berettiget, og en løsning ikke kan findes, har kunden ret til at opsige aftalen gebyrfrit.</p>
-        <p>5.3. Data transmitteres og opbevares som udgangspunkt inden for EU/EØS eller underlagt fuldt gyldige overførselsgrundlag (fx EU's Standard Contractual Clauses eller Data Privacy Framework).</p>
+        <p>5.3. Data transmitteres og opbevares som udgangspunkt inden for EU/EØS. Hvor en underdatabehandler er etableret uden for EU/EØS (fx i USA), sker overførsel alene på et gyldigt overførselsgrundlag (fx EU's Standard Contractual Clauses eller EU-U.S. Data Privacy Framework).</p>
 
         <h2>6. Underretning om brud på persondatasikkerheden</h2>
         <p>6.1. Databehandleren underretter den dataansvarlige uden unødig forsinkelse og senest 48 timer efter at være blevet opmærksom på et brud på persondatasikkerheden.</p>
         <p>6.2. Databehandleren bistår den dataansvarlige med at foretage lovpligtige anmeldelser til Datatilsynet.</p>
 
         <h2>7. Sletning og Anonymisering af Data</h2>
-        <p>7.1. <strong>Slettepligt:</strong> Ved ophør af "Bison Frame" abonnementet forpligter Databehandleren sig til, efter den Dataansvarliges anvisning, at slette eller tilbagelevere alle personoplysninger, som Databehandleren behandler på vegne af den Dataansvarlige (medmindre EU-ret eller national ret foreskriver opbevaring).</p>
-        <p>7.2. <strong>AI-Træning & Anonymisering:</strong> Forud for en eventuel sletning af data, eller løbende som led i drift og udvikling, er Databehandleren berettiget til at udtrække data og underkaste dem en irreversibel og fuldstændig anonymisering. Formålet hermed er udelukkende systemforbedring og træning af platformens AI-modeller (beregningslogik). Når data er lovligt og fuldt anonymiseret (hvorved de ikke længere kan henføres til en fysisk person, virksomhed eller slutkunde), udgør de ikke længere personoplysninger under GDPR. Databehandleren erhverver det fulde ejerskab til disse anonymiserede data og forbeholder sig retten til at bevare disse på ubestemt tid, også efter kundens opsigelse.</p>
+        <p>7.1. <strong>Slettepligt:</strong> Ved ophør af "Bison Frame" abonnementet forpligter Databehandleren sig til, efter den Dataansvarliges anvisning, at slette eller tilbagelevere alle personoplysninger, som Databehandleren behandler på vegne af den Dataansvarlige (medmindre EU-ret eller national ret foreskriver opbevaring). Sletning sker senest 90 dage efter abonnementets ophør, medmindre andet aftales skriftligt.</p>
+        <p>7.2. <strong>AI-Træning &amp; Anonymisering:</strong> Forud for en eventuel sletning af data, eller løbende som led i drift og udvikling, er Databehandleren berettiget til at udtrække data og underkaste dem en irreversibel og fuldstændig anonymisering. Formålet hermed er udelukkende systemforbedring og træning af platformens AI-modeller (beregningslogik). Når data er lovligt og fuldt anonymiseret (hvorved de ikke længere kan henføres til en fysisk person, virksomhed eller slutkunde), udgør de ikke længere personoplysninger under GDPR. Databehandleren erhverver det fulde ejerskab til disse anonymiserede data og forbeholder sig retten til at bevare disse på ubestemt tid, også efter kundens opsigelse.</p>
 
         <h2>8. Behandlingens Omfang</h2>
         <h3>Kategorier af Registrerede og Oplysninger</h3>
@@ -153,9 +175,45 @@
         </ul>
         <p>Behandlingen varer indtil Kundens abonnement opsiges og sletteprocedurer iværksættes.</p>
 
+        <h2>Bilag A — Instruks og behandlingsaktiviteter</h2>
+        <ul>
+            <li><strong>Genstand:</strong> Behandling af personoplysninger som led i levering af Bison Frame.</li>
+            <li><strong>Varighed:</strong> Så længe Kundens abonnement er aktivt, jf. pkt. 7.</li>
+            <li><strong>Karakter og formål:</strong> Indsamling, registrering, opbevaring, visning, overførsel til tilvalgte integrationer og sletning med henblik på tilbudsgivning, sagsstyring, fakturering og kundekommunikation.</li>
+            <li><strong>Typer af personoplysninger:</strong> Almindelige personoplysninger, jf. pkt. 8.</li>
+            <li><strong>Kategorier af registrerede:</strong> Kundens slutkunder/leads samt Kundens egne medarbejdere/brugere.</li>
+        </ul>
+
+        <h2>Bilag B — Godkendte underdatabehandlere</h2>
+        <p>Følgende underdatabehandlere anvendes i leveringen af Bison Frame. Oplysning om tredjelandsoverførsel og overførselsgrundlag fremgår samlet af pkt. 5.3.</p>
+        <table>
+            <thead><tr><th>Underdatabehandler</th><th>Formål</th></tr></thead>
+            <tbody>
+                <tr><td>Supabase Inc.</td><td>Database, fillagring og hosting</td></tr>
+                <tr><td>Vercel Inc.</td><td>Applikations-hosting og API</td></tr>
+                <tr><td>Stripe, Inc.</td><td>Betalingsbehandling</td></tr>
+                <tr><td>Resend (Plus Five Five, Inc.)</td><td>Afsendelse af e-mails</td></tr>
+                <tr><td>OpenAI, L.L.C.</td><td>Stemmetransskribering og AI-tekstgenerering</td></tr>
+                <tr><td>Anthropic, PBC</td><td>AI-genererede tilbud og support</td></tr>
+                <tr><td>Google LLC (Google Maps)</td><td>Adresseopslag</td></tr>
+                <tr><td>e-conomic, Dinero (Visma), Minuba, Apacta, Ordrestyring</td><td>Regnskab/sagsstyring — aktiveres kun ved Kundens eget tilvalg af integrationen</td></tr>
+            </tbody>
+        </table>
+        <p><strong>E-mailafsendelse:</strong> E-mails sendes via Resend. Har Kunden selv konfigureret en SMTP-server, sendes Kundens e-mails via denne server, der i så fald ikke udgør en underdatabehandler under Bison Company.</p>
+
+        <h2>Bilag C — Tekniske og organisatoriske sikkerhedsforanstaltninger</h2>
+        <ul>
+            <li><strong>Kryptering:</strong> Al datatransmission sker krypteret via TLS/HTTPS. Adgangskoder hashes. Data lagres krypteret hos hosting-underdatabehandleren.</li>
+            <li><strong>Adgangsstyring:</strong> Rollebaseret adgangskontrol (row-level security), adgang efter "least privilege"-princippet og personlige brugerkonti.</li>
+            <li><strong>Backup:</strong> Løbende, automatiske sikkerhedskopier af Kundens data.</li>
+            <li><strong>Logning:</strong> Overvågning og logning af systemadgang og væsentlige hændelser.</li>
+            <li><strong>Fortrolighed:</strong> Medarbejdere med adgang er underlagt tavshedspligt.</li>
+            <li><strong>Beredskab:</strong> Procedurer for håndtering af og underretning om sikkerhedsbrud, jf. pkt. 6.</li>
+        </ul>
+
         <div class="footer">
             <div>Bison Company ApS · CVR: 45899713</div>
-            <div>Senest opdateret: Maj 2026</div>
+            <div>Senest opdateret: Juni 2026</div>
         </div>
     </div>
 </body>
