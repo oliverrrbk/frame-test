@@ -1538,7 +1538,15 @@ const Dashboard = () => {
                 role: metadata.role || 'admin',
                 company_id: metadata.company_id || null,
                 tier: metadata.tier || 'standard',
-                raw_data: autoLonnummer ? { lonnummer: autoLonnummer } : {},
+                raw_data: {
+                    ...(autoLonnummer ? { lonnummer: autoLonnummer } : {}),
+                    ...(metadata.team ? { team: metadata.team } : {}),   // rollebaseret hold (sæder)
+                },
+                // Ny mester/ejer får 30 dages gratis prøve med det samme (kort først ved udløb).
+                ...((!metadata.role || metadata.role === 'admin') ? {
+                    subscription_status: 'trialing',
+                    trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                } : {}),
                 has_completed_onboarding: false,
                 requires_password_change: metadata.role && metadata.role !== 'admin' ? true : false,
                 success_message: 'Tusind tak for din henvendelse! Vi går tilbuddet igennem hurtigst muligt.'
@@ -2737,9 +2745,9 @@ const Dashboard = () => {
     
     if (carpenterProfile) {
         // Bemærk: Superadmin har altid adgang
-        if (myProfile?.email !== 'team@bisoncompany.dk') {
-            const subStatus = carpenterProfile.subscription_status || 'trialing';
-            
+        const subStatus = carpenterProfile.subscription_status || 'trialing';
+        // Superadmin OG exempt-konti (fx William/Skåbro Byg + Bison selv) har altid fuld adgang.
+        if (myProfile?.email !== 'team@bisoncompany.dk' && subStatus !== 'exempt') {
             if (subStatus === 'trialing') {
                 const fallbackDate = new Date();
                 fallbackDate.setDate(fallbackDate.getDate() - 1); // fallback til udløbet hvis ingen dato

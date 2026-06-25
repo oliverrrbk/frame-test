@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
-import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus } from 'lucide-react';
 import { Autocomplete } from '@react-google-maps/api';
 import toast from 'react-hot-toast';
+import { computePrice, formatKr } from '../../utils/pricing';
 
 const Register = ({ setSession }) => {
     const navigate = useNavigate();
@@ -18,7 +19,19 @@ const Register = ({ setSession }) => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [acceptedTerms, setAcceptedTerms] = useState(false);
-    const [selectedTier, setSelectedTier] = useState('');
+    // Rollebaseret hold. Hentes fra prissiden hvis man byggede det dér, ellers 1 mester (249).
+    const [team, setTeam] = useState(() => {
+        try {
+            const saved = sessionStorage.getItem('bison_signup_team');
+            if (saved) {
+                const t = JSON.parse(saved);
+                return { mester: Math.max(1, Number(t.mester) || 1), pl: Number(t.pl) || 0, bog: Number(t.bog) || 0, svend: Number(t.svend) || 0, laer: Number(t.laer) || 0 };
+            }
+        } catch { /* ignore */ }
+        return { mester: 1, pl: 0, bog: 0, svend: 0, laer: 0 };
+    });
+    const teamPrice = computePrice(team);
+    const stepTeam = (key, d, min) => setTeam(t => ({ ...t, [key]: Math.max(min, Math.min(299, (t[key] || 0) + d)) }));
     
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
@@ -65,11 +78,6 @@ const Register = ({ setSession }) => {
             return;
         }
 
-        if (!selectedTier) {
-            setErrorMsg("Du skal vælge en pakke (Basis, Standard eller Enterprise) for at fortsætte.");
-            return;
-        }
-
         if (address.length < 5) {
             setErrorMsg("Du skal indtaste en gyldig adresse, så systemet kan udregne køreafstande.");
             return;
@@ -90,7 +98,9 @@ const Register = ({ setSession }) => {
                     address: address,
                     phone: phone,
                     email: email,
-                    tier: selectedTier
+                    tier: 'role_based',
+                    team: team,                          // {mester,pl,bog,svend,laer} — holdet de byggede
+                    monthly_total: teamPrice.total       // kr/md ekskl. moms (til reference)
                 },
                 emailRedirectTo: window.location.origin + '/bekraeftet'
             }
@@ -103,7 +113,8 @@ const Register = ({ setSession }) => {
         }
 
         if (data.user) {
-            // NOTE: Vi behøver ikke længere at kæmpe imod RLS ved at lave direkte database-inserts 
+            try { sessionStorage.removeItem('bison_signup_team'); } catch { /* ignore */ }
+            // NOTE: Vi behøver ikke længere at kæmpe imod RLS ved at lave direkte database-inserts
             // under oprettelsen her. Dashboard.jsx aflæser user_metadata og bygger profilen perfekt, 
             // næste gang man lander på appen (sikkert), selv hvis man ventede på en email confirmation.
             
@@ -121,12 +132,9 @@ const Register = ({ setSession }) => {
 
             // Webhook kald til CRM systemet
             try {
-                let price = 0;
-                let productName = "Basis";
-                if (selectedTier === 'basis') { price = 390; productName = "Basis"; }
-                if (selectedTier === 'standard') { price = 790; productName = "Professionel"; }
-                if (selectedTier === 'enterprise') { price = 1890; productName = "Enterprise"; }
-                
+                const price = teamPrice.total;
+                const productName = `Bison Frame (rollebaseret · ${teamPrice.heads} bruger${teamPrice.heads > 1 ? 'e' : ''})`;
+
                 fetch('https://www.bisoncrm.dk/api/webhooks/frame-signup', {
                     method: 'POST',
                     headers: {
@@ -346,38 +354,47 @@ const Register = ({ setSession }) => {
 
                             <div className="flex flex-col gap-3">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Vælg din pakke (30 Dage Gratis) *</label>
+                                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Byg dit hold (30 Dage Gratis) *</label>
                                     <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md uppercase tracking-wider inline-flex items-center gap-1 w-max">
                                         <CheckCircle2 size={12} /> Intet kort påkrævet
                                     </span>
                                 </div>
-                                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 -mt-1 ml-1">Du starter som 1 mester (249 kr). Tilføj resten her — eller byg holdet på prissiden først.</p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     {[
-                                        { id: 'basis', name: 'Basis', price: '390' },
-                                        { id: 'standard', name: 'Professionel', price: '790' },
-                                        { id: 'enterprise', name: 'Enterprise', price: '1.890' }
-                                    ].map(tier => (
-                                        <button 
-                                            key={tier.id}
-                                            type="button"
-                                            onClick={() => setSelectedTier(tier.id)}
-                                            className={`relative flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all ${
-                                                selectedTier === tier.id 
-                                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 shadow-sm' 
-                                                    : 'border-slate-100 dark:border-slate-800 bg-transparent hover:border-slate-300 dark:hover:border-slate-700'
-                                            }`}
-                                        >
-                                            {selectedTier === tier.id && (
-                                                <div className="absolute -top-2.5 -right-2.5 bg-blue-500 text-white rounded-full p-1 shadow-md">
-                                                    <CheckCircle2 size={14} strokeWidth={3} />
-                                                </div>
-                                            )}
-                                            <span className={`text-xs sm:text-sm font-bold mb-1 ${selectedTier === tier.id ? 'text-blue-700 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>{tier.name}</span>
-                                            <span className={`text-lg sm:text-xl md:text-2xl font-black ${selectedTier === tier.id ? 'text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-300'}`}>{tier.price}</span>
-                                            <span className="text-[10px] sm:text-xs font-medium text-slate-400 mt-0.5 text-center leading-tight">kr. ekskl. moms / md.</span>
-                                        </button>
+                                        { key: 'mester', label: 'Mestre', hint: '1 inkl. (249) · ekstra 149', min: 1 },
+                                        { key: 'pl', label: 'Projektledere', hint: '149 kr · kontor', min: 0 },
+                                        { key: 'bog', label: 'Bogholdere', hint: '149 kr · kontor', min: 0 },
+                                        { key: 'svend', label: 'Svende', hint: '99 kr · felt', min: 0 },
+                                        { key: 'laer', label: 'Lærlinge', hint: '99 kr · felt', min: 0 },
+                                    ].map(r => (
+                                        <div key={r.key} className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl px-3.5 py-2.5">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{r.label}</span>
+                                                <span className="text-[11px] font-semibold text-slate-400">{r.hint}</span>
+                                            </div>
+                                            <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                                                <button type="button" onClick={() => stepTeam(r.key, -1, r.min)} aria-label={`Færre ${r.label}`} className="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-500/10 transition-colors"><Minus size={16} /></button>
+                                                <span className="min-w-[34px] text-center text-sm font-extrabold tabular-nums text-slate-900 dark:text-slate-100">{team[r.key]}</span>
+                                                <button type="button" onClick={() => stepTeam(r.key, 1, r.min)} aria-label={`Flere ${r.label}`} className="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-500/10 transition-colors"><Plus size={16} /></button>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
+
+                                <div className="flex items-center justify-between gap-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl px-4 py-3 mt-1">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pr. måned · eks. moms</span>
+                                        <span className="text-2xl font-black text-slate-900 dark:text-slate-100 tabular-nums leading-tight">{formatKr(teamPrice.total)}</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-500/30 rounded-lg px-3 py-2 inline-flex items-center gap-1.5">
+                                        <CheckCircle2 size={14} strokeWidth={3} /> Gratis i 30 dage · {teamPrice.heads} bruger{teamPrice.heads > 1 ? 'e' : ''}
+                                    </span>
+                                </div>
+                                {teamPrice.isEnterprise && (
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">Over 40 ansatte? Vi laver en fast entreprisepris — skriv til <a href="mailto:kontakt@bisonframe.dk" className="text-blue-600 dark:text-blue-400 font-bold">kontakt@bisonframe.dk</a>.</p>
+                                )}
                             </div>
 
                             <div className="mt-2">

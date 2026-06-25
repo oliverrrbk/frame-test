@@ -55,20 +55,38 @@ serve(async (req) => {
         console.log("Ingen gyldig body fundet (standard fallback bruges)");
     }
 
-    let tier = (targetTier || carpenter.tier || 'standard').toLowerCase();
-    // Fallbacks hvis navnet i databasen hedder 'professionel' i stedet for 'standard'
-    if (tier === 'professionel') tier = 'standard';
-    if (tier === 'entreprise') tier = 'enterprise';
-    
-    // MAPPING FRA TIER TIL STRIPE PRICE ID
-    const priceIds: Record<string, string> = {
-        'basis': Deno.env.get('STRIPE_PRICE_BASIS') || 'price_12345basis',
-        'standard': Deno.env.get('STRIPE_PRICE_STANDARD') || 'price_12345standard',
-        'enterprise': Deno.env.get('STRIPE_PRICE_ENTERPRISE') || 'price_12345enterprise'
+    // ROLLEBASERET PRISMODEL — byg line-items ud fra firmaets hold (carpenter.raw_data.team).
+    // 1 Mester (fast) + Kontor-sæder (149→119 fra nr. 11) + Felt-sæder (99→79 fra nr. 11).
+    const PRICE_IDS: Record<string, string | undefined> = {
+        MESTER: Deno.env.get('STRIPE_PRICE_MESTER'),
+        KONTOR: Deno.env.get('STRIPE_PRICE_KONTOR'),
+        KONTOR_VOLUME: Deno.env.get('STRIPE_PRICE_KONTOR_11'),
+        FELT: Deno.env.get('STRIPE_PRICE_FELT'),
+        FELT_VOLUME: Deno.env.get('STRIPE_PRICE_FELT_11'),
     };
+    const VOLUME_FROM = 11;
+    const rawTeam = (carpenter.raw_data && carpenter.raw_data.team) || {};
+    const team = {
+        mester: Math.max(1, Number(rawTeam.mester) || 1),
+        pl: Number(rawTeam.pl) || 0,
+        bog: Number(rawTeam.bog) || 0,
+        svend: Number(rawTeam.svend) || 0,
+        laer: Number(rawTeam.laer) || 0,
+    };
+    const kontorSeats = (team.mester - 1) + team.pl + team.bog;
+    const feltSeats = team.svend + team.laer;
+    const split = (n: number) => ({ std: Math.min(n, VOLUME_FROM - 1), vol: Math.max(n - (VOLUME_FROM - 1), 0) });
+    const k = split(kontorSeats);
+    const f = split(feltSeats);
 
-    const priceId = priceIds[tier];
-    if (!priceId) throw new Error("Kunne ikke finde Stripe Price ID for tier: " + tier);
+    const lineItems: { price: string; quantity: number }[] = [{ price: PRICE_IDS.MESTER as string, quantity: 1 }];
+    if (k.std > 0) lineItems.push({ price: PRICE_IDS.KONTOR as string, quantity: k.std });
+    if (k.vol > 0) lineItems.push({ price: PRICE_IDS.KONTOR_VOLUME as string, quantity: k.vol });
+    if (f.std > 0) lineItems.push({ price: PRICE_IDS.FELT as string, quantity: f.std });
+    if (f.vol > 0) lineItems.push({ price: PRICE_IDS.FELT_VOLUME as string, quantity: f.vol });
+    if (lineItems.some((li) => !li.price)) {
+        throw new Error("Mangler en eller flere STRIPE_PRICE_* secrets i Supabase.");
+    }
 
     // Tjek om kunden allerede eksisterer i Stripe, ellers opret en ny
     let customerId = carpenter.payment_customer_id;
@@ -104,16 +122,11 @@ serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
-        line_items: [
-            {
-                price: priceId,
-                quantity: 1,
-            },
-        ],
+        line_items: lineItems,
         mode: 'subscription',
         subscription_data: {
             metadata: {
-                target_tier: tier
+                target_tier: 'role_based'
             }
         },
         automatic_tax: { enabled: true }, // <--- Beder Stripe om at beregne og tillægge dansk moms automatisk
