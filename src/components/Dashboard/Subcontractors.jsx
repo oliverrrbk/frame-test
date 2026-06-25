@@ -4,6 +4,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, Phone, Mail, Pencil, Trash2, Plus, X, Loader2, Wrench, HardHat, ChevronDown, MapPin, CheckCircle } from 'lucide-react';
+import GuestInviteModal from '../Guest/GuestInviteModal';
 
 /*
  * Underleverandører = eksterne partnere/kontakter UDEN login.
@@ -369,6 +370,8 @@ export function SubcontractorManager({ profile, isMobile = false }) {
     const [isLoading, setIsLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState(null);
+    const [showGuestInvite, setShowGuestInvite] = useState(false);
+    const [activeLeads, setActiveLeads] = useState([]);  // sager man kan give en gæst adgang til
 
     const fetchList = async () => {
         setIsLoading(true);
@@ -381,7 +384,18 @@ export function SubcontractorManager({ profile, isMobile = false }) {
         setIsLoading(false);
     };
 
-    useEffect(() => { fetchList(); }, [companyId]);
+    // Aktive/bekræftede sager til projekt-vælgeren i gæste-invitationen.
+    const fetchActiveLeads = async () => {
+        const { data } = await supabase
+            .from('leads')
+            .select('id, case_number, project_category, customer_name, raw_data, status')
+            .eq('carpenter_id', companyId)
+            .in('status', ['Bekræftet opgave', 'Sæt i bero'])
+            .order('created_at', { ascending: false });
+        if (data) setActiveLeads(data);
+    };
+
+    useEffect(() => { fetchList(); fetchActiveLeads(); }, [companyId]);
 
     const handleSaved = (saved) => {
         setList(prev => {
@@ -406,13 +420,23 @@ export function SubcontractorManager({ profile, isMobile = false }) {
                     </div>
                     <h3 style={{ whiteSpace: 'nowrap' }}>Underleverandører ({list.length})</h3>
                 </div>
-                <button
-                    onClick={() => { setEditing(null); setModalOpen(true); }}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: isMobile ? '16px' : '10px 16px', width: isMobile ? '100%' : 'auto', borderRadius: isMobile ? '14px' : '12px', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: 'white', fontWeight: 700, fontSize: isMobile ? '1rem' : '0.88rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 6px 14px rgba(124, 58, 237, 0.22)', transition: 'transform 0.1s' }}
-                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
-                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}>
-                    <Plus size={18} /> Tilføj underleverandør
-                </button>
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '10px', width: isMobile ? '100%' : 'auto' }}>
+                    <button
+                        onClick={() => setShowGuestInvite(true)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: isMobile ? '16px' : '10px 16px', width: isMobile ? '100%' : 'auto', borderRadius: isMobile ? '14px' : '12px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#2563eb', fontWeight: 700, fontSize: isMobile ? '1rem' : '0.88rem', whiteSpace: 'nowrap', cursor: 'pointer', transition: 'transform 0.1s' }}
+                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
+                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        title="Inviter en underentreprenør med gæste-login til en sag">
+                        📨 Send gæste-login
+                    </button>
+                    <button
+                        onClick={() => { setEditing(null); setModalOpen(true); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: isMobile ? '16px' : '10px 16px', width: isMobile ? '100%' : 'auto', borderRadius: isMobile ? '14px' : '12px', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: 'white', fontWeight: 700, fontSize: isMobile ? '1rem' : '0.88rem', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 6px 14px rgba(124, 58, 237, 0.22)', transition: 'transform 0.1s' }}
+                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
+                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+                        <Plus size={18} /> Tilføj underleverandør
+                    </button>
+                </div>
             </div>
 
             <div className="card-body">
@@ -503,6 +527,14 @@ export function SubcontractorManager({ profile, isMobile = false }) {
                 companyId={companyId}
                 initial={editing}
                 onSaved={handleSaved}
+            />
+
+            {/* Send gæste-login fra holdet — her vælger mester selv hvilken sag adgangen gælder */}
+            <GuestInviteModal
+                open={showGuestInvite}
+                onClose={() => setShowGuestInvite(false)}
+                invitedByCompanyId={companyId}
+                selectableLeads={activeLeads}
             />
         </div>
     );

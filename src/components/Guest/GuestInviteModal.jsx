@@ -14,18 +14,27 @@ const ROLES = [
     { value: 'project_manager', label: 'Projektleder' },
 ];
 
-export default function GuestInviteModal({ open, onClose, leadId, invitedByCompanyId, projectTitle, onSent }) {
+export default function GuestInviteModal({ open, onClose, leadId, invitedByCompanyId, projectTitle, onSent, selectableLeads = null }) {
     const [name, setName] = useState('');
     const [companyName, setCompanyName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [role, setRole] = useState('subcontractor_owner');
+    const [pickedLeadId, setPickedLeadId] = useState('');
     const [sending, setSending] = useState(false);
 
     if (!open) return null;
 
+    // Når modalen åbnes UDEN en bestemt sag (fx fra "Holdet"), vælger mester sagen her.
+    const titleOf = (l) => l?.raw_data?.project_title || l?.project_category || `Sag #${l?.case_number || String(l?.id || '').slice(0, 6)}`;
+    const showPicker = !leadId && Array.isArray(selectableLeads);
+    const effectiveLeadId = leadId || pickedLeadId || (selectableLeads && selectableLeads[0]?.id) || '';
+    const pickedLead = selectableLeads?.find(l => String(l.id) === String(effectiveLeadId));
+    const effectiveTitle = projectTitle || (pickedLead ? titleOf(pickedLead) : '');
+
     const send = async () => {
         if (!name.trim() || !email.trim()) { toast.error('Udfyld navn og e-mail.'); return; }
+        if (!effectiveLeadId) { toast.error('Vælg hvilken sag de skal have adgang til.'); return; }
         setSending(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -36,8 +45,8 @@ export default function GuestInviteModal({ open, onClose, leadId, invitedByCompa
                     ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
                 },
                 body: JSON.stringify({
-                    leadId, invitedByCompanyId, name, email, phone, companyName, role,
-                    projectTitle, origin: window.location.origin,
+                    leadId: effectiveLeadId, invitedByCompanyId, name, email, phone, companyName, role,
+                    projectTitle: effectiveTitle, origin: window.location.origin,
                 }),
             });
             const data = await res.json();
@@ -64,12 +73,24 @@ export default function GuestInviteModal({ open, onClose, leadId, invitedByCompa
                 <div style={{ padding: '24px 26px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 900, color: '#0f172a' }}>Send gæste-login</h2>
-                        <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.88rem' }}>De får adgang til {projectTitle ? <strong>{projectTitle}</strong> : 'denne sag'} og kan føre egne timer.</p>
+                        <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.88rem' }}>De får adgang til {effectiveTitle ? <strong>{effectiveTitle}</strong> : 'sagen'} og kan føre egne timer.</p>
                     </div>
                     <button onClick={onClose} style={{ flexShrink: 0, width: 36, height: 36, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={18} /></button>
                 </div>
 
                 <div style={{ padding: '22px 26px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {showPicker && (
+                        <div>
+                            <label style={label}>Sag *</label>
+                            {selectableLeads.length === 0 ? (
+                                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Du har ingen aktive sager at give adgang til endnu.</p>
+                            ) : (
+                                <select value={effectiveLeadId} onChange={e => setPickedLeadId(e.target.value)} style={{ ...inputStyle, paddingLeft: 14 }}>
+                                    {selectableLeads.map(l => <option key={l.id} value={l.id}>{titleOf(l)}{l.customer_name ? ` · ${l.customer_name}` : ''}</option>)}
+                                </select>
+                            )}
+                        </div>
+                    )}
                     <div><label style={label}>Navn *</label><div style={wrap}><User size={17} style={iconStyle} /><input value={name} onChange={e => setName(e.target.value)} placeholder="Jacob Jensen" style={inputStyle} /></div></div>
                     <div><label style={label}>Firmanavn</label><div style={wrap}><Building size={17} style={iconStyle} /><input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Jacobs VVS ApS" style={inputStyle} /></div></div>
                     <div><label style={label}>E-mail *</label><div style={wrap}><Mail size={17} style={iconStyle} /><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jacob@firma.dk" style={inputStyle} /></div></div>
