@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLoadScript, Autocomplete } from '@react-google-maps/api';
-import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2 } from 'lucide-react';
+import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic } from 'lucide-react';
+import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { buildQuotePdf } from '../../utils/quotePdf';
@@ -166,6 +167,8 @@ const PREVIEW_CSS = `
   .qqb-tbtn:active{transform:translateY(1px);}
   @keyframes qqbspin{to{transform:rotate(360deg);}}
   .qqb-spin{animation:qqbspin .8s linear infinite;}
+  @keyframes qqbrec{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.8);}}
+  .qqb-rec{animation:qqbrec 1s ease-in-out infinite;}
 `;
 
 export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null }) {
@@ -223,6 +226,27 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const [extras, setExtras] = useState((mq0.extras && mq0.extras.length) ? mq0.extras.map(e => ({ id: uid(), desc: e.desc || '', amount: e.amount != null ? String(e.amount) : '' })) : [{ id: uid(), desc: '', amount: '' }]);
     const [workDescHtml, setWorkDescHtml] = useState(mq0.workHtml || '');
     const workEditorRef = useRef(null);
+    // Indtal arbejdsbeskrivelsen — samme danske transskribering + fagterm-rettelse som
+    // aftalesedlen (mode 'transcribe' kører WHISPER_PROMPT + FAGTERM_CORRECTION_PROMPT).
+    // Den dikterede tekst TILFØJES, så man kan tale flere noter ind løbende (fx ude på pladsen).
+    const appendDictation = (text) => {
+        const t = (text || '').trim();
+        if (!t) return;
+        const el = workEditorRef.current;
+        const snippet = escapeHtml(t);
+        if (el) {
+            const cur = el.innerHTML || '';
+            el.innerHTML = cur && cur.trim() ? `${cur}<br>${snippet}` : snippet;
+            setWorkDescHtml(el.innerHTML);
+        } else {
+            setWorkDescHtml(prev => (prev && prev.trim() ? `${prev}<br>${snippet}` : snippet));
+        }
+    };
+    const workDictation = useVoiceDictation(appendDictation, {
+        mode: 'transcribe',
+        processingMessage: 'Skriver arbejdsbeskrivelsen ned…',
+        successMessage: 'Tilføjet til arbejdsbeskrivelsen',
+    });
     // Kunde — strukturerede felter (gade/postnr/by) hentes fra customerDetails hvis de findes.
     const cd0 = initialLead?.raw_data?.customerDetails || {};
     const [customer, setCustomer] = useState({
@@ -722,7 +746,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             {content}
         </button>
     );
-    const renderRichEditor = (ref, onChange, placeholder, minHeight = '96px') => {
+    const renderRichEditor = (ref, onChange, placeholder, minHeight = '96px', dictation = null) => {
         const sync = () => { if (ref.current) onChange(ref.current.innerHTML); };
         const exec = (cmd) => { ref.current?.focus(); document.execCommand(cmd, false, null); sync(); };
         const onPaste = (e) => {
@@ -735,10 +759,35 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         };
         return (
             <>
-                <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'center' }}>
                     {tbtn('Fed (Cmd/Ctrl+B)', () => exec('bold'), <span style={{ fontWeight: 900, fontSize: '0.95rem' }}>F</span>)}
                     {tbtn('Kursiv', () => exec('italic'), <span style={{ fontStyle: 'italic', fontFamily: 'serif' }}>K</span>)}
                     {tbtn('Punktliste', () => exec('insertUnorderedList'), <><span style={{ fontSize: '1.1rem', lineHeight: 1 }}>•</span><span style={{ fontSize: '0.78rem' }}>Liste</span></>)}
+                    {dictation && (
+                        <button
+                            type="button"
+                            title={dictation.isRecording ? 'Stop og skriv ned' : 'Indtal arbejdsbeskrivelsen'}
+                            onClick={dictation.toggle}
+                            disabled={dictation.isProcessing}
+                            style={{
+                                marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                padding: '6px 12px', borderRadius: '9px', fontWeight: 700, fontSize: '0.78rem',
+                                cursor: dictation.isProcessing ? 'wait' : 'pointer',
+                                border: '1px solid ' + (dictation.isRecording ? '#fecaca' : dictation.isProcessing ? '#e2e8f0' : '#cbd5e1'),
+                                background: dictation.isRecording ? '#fef2f2' : dictation.isProcessing ? '#f1f5f9' : '#fff',
+                                color: dictation.isRecording ? '#dc2626' : dictation.isProcessing ? '#64748b' : '#334155',
+                                transition: 'background .15s ease, border-color .15s ease',
+                            }}
+                        >
+                            {dictation.isProcessing ? (
+                                <><span className="qqb-spin" style={{ width: '12px', height: '12px', border: '2px solid #cbd5e1', borderTopColor: '#64748b', borderRadius: '50%', display: 'inline-block' }} /> Skriver ned…</>
+                            ) : dictation.isRecording ? (
+                                <><span className="qqb-rec" style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} /> Optager — stop</>
+                            ) : (
+                                <><Mic size={14} /> Indtal</>
+                            )}
+                        </button>
+                    )}
                 </div>
                 <div
                     ref={ref}
@@ -910,7 +959,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 </div>
                 <div style={editSection}>
                     <h3 style={editH}><CheckCircle2 size={18} color="#10b981" /> Arbejdsbeskrivelse</h3>
-                    {renderRichEditor(workEditorRef, setWorkDescHtml, 'Skriv arbejdsbeskrivelsen frit — markér tekst og gør den fed, lav punkter, eller indsæt direkte fra Word.')}
+                    {renderRichEditor(workEditorRef, setWorkDescHtml, 'Skriv arbejdsbeskrivelsen frit — markér tekst og gør den fed, lav punkter, eller indsæt direkte fra Word.', '96px', workDictation)}
                 </div>
                 <div style={editSection}>
                     <h3 style={editH}><Plus size={18} color="#64748b" /> Tillæg</h3>

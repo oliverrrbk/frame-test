@@ -52,7 +52,8 @@ function parseRichBlocks(html) {
 function renderRich(pdf, blocks, o) {
     const fontOf = (r) => (r.bold && r.italic) ? 'bolditalic' : r.bold ? 'bold' : r.italic ? 'italic' : 'normal';
     let y = o.y;
-    const ensure = () => { if (y > 275) { pdf.addPage(); y = 20; } };
+    // Tilbuddet tegnes på ÉN lang side (ingen sideskift) — derfor ingen paginering her.
+    const ensure = () => {};
     const spaceW = () => pdf.getTextWidth(' ');
     const drawRuns = (runs, startX, hangX) => {
         let cx = startX;
@@ -91,15 +92,6 @@ function renderRich(pdf, blocks, o) {
 // quote = manual_quote-objektet (se QuickQuoteBuilder). carpenter = profil. customer = { name, email, phone, address }.
 export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     const { jsPDF } = await import('jspdf');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-
-    // Sæt en relevant dokument-titel — vises i PDF-viewerens hjørne og foreslås ved "gem som".
-    const docTitle = [
-        'Tilbud',
-        (customer?.name || '').trim(),
-        opts.title ? opts.title.trim() : (opts.dateStr || ''),
-    ].filter(Boolean).join(' – ');
-    pdf.setProperties({ title: docTitle, subject: opts.title || 'Tilbud', author: carpenter?.company_name || '' });
 
     const brand = [15, 23, 42];      // #0f172a
     const muted = [100, 116, 139];   // #64748b
@@ -107,6 +99,19 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     const pageW = 210;
     const left = 16;
     const right = pageW - 16;
+
+    // Sæt en relevant dokument-titel — vises i PDF-viewerens hjørne og foreslås ved "gem som".
+    const docTitle = [
+        'Tilbud',
+        (customer?.name || '').trim(),
+        opts.title ? opts.title.trim() : (opts.dateStr || ''),
+    ].filter(Boolean).join(' – ');
+
+    // Hele tilbuddet tegnes på ÉN sammenhængende side uden sideskift, så det aldrig
+    // "hopper" ned på en ny side. Vi tegner derfor i to gennemløb: først måles den
+    // samlede højde på en høj kladde-side, så oprettes den endelige side i præcis den
+    // højde (A4-bredde). drawBody returnerer slut-y (bunden af indholdet).
+    const drawBody = (pdf) => {
     let y = 20;
 
     // ---- Header: firmanavn (venstre) + TILBUD (højre) ----
@@ -178,7 +183,6 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     // ---- Linje-tabel (beskrivelse + beløb ekskl. moms) ----
     const rowsCol = right - 40;
     const drawRow = (label, amount, bold = false) => {
-        if (y > 270) { pdf.addPage(); y = 20; }
         pdf.setFont('helvetica', bold ? 'bold' : 'normal');
         pdf.setFontSize(10);
         pdf.setTextColor(...(bold ? brand : muted));
@@ -203,7 +207,6 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     // ellers fald tilbage til de simple linjer / en neutral tekst.
     const richText = (quote?.workHtml || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
     if (richText) {
-        if (y > 250) { pdf.addPage(); y = 20; }
         y = renderRich(pdf, parseRichBlocks(quote.workHtml), { x: left, maxX: right, y, lineGap: 5, size: 10, color: muted });
         y += 3;
     } else {
@@ -215,14 +218,9 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
         pdf.setFontSize(10);
         pdf.setTextColor(...muted);
         const scopeWrapped = pdf.splitTextToSize(scopeText, right - left);
-        if (y + scopeWrapped.length * 5 > 270) { pdf.addPage(); y = 20; }
         pdf.text(scopeWrapped, left, y);
         y += scopeWrapped.length * 5 + 5;
     }
-
-    // Hold totaler + betingelser samlet: hvis en lang beskrivelse har skubbet os
-    // langt ned, så start totalerne på en frisk side (PDF'en må gerne blive flersidet).
-    if (y > 232) { pdf.addPage(); y = 20; }
 
     pdf.setDrawColor(...line);
     pdf.line(left, y, right, y);
@@ -270,17 +268,31 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     pdf.setTextColor(...muted);
     const abText = 'Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.';
     const abLines = pdf.splitTextToSize(abText, right - left);
-    // Undgå at betingelses-teksten lapper ind over footeren (y≈287) på en fyldt side.
-    if (y + abLines.length * 4 > 283) { pdf.addPage(); y = 20; }
     pdf.text(abLines, left, y);
+    y += abLines.length * 4;
 
-    // ---- Footer ----
+    return y; // bunden af indholdet
+    };
+
+    // ---- Pass 1: mål den samlede højde på en høj kladde-side ----
+    const scratch = new jsPDF({ orientation: 'p', unit: 'mm', format: [pageW, 6000] });
+    const contentBottom = drawBody(scratch);
+
+    // ---- Pass 2: opret den endelige side i præcis den nødvendige højde (mindst A4) ----
+    // Footeren skal have plads i bunden, så vi lægger lidt luft til.
+    const footerY = Math.max(297, Math.ceil(contentBottom) + 18) - 10;
+    const pageH = footerY + 10;
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: [pageW, pageH] });
+    pdf.setProperties({ title: docTitle, subject: opts.title || 'Tilbud', author: carpenter?.company_name || '' });
+    drawBody(pdf);
+
+    // ---- Footer (i bunden af den lange side) ----
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8);
     pdf.setTextColor(...muted);
     pdf.text(
         `${carpenter?.company_name || ''}${carpenter?.phone ? ' · ' + carpenter.phone : ''}${carpenter?.email ? ' · ' + carpenter.email : ''}`,
-        pageW / 2, 287, { align: 'center' }
+        pageW / 2, footerY, { align: 'center' }
     );
 
     const filename = `Tilbud_${(customer?.name || 'kunde').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
