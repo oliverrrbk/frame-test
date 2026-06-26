@@ -116,8 +116,12 @@ BEGIN
         COALESCE(v_rd->'customerDetails'->>'zip', v_rd->>'zip'),
         COALESCE(v_rd->'customerDetails'->>'city', v_rd->>'city'),
         COALESCE(NEW.price_estimate, NULLIF(v_rd->'manual_quote'->>'total','')::numeric),
+        -- ANONYMISERING: gem KUN de strukturerede beregnings-/tilbudsfelter til ML,
+        -- og strip evt. nøgler der kan indeholde slutkunde-PII (navn/mail/tlf/adresse).
+        -- quote_dataset gemmer i forvejen IKKE customer_name/email/phone.
         COALESCE(
-            CASE WHEN v_qtype = 'manual' THEN v_rd->'manual_quote' ELSE v_rd->'calc_data' END,
+            (CASE WHEN v_qtype = 'manual' THEN v_rd->'manual_quote' ELSE v_rd->'calc_data' END)
+                - 'customerDetails' - 'customer' - 'customer_name' - 'name' - 'email' - 'phone' - 'address',
             '{}'::jsonb
         ),
         NEW.status,

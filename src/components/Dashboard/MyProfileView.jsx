@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { User, Lock, Camera, Copy, CheckCircle, Phone, MessageSquare, Shield, Bell } from 'lucide-react';
+import { User, Lock, Camera, Copy, CheckCircle, Phone, MessageSquare, Shield, Bell, Download } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import PushSubscriber from './PushSubscriber';
 import { getFeatures } from '../../utils/features';
@@ -62,6 +63,38 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
 
     const fileInputRef = useRef(null);
     const isAdmin = myProfile?.role === 'admin';
+    const [exporting, setExporting] = useState(false);
+
+    // GDPR-dataportabilitet: hent alt firmaets data råt (JSON-download).
+    const exportMyData = async () => {
+        setExporting(true);
+        try {
+            const companyId = myProfile.company_id || myProfile.id;
+            const [leadsRes, subsRes] = await Promise.all([
+                supabase.from('leads').select('*').eq('carpenter_id', companyId),
+                supabase.from('subcontractors').select('*').eq('company_id', companyId),
+            ]);
+            const payload = {
+                exported_at: new Date().toISOString(),
+                company: { id: myProfile.id, company_name: myProfile.company_name, cvr: myProfile.cvr, owner_name: myProfile.owner_name, email: myProfile.email, phone: myProfile.phone, address: myProfile.address, business_type: myProfile.business_type },
+                sager_og_tilbud: leadsRes.data || [],
+                underleverandører: subsRes.data || [],
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bison-frame-data-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+            toast.success('Dine data er hentet.');
+        } catch (e) {
+            console.error('Dataeksport fejlede:', e);
+            toast.error('Kunne ikke hente dine data. Prøv igen.');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const handleAvatarUpload = async (e) => {
         try {
