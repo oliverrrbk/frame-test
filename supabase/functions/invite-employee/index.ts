@@ -123,8 +123,11 @@ serve(async (req) => {
             .map(Number).filter((n) => !isNaN(n))
         const nextLon = String((nums.length ? Math.max(...nums) : 1000) + 1)
 
-        const { data: existingMember } = await admin.from('carpenters').select('raw_data').eq('id', userId).single()
+        const { data: existingMember } = await admin.from('carpenters').select('raw_data, slug').eq('id', userId).single()
         const mergedRaw = { ...(existingMember?.raw_data || {}), lonnummer: existingMember?.raw_data?.lonnummer || nextLon }
+        // 'slug' er NOT NULL (bruges til offentlige tilbuds-URL'er). Medarbejdere har ikke
+        // brug for et pænt slug, men det skal være unikt + udfyldt — brug bruger-id'et.
+        const slug = existingMember?.slug || `medarbejder-${userId}`
 
         // 3. Opret/opdatér carpenter-rækken — DETTE er det der manglede via Vercel.
         const { data: member, error: upErr } = await admin.from('carpenters').upsert([{
@@ -135,6 +138,7 @@ serve(async (req) => {
             role,
             company_id: companyId,
             company_name: 'Medarbejder',
+            slug,
             is_active: true,
             requires_password_change: true,
             raw_data: mergedRaw,
