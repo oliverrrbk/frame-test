@@ -4,6 +4,9 @@ import { supabase } from '../../supabaseClient';
 import { CreditCard, FileText, CheckCircle, AlertTriangle, Calendar, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { computePrice, formatKr } from '../../utils/pricing';
+import UpdateCardModal from './UpdateCardModal';
+
+const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
 // Normalisér firmaets gemte hold til pricing.js-formen { mester, pl, bog, svend, laer }.
 // raw_data.team kan være gemt i to former:
@@ -46,6 +49,7 @@ const SubscriptionSettings = () => {
     const [cancelNote, setCancelNote] = useState('');
     const [invoices, setInvoices] = useState([]);
     const [invoicesLoading, setInvoicesLoading] = useState(false);
+    const [showCardModal, setShowCardModal] = useState(false);
 
     useEffect(() => {
         loadSubscriptionData();
@@ -256,6 +260,13 @@ const SubscriptionSettings = () => {
 
     const fmtDate = (ms) => ms ? new Date(ms).toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
+    // Betalingskort-knap: nyt kort i app (Elements) hvis nøgle findes, ellers Stripe-side.
+    const handleCardClick = () => {
+        if (!hasCard) return handleStartCheckout();      // intet abonnement endnu → opret
+        if (STRIPE_PK) return setShowCardModal(true);    // in-app kort-boks
+        return handleManagePortal();                     // fallback til Stripe-portal
+    };
+
     if (isLoading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Indlæser firmaaftale...</div>;
     if (!company) return null;
 
@@ -442,7 +453,7 @@ const SubscriptionSettings = () => {
                         </div>
                     </div>
                     <button
-                        onClick={hasCard ? handleManagePortal : handleStartCheckout}
+                        onClick={handleCardClick}
                         disabled={isManaging}
                         style={{ background: 'transparent', color: '#3b82f6', border: 'none', fontWeight: '600', fontSize: '0.9rem', cursor: isManaging ? 'not-allowed' : 'pointer', padding: 0 }}
                     >
@@ -534,6 +545,13 @@ const SubscriptionSettings = () => {
             <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#94a3b8' }}>
                 Kort og fakturaer håndteres sikkert via Stripe.
             </div>
+
+            {showCardModal && (
+                <UpdateCardModal
+                    onClose={() => setShowCardModal(false)}
+                    onSuccess={() => { setShowCardModal(false); loadSubscriptionData(); }}
+                />
+            )}
 
             {/* Opsigelse + churn-feedback — lækker, interaktiv Bison-popup */}
             {confirmCancel && createPortal(
