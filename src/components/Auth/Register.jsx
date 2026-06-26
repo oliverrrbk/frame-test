@@ -61,14 +61,23 @@ const Register = ({ setSession }) => {
     };
 
     const selectAddress = (item) => {
+        // DAWA leverer adressen under `adgangsadresse`. Hvis den mod forventning mangler,
+        // udledes vej/postnr/by fra `tekst` ("Bragesvej 88, 4220 Korsør") som fallback.
         const a = item?.adgangsadresse || {};
-        const street = [a.vejnavn, a.husnr].filter(Boolean).join(' ').trim();
-        setAddress(street || item.tekst || '');
-        if (a.postnr) setZip(a.postnr);
-        if (a.postnrnavn) setCity(a.postnrnavn);
-        setIsAddressValid(!!(street && a.postnr));
+        let street = [a.vejnavn, a.husnr].filter(Boolean).join(' ').trim();
+        let postnr = a.postnr || '';
+        let by = a.postnrnavn || '';
+        if ((!street || !postnr) && item?.tekst) {
+            const m = item.tekst.match(/^(.*?),\s*(\d{4})\s+(.+)$/);
+            if (m) { street = street || m[1].trim(); postnr = postnr || m[2]; by = by || m[3].trim(); }
+        }
+        if (street) setAddress(street);
+        if (postnr) setZip(postnr);
+        if (by) setCity(by);
+        setIsAddressValid(!!(street && postnr));
         setAddrSuggestions([]);
         setShowAddrSuggestions(false);
+        if (addrBlurRef.current) clearTimeout(addrBlurRef.current);
     };
 
     // Skriver man et postnummer manuelt, slår vi byen op (DAWA) — så systemet altid
@@ -365,7 +374,7 @@ const Register = ({ setSession }) => {
                                                     <li key={item.tekst + idx}>
                                                         <button
                                                             type="button"
-                                                            onMouseDown={(e) => { e.preventDefault(); selectAddress(item); }}
+                                                            onPointerDown={(e) => { e.preventDefault(); selectAddress(item); }}
                                                             className="w-full text-left px-4 py-3 text-[14px] text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2.5 border-b border-slate-50 dark:border-slate-800 last:border-0"
                                                         >
                                                             <MapPin size={15} className="text-slate-400 shrink-0" />
