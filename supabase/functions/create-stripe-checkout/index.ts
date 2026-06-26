@@ -73,8 +73,11 @@ serve(async (req) => {
         svend: Number(rawTeam.svend) || 0,
         laer: Number(rawTeam.laer) || 0,
     };
-    const kontorSeats = (team.mester - 1) + team.pl + team.bog;
-    const feltSeats = team.svend + team.laer;
+    // Holdet kan være gemt i to former: {mester,pl,bog,svend,laer} (fra oprettelse)
+    // eller {mester,kontor,felt} (skrevet af seat-sync). Vi læser BEGGE, så beløbet
+    // altid er korrekt — også efter man har tilføjet/fjernet folk.
+    const kontorSeats = (team.mester - 1) + team.pl + team.bog + (Number(rawTeam.kontor) || 0);
+    const feltSeats = team.svend + team.laer + (Number(rawTeam.felt) || 0);
     const split = (n: number) => ({ std: Math.min(n, VOLUME_FROM - 1), vol: Math.max(n - (VOLUME_FROM - 1), 0) });
     const k = split(kontorSeats);
     const f = split(feltSeats);
