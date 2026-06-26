@@ -19,17 +19,8 @@ const Register = ({ setSession }) => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [acceptedTerms, setAcceptedTerms] = useState(false);
-    // Rollebaseret hold. Hentes fra prissiden hvis man byggede det dér, ellers 1 mester (249).
-    const [team, setTeam] = useState(() => {
-        try {
-            const saved = sessionStorage.getItem('bison_signup_team');
-            if (saved) {
-                const t = JSON.parse(saved);
-                return { mester: Math.max(1, Number(t.mester) || 1), pl: Number(t.pl) || 0, bog: Number(t.bog) || 0, svend: Number(t.svend) || 0, laer: Number(t.laer) || 0 };
-            }
-        } catch { /* ignore */ }
-        return { mester: 1, pl: 0, bog: 0, svend: 0, laer: 0 };
-    });
+    // Rollebaseret hold — starter ALTID på 1 mester (249 kr). Man tilføjer selv resten.
+    const [team, setTeam] = useState({ mester: 1, pl: 0, bog: 0, svend: 0, laer: 0 });
     const teamPrice = computePrice(team);
     const stepTeam = (key, d, min) => setTeam(t => ({ ...t, [key]: Math.max(min, Math.min(299, (t[key] || 0) + d)) }));
     
