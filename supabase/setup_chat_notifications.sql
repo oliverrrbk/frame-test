@@ -47,7 +47,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS tr_chat_message_push ON public.chat_messages;
 CREATE TRIGGER tr_chat_message_push

@@ -5,6 +5,7 @@ import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import { friendlyError } from '../../utils/friendlyError';
 import { buildQuotePdf } from '../../utils/quotePdf';
 import { getCustomerOfferSentTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
 import Coachmark from './Coachmark';
@@ -710,7 +711,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             toast.success(sendToCustomer ? (wasSent ? 'Opdateret tilbud sendt til kunden! 🎉' : 'Tilbuddet er sendt til kunden! 🎉') : 'Kladden er gemt.');
             onComplete && onComplete(lead);
         } catch (e) {
-            toast.error('Noget gik galt: ' + (e.message || e));
+            console.error('Kunne ikke gemme/sende tilbud:', e);
+            toast.error(friendlyError(e, 'Kunne ikke gemme tilbuddet. Prøv igen.'));
         } finally {
             setBusy(false);
         }
@@ -730,7 +732,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             if (onDeleted) onDeleted(initialLead.id);
             else if (onCancel) onCancel();
         } catch (e) {
-            toast.error('Kunne ikke slette tilbuddet: ' + (e.message || e));
+            console.error('Kunne ikke slette tilbuddet:', e);
+            toast.error(friendlyError(e, 'Kunne ikke slette tilbuddet. Prøv igen.'));
         } finally {
             setBusy(false);
         }

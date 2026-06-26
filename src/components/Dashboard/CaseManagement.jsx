@@ -18,6 +18,8 @@ import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil }
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { getRoleLabel } from '../../utils/roles';
 import { buildCaseMessage, mutateCaseMessages } from '../../utils/caseMessages';
+import { friendlyError } from '../../utils/friendlyError';
+import { mutateLeadRawData } from '../../utils/leadRawData';
 import { getChecklistForCategory, buildPhasesChecklist } from '../../utils/checklistGenerator';
 import UserAvatar from '../ui/UserAvatar';
 import QuarterTimePicker from '../ui/QuarterTimePicker';
@@ -705,12 +707,18 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             daily_message: msgData
         };
         
-        const updatedLead = { ...selectedCase, raw_data: updatedRawData };
-        onUpdateLead(updatedLead);
+        // Skriv FØRST — vis først "gemt" når det faktisk ER gemt (ellers lyver toasten
+        // ved offline/fejl, og beskeden går tabt uden at nogen opdager det).
+        const { error } = await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', selectedCase.id);
+        if (error) {
+            console.error('Kunne ikke gemme dagens besked:', error);
+            toast.error(friendlyError(error, 'Kunne ikke gemme beskeden. Tjek din forbindelse og prøv igen.'));
+            return;
+        }
+
+        onUpdateLead({ ...selectedCase, raw_data: updatedRawData });
         setIsDailyMessageOpen(false);
         toast.success("Dagens besked gemt!");
-        
-        await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', selectedCase.id);
     };
 
     // --- Sags-beskeder (dagens huske-ting til hele holdet eller en bestemt person) ---
@@ -1053,21 +1061,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     const saveCaseDataToDb = async (updatedFields) => {
         try {
-            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', selectedCase.id).single();
-            const currentRawData = latestData?.raw_data || selectedCase.raw_data || {};
-
-            const updatedRawData = {
-                ...currentRawData,
-                ...updatedFields
-            };
-
-            const { error } = await supabase
-                .from('leads')
-                .update({ raw_data: updatedRawData })
-                .eq('id', selectedCase.id);
-
-            if (error) throw error;
-
+            // Atomisk shallow-merge: kun de ændrede felter skrives server-side, så
+            // samtidige ændringer af andre raw_data-nøgler ikke overskrives.
+            const merged = await mutateLeadRawData(selectedCase.id, updatedFields);
+            const updatedRawData = merged || { ...(selectedCase.raw_data || {}), ...updatedFields };
             const updatedCase = { ...selectedCase, raw_data: updatedRawData };
             // (Samme som ovenfor)
             if (onUpdateLead) onUpdateLead(updatedCase);
@@ -1096,15 +1093,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             const currentRawData = latestData?.raw_data || selectedCase.raw_data || {};
             const currentArr = Array.isArray(currentRawData[field]) ? currentRawData[field] : [];
             const newArr = mutator(currentArr);
-            const updatedRawData = { ...currentRawData, [field]: newArr };
-            const { error } = await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', selectedCase.id);
-            if (error) throw error;
+            // Atomisk shallow-merge: kun DETTE felt skrives server-side, så samtidige
+            // ændringer af ANDRE felter (fx time_entries) ikke overskrives (lost update).
+            const merged = await mutateLeadRawData(selectedCase.id, { [field]: newArr });
+            const updatedRawData = merged || { ...currentRawData, [field]: newArr };
             if (applyLocal) applyLocal(newArr);
             if (onUpdateLead) onUpdateLead({ ...selectedCase, raw_data: updatedRawData });
             return newArr;
         } catch (err) {
             console.error(`Kunne ikke gemme ${field}:`, err);
-            toast.error('Kunne ikke gemme – tjek forbindelsen og prøv igen.');
+            toast.error(friendlyError(err, 'Kunne ikke gemme – tjek forbindelsen og prøv igen.'));
             return null;
         }
     };
@@ -1788,17 +1786,19 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     // Marker alle materialer (liste + materialeposter) som leveret — direkte fra overblikskortet.
     const handleMarkAllMaterialsDelivered = async (e) => {
         e?.stopPropagation?.();
-        const rdNow = selectedCase?.raw_data || {};
-        const nextList = (rdNow.material_list || []).map(m => ({ ...m, status: 'Leveret' }));
-        const nextInvoices = (rdNow.supplier_invoices || []).map(inv => ((inv.category === 'Materialer' || !inv.category) && inv.delivery_status) ? { ...inv, delivery_status: 'Leveret' } : inv);
-        const merged = { ...rdNow, material_list: nextList, supplier_invoices: nextInvoices };
         try {
-            const { error } = await supabase.from('leads').update({ raw_data: merged }).eq('id', selectedCase.id);
-            if (error) throw error;
-            onUpdateLead && onUpdateLead({ ...selectedCase, raw_data: merged });
+            // Hent friskt (ikke fra evt. forældet React-state) og flet kun de to
+            // ændrede nøgler atomisk ind, så samtidige ændringer ikke overskrives.
+            const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', selectedCase.id).single();
+            const rdNow = latestData?.raw_data || selectedCase?.raw_data || {};
+            const nextList = (rdNow.material_list || []).map(m => ({ ...m, status: 'Leveret' }));
+            const nextInvoices = (rdNow.supplier_invoices || []).map(inv => ((inv.category === 'Materialer' || !inv.category) && inv.delivery_status) ? { ...inv, delivery_status: 'Leveret' } : inv);
+            const merged = await mutateLeadRawData(selectedCase.id, { material_list: nextList, supplier_invoices: nextInvoices });
+            onUpdateLead && onUpdateLead({ ...selectedCase, raw_data: merged || { ...rdNow, material_list: nextList, supplier_invoices: nextInvoices } });
             toast.success('Alle materialer markeret som leveret');
         } catch (err) {
-            toast.error('Kunne ikke opdatere materialer');
+            console.error('Kunne ikke opdatere materialer:', err);
+            toast.error(friendlyError(err, 'Kunne ikke opdatere materialer. Prøv igen.'));
         }
     };
     const existingDeliveryEvent = Array.isArray(carpenterProfile?.raw_data?.calendar_events)

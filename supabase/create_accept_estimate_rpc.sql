@@ -16,6 +16,7 @@ CREATE OR REPLACE FUNCTION accept_estimate_by_token(token_val UUID, preference_v
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER -- Bypasser RLS sikkert under kørsel
+SET search_path = public
 AS $$
 DECLARE
     affected_rows INT;

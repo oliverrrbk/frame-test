@@ -27,6 +27,7 @@ CREATE OR REPLACE FUNCTION protect_carpenter_sensitive_cols()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     is_service_role BOOLEAN;
@@ -100,6 +101,7 @@ RETURNS TABLE(
 )
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public
 AS $$
     SELECT id, owner_name, company_name, slug, logo_url, address, phone, email, is_active
     FROM carpenters
@@ -121,6 +123,7 @@ RETURNS TABLE(
 )
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public
 AS $$
     SELECT id, owner_name, company_name, slug, logo_url, address, phone, email, is_active
     FROM carpenters

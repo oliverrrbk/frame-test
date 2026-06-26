@@ -1444,11 +1444,15 @@ const Dashboard = () => {
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
-                table: 'leads'
-            }, (payload) => {
-                // For a simpler approach, just refresh when ANY lead changes that we have access to
-                // In a production app with thousands of users, you'd want to add filter: `carpenter_id=eq.${targetId}`
-                // but since we have "stranded leads" logic, we just trigger a refresh and let fetchLeads do the filtering.
+                table: 'leads',
+                // SKALERING: abonnér KUN på eget firmas leads. Uden filter modtog hvert
+                // åbent dashboard et event for HVER lead-ændring i hele systemet (på tværs
+                // af firmaer) og kørte et fuldt refetch hver gang — en selvforstærkende
+                // belastning. Filteret matcher hovedfetchens .eq('carpenter_id', targetId).
+                // (Sjældne "stranded leads" med afvigende carpenter_id fanges stadig af
+                // visibilitychange-/pull-to-refresh-opdateringen.)
+                filter: `carpenter_id=eq.${targetId}`
+            }, () => {
                 refreshData();
             })
             .subscribe();

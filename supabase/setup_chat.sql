@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_thread_created ON public.chat_messa
 
 -- 5. Helper Function for Policy Checks (avoids RLS recursion)
 CREATE OR REPLACE FUNCTION public.check_user_in_thread(t_id UUID, u_id UUID)
-RETURNS BOOLEAN SECURITY DEFINER AS $$
+RETURNS BOOLEAN SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.chat_participants 

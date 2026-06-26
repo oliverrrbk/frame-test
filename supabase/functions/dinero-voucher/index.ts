@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
 
 import { corsHeadersFor } from "../_shared/cors.ts"
 import { getValidDineroToken } from "../_shared/dineroToken.ts"
+import { resolveOwnCompanyId, ownCompanyOrWarn } from "../_shared/companyGuard.ts"
 
 // Opretter et købs-bilag (udgift) i Dinero og vedhæfter billedet af kvitteringen,
 // så det står klar til bogføring. Samme princip som economic-voucher.
@@ -37,7 +38,10 @@ serve(async (req) => {
     if (!amount || Number(amount) <= 0) throw new Error("Mangler et gyldigt beløb på bilaget")
 
     const voucherDate = (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) ? date : new Date().toISOString().split('T')[0]
-    const targetCarpenterId = companyId || user.id
+    // SIKKERHED: firma-id udledes server-side fra kalderen; klientens companyId
+    // bruges ikke til at vælge nøgle (forhindrer bogføring i et andet firmas Dinero).
+    const ownCompanyId = await resolveOwnCompanyId(supabaseClient, user.id)
+    const targetCarpenterId = ownCompanyOrWarn(companyId, ownCompanyId, 'dinero-voucher')
 
     // 1a. Konto-opsætning fra firma-profilen
     const { data: companyRow } = await supabaseClient

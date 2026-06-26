@@ -220,7 +220,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Trigger
 DROP TRIGGER IF EXISTS tr_lead_status_push_notify ON public.leads;
