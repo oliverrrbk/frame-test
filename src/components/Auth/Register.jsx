@@ -7,6 +7,53 @@ import toast from 'react-hot-toast';
 import { computePrice, formatKr } from '../../utils/pricing';
 import { BUSINESS_TYPES } from '../../utils/features';
 
+// Lækker Bison Frame-dropdown til branchevalg (erstatter den grimme native select).
+const BusinessTypeSelect = ({ value, onChange }) => {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+        const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', onDoc);
+        return () => document.removeEventListener('mousedown', onDoc);
+    }, []);
+    const selected = BUSINESS_TYPES.find(b => b.value === value);
+    return (
+        <div className="relative" ref={ref}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                className={`w-full flex items-center bg-slate-50 dark:bg-slate-950 border text-slate-900 dark:text-slate-100 rounded-xl pl-11 pr-10 py-3.5 transition-all font-medium text-[15px] text-left relative ${open ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'}`}
+            >
+                <Wrench className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                {selected?.label || 'Vælg branche…'}
+                <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} size={18} />
+            </button>
+            {open && (
+                <div
+                    className="absolute z-30 mt-2 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-2xl shadow-slate-900/15 overflow-hidden p-1.5"
+                    style={{ animation: 'bizDrop .18s cubic-bezier(0.16,1,0.3,1)' }}
+                >
+                    {BUSINESS_TYPES.map(b => {
+                        const active = b.value === value;
+                        return (
+                            <button
+                                key={b.value}
+                                type="button"
+                                onClick={() => { onChange(b.value); setOpen(false); }}
+                                className={`w-full flex items-center justify-between gap-2 px-3.5 py-3 rounded-xl text-left text-[15px] font-medium transition-colors ${active ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                            >
+                                {b.label}
+                                {active && <CheckCircle2 size={17} className="text-blue-600 dark:text-blue-400 shrink-0" />}
+                            </button>
+                        );
+                    })}
+                    <style>{`@keyframes bizDrop { from { opacity:0; transform: translateY(-6px) scale(.98); } to { opacity:1; transform: translateY(0) scale(1); } }`}</style>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const Register = ({ setSession }) => {
     const navigate = useNavigate();
     const [companyName, setCompanyName] = useState('');
@@ -329,13 +376,7 @@ const Register = ({ setSession }) => {
                             {/* Branche — afgør om man får prisberegner + materialer */}
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Hvilken slags håndværker er du? *</label>
-                                <div className="relative">
-                                    <Wrench className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-                                    <select value={businessType} onChange={e => setBusinessType(e.target.value)} required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl pl-11 pr-10 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-[15px] appearance-none cursor-pointer">
-                                        {BUSINESS_TYPES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
-                                    </select>
-                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-                                </div>
+                                <BusinessTypeSelect value={businessType} onChange={setBusinessType} />
                                 <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">Tømrere får prisberegner + materialer. Andre fag laver hurtige tilbud — alt det øvrige er ens.</span>
                             </div>
 
