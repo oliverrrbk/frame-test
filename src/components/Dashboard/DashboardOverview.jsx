@@ -45,8 +45,9 @@ import { computeCaseFinance } from '../../utils/caseFinance';
 
 // "Lav et tilbud" — Bison-glas-knap, der åbner tilbudstype-vælgeren. Bruges både på
 // desktop (kompakt, ved siden af overblik-teksten) og mobil (fuld bredde).
-function CreateQuoteButton({ onClick, fullWidth = false }) {
+function CreateQuoteButton({ onClick, fullWidth = false, variant = 'solid' }) {
     const [hover, setHover] = useState(false);
+    const glass = variant === 'glass';
     return (
         <button
             onClick={onClick}
@@ -55,12 +56,16 @@ function CreateQuoteButton({ onClick, fullWidth = false }) {
             style={{
                 width: fullWidth ? '100%' : 'auto',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '9px',
-                padding: fullWidth ? '13px 20px' : '10px 18px',
+                padding: fullWidth ? '14px 20px' : '10px 18px',
                 borderRadius: '999px',
-                border: '1px solid rgba(59,130,246,0.35)',
-                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                color: '#fff', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
-                boxShadow: hover ? '0 14px 30px rgba(37,99,235,0.42)' : '0 8px 20px rgba(37,99,235,0.28)',
+                border: glass ? '1px solid rgba(37,99,235,0.25)' : '1px solid rgba(59,130,246,0.35)',
+                background: glass ? 'rgba(37,99,235,0.10)' : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                backdropFilter: glass ? 'blur(14px)' : undefined,
+                WebkitBackdropFilter: glass ? 'blur(14px)' : undefined,
+                color: glass ? '#1d4ed8' : '#fff', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
+                boxShadow: glass
+                    ? (hover ? '0 10px 24px rgba(37,99,235,0.18)' : '0 4px 14px rgba(37,99,235,0.10)')
+                    : (hover ? '0 14px 30px rgba(37,99,235,0.42)' : '0 8px 20px rgba(37,99,235,0.28)'),
                 transform: hover ? 'translateY(-2px)' : 'translateY(0)',
                 transition: 'transform .15s ease, box-shadow .2s ease',
                 whiteSpace: 'nowrap'
@@ -228,13 +233,13 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                         {onCreateQuote && <span data-tour="create-quote" style={{ display: 'inline-flex' }}><CreateQuoteButton onClick={onCreateQuote} /></span>}
                     </div>
                 </div>
-                <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
+                <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
                     <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
                         Oversigt over din forretning
                     </h2>
                     {/* Mobil: Lav tilbud + Kopiér link side om side (50/50). Desktop bruger blokken ovenfor + banneret til højre. */}
                     <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-                        {onCreateQuote && <div style={{ flex: 1, display: 'flex' }}><CreateQuoteButton onClick={onCreateQuote} fullWidth /></div>}
+                        {onCreateQuote && <div style={{ flex: 1, display: 'flex' }}><CreateQuoteButton onClick={onCreateQuote} fullWidth variant="glass" /></div>}
                         {canSharePortal && (
                             <button
                                 onClick={() => {

@@ -6723,7 +6723,7 @@ const Dashboard = () => {
             {/* Trial-påmindelse — vises ALDRIG mens onboarding/password-modal er åben (ellers spærrer den
                 for at trykke videre, særligt på mobil). På mobil er den en lille, diskret pille der kan
                 foldes ud eller skjules, så den aldrig blokerer for arbejdet. */}
-            {trialDaysLeft > 0 && !isPaywallActive && effectiveRole === 'admin' && !showOnboarding && !showSetPassword && !trialPillDismissed && createPortal(
+            {trialDaysLeft > 0 && !isPaywallActive && effectiveRole === 'admin' && !carpenterProfile?.payment_customer_id && !showOnboarding && !showSetPassword && !trialPillDismissed && createPortal(
                 isMobile ? (
                     <div style={{ position: 'fixed', right: '12px', bottom: 'calc(84px + env(safe-area-inset-bottom))', zIndex: 9000 }}>
                         {trialPillExpanded ? (
@@ -6753,10 +6753,11 @@ const Dashboard = () => {
                         ) : (
                             <button
                                 onClick={() => setTrialPillExpanded(true)}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '999px', padding: '7px 12px', boxShadow: '0 6px 16px rgba(0,0,0,0.14)', cursor: 'pointer', fontWeight: 700, fontSize: '12px', color: '#0f172a' }}
+                                aria-label={`Gratis prøve · ${trialDaysLeft} dage tilbage`}
+                                style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fff', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 10px 24px rgba(0,0,0,0.16)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px', padding: 0 }}
                             >
-                                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#3b82f6' }} />
-                                {trialDaysLeft} dage
+                                <span style={{ fontWeight: 800, fontSize: '19px', color: '#0f172a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{trialDaysLeft}</span>
+                                <span style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#3b82f6' }}>dage</span>
                             </button>
                         )}
                     </div>
