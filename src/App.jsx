@@ -18,7 +18,6 @@ const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
 const QuoteAcceptPage = lazy(() => import('./components/Wizard/QuoteAcceptPage'));
 const EstimateAcceptPage = lazy(() => import('./components/Wizard/EstimateAcceptPage'));
 const AgreementConfirmPage = lazy(() => import('./components/Wizard/AgreementConfirmPage'));
-const MinubaIntegration = lazy(() => import('./components/Dashboard/MinubaIntegration'));
 const GuestActivate = lazy(() => import('./components/Guest/GuestActivate'));
 import { supabase } from './supabaseClient';
 import { isStandalonePWA } from './utils/pwa';
@@ -234,7 +233,6 @@ const AnimatedRoutes = ({ session, setSession }) => {
         <Route path="/bekraeftet" element={<ConfirmedPage />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/guest/aktiver" element={<GuestActivate />} />
-        <Route path="/minuba-login" element={<MinubaIntegration />} />
         <Route path="/register" element={
           session ? (
             session.user?.email === 'team@bisoncompany.dk' 

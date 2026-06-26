@@ -1042,38 +1042,16 @@ const Dashboard = () => {
         const code = params.get('code');
         const state = params.get('state');
 
-        // Tjek for Minuba OAuth Callback
-        const minubaIntegration = params.get('integration');
-        
         // Tjek for e-conomic Auth Callback
         const token = params.get('token');
-        
-        const isAuthCallback = (code && state === 'dinero') || (code && minubaIntegration === 'minuba') || token;
+
+        const isAuthCallback = (code && state === 'dinero') || token;
 
         supabase.auth.getSession().then(async ({ data: { session } }) => {
             setSession(session);
             if (session) {
                 let authHandled = false;
 
-                if (code && minubaIntegration === 'minuba') {
-                    authHandled = true;
-                    setActiveTab('integrations');
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    setCarpenterProfile(prev => prev ? {...prev, minuba_api_key: 'pending_authorization'} : null);
-                    
-                    const redirectUri = 'https://bisonframe.dk/dashboard?integration=minuba';
-                        
-                    const { data, error } = await supabase.functions.invoke('minuba-auth', {
-                        body: { code: code, redirectUri: redirectUri }
-                    });
-                    
-                    if (error) {
-                        toast.error("Der skete en fejl under godkendelse hos Minuba. Prøv venligst igen.");
-                    } else {
-                        toast.success("Minuba er nu forbundet!");
-                    }
-                }
-                
                 if (code && state === 'dinero') {
                     authHandled = true;
                     setActiveTab('integrations');
@@ -1532,9 +1510,6 @@ const Dashboard = () => {
             if (secrets) {
                 profile.economic_api_key = secrets.economic_api_key;
                 profile.dinero_api_key = secrets.dinero_api_key;
-                profile.ordrestyring_api_key = secrets.ordrestyring_api_key;
-                profile.apacta_api_key = secrets.apacta_api_key;
-                profile.minuba_api_key = secrets.minuba_api_key;
             }
             
             userProfile = profile;
@@ -2108,132 +2083,8 @@ const Dashboard = () => {
         }
     };
 
-    const syncToOrdrestyring = async (lead) => {
-        if (!carpenterProfile) return;
-
-        if (!carpenterProfile.ordrestyring_api_key) {
-            toast('Indtast din Ordrestyring API-nøgle i Indstillinger for at overføre.', { icon: 'ℹ️' });
-            setSelectedLead(null);
-            setActiveTab('integrations');
-            return;
-        }
-
-        try {
-            console.log('--- ORDRESTYRING SYNC STARTER ---');
-            toast.loading("Opretter sag i Ordrestyring...", { id: "ordrestyring" });
-            
-            const { data, error } = await supabase.functions.invoke('ordrestyring-case', {
-                body: { lead: lead, api_key: carpenterProfile.ordrestyring_api_key }
-            });
-
-            if (error || (data && !data.success)) {
-                console.error("Ordrestyring fejl:", error || data?.error);
-                toast.error("Fejl ved oprettelse i Ordrestyring: " + (error?.message || data?.error), { id: "ordrestyring" });
-            } else {
-                toast.success(`Succes! Sagen er nu overført til eget ordrestyringssystem. (Sagsnr: ${data.caseId})`, { id: "ordrestyring" });
-                const { error: updateError } = await supabase.from('leads').update({ ordrestyring_case_id: String(data.caseId) }).eq('id', lead.id);
-                if (!updateError) {
-                    setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...l, ordrestyring_case_id: String(data.caseId) } : l));
-                    if (selectedLead && selectedLead.id === lead.id) {
-                        setSelectedLead(prev => ({ ...prev, ordrestyring_case_id: String(data.caseId) }));
-                    }
-                    
-                    const isInternalId = String(data.caseId).length >= 4 || Number(data.caseId) > 1000;
-                    const finalUrl = isInternalId 
-                        ? `https://system.ordrestyring.dk/cases?id=${data.caseId}` 
-                        : `https://system.ordrestyring.dk/cases`;
-
-                    setIntegrationSuccessData({
-                        platform: 'Ordrestyring',
-                        caseId: String(data.caseId),
-                        url: finalUrl,
-                        debugData: data
-                    });
-                }
-            }
-        } catch(err) {
-            console.error('Fejl under Ordrestyring-synkronisering:', err);
-            toast.error("Der skete en netværksfejl. Prøv igen senere.", { id: "ordrestyring" });
-        }
-    };
-
-    const syncToApacta = async (lead) => {
-        if (!carpenterProfile) return;
-
-        if (!carpenterProfile.apacta_api_key) {
-            toast('Indtast din Apacta API-nøgle i Indstillinger for at overføre.', { icon: 'ℹ️' });
-            setSelectedLead(null);
-            setActiveTab('integrations');
-            return;
-        }
-
-        try {
-            console.log('--- APACTA SYNC STARTER ---');
-            toast.loading("Opretter sag i Apacta...", { id: "apacta" });
-            
-            const { data, error } = await supabase.functions.invoke('apacta-case', {
-                body: { lead: lead, api_key: carpenterProfile.apacta_api_key }
-            });
-
-            if (error || (data && !data.success)) {
-                console.error("Apacta fejl:", error || data?.error);
-                toast.error("Fejl ved oprettelse i Apacta: " + (error?.message || data?.error), { id: "apacta" });
-            } else {
-                toast.success(`Succes! Sagen er nu overført til eget ordrestyringssystem. (Sagsnr: ${data.caseId})`, { id: "apacta" });
-                const { error: updateError } = await supabase.from('leads').update({ apacta_case_id: String(data.caseId) }).eq('id', lead.id);
-                if (!updateError) {
-                    setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...l, apacta_case_id: String(data.caseId) } : l));
-                    if (selectedLead && selectedLead.id === lead.id) {
-                        setSelectedLead(prev => ({ ...prev, apacta_case_id: String(data.caseId) }));
-                    }
-
-                    setIntegrationSuccessData({
-                        platform: 'Apacta',
-                        caseId: String(data.caseId),
-                        url: `https://control-panel.apacta.com/projects/${data.caseId}`
-                    });
-                }
-            }
-        } catch(err) {
-            console.error('Fejl under Apacta-synkronisering:', err);
-            toast.error("Der skete en netværksfejl. Prøv igen senere.", { id: "apacta" });
-        }
-    };
-
-    const syncToMinuba = async (lead) => {
-        if (!carpenterProfile.minuba_api_key) {
-            toast('Indtast din Minuba API-nøgle i Indstillinger for at overføre.', { icon: 'ℹ️' });
-            setActiveTab('integrations');
-            return;
-        }
-
-        try {
-            toast.loading("Opretter sag i Minuba...", { id: "minuba" });
-            const { data, error } = await supabase.functions.invoke('minuba-case', {
-                body: { lead: lead, api_key: carpenterProfile.minuba_api_key }
-            });
-
-            if (error || !data?.success) {
-                console.error("Minuba fejl:", error || data?.error);
-                toast.error("Fejl ved oprettelse i Minuba: " + (error?.message || data?.error), { id: "minuba" });
-            } else {
-                toast.success(`Succes! Sagen er nu overført til eget ordrestyringssystem. (Sagsnr: ${data.caseId})`, { id: "minuba" });
-                
-                // Gem Minuba sags-id på leadet
-                await supabase.from('leads').update({ minuba_case_id: data.caseId }).eq('id', lead.id);
-
-                setIntegrationSuccessData({
-                    platform: 'Minuba',
-                    caseId: data.caseId,
-                    url: `https://app.minuba.dk/` // Default URL until we get the actual deep link
-                });
-                setActiveTab('integrations');
-            }
-        } catch (err) {
-            console.error('Fejl under Minuba-synkronisering:', err);
-            toast.error('Noget gik galt under overførslen.', { id: "minuba" });
-        }
-    };
+    // Lag 2: syncToOrdrestyring/Apacta/Minuba fjernet — eksterne sagsstyrings-integrationer udfaset.
+    // e-conomic/Dinero-overførsel (syncToAccounting) er uberørt. Backend/DB bevaret (Lag 3 frarådet).
 
     const handleSendFeedback = async () => {
         if (!feedbackText.trim()) return;
@@ -2505,10 +2356,7 @@ const Dashboard = () => {
             await supabase.from('carpenter_secrets').upsert({
                 carpenter_id: carpenterProfile.id,
                 dinero_api_key: carpenterProfile.dinero_api_key,
-                economic_api_key: carpenterProfile.economic_api_key,
-                ordrestyring_api_key: carpenterProfile.ordrestyring_api_key,
-                apacta_api_key: carpenterProfile.apacta_api_key,
-                minuba_api_key: carpenterProfile.minuba_api_key
+                economic_api_key: carpenterProfile.economic_api_key
             });
         }
         
@@ -4062,7 +3910,7 @@ const Dashboard = () => {
 
                                                     {isConfirmedCase(lead) && (
                                                         <div className="lead-card-integration-btns">
-                                                            {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(effectiveRole) && !carpenterProfile?.ordrestyring_token && !carpenterProfile?.apacta_api_key && !carpenterProfile?.minuba_api_token && (
+                                                            {(carpenterProfile?.economic_api_key || carpenterProfile?.dinero_api_key) && ['admin', 'accountant'].includes(effectiveRole) && (
                                                                 // Bison Frame OMS check: If lead has timesheets or work orders, hide the button so they must invoice from within the case management
                                                                 (!lead.timesheets?.length && !lead.work_orders?.length) && (
                                                                 <button 
@@ -4073,50 +3921,6 @@ const Dashboard = () => {
                                                                 </button>
                                                                 )
                                                             )}
-                                                        {carpenterProfile?.ordrestyring_token && ['admin', 'accountant'].includes(effectiveRole) && (
-                                                            lead.ordrestyring_case_id ? (
-                                                                <a 
-                                                                    href={
-                                                                        (String(lead.ordrestyring_case_id).length >= 4 || Number(lead.ordrestyring_case_id) > 1000)
-                                                                            ? `https://system.ordrestyring.dk/cases?id=${lead.ordrestyring_case_id}`
-                                                                            : `https://system.ordrestyring.dk/cases`
-                                                                    }
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    style={{ padding: '8px', borderRadius: '8px', border: '1px solid #db2777', backgroundColor: '#fdf2f8', color: '#be185d', fontWeight: 'bold', cursor: 'pointer', outline: 'none', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                                                                >
-                                                                    <ExternalLink size={16} /> Åbn i Ordrestyring
-                                                                </a>
-                                                            ) : (
-                                                                <button 
-                                                                    onClick={(e) => { e.stopPropagation(); syncToOrdrestyring(lead); }}
-                                                                    style={{ padding: '8px', borderRadius: '8px', border: '1px solid #db2777', backgroundColor: '#fdf2f8', color: '#be185d', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                                                                >
-                                                                    <UploadCloud size={16} /> Til Ordrestyring
-                                                                </button>
-                                                            )
-                                                        )}
-                                                        {carpenterProfile?.apacta_api_key && ['admin', 'accountant'].includes(effectiveRole) && (
-                                                            lead.apacta_case_id ? (
-                                                                <a 
-                                                                    href={`https://control-panel.apacta.com/projects/${lead.apacta_case_id}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    style={{ padding: '8px', borderRadius: '8px', border: '1px solid #4f46e5', backgroundColor: '#eef2ff', color: '#4338ca', fontWeight: 'bold', cursor: 'pointer', outline: 'none', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                                                                >
-                                                                    <ExternalLink size={16} /> Åbn i Apacta
-                                                                </a>
-                                                            ) : (
-                                                                <button 
-                                                                    onClick={(e) => { e.stopPropagation(); syncToApacta(lead); }}
-                                                                    style={{ padding: '8px', borderRadius: '8px', border: '1px solid #4f46e5', backgroundColor: '#eef2ff', color: '#4338ca', fontWeight: 'bold', cursor: 'pointer', outline: 'none', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                                                                >
-                                                                    <UploadCloud size={16} /> Til Apacta
-                                                                </button>
-                                                            )
-                                                        )}
                                                     </div>
                                                 )}
                                                 </div>
@@ -4176,56 +3980,6 @@ const Dashboard = () => {
 
                                         {/* Tjekket top-menu for integrationer med ensartede knapper */}
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'stretch', marginBottom: '32px' }}>
-                                            {isConfirmedCase(selectedLead) && ['admin', 'accountant'].includes(effectiveRole) && (
-                                                <>
-                                                    {/* Regnskab integration fjernet fra lead-visning. Skal ligge under fremtidigt Faktura/Økonomi overblik */}
-
-                                                    {carpenterProfile?.ordrestyring_token && (
-                                                        selectedLead.ordrestyring_case_id ? (
-                                                            <a href={ (String(selectedLead.ordrestyring_case_id).length >= 4 || Number(selectedLead.ordrestyring_case_id) > 1000) ? `https://system.ordrestyring.dk/cases?id=${selectedLead.ordrestyring_case_id}` : `https://system.ordrestyring.dk/cases` } target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
-                                                                <ExternalLink size={18} /> Åbn eget ordrestyringssystem
-                                                            </a>
-                                                        ) : selectedLead.raw_data?.synced_to_management ? (
-                                                            <a href={`https://system.ordrestyring.dk/cases`} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
-                                                                <ExternalLink size={18} /> Åbn eget ordrestyringssystem
-                                                            </a>
-                                                        ) : (
-                                                            <button onClick={() => syncToOrdrestyring(selectedLead)} style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #db2777', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
-                                                                <UploadCloud size={18} /> Overfør til eget ordrestyringssystem
-                                                            </button>
-                                                        )
-                                                    )}
-
-                                                    {carpenterProfile?.apacta_api_key && (
-                                                        selectedLead.apacta_case_id ? (
-                                                            <a href={`https://control-panel.apacta.com/projects/${selectedLead.apacta_case_id}`} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
-                                                                <ExternalLink size={18} /> Åbn eget ordrestyringssystem
-                                                            </a>
-                                                        ) : selectedLead.raw_data?.synced_to_management ? (
-                                                            <a href={`https://control-panel.apacta.com/projects`} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
-                                                                <ExternalLink size={18} /> Åbn eget ordrestyringssystem
-                                                            </a>
-                                                        ) : (
-                                                            <button onClick={() => syncToApacta(selectedLead)} style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#eef2ff', color: '#4338ca', border: '1px solid #4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
-                                                                <UploadCloud size={18} /> Overfør til eget ordrestyringssystem
-                                                            </button>
-                                                        )
-                                                    )}
-
-                                                    {carpenterProfile?.minuba_api_key && (
-                                                        selectedLead.minuba_case_id ? (
-                                                            <a href={`https://app.minuba.dk/`} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}>
-                                                                <ExternalLink size={18} /> Åbn eget ordrestyringssystem
-                                                            </a>
-                                                        ) : (
-                                                            <button onClick={() => syncToMinuba(selectedLead)} style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
-                                                                <UploadCloud size={18} /> Overfør til eget ordrestyringssystem
-                                                            </button>
-                                                        )
-                                                    )}
-                                                </>
-                                            )}
-                                            
                                             {selectedLead.raw_data?.quote_pdf_url && !isConfirmedCase(selectedLead) && (
                                                 <a href={selectedLead.raw_data.quote_pdf_url} target="_blank" rel="noopener noreferrer" style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', background: '#f3f1ed', border: '1px solid #e8e6e1', color: '#374151', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
                                                     <FileText size={18} /> PDF-tilbud
