@@ -233,13 +233,13 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                         {onCreateQuote && <span data-tour="create-quote" style={{ display: 'inline-flex' }}><CreateQuoteButton onClick={onCreateQuote} /></span>}
                     </div>
                 </div>
-                <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+                <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '26px', width: '100%' }}>
                     <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
                         Oversigt over din forretning
                     </h2>
-                    {/* Mobil: Lav tilbud + Kopiér link side om side (50/50). Desktop bruger blokken ovenfor + banneret til højre. */}
-                    <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-                        {onCreateQuote && <div style={{ flex: 1, display: 'flex' }}><CreateQuoteButton onClick={onCreateQuote} fullWidth variant="glass" /></div>}
+                    {/* Mobil: med portal (tømrer) = Lav tilbud + Kopiér link 50/50. Uden portal = én centreret, kompakt blå knap. */}
+                    <div style={{ display: 'flex', gap: '10px', width: '100%', justifyContent: canSharePortal ? 'stretch' : 'center' }}>
+                        {onCreateQuote && <div style={{ flex: canSharePortal ? 1 : '0 1 auto', display: 'flex' }}><CreateQuoteButton onClick={onCreateQuote} fullWidth={canSharePortal} /></div>}
                         {canSharePortal && (
                             <button
                                 onClick={() => {

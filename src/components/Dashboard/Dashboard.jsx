@@ -6727,7 +6727,7 @@ const Dashboard = () => {
                 foldes ud eller skjules, så den aldrig blokerer for arbejdet. */}
             {trialDaysLeft > 0 && !isPaywallActive && effectiveRole === 'admin' && !carpenterProfile?.payment_customer_id && !showOnboarding && !showSetPassword && !trialPillDismissed && createPortal(
                 isMobile ? (
-                    <div style={{ position: 'fixed', right: '12px', bottom: 'calc(84px + env(safe-area-inset-bottom))', zIndex: 9000 }}>
+                    <div style={{ position: 'fixed', right: '14px', bottom: 'calc(16px + env(safe-area-inset-bottom))', zIndex: 9000 }}>
                         {trialPillExpanded ? (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9, y: 10 }}
