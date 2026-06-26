@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
 
 import { corsHeadersFor } from "../_shared/cors.ts"
+import { resolveOwnCompanyId, ownCompanyOrWarn } from "../_shared/companyGuard.ts"
 
 // Opretter et KLADDE-bilag (udgift) i e-conomics kassekladde og uploader
 // billedet af kvitteringen som vedhæftning, så bogholderen kan tjekke og bogføre.
@@ -45,7 +46,10 @@ serve(async (req) => {
 
     const voucherDate = (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) ? date : new Date().toISOString().split('T')[0]
 
-    const targetCarpenterId = companyId || user.id
+    // SIKKERHED: firma-id udledes server-side fra kalderen; klientens companyId
+    // bruges ikke til at vælge nøgle (forhindrer bogføring i et andet firmas e-conomic).
+    const ownCompanyId = await resolveOwnCompanyId(supabaseClient, user.id)
+    const targetCarpenterId = ownCompanyOrWarn(companyId, ownCompanyId, 'economic-voucher')
 
     // 1a. Hent konto-opsætningen fra firma-profilen (sat under Indstillinger → e-conomic)
     const { data: companyRow } = await supabaseClient

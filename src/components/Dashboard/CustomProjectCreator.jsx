@@ -4,6 +4,7 @@ import { supabase } from '../../supabaseClient';
 import { MATERIAL_INDEX } from '../../prices';
 import { enrichPhasesWithStandardMaterials } from '../../utils/enrichMaterials';
 import toast from 'react-hot-toast';
+import { friendlyError } from '../../utils/friendlyError';
 
 const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = null, isMobile = false, initialData = null }) => {
     const [isRecording, setIsRecording] = useState(false);
@@ -248,7 +249,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                         toast.success("Tale indsat!");
                     } catch (error) {
                         console.error('AI Processing Error:', error);
-                        toast.error("Kunne ikke behandle tale: " + error.message);
+                        toast.error(friendlyError(error, 'Kunne ikke behandle talen. Prøv igen.'));
                     } finally {
                         setIsProcessingAI(false);
                     }
@@ -337,7 +338,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
             setViewMode('editor');
         } catch (error) {
             console.error('AI Structuring Error:', error);
-            toast.error("Kunne ikke strukturere: " + error.message, { id: "structuring" });
+            toast.error(friendlyError(error, 'Kunne ikke strukturere teksten. Prøv igen.'), { id: "structuring" });
         } finally {
             setIsProcessingAI(false);
         }
@@ -603,7 +604,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
             if (onComplete) onComplete(queryData[0]);
         } catch (err) {
             console.error("Fejl:", err);
-            toast.error((initialData ? "Kunne ikke opdatere sagen: " : "Kunne ikke oprette sagen: ") + err.message, { id: "save_custom" });
+            toast.error(friendlyError(err, initialData ? 'Kunne ikke opdatere sagen. Prøv igen.' : 'Kunne ikke oprette sagen. Prøv igen.'), { id: "save_custom" });
         }
     };
 

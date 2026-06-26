@@ -4,6 +4,7 @@ import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, Chevron
 import { generateMaterialList } from '../../utils/materialGenerator';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import { friendlyError } from '../../utils/friendlyError';
 
 const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryToCalendar, existingDeliveryDate }) => {
     const [materials, setMaterials] = useState([]);
@@ -408,7 +409,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
             return { pdf, filename };
         } catch (err) {
             console.error('Fejl under PDF-generering:', err);
-            toast.error("Kunne ikke oprette PDF: " + err.message, { id: "pdf_generation" });
+            toast.error(friendlyError(err, 'Kunne ikke oprette PDF. Prøv igen.'), { id: "pdf_generation" });
             return null;
         }
     };

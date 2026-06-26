@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
 
 import { corsHeadersFor } from "../_shared/cors.ts"
+import { resolveOwnCompanyId, ownCompanyOrWarn } from "../_shared/companyGuard.ts"
 
 serve(async (req) => {
   const corsHeaders = corsHeadersFor(req)
@@ -36,7 +37,11 @@ serve(async (req) => {
     console.log("Starter e-conomic overførsel for:", lead.customer_name);
 
     // 1. Hent tokens fra DB (læg mærke til at tabellen hedder carpenters!)
-    const targetCarpenterId = lead.carpenter_id || user.id;
+    // SIKKERHED: firma-id udledes server-side fra den indloggede bruger — klientens
+    // lead.carpenter_id bruges IKKE til at vælge nøgle (forhindrer at man fakturerer
+    // i et andet firmas e-conomic). Identisk adfærd for en legitim mester/bogholder.
+    const ownCompanyId = await resolveOwnCompanyId(supabaseClient, user.id)
+    const targetCarpenterId = ownCompanyOrWarn(lead.carpenter_id, ownCompanyId, 'economic-invoice');
     const { data: profile, error: dbError } = await supabaseClient
       .from('carpenter_secrets')
       .select('economic_api_key')

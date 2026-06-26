@@ -17,6 +17,7 @@ CREATE OR REPLACE FUNCTION confirm_agreement_by_token(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   agreements JSONB;

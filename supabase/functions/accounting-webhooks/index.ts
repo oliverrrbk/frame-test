@@ -16,7 +16,28 @@ serve(async (req) => {
     try {
         const url = new URL(req.url);
         const source = url.searchParams.get('source') || 'unknown'; // f.eks. ?source=dinero
-        
+
+        // SIKKERHED: delt hemmelighed, så ikke hvem som helst kan markere fakturaer
+        // som betalt på tværs af firmaer. OPT-IN for ikke at bryde den nuværende
+        // auto-"betalt": kun HVIS ACCOUNTING_WEBHOOK_SECRET er sat i miljøet kræves
+        // den. Sæt den + tilføj ?secret=... (eller header x-webhook-secret) på
+        // webhook-URL'en hos Dinero/e-conomic for at låse endpointet helt.
+        const expectedSecret = Deno.env.get('ACCOUNTING_WEBHOOK_SECRET') || '';
+        if (expectedSecret) {
+            const provided = url.searchParams.get('secret') || req.headers.get('x-webhook-secret') || '';
+            // Konstant-tids-sammenligning (undgår timing-orakel på hemmeligheden).
+            const a = new TextEncoder().encode(provided);
+            const b = new TextEncoder().encode(expectedSecret);
+            let diff = a.length ^ b.length;
+            for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
+            if (diff !== 0) {
+                console.warn(`[accounting-webhooks] Afvist: forkert/manglende hemmelighed (source=${source}).`);
+                return new Response(JSON.stringify({ error: 'unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+            }
+        } else {
+            console.warn('[accounting-webhooks] ADVARSEL: kører UDEN delt hemmelighed — endpointet er uautentificeret. Sæt ACCOUNTING_WEBHOOK_SECRET for at sikre det.');
+        }
+
         let bodyText = "";
         try {
             bodyText = await req.text();

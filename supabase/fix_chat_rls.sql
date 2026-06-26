@@ -3,7 +3,7 @@
 
 -- 1. Helper function to get a user's company ID
 CREATE OR REPLACE FUNCTION public.get_user_company_id(u_id UUID)
-RETURNS UUID SECURITY DEFINER AS $$
+RETURNS UUID SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   comp_id UUID;
 BEGIN

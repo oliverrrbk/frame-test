@@ -62,6 +62,7 @@ afløser/supplerer hinanden.
 | `setup_time_entries_rpc.sql` | `mutate_time_entries` (atomisk timeregistrering) |
 | `setup_calendar_events_rpc.sql` | `mutate_calendar_events` (atomisk kalender) |
 | `setup_case_messages_rpc.sql` | `mutate_case_messages` (atomiske sags-beskeder) |
+| `setup_lead_raw_data_rpc.sql` | `mutate_lead_raw_data(p_id, p_patch)` — atomisk shallow-merge af `leads.raw_data` (kun ændrede top-level-nøgler skrives, så samtidige skrivninger ikke overskriver hinandens andre felter). SECURITY INVOKER → RLS + feltspærre gælder. Bruges af `CaseManagement` (materialer/checklister/sagsdata). |
 | `supabase/soft_delete_lead.sql` | `soft_delete_lead(p_lead_id)` — pålidelig soft-delete af tilbud/kladder (autoriserer ejer/opretter/sales; nægter bekræftede sager for ikke-ejere). **Opdaterer også `protect_lead_sensitive_fields()`** med en `app.allow_delete`-undtagelse → **kør EFTER `add_lead_push_trigger.sql`** så den kanoniske trigger-version vinder |
 
 ### 4) RLS-hærdning (efter fundament + tabeller)
@@ -82,6 +83,11 @@ afløser/supplerer hinanden.
 | `supabase/add_lead_push_trigger.sql` | **Kanonisk** version af `protect_lead_sensitive_fields()` (med anon-accept) **+** `tr_on_lead_push_notify` (push ved godkendt/forespørgsel/tildeling/besked) | **Kør EFTER field_guard** |
 | `setup_payroll_lock_guard.sql` | `effective_payroll_lock()` + `enforce_payroll_lock` (server-side lønlås) | |
 | `setup_leads_price_masking.sql` | `get_visible_leads()` (skjul priser for svende/lærlinge) | |
+
+### 6) Indeks (ydelse — kan køres når som helst)
+| Fil | Formål |
+|-----|--------|
+| `setup_leads_indexes.sql` | Indeks på `leads(carpenter_id, created_at)`, `assigned_to`, `status` + GIN på `raw_data->assigned_workers/assigned_pm/invoice_history`. Fjerner fuld tabel-scan i RLS-filtre + dashboard-fetch. Additiv, idempotent. |
 
 ---
 
