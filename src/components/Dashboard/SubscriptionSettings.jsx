@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
-import { CreditCard, FileText, CheckCircle, AlertTriangle, Calendar } from 'lucide-react';
+import { CreditCard, FileText, CheckCircle, AlertTriangle, Calendar, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { computePrice, formatKr } from '../../utils/pricing';
 
@@ -131,6 +132,16 @@ const SubscriptionSettings = () => {
 
     return (
         <div className="space-y-6 animate-fadeIn" style={{ maxWidth: '600px', margin: '0 auto' }}>
+
+            {/* Fuld-skærms loader mens vi henter det sikre Stripe-link (så man ser at der sker noget). */}
+            {isManaging && createPortal(
+                <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+                    <Loader2 size={48} color="#fff" className="spin" />
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.05rem' }}>Sender dig til sikker betaling…</div>
+                    <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>Et øjeblik — du føres videre til Stripe.</div>
+                </div>,
+                document.body
+            )}
 
             {/* Trial Banner */}
             {company.subscription_status === 'trialing' && daysLeft > 0 && (
