@@ -105,19 +105,23 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
         supabase.functions.invoke('sync-subscription-seats').catch(() => {});
     };
 
-    // Rolig, ærlig omkostnings-linje ved invitation (ikke sælgende — bare gennemsigtig).
+    // Rolig, ærlig omkostnings-forklaring ved invitation (ikke sælgende — bare gennemsigtig).
     const KONTOR_BILLING_ROLES = ['admin', 'boss', 'sales', 'lead', 'pm', 'accountant'];
     const FELT_BILLING_ROLES = ['worker', 'apprentice'];
+    // Dagens dato fanges én gang (ren beregning af proration-andel for resten af måneden).
+    const [today] = useState(() => {
+        const d = new Date();
+        return { dom: d.getDate(), dim: new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() };
+    });
     const inviteSeatInfo = () => {
         const kontor = team.filter(m => KONTOR_BILLING_ROLES.includes(m.role)).length;
         const felt = team.filter(m => FELT_BILLING_ROLES.includes(m.role)).length;
         const current = { mester: 1, pl: kontor, bog: 0, svend: felt, laer: 0 };
         const roleKey = FELT_BILLING_ROLES.includes(inviteData.role) ? 'svend' : 'pl';
-        const cost = priceForAddingRole(current, roleKey);
-        const status = profile.subscription_status;
-        if (status === 'exempt') return 'Gratis — I betaler ikke pr. bruger.';
-        if (status === 'active') return `+${formatKr(cost)} kr/md fra næste regning.`;
-        return `Gratis i prøveperioden — derefter +${formatKr(cost)} kr/md.`;
+        const monthly = priceForAddingRole(current, roleKey);
+        const remainingDays = Math.max(1, today.dim - today.dom + 1);
+        const proratedNow = Math.round(monthly * (remainingDays / today.dim));
+        return { status: profile.subscription_status, monthly, remainingDays, proratedNow };
     };
 
     const doRoleChange = async (member, newRole) => {
@@ -537,10 +541,42 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                 </p>
                             </div>
 
-                            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <DollarSign size={15} style={{ flexShrink: 0, opacity: 0.7 }} />
-                                <span>{inviteSeatInfo()}</span>
-                            </div>
+                            {(() => {
+                                const info = inviteSeatInfo();
+                                const boxStyle = { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 14px' };
+                                if (info.status === 'exempt') {
+                                    return (
+                                        <div style={{ ...boxStyle, fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <DollarSign size={15} style={{ flexShrink: 0, opacity: 0.7 }} /> Gratis — I betaler ikke pr. bruger.
+                                        </div>
+                                    );
+                                }
+                                if (info.status !== 'active') {
+                                    return (
+                                        <div style={{ ...boxStyle, fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <DollarSign size={15} style={{ flexShrink: 0, opacity: 0.7 }} /> Gratis i prøveperioden — derefter <b style={{ color: 'var(--text-primary)' }}>+{formatKr(info.monthly)} kr/md</b>.
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <div style={boxStyle}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px' }}>
+                                            <DollarSign size={14} /> Sådan påvirker det din regning
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', fontSize: '0.88rem', color: '#475569', marginBottom: '4px' }}>
+                                            <span>Resten af denne måned (ca. {info.remainingDays} dage)</span>
+                                            <b style={{ color: '#0f172a', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>~{formatKr(info.proratedNow)} kr</b>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', fontSize: '0.88rem', color: '#475569' }}>
+                                            <span>Fra næste måned</span>
+                                            <b style={{ color: '#0f172a', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>+{formatKr(info.monthly)} kr/md</b>
+                                        </div>
+                                        <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '9px', paddingTop: '8px', fontSize: '0.78rem', color: '#94a3b8' }}>
+                                            Begge dele samles på din næste regning · ekskl. moms
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                             <button
                                 type="submit"
                                 disabled={isInviting}
