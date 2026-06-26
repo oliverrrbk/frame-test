@@ -3343,6 +3343,7 @@ const Dashboard = () => {
                             leadsData={roleFilteredLeads}
                             myProfile={{ ...myProfile, role: effectiveRole }}
                             simulatedRole={simulatedRole}
+                            onDataChange={refreshData}
                         />
                         </Suspense>
                     )}

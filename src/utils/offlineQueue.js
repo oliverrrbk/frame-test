@@ -36,6 +36,22 @@ export function queuedOpsCount() {
     return readQueue().length;
 }
 
+// Alle ventende registreringer i køen (til optimistisk visning i timesedlen), så
+// svenden SER sine offline-gemte timer og ikke taster dem ind igen (= dubletter).
+// Håndterer edit-i-kø (et add der senere fjernes igen vises ikke). Hver post får
+// _table (leads/carpenters) og _opId (lead-id ved projekt-tid) med til opslag.
+export function getQueuedEntries() {
+    const list = readQueue();
+    const byId = new Map();
+    for (const op of list) {
+        for (const id of (op.removeIds || [])) byId.delete(id);
+        for (const e of (op.add || [])) {
+            byId.set(e.id, { ...e, _table: op.table, _opId: op.id });
+        }
+    }
+    return Array.from(byId.values());
+}
+
 // Udled den netto "åbne" tjek-ind fra køen — bruges til optimistisk visning, så
 // svenden ser at han er tjekket ind, selv mens stemplingen venter på at blive sendt.
 // Overlever reload, fordi den læses fra localStorage-køen (ikke React-state).

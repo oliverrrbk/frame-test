@@ -7,6 +7,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } fro
 import { isWeekendOrHoliday } from '../../utils/holidays';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
 import { mutateTimeEntries } from '../../utils/timeEntries';
+import { queueTimeEntryOp, flushTimeEntryQueue, queuedOpsCount, getQueuedEntries } from '../../utils/offlineQueue';
+import { friendlyError, isOfflineError } from '../../utils/friendlyError';
 import TimeRegistrationReminder from './TimeRegistrationReminder';
 import QuarterTimePicker from '../ui/QuarterTimePicker';
 import { snapToQuarter } from '../../utils/timeUtils';
@@ -109,9 +111,11 @@ const CustomSelect = ({ value, onChange, options, placeholder, minWidth = '180px
     );
 };
 
-export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole }) {
+export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole, onDataChange }) {
     const [selectedPeriod, setSelectedPeriod] = useState('this_month');
     const [payrollSettings, setPayrollSettings] = useState(null);
+    // Bumpes når offline-køen ændrer sig, så ventende registreringer vises/fjernes.
+    const [pendingVersion, setPendingVersion] = useState(0);
     const lockedUntil = getEffectiveLockedUntil(payrollSettings);
     const entryLocked = (entry) => isDateLocked(entry?.date, lockedUntil);
 
@@ -119,6 +123,24 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
         const cid = myProfile?.company_id || myProfile?.id;
         if (cid) fetchPayrollSettings(cid).then(setPayrollSettings);
     }, [myProfile]);
+
+    // Offline-synk: send ventende timer automatisk når signalet kommer igen.
+    // (Idempotent ift. de samme listeners i WorkerOverview — flushing-guard'en i
+    // offlineQueue sikrer at to samtidige flush ikke kolliderer.)
+    useEffect(() => {
+        const sync = async () => {
+            if (queuedOpsCount() === 0) return;
+            const { flushed } = await flushTimeEntryQueue();
+            if (flushed > 0) {
+                toast.success(`${flushed} registrering${flushed > 1 ? 'er' : ''} synkroniseret.`);
+                setPendingVersion(v => v + 1);
+                onDataChange?.();
+            }
+        };
+        sync(); // forsøg ved mount — måske kom vi online imens timesedlen var lukket
+        window.addEventListener('online', sync);
+        return () => window.removeEventListener('online', sync);
+    }, [onDataChange]);
     
     useEffect(() => {
         const handleOpenAdd = (e) => {
@@ -216,8 +238,30 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
             });
         });
 
+        // Ventende offline-registreringer — vises med "Afventer synk"-badge, så
+        // svenden ser at timerne ER gemt (og ikke taster dem ind igen). Springes
+        // over hvis de allerede er nået i DB (samme id i listen ovenfor).
+        const existingIds = new Set(entries.map(e => e.id));
+        getQueuedEntries().forEach(q => {
+            if (q.employeeId !== myProfile?.id || existingIds.has(q.id)) return;
+            if (q._table === 'carpenters') {
+                entries.push({
+                    ...q, source: 'profile', leadId: 'internal', caseNumber: 'INT',
+                    leadName: q.absenceType ? `Internt: ${q.absenceType}` : 'Internt / Fravær',
+                    _pending: true
+                });
+            } else {
+                const lead = leadsData.find(l => String(l.id) === String(q._opId));
+                entries.push({
+                    ...q, source: 'lead', leadId: q._opId,
+                    caseNumber: lead?.case_number || String(q._opId).substring(0, 6),
+                    leadName: lead?.customer_name || 'Sag', _pending: true
+                });
+            }
+        });
+
         return entries.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }, [leadsData, myProfile]);
+    }, [leadsData, myProfile, pendingVersion]);
 
     // Ferie-logik (Lightweight HR)
     const vacationQuota = myProfile?.raw_data?.vacation_quota || 30; // Standard 30 dage
@@ -379,6 +423,11 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
     const confirmDeleteEntry = async () => {
         const entry = deletingEntry;
         if (!entry) return;
+        if (entry._pending) {
+            toast('Registreringen afventer synk — vent til du har signal, før du sletter.', { icon: '📡' });
+            setDeletingEntry(null);
+            return;
+        }
         if (entryLocked(entry)) {
             toast.error('Timen er låst efter lønkørsel og kan ikke slettes.');
             setDeletingEntry(null);
@@ -404,22 +453,42 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
                 removeIds = [entry.id];
             }
 
+            const op = { table: 'carpenters', id: myProfile.id, removeIds, add: [] };
             try {
-                await mutateTimeEntries({ table: 'carpenters', id: myProfile.id, removeIds });
+                await mutateTimeEntries(op);
                 toast.success(entry.isGrouped ? 'Ferie-periode slettet.' : 'Registrering slettet.');
-                setTimeout(() => window.location.reload(), 800);
-            } catch {
-                toast.error('Kunne ikke slette fravær/internt.');
+                setDeletingEntry(null);
+                if (onDataChange) onDataChange(); else setTimeout(() => window.location.reload(), 600);
+            } catch (err) {
+                if (isOfflineError(err)) {
+                    queueTimeEntryOp(op);
+                    setDeletingEntry(null);
+                    setPendingVersion(v => v + 1);
+                    toast('Ingen forbindelse — sletningen er gemt og udføres, når du får signal.', { icon: '📡', duration: 5000 });
+                } else {
+                    console.error('Kunne ikke slette fravær/internt:', err);
+                    toast.error(friendlyError(err, 'Kunne ikke slette registreringen. Prøv igen.'));
+                }
             }
         } else {
             const lead = leadsData.find(l => l.id === entry.leadId);
             if (!lead) return toast.error('Sag ikke fundet');
+            const op = { table: 'leads', id: lead.id, removeIds: [entry.id], add: [] };
             try {
-                await mutateTimeEntries({ table: 'leads', id: lead.id, removeIds: [entry.id] });
+                await mutateTimeEntries(op);
                 toast.success('Tidsregistrering slettet.');
-                setTimeout(() => window.location.reload(), 800);
-            } catch {
-                toast.error('Kunne ikke slette tiden.');
+                setDeletingEntry(null);
+                if (onDataChange) onDataChange(); else setTimeout(() => window.location.reload(), 600);
+            } catch (err) {
+                if (isOfflineError(err)) {
+                    queueTimeEntryOp(op);
+                    setDeletingEntry(null);
+                    setPendingVersion(v => v + 1);
+                    toast('Ingen forbindelse — sletningen er gemt og udføres, når du får signal.', { icon: '📡', duration: 5000 });
+                } else {
+                    console.error('Kunne ikke slette tiden:', err);
+                    toast.error(friendlyError(err, 'Kunne ikke slette tiden. Prøv igen.'));
+                }
             }
         }
     };
@@ -469,67 +538,65 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
             }
         }
         
+        // Byg den atomiske operation (samme form som offline-køen forventer), så
+        // gem-vejen og offline-fallbacken deler præcis samme nyttelast.
+        let op;
+        if (formData.regType === 'internal') {
+            const newEntries = datesToSave.map((dateStr, idx) => ({
+                id: (isAdding || datesToSave.length > 1) ? `time-${Date.now()}-${idx}` : editingEntry.id,
+                startTime: isMultiDayAbsence ? '' : (formData.startTime || ''),
+                endTime: isMultiDayAbsence ? '' : (formData.endTime || ''),
+                pauseMinutes: isMultiDayAbsence ? 0 : (parseInt(formData.pauseMinutes) || 0),
+                hours: isMultiDayAbsence ? 7.4 : (parseFloat(formData.hours) || 0),
+                date: dateStr,
+                desc: formData.desc || '',
+                employeeId: myProfile.id,
+                employeeName: myProfile.owner_name || myProfile.company_name || 'Ukendt',
+                km: isMultiDayAbsence ? 0 : (formData.km ? parseFloat(formData.km) : 0),
+                absenceType: formData.absenceType || 'Internt'
+            }));
+            op = { table: 'carpenters', id: myProfile.id, removeIds: (!isAdding && editingEntry) ? [editingEntry.id] : [], add: newEntries };
+        } else {
+            const finalEntry = {
+                id: isAdding ? `time-${Date.now()}` : editingEntry.id,
+                startTime: formData.startTime ? snapToQuarter(formData.startTime) : '',
+                endTime: formData.endTime ? snapToQuarter(formData.endTime) : '',
+                pauseMinutes: parseInt(formData.pauseMinutes) || 0,
+                // Sikkerhedsnet: hvis hours skulle være tom, beregn den fra tiderne,
+                // så vi aldrig gemmer 0 timer når start/slut er udfyldt.
+                hours: parseFloat(formData.hours) || computeHours(formData.startTime, formData.endTime, formData.pauseMinutes) || 0,
+                date: formData.date,
+                desc: formData.desc || '',
+                employeeId: myProfile.id,
+                employeeName: myProfile.owner_name || myProfile.company_name || 'Ukendt',
+                km: formData.km ? parseFloat(formData.km) : 0
+            };
+
+            const lead = leadsData.find(l => String(l.id) === String(formData.leadId));
+            if (!lead) return toast.error('Sag ikke fundet');
+
+            op = { table: 'leads', id: lead.id, removeIds: (!isAdding && editingEntry) ? [finalEntry.id] : [], add: [finalEntry] };
+        }
+
         try {
-            if (formData.regType === 'internal') {
-                const newEntries = datesToSave.map((dateStr, idx) => ({
-                    id: (isAdding || datesToSave.length > 1) ? `time-${Date.now()}-${idx}` : editingEntry.id,
-                    startTime: isMultiDayAbsence ? '' : (formData.startTime || ''),
-                    endTime: isMultiDayAbsence ? '' : (formData.endTime || ''),
-                    pauseMinutes: isMultiDayAbsence ? 0 : (parseInt(formData.pauseMinutes) || 0),
-                    hours: isMultiDayAbsence ? 7.4 : (parseFloat(formData.hours) || 0),
-                    date: dateStr,
-                    desc: formData.desc || '',
-                    employeeId: myProfile.id,
-                    employeeName: myProfile.owner_name || myProfile.company_name || 'Ukendt',
-                    km: isMultiDayAbsence ? 0 : (formData.km ? parseFloat(formData.km) : 0),
-                    absenceType: formData.absenceType || 'Internt'
-                }));
-
-                const removeIds = (!isAdding && editingEntry) ? [editingEntry.id] : [];
-
-                try {
-                    await mutateTimeEntries({ table: 'carpenters', id: myProfile.id, removeIds, add: newEntries });
-                } catch (error) {
-                    console.error("Supabase RPC error (carpenters):", error);
-                    throw new Error('Fejl ved gem internt: ' + error.message);
-                }
-            } else {
-                const finalEntry = {
-                    id: isAdding ? `time-${Date.now()}` : editingEntry.id,
-                    startTime: formData.startTime ? snapToQuarter(formData.startTime) : '',
-                    endTime: formData.endTime ? snapToQuarter(formData.endTime) : '',
-                    pauseMinutes: parseInt(formData.pauseMinutes) || 0,
-                    // Sikkerhedsnet: hvis hours skulle være tom, beregn den fra tiderne,
-                    // så vi aldrig gemmer 0 timer når start/slut er udfyldt.
-                    hours: parseFloat(formData.hours) || computeHours(formData.startTime, formData.endTime, formData.pauseMinutes) || 0,
-                    date: formData.date,
-                    desc: formData.desc || '',
-                    employeeId: myProfile.id,
-                    employeeName: myProfile.owner_name || myProfile.company_name || 'Ukendt',
-                    km: formData.km ? parseFloat(formData.km) : 0
-                };
-
-                const lead = leadsData.find(l => String(l.id) === String(formData.leadId));
-                if (!lead) return toast.error('Sag ikke fundet');
-
-                const removeIds = (!isAdding && editingEntry) ? [finalEntry.id] : [];
-
-                try {
-                    await mutateTimeEntries({ table: 'leads', id: lead.id, removeIds, add: [finalEntry] });
-                } catch (error) {
-                    console.error("Supabase RPC error (leads):", error);
-                    throw new Error('Fejl ved gem tid på sag: ' + error.message);
-                }
-            }
-
+            await mutateTimeEntries(op);
             toast.success(isAdding ? 'Registrering tilføjet!' : 'Registrering opdateret!');
             setEditingEntry(null);
             setIsAdding(false);
-            setTimeout(() => window.location.reload(), 800);
+            // Blød opdatering i stedet for hård sidegenindlæsning (hurtigere på mobil).
+            if (onDataChange) onDataChange(); else setTimeout(() => window.location.reload(), 600);
         } catch (err) {
-            console.error(err);
-            const errorMsg = 'Fejl detaljer: ' + (err.message || JSON.stringify(err));
-            toast.error(errorMsg);
+            if (isOfflineError(err)) {
+                // Ingen forbindelse: gem timerne lokalt og send dem automatisk senere.
+                queueTimeEntryOp(op);
+                setEditingEntry(null);
+                setIsAdding(false);
+                setPendingVersion(v => v + 1);
+                toast('Ingen forbindelse — timerne er gemt og sendes automatisk, når du får signal.', { icon: '📡', duration: 5000 });
+            } else {
+                console.error('Kunne ikke gemme tidsregistrering:', err);
+                toast.error(friendlyError(err, 'Kunne ikke gemme timerne. Prøv igen.'));
+            }
         }
     };
 
@@ -544,6 +611,10 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
     };
 
     const openEdit = (entry) => {
+        if (entry._pending) {
+            toast('Registreringen afventer synk — vent til du har signal, før du retter.', { icon: '📡' });
+            return;
+        }
         if (entryLocked(entry)) {
             toast.error(`Timerne er lønkørt og låst (til og med ${formatDa(lockedUntil)}). Kontakt din mester.`);
             return;
@@ -782,7 +853,11 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole })
                                                 {entry.isGrouped ? '-' : (entry.km ? `${entry.km} km` : '-')}
                                             </td>
                                             <td data-label="Handlinger" style={{ padding: '20px 24px', textAlign: 'right' }}>
-                                                {locked ? (
+                                                {entry._pending ? (
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '999px', background: '#fff7ed', border: '1px solid #fed7aa', color: '#c2410c', fontSize: '0.78rem', fontWeight: 700 }} title="Gemt offline — sendes automatisk når du får signal">
+                                                        📡 Afventer synk
+                                                    </div>
+                                                ) : locked ? (
                                                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '999px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.78rem', fontWeight: 700 }} title={`Lønkørt og låst til og med ${formatDa(lockedUntil)}`}>
                                                         <Lock size={13} /> Låst
                                                     </div>

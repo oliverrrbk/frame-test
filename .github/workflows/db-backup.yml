@@ -1,0 +1,60 @@
+name: Database Backup (off-site)
+
+# Gratis, uafhængig off-site backup af Supabase-databasen.
+# Kører på GitHubs servere (gratis) og gemmer en komprimeret (+ evt. krypteret)
+# dump som en GitHub "artifact" — INGEN Dropbox/ekstern konto nødvendig.
+#
+# === SÅDAN AKTIVERER DU DEN (1 secret) ===
+# 1) Supabase → Settings → Database → Connection string (Session/direct, ikke pooler).
+# 2) GitHub → repo → Settings → Secrets and variables → Actions → New repository secret:
+#       Navn:  SUPABASE_DB_URL      Værdi:  <forbindelsesstrengen>
+#    (Indtil dette secret er sat, gør workflowet INGENTING — helt ufarligt.)
+#
+# === VALGFRIT: krypter dumpen ===
+# Tilføj et secret BACKUP_PASSPHRASE — så krypteres filen (gpg) før den gemmes,
+# så selv en lækket artifact ikke afslører data. Stærkt anbefalet (dumpen rummer PII).
+#
+# === SENERE: vil du have den i Dropbox i stedet/også? ===
+# Sig til — så tilføjer vi et upload-trin (kræver et Dropbox-token-secret).
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # hver nat kl. 02:00 UTC
+  workflow_dispatch: {}    # + manuel "Run workflow"-knap i Actions-fanen
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Installer pg_dump (Postgres 16-klient)
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+
+      - name: Dump database (+ evt. krypter)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::warning::Backup ikke konfigureret endnu — mangler secret SUPABASE_DB_URL. Springer over."
+            exit 0
+          fi
+          STAMP=$(date +%Y-%m-%d-%H%M)
+          OUT="bisonframe-${STAMP}.sql.gz"
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges | gzip > "$OUT"
+          echo "Dump lavet: $OUT ($(du -h "$OUT" | cut -f1))"
+          if [ -n "$BACKUP_PASSPHRASE" ]; then
+            gpg --batch --yes --passphrase "$BACKUP_PASSPHRASE" -c "$OUT" && rm "$OUT"
+            echo "Dump krypteret."
+          fi
+
+      - name: Gem backup som artifact (gratis, 90 dages opbevaring)
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: bisonframe-*
+          retention-days: 90
+          if-no-files-found: ignore
