@@ -5,7 +5,7 @@ import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, T
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
-import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
+import { isValidLonnummer } from '../../utils/payroll';
 import UserAvatar from '../ui/UserAvatar';
 import { priceForAddingRole, formatKr } from '../../utils/pricing';
 
@@ -306,48 +306,41 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
         setSuccessMsg('');
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const response = await fetch('/api/invite-employee', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
-                },
-                body: JSON.stringify({
+            // Oprettes via edge-funktion (garanteret service-role), så carpenter-rækken
+            // ALTID skrives med det samme — medarbejderen vises straks og tæller med i prisen,
+            // uden at vente på at han selv logger ind første gang.
+            const { data: result, error: fnErr } = await supabase.functions.invoke('invite-employee', {
+                body: {
                     name: inviteData.name,
                     email: inviteData.email,
                     phone: inviteData.phone,
                     role: inviteData.role,
-                    companyId: companyId,
-                    adminId: profile.id
-                }),
+                }
             });
 
-            const result = await response.json();
-
-            if (response.ok) {
-                // Auto-tildel næste ledige lønnummer, så det aldrig glemmes (kan ændres bagefter).
-                const existingNumbers = [
-                    ...team.map(m => m.raw_data?.lonnummer),
-                    profile.raw_data?.lonnummer
-                ].filter(Boolean);
-                const autoLonnummer = nextLonnummer(existingNumbers);
-
-                // Hent ny række så vi ikke overskriver evt. raw_data sat ved oprettelsen
-                const { data: newRow } = await supabase.from('carpenters').select('raw_data').eq('email', inviteData.email).single();
-                const mergedRaw = { ...(newRow?.raw_data || {}), lonnummer: autoLonnummer };
-
-                // Sikr at requires_password_change står til true i databasen for den nye bruger, så de får pop-uppen!
-                await supabase.from('carpenters').update({ requires_password_change: true, raw_data: mergedRaw }).eq('email', inviteData.email);
-
-                setSuccessMsg(`Medarbejder oprettet med lønnummer ${autoLonnummer}! Der er automatisk sendt en velkomstmail med login-oplysninger.`);
-                setInviteData({ name: '', email: '', phone: '', role: 'sales' });
-                if (isMobile) { setIsInviteModalOpen(false); toast.success(`Medarbejder oprettet (lønnr. ${autoLonnummer})`); }
-                fetchTeam(); // Opdater listen
-                syncSeats(); // opdatér Stripe-sæder (kun betalende konti)
-            } else {
-                setErrorMsg(result.error || 'Kunne ikke invitere medarbejder.');
+            if (fnErr || !result?.success) {
+                setErrorMsg(result?.error || fnErr?.message || 'Kunne ikke oprette medarbejder.');
+                return;
             }
+
+            const lon = result.lonnummer;
+            // Vis medarbejderen MED DET SAMME (optimistisk) — så han ses i listen uden reload.
+            if (result.member) {
+                setTeam(prev => prev.some(m => m.id === result.member.id)
+                    ? prev.map(m => m.id === result.member.id ? result.member : m)
+                    : [...prev, result.member]);
+            }
+
+            const mailNote = result.emailSent
+                ? 'Der er sendt en velkomstmail med login-oplysninger.'
+                : (result.tempPassword
+                    ? `Velkomstmailen kunne ikke sendes — giv selv login videre: ${inviteData.email} / ${result.tempPassword}`
+                    : 'Velkomstmailen kunne ikke sendes — bed medarbejderen om at bruge "Glemt adgangskode" på login.');
+            setSuccessMsg(`Medarbejder oprettet${lon ? ` med lønnummer ${lon}` : ''}! ${mailNote}`);
+            setInviteData({ name: '', email: '', phone: '', role: 'sales' });
+            if (isMobile) { setIsInviteModalOpen(false); toast.success(`Medarbejder oprettet${lon ? ` (lønnr. ${lon})` : ''}`); }
+            fetchTeam(); // Hent fra serveren så listen er præcis
+            syncSeats(); // opdatér Stripe-sæder med det samme (kun betalende konti)
         } catch (error) {
             setErrorMsg('Der skete en netværksfejl.');
         } finally {
