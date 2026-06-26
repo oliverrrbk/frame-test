@@ -498,6 +498,63 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
 
     useEffect(() => () => { slotUrlsRef.current.forEach(u => u && URL.revokeObjectURL(u)); }, []);
 
+    // ---- Auto-gem af en allerede gemt kladde ----
+    // Når man redigerer et tilbud der ALLEREDE er gemt som kladde (initialLead.id), gemmes
+    // alle ændringer løbende i databasen — så intet går tabt, selv hvis man lukker uden at
+    // trykke "Gem kladde". Let DB-opdatering (uden PDF-upload); PDF'en regenereres ved
+    // eksplicit gem/send. Kører ikke på allerede sendte tilbud (de kræver bevidst gensend).
+    const [autosaveState, setAutosaveState] = useState('idle'); // 'idle' | 'saving' | 'saved'
+    const autosaveDraft = async () => {
+        if (!initialLead?.id || wasSent || busy) return;
+        setAutosaveState('saving');
+        try {
+            const quoteObj = buildQuoteObj();
+            const fullAddress = [customer.address, [customer.zip, customer.city].filter(Boolean).join(' ')]
+                .filter(Boolean).join(', ').trim();
+            const raw_data = {
+                ...(initialLead?.raw_data || {}),
+                is_manual_quote: true,
+                manual_quote: quoteObj,
+                quote_settings: { ...(initialLead?.raw_data?.quote_settings || {}), validityDays: num(validityDays) || 14 },
+                custom_message: emailMessage,
+                calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: num(laborHours), hourlyRate: num(laborRate) },
+                actual_quote_price: calc.totalExVat,
+                customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city },
+            };
+            const { error } = await supabase.from('leads').update({
+                customer_name: customer.name,
+                customer_email: customer.email || '',
+                customer_phone: customer.phone || '',
+                customer_address: fullAddress || '',
+                project_category: title || 'Manuelt tilbud',
+                price_estimate: `${kr(calc.totalIncVat)} DKK`,
+                raw_data,
+            }).eq('id', initialLead.id);
+            if (error) throw error;
+            setAutosaveState('saved');
+        } catch {
+            // Auto-gem må aldrig forstyrre — fald stille tilbage (eksplicit "Gem kladde" findes stadig).
+            setAutosaveState('idle');
+        }
+    };
+    // Hold en frisk reference, så flush ved luk altid gemmer den NYESTE tilstand.
+    const autosaveRef = useRef(autosaveDraft);
+    autosaveRef.current = autosaveDraft;
+
+    // Debounced auto-gem når indholdet ændrer sig (kun for en allerede gemt kladde).
+    const autosaveMounted = useRef(false);
+    useEffect(() => {
+        if (!isEditing || wasSent) return;
+        if (!autosaveMounted.current) { autosaveMounted.current = true; return; } // spring den uændrede mount-tilstand over
+        setAutosaveState('saving');
+        const t = setTimeout(() => { autosaveRef.current(); }, 1200);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [quoteSig, emailMessage]);
+
+    // Flush ved luk/unmount, så de sidste ændringer (inden debouncen nåede at fyre) også gemmes.
+    useEffect(() => () => { autosaveRef.current(); }, []);
+
     // ---- Validering før afsendelse ----
     // Et tilbud må kun sendes når det vigtigste er på plads — så man altid fremstår professionel.
     const validateForSend = () => {
@@ -1105,6 +1162,15 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     <div>
                         <div style={{ fontSize: '0.8rem', color: '#64748b' }}>I alt inkl. moms</div>
                         <div style={{ fontSize: isMobile ? '1.4rem' : '1.7rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>{kr(calc.totalIncVat)} kr</div>
+                        {isEditing && !wasSent && (
+                            <div style={{ marginTop: '3px', fontSize: '0.72rem', fontWeight: 600, color: autosaveState === 'saved' ? '#10b981' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                {autosaveState === 'saving'
+                                    ? <><span className="qqb-spin" style={{ width: '10px', height: '10px', border: '2px solid #cbd5e1', borderTopColor: '#64748b', borderRadius: '50%', display: 'inline-block' }} /> Gemmer automatisk…</>
+                                    : autosaveState === 'saved'
+                                        ? <><CheckCircle2 size={13} /> Gemt automatisk</>
+                                        : <>Ændringer gemmes automatisk</>}
+                            </div>
+                        )}
                     </div>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                         {isEditing && (
