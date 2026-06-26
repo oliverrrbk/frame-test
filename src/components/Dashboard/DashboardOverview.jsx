@@ -14,7 +14,8 @@ import {
     ArrowRight,
     MapPin,
     Phone,
-    Send
+    Send,
+    FileText
 } from 'lucide-react';
 import {
     AreaChart,
@@ -41,7 +42,35 @@ import { toast } from 'react-hot-toast';
 import CalculatorWorkflowSteps from './CalculatorWorkflowSteps';
 import { computeCaseFinance } from '../../utils/caseFinance';
 
-export default function DashboardOverview({ leadsData, carpenterProfile, myProfile, setActiveTab, setSelectedLead, setTargetCaseId }) {
+// "Lav et tilbud" — Bison-glas-knap, der åbner tilbudstype-vælgeren. Bruges både på
+// desktop (kompakt, ved siden af overblik-teksten) og mobil (fuld bredde).
+function CreateQuoteButton({ onClick, fullWidth = false }) {
+    const [hover, setHover] = useState(false);
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            style={{
+                width: fullWidth ? '100%' : 'auto',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '9px',
+                padding: fullWidth ? '13px 20px' : '10px 18px',
+                borderRadius: '999px',
+                border: '1px solid rgba(59,130,246,0.35)',
+                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                color: '#fff', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
+                boxShadow: hover ? '0 14px 30px rgba(37,99,235,0.42)' : '0 8px 20px rgba(37,99,235,0.28)',
+                transform: hover ? 'translateY(-2px)' : 'translateY(0)',
+                transition: 'transform .15s ease, box-shadow .2s ease',
+                whiteSpace: 'nowrap'
+            }}
+        >
+            <FileText size={17} /> Lav et tilbud
+        </button>
+    );
+}
+
+export default function DashboardOverview({ leadsData, carpenterProfile, myProfile, setActiveTab, setSelectedLead, setTargetCaseId, onCreateQuote }) {
     const [timeframe, setTimeframe] = useState('30d'); // '7d', '30d', 'ytd', 'all'
     const [selectedMetric, setSelectedMetric] = useState('won_revenue'); 
 
@@ -189,14 +218,18 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                     <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.75rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
                         Velkommen tilbage, {(myProfile?.owner_name || carpenterProfile?.company_name || 'Mester').split(' ')[0]}!
                     </h2>
-                    <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.05rem' }}>
-                        Her er dit visuelle overblik for forretningen lige nu.
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.05rem' }}>
+                            Her er dit visuelle overblik for forretningen lige nu.
+                        </p>
+                        {onCreateQuote && <CreateQuoteButton onClick={onCreateQuote} />}
+                    </div>
                 </div>
-                <div className="mobile-only">
-                    <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
+                <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
+                    <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
                         Oversigt over din forretning
                     </h2>
+                    {onCreateQuote && <CreateQuoteButton onClick={onCreateQuote} fullWidth />}
                 </div>
                 
                 {/* Thin, compact link banner */}

@@ -667,7 +667,8 @@ const Dashboard = () => {
     const [disabledCategories, setDisabledCategories] = useState([]);
     const [leadsData, setLeadsData] = useState([]);
     const [geocodedLeads, setGeocodedLeads] = useState({});
-    const [leadFilter, setLeadFilter] = useState('Ny forespørgsel');
+    // Standard-fane i Kunder & leads: dine egne tilbudskladder vises først.
+    const [leadFilter, setLeadFilter] = useState('Tilbudskladder');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLead, setSelectedLead] = useState(null);
     const [extendLead, setExtendLead] = useState(null);   // lead hvis tilbud forlænges
@@ -1006,7 +1007,7 @@ const Dashboard = () => {
             window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
         } else if (tabParam === 'leads') {
             setActiveTab('leads');
-            setLeadFilter('Ny forespørgsel');
+            setLeadFilter('Tilbudskladder');
             const newUrl = new URL(window.location);
             newUrl.searchParams.delete('tab');
             window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
@@ -3465,6 +3466,7 @@ const Dashboard = () => {
                                 setActiveTab={setActiveTab}
                                 setSelectedLead={setSelectedLead}
                                 setTargetCaseId={setTargetCaseId}
+                                onCreateQuote={() => setIsCreateLeadModalOpen(true)}
                             />
                             </Suspense>
                         )
@@ -3630,7 +3632,7 @@ const Dashboard = () => {
                                     {/* Pipeline Menu with Action Button */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingBottom: '10px', flexWrap: 'wrap', gap: '16px' }}>
                                     <div className="desktop-filters" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-                                        {['Ny forespørgsel', 'Tilbudskladder', 'Sendt tilbud', 'Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag', 'Historik']
+                                        {['Tilbudskladder', 'Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag', 'Historik']
                                             .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Sæt i bero' || status === 'Historik')
                                             .map(status => (
                                             <button 
@@ -3723,7 +3725,7 @@ const Dashboard = () => {
                                                 zIndex: 50,
                                                 overflow: 'hidden'
                                             }}>
-                                                {['Ny forespørgsel', 'Tilbudskladder', 'Sendt tilbud', 'Bekræftet opgave', 'Afbrudt Sag', 'Historik']
+                                                {['Tilbudskladder', 'Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Afbrudt Sag', 'Historik']
                                                     .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
                                                     .map(status => (
                                                         <button
