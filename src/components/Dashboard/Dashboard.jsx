@@ -877,6 +877,17 @@ const Dashboard = () => {
     // Kom-i-gang: helte-prik der peger på "Opret Ny Kunde" (kun desktop, første gang).
     const createLeadBtnRef = useRef(null);
     const [heroCoachDismissed, setHeroCoachDismissed] = useState(false);
+    // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
+    // så man lander præcis hvor man tilføjer kort — ikke i toppen ved firmaoplysninger.
+    const goToBilling = () => {
+        setActiveTab('account_settings');
+        let tries = 0;
+        const t = setInterval(() => {
+            const el = document.getElementById('frame-aftale');
+            if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); clearInterval(t); }
+            if (++tries > 15) clearInterval(t);
+        }, 120);
+    };
     const [showCreateLeadCancelConfirm, setShowCreateLeadCancelConfirm] = useState(false);
     const [createLeadMode, setCreateLeadMode] = useState(null);
     // Når en gemt tilbudskladde (selvlavet hurtigt tilbud) åbnes, redigeres den i QuickQuoteBuilder.
@@ -6722,7 +6733,7 @@ const Dashboard = () => {
                                     Tilknyt et kort i god tid for at undgå afbrydelser.
                                 </p>
                                 <button
-                                    onClick={() => { setActiveTab('account_settings'); setTrialPillExpanded(false); }}
+                                    onClick={() => { goToBilling(); setTrialPillExpanded(false); }}
                                     style={{ width: '100%', background: '#0f172a', color: '#fff', border: 'none', padding: '10px', borderRadius: '9px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                                 >
                                     <CreditCard size={14} /> Tilføj kort
@@ -6777,7 +6788,7 @@ const Dashboard = () => {
                                 Du har brugt {30 - trialDaysLeft} ud af 30 dage. Tilknyt et kort i god tid for at undgå afbrydelser.
                             </p>
                             <button
-                                onClick={() => setActiveTab('account_settings')}
+                                onClick={goToBilling}
                                 style={{
                                     marginTop: '4px',
                                     width: '100%',

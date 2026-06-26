@@ -278,7 +278,7 @@ const AccountSettingsView = ({
             </div>
 
             {/* ABONNEMENT & FAKTURA */}
-            <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#64748b', margin: '0 0 8px 16px', fontWeight: '700', letterSpacing: '0.05em' }}>Bison Aftale</h3>
+            <h3 id="frame-aftale" style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#64748b', margin: '0 0 8px 16px', fontWeight: '700', letterSpacing: '0.05em', scrollMarginTop: '80px' }}>Frame Aftale</h3>
             <SubscriptionSettings />
 
         </div>
