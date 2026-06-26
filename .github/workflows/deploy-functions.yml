@@ -54,7 +54,14 @@ jobs:
 
           for fn in $CHANGED; do
             if [ -d "supabase/functions/$fn" ]; then
-              echo "→ Deployer $fn"
-              supabase functions deploy "$fn" --project-ref "$PROJECT_REF"
+              # Funktioner markeret verify_jwt=false i config.toml (fx Stripe-webhook)
+              # SKAL deployes med --no-verify-jwt, ellers afviser gatewayen eksterne
+              # kald uden bruger-JWT (Stripe sender ingen).
+              FLAG=""
+              if awk -v f="[functions.$fn]" '$0==f{found=1;next} /^\[/{found=0} found && /verify_jwt[[:space:]]*=[[:space:]]*false/{print "yes";exit}' supabase/config.toml | grep -q yes; then
+                FLAG="--no-verify-jwt"
+              fi
+              echo "→ Deployer $fn $FLAG"
+              supabase functions deploy "$fn" --project-ref "$PROJECT_REF" $FLAG
             fi
           done

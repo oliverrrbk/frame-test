@@ -66,7 +66,7 @@ serve(async (req) => {
     // Find tømreren via customer id
     const { data: carpenter, error: findError } = await supabaseClient
         .from('carpenters')
-        .select('id, tier, subscription_status')
+        .select('id, tier, subscription_status, raw_data')
         .eq('payment_customer_id', customerId)
         .single();
 
@@ -75,33 +75,47 @@ serve(async (req) => {
         return new Response('Ok (ukendt kunde)', { status: 200 });
     }
 
+    // Hjælper: gem opsigelses-status i raw_data.billing så Frame altid kan vise
+    // OPSAGT/AKTIV korrekt — automatisk, uden at appen selv skal spørge Stripe.
+    const billingFrom = (sub: any) => ({
+        cancelAtPeriodEnd: !!sub.cancel_at_period_end,
+        periodEnd: sub.current_period_end ? sub.current_period_end * 1000 : null,
+        status: sub.status,
+    });
+
     // Håndter events
     switch (event.type) {
         case 'checkout.session.completed':
+            // Selve session-objektet har ikke abonnementsdetaljer — sæt blot active.
+            // Den efterfølgende subscription.created/updated synker billing-flagene.
+            await supabaseClient.from('carpenters').update({
+                subscription_status: 'active', trial_ends_at: null, tier: 'role_based'
+            }).eq('id', carpenter.id);
+            console.log(`Opdaterede firma ${carpenter.id} til active (checkout)`);
+            break;
+
         case 'customer.subscription.created':
-        case 'customer.subscription.updated':
+        case 'customer.subscription.updated': {
             const sub = event.data.object as any;
-            if (sub.status === 'active' || sub.status === 'trialing' || event.type === 'checkout.session.completed') {
+            if (sub.status === 'active' || sub.status === 'trialing') {
                 const targetTier = sub.metadata?.target_tier;
-                
                 const updateData: any = {
                     subscription_status: 'active',
-                    trial_ends_at: null
+                    trial_ends_at: null,
+                    raw_data: { ...(carpenter.raw_data || {}), billing: billingFrom(sub) },
                 };
-                
-                if (targetTier) {
-                    updateData.tier = targetTier;
-                }
-                
+                if (targetTier) updateData.tier = targetTier;
                 await supabaseClient.from('carpenters').update(updateData).eq('id', carpenter.id);
-                console.log(`Opdaterede firma ${carpenter.id} til active${targetTier ? ` med tier ${targetTier}` : ''}`);
+                console.log(`Opdaterede firma ${carpenter.id} til active (cancel_at_period_end=${sub.cancel_at_period_end})`);
             }
             break;
-            
+        }
+
         case 'customer.subscription.deleted':
         case 'customer.subscription.canceled':
             await supabaseClient.from('carpenters').update({
-                subscription_status: 'canceled'
+                subscription_status: 'canceled',
+                raw_data: { ...(carpenter.raw_data || {}), billing: { cancelAtPeriodEnd: false, periodEnd: null, status: 'canceled' } },
             }).eq('id', carpenter.id);
             console.log(`Opdaterede firma ${carpenter.id} til canceled`);
             break;
