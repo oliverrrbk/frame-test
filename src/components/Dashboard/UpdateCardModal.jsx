@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { supabase } from '../../supabaseClient';
 import { Loader2, CreditCard, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -10,30 +10,36 @@ import toast from 'react-hot-toast';
 const pk = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = pk ? loadStripe(pk) : null;
 
-const appearance = {
-    theme: 'stripe',
-    variables: { colorPrimary: '#0f172a', borderRadius: '10px', fontFamily: 'inherit', colorText: '#0f172a' },
+const CARD_OPTIONS = {
+    hidePostalCode: true, // rent felt — ingen postnummer/Link/e-mail
+    style: {
+        base: {
+            fontSize: '16px',
+            color: '#0f172a',
+            fontFamily: '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+            '::placeholder': { color: '#94a3b8' },
+        },
+        invalid: { color: '#ef4444' },
+    },
 };
 
-function CardForm({ onClose, onSuccess, defaultName, defaultEmail }) {
+function CardForm({ clientSecret, onClose, onSuccess, defaultName, defaultEmail }) {
     const stripe = useStripe();
     const elements = useElements();
     const [busy, setBusy] = useState(false);
+    const [ready, setReady] = useState(false);
     const [err, setErr] = useState('');
-
-    // Rene kortfelter: skjul navn/e-mail/telefon (dem har vi allerede) — det fjerner
-    // også Stripe Link-tilmeldingen. Værdierne sendes med via defaultValues.
-    const peOptions = {
-        layout: 'tabs',
-        fields: { billingDetails: { name: 'never', email: 'never', phone: 'never' } },
-        defaultValues: { billingDetails: { name: defaultName || undefined, email: defaultEmail || undefined } },
-    };
 
     const submit = async (e) => {
         e.preventDefault();
         if (!stripe || !elements) return;
         setBusy(true); setErr('');
-        const { error, setupIntent } = await stripe.confirmSetup({ elements, redirect: 'if_required' });
+        const { error, setupIntent } = await stripe.confirmCardSetup(clientSecret, {
+            payment_method: {
+                card: elements.getElement(CardElement),
+                billing_details: { name: defaultName || undefined, email: defaultEmail || undefined },
+            },
+        });
         if (error) { setErr(error.message || 'Kortet kunne ikke gemmes.'); setBusy(false); return; }
         try {
             const pmId = typeof setupIntent.payment_method === 'string'
@@ -53,7 +59,9 @@ function CardForm({ onClose, onSuccess, defaultName, defaultEmail }) {
 
     return (
         <form onSubmit={submit}>
-            <PaymentElement options={peOptions} />
+            <div style={{ padding: '15px 16px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#fff' }}>
+                <CardElement options={CARD_OPTIONS} onReady={() => setReady(true)} />
+            </div>
             {err && (
                 <div style={{ marginTop: '14px', padding: '12px 14px', borderRadius: '10px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)', color: '#b91c1c', fontSize: '0.85rem' }}>{err}</div>
             )}
@@ -62,8 +70,8 @@ function CardForm({ onClose, onSuccess, defaultName, defaultEmail }) {
                     style={{ flex: 1, padding: '13px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, cursor: 'pointer' }}>
                     Annullér
                 </button>
-                <button type="submit" disabled={busy || !stripe}
-                    style={{ flex: 1, padding: '13px', borderRadius: '12px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, cursor: busy ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: (!stripe) ? 0.6 : 1 }}>
+                <button type="submit" disabled={busy || !stripe || !ready}
+                    style={{ flex: 1, padding: '13px', borderRadius: '12px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, cursor: (busy || !ready) ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: (!stripe || !ready) ? 0.6 : 1 }}>
                     {busy ? <Loader2 size={17} className="spin" /> : <CreditCard size={17} />} Gem kort
                 </button>
             </div>
@@ -93,7 +101,7 @@ export default function UpdateCardModal({ onClose, onSuccess, defaultName, defau
         <div onClick={onClose}
             style={{ position: 'fixed', inset: 0, zIndex: 100003, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
             <div onClick={(e) => e.stopPropagation()}
-                style={{ width: '100%', maxWidth: '460px', background: '#fff', borderRadius: '24px', boxShadow: '0 30px 60px -15px rgba(15,23,42,0.4)', overflow: 'hidden' }}>
+                style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '24px', boxShadow: '0 30px 60px -15px rgba(15,23,42,0.4)', overflow: 'hidden' }}>
                 <div style={{ padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #1a1a1a, #0f172a)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -112,15 +120,15 @@ export default function UpdateCardModal({ onClose, onSuccess, defaultName, defau
                             <p style={{ margin: '0 0 16px', fontSize: '0.9rem' }}>{loadErr}</p>
                             <button onClick={onClose} style={{ padding: '11px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, cursor: 'pointer' }}>Luk</button>
                         </div>
-                    ) : !clientSecret ? (
+                    ) : !clientSecret || !stripePromise ? (
                         <div style={{ padding: '24px', display: 'flex', justifyContent: 'center', color: '#94a3b8' }}>
                             <Loader2 size={26} className="spin" />
                         </div>
                     ) : (
                         <>
                             <p style={{ margin: '0 0 18px', color: '#64748b', fontSize: '0.88rem', lineHeight: 1.5 }}>Indtast jeres nye kort herunder. Det bliver brugt til jeres næste fornyelse.</p>
-                            <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
-                                <CardForm onClose={onClose} onSuccess={onSuccess} defaultName={defaultName} defaultEmail={defaultEmail} />
+                            <Elements stripe={stripePromise} options={{ appearance: { theme: 'stripe' } }}>
+                                <CardForm clientSecret={clientSecret} onClose={onClose} onSuccess={onSuccess} defaultName={defaultName} defaultEmail={defaultEmail} />
                             </Elements>
                             <p style={{ margin: '16px 0 0', textAlign: 'center', color: '#cbd5e1', fontSize: '0.75rem' }}>Kortet håndteres sikkert af Stripe — vi gemmer aldrig dine kortoplysninger.</p>
                         </>
