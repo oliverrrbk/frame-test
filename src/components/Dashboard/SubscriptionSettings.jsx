@@ -29,6 +29,9 @@ const SubscriptionSettings = () => {
     const [isManaging, setIsManaging] = useState(false);
     const [verifying, setVerifying] = useState(false);
     const [showWelcome, setShowWelcome] = useState(false);
+    const [billing, setBilling] = useState(null);        // { cancelAtPeriodEnd, periodEnd, status }
+    const [confirmCancel, setConfirmCancel] = useState(false);
+    const [subBusy, setSubBusy] = useState(false);
 
     useEffect(() => {
         loadSubscriptionData();
@@ -148,6 +151,55 @@ const SubscriptionSettings = () => {
         }
     };
 
+    // Aflæs opsigelses-status: brug DB-værdien straks, og frisk fra Stripe ved load,
+    // så UI'et er retvisende (også hvis man har opsagt/genaktiveret i Stripe-portalen).
+    useEffect(() => {
+        if (!company) return;
+        if (company.raw_data?.billing) setBilling(company.raw_data.billing);
+        if (company.payment_customer_id && company.subscription_status !== 'exempt') {
+            (async () => {
+                try {
+                    const { data } = await supabase.functions.invoke('manage-subscription', { body: { action: 'status' } });
+                    if (data?.success && data.hasSubscription) {
+                        setBilling({ cancelAtPeriodEnd: data.cancelAtPeriodEnd, periodEnd: data.periodEnd, status: data.status });
+                    }
+                } catch { /* DB-værdien bruges */ }
+            })();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [company?.id]);
+
+    const applyBilling = (data) => setBilling({ cancelAtPeriodEnd: data.cancelAtPeriodEnd, periodEnd: data.periodEnd, status: data.status });
+
+    // Opsig i appen (kører perioden ud — ingen ny opkrævning).
+    const handleCancel = async () => {
+        setSubBusy(true);
+        try {
+            const { data, error } = await supabase.functions.invoke('manage-subscription', { body: { action: 'cancel' } });
+            if (error || !data?.success) throw new Error(data?.error || error?.message || 'Kunne ikke opsige abonnementet.');
+            applyBilling(data);
+            setConfirmCancel(false);
+            toast.success('Abonnementet er opsagt — det kører den betalte periode ud.');
+        } catch (e) {
+            toast.error(e.message);
+        } finally { setSubBusy(false); }
+    };
+
+    // Fortryd opsigelsen — abonnementet fornyes som normalt igen.
+    const handleReactivate = async () => {
+        setSubBusy(true);
+        try {
+            const { data, error } = await supabase.functions.invoke('manage-subscription', { body: { action: 'reactivate' } });
+            if (error || !data?.success) throw new Error(data?.error || error?.message || 'Kunne ikke genaktivere abonnementet.');
+            applyBilling(data);
+            toast.success('Abonnementet er genaktiveret — det fornyes som normalt.');
+        } catch (e) {
+            toast.error(e.message);
+        } finally { setSubBusy(false); }
+    };
+
+    const fmtDate = (ms) => ms ? new Date(ms).toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+
     if (isLoading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Indlæser firmaaftale...</div>;
     if (!company) return null;
 
@@ -163,6 +215,7 @@ const SubscriptionSettings = () => {
     // Din månedlige pris — udregnet fra firmaets faktiske hold (samme facit som prissiden).
     const price = computePrice(teamForPricing(company.raw_data?.team));
     const hasCard = !!company.payment_customer_id;
+    const isCanceling = company.subscription_status === 'active' && !!billing?.cancelAtPeriodEnd;
 
     return (
         <div className="space-y-6 animate-fadeIn" style={{ maxWidth: '600px', margin: '0 auto' }}>
@@ -248,9 +301,21 @@ const SubscriptionSettings = () => {
                 <div style={{ padding: '20px', borderBottom: '1px solid #f1f5f9' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                         <span style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.05em' }}>Din månedlige pris</span>
-                        {company.subscription_status === 'active' ? (
+                        {company.subscription_status === 'active' && isCanceling ? (
+                            <div style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <AlertTriangle size={12} /> OPSAGT
+                            </div>
+                        ) : company.subscription_status === 'active' ? (
                             <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <CheckCircle size={12} /> AKTIV
+                            </div>
+                        ) : company.subscription_status === 'canceled' ? (
+                            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700' }}>
+                                UDLØBET
+                            </div>
+                        ) : company.subscription_status === 'past_due' ? (
+                            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <AlertTriangle size={12} /> BETALING FEJLEDE
                             </div>
                         ) : (
                             <div style={{ background: 'rgba(100, 116, 139, 0.1)', color: '#64748b', padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700' }}>
@@ -262,8 +327,8 @@ const SubscriptionSettings = () => {
                         <span style={{ fontSize: '2.4rem', lineHeight: 1, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{formatKr(price.total)}</span>
                         <span style={{ color: '#64748b', fontSize: '0.95rem', fontWeight: 600 }}>kr / md · eks. moms</span>
                     </div>
-                    <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '6px' }}>
-                        {price.heads} bruger{price.heads > 1 ? 'e' : ''} · fornyes automatisk hver måned
+                    <div style={{ color: isCanceling ? '#b45309' : '#64748b', fontSize: '0.85rem', marginTop: '6px' }}>
+                        {price.heads} bruger{price.heads > 1 ? 'e' : ''} · {isCanceling ? `aktiv til ${fmtDate(billing?.periodEnd)} — fornyes ikke` : 'fornyes automatisk hver måned'}
                     </div>
 
                     {/* Opdeling pr. rolle */}
@@ -301,22 +366,34 @@ const SubscriptionSettings = () => {
                     </button>
                 </div>
 
-                {/* Opsigelse */}
+                {/* Opsigelse / genaktivering */}
                 <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <AlertTriangle size={20} color="#ef4444" style={{ marginRight: '16px', flexShrink: 0 }}/>
+                        <AlertTriangle size={20} color={isCanceling ? '#10b981' : '#ef4444'} style={{ marginRight: '16px', flexShrink: 0 }}/>
                         <div>
-                            <div style={{ fontSize: '1rem', color: '#0f172a' }}>Opsig abonnement</div>
-                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Løber til udgangen af betalt periode</div>
+                            <div style={{ fontSize: '1rem', color: '#0f172a' }}>{isCanceling ? 'Abonnement opsagt' : 'Opsig abonnement'}</div>
+                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                {isCanceling ? `Aktiv til ${fmtDate(billing?.periodEnd)} · fornyes ikke` : 'Løber til udgangen af betalt periode'}
+                            </div>
                         </div>
                     </div>
-                    <button
-                        onClick={handleManagePortal}
-                        disabled={isManaging || !hasCard}
-                        style={{ background: 'transparent', color: '#ef4444', border: 'none', fontWeight: '600', fontSize: '0.9rem', cursor: isManaging || !hasCard ? 'not-allowed' : 'pointer', padding: 0, opacity: !hasCard ? 0.5 : 1 }}
-                    >
-                        Opsig
-                    </button>
+                    {isCanceling ? (
+                        <button
+                            onClick={handleReactivate}
+                            disabled={subBusy}
+                            style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontWeight: '700', fontSize: '0.88rem', cursor: subBusy ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            {subBusy ? <Loader2 size={15} className="spin" /> : <CheckCircle size={15} />} Aktivér igen
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => setConfirmCancel(true)}
+                            disabled={isManaging || subBusy || !hasCard}
+                            style={{ background: 'transparent', color: '#ef4444', border: 'none', fontWeight: '600', fontSize: '0.9rem', cursor: isManaging || !hasCard ? 'not-allowed' : 'pointer', padding: 0, opacity: !hasCard ? 0.5 : 1 }}
+                        >
+                            Opsig
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -343,6 +420,36 @@ const SubscriptionSettings = () => {
             <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#94a3b8' }}>
                 Kort og fakturaer håndteres sikkert via Stripe.
             </div>
+
+            {/* Bekræft opsigelse — rolig fuldskærms-popup i Bison-stil */}
+            {confirmCancel && createPortal(
+                <div onClick={() => !subBusy && setConfirmCancel(false)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 100002, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div onClick={(e) => e.stopPropagation()}
+                        style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '24px', boxShadow: '0 30px 60px -15px rgba(15,23,42,0.4)', overflow: 'hidden' }}>
+                        <div style={{ padding: '36px 32px 32px', textAlign: 'center' }}>
+                            <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 24px -6px rgba(245,158,11,0.5)' }}>
+                                <AlertTriangle size={32} />
+                            </div>
+                            <h3 style={{ margin: '0 0 8px', fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>Opsig abonnement?</h3>
+                            <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.95rem', lineHeight: 1.55 }}>
+                                I beholder fuld adgang frem til <strong style={{ color: '#334155' }}>{fmtDate(billing?.periodEnd) || 'udgangen af perioden'}</strong>. Der bliver ikke trukket mere, og I kan altid <strong style={{ color: '#334155' }}>aktivere igen</strong> inden da.
+                            </p>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button onClick={() => setConfirmCancel(false)} disabled={subBusy}
+                                    style={{ flex: 1, padding: '13px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, cursor: 'pointer' }}>
+                                    Behold abonnement
+                                </button>
+                                <button onClick={handleCancel} disabled={subBusy}
+                                    style={{ flex: 1, padding: '13px', borderRadius: '14px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700, cursor: subBusy ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                    {subBusy ? <Loader2 size={17} className="spin" /> : null} Ja, opsig
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
 
         </div>
     );
