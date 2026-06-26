@@ -569,9 +569,11 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
 
             const fields = {
                 customer_name: customer.name,
-                customer_email: customer.email || null,
-                customer_phone: customer.phone || null,
-                customer_address: fullAddress || null,
+                // En kladde må gerne mangle email/adresse (kræves først ved afsendelse). Brug
+                // tom streng frem for null, så NOT NULL-constraints på leads ikke blokerer gemning.
+                customer_email: customer.email || '',
+                customer_phone: customer.phone || '',
+                customer_address: fullAddress || '',
                 project_category: title || 'Manuelt tilbud',
                 price_estimate: `${kr(calc.totalIncVat)} DKK`,
                 quote_token: quoteToken,
