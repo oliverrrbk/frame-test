@@ -6,6 +6,8 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { buildQuotePdf } from '../../utils/quotePdf';
 import { getCustomerOfferSentTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
+import Coachmark from './Coachmark';
+import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
 
 // Stabil reference (react-google-maps kræver at libraries-arrayet ikke gendannes pr. render).
 // Samme id+libraries som Dashboard, så scriptet dedupliceres.
@@ -199,6 +201,13 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const clearWorkingDraft = () => { try { window.localStorage.removeItem(draftKey); } catch { /* ignore */ } };
 
     const [title, setTitle] = useState(initialLead?.project_category && initialLead.project_category !== 'Manuelt tilbud' ? initialLead.project_category : '');
+
+    // Kom-i-gang: 2 små hints første gang (kun desktop). Ankre sættes på pris/avance + send-knap.
+    const coachMaterialRef = useRef(null);
+    const coachSendRef = useRef(null);
+    const [coachHintStep, setCoachHintStep] = useState(() => (!isMobile && shouldShowCoach('quick_hints')) ? 0 : -1);
+    useEffect(() => { if (coachHintStep >= 0) markCoachSeen('quick_hints'); }, [coachHintStep]);
+
     // Materialer
     const [materialCost, setMaterialCost] = useState(mq0.materialCost ? String(mq0.materialCost) : '');   // indkøbspris ekskl. moms
     const [markup, setMarkup] = useState(mq0.materialMarkupPct != null ? String(mq0.materialMarkupPct) : '35');             // avance %
@@ -604,7 +613,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
 
     const renderMaterialInputs = () => (
         <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div ref={coachMaterialRef} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                     <label style={label}>Indkøbspris</label>
                     <input className="qqb-input" style={input} inputMode="decimal" placeholder="167.080" value={materialCost} onChange={(e) => setMaterialCost(fmtDk(e.target.value))} />
@@ -1015,10 +1024,40 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             <Save size={18} /> Gem kladde
                         </button>
                         )}
-                        <button className="qqb-send" disabled={busy} onClick={() => save(true)} style={{ padding: '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
+                        <button ref={coachSendRef} className="qqb-send" disabled={busy} onClick={() => save(true)} style={{ padding: '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
                             <Send size={18} /> {busy ? 'Sender…' : (wasSent ? 'Send opdateret tilbud' : 'Send tilbud')}
                         </button>
                     </div>
+
+                    {/* Kom-i-gang: 2 hints (kun desktop, første gang) */}
+                    {coachHintStep === 0 && (
+                        <Coachmark
+                            anchorRef={coachMaterialRef}
+                            placement="bottom"
+                            step="1 / 2"
+                            eyebrow="Hurtigt tilbud"
+                            title="Skriv pris & avance"
+                            body="Du styrer tallene helt selv — tilbuddet i midten opdateres med det samme."
+                            primaryLabel="Forstået →"
+                            onPrimary={() => setCoachHintStep(1)}
+                            onSkip={() => { skipAllCoach(); setCoachHintStep(-1); }}
+                            onClose={() => setCoachHintStep(-1)}
+                        />
+                    )}
+                    {coachHintStep === 1 && (
+                        <Coachmark
+                            anchorRef={coachSendRef}
+                            placement="top"
+                            step="2 / 2"
+                            eyebrow="Hurtigt tilbud"
+                            title="Send med det samme"
+                            body="Send som link eller PDF — kunden kan svare direkte."
+                            primaryLabel="Forstået"
+                            onPrimary={() => setCoachHintStep(-1)}
+                            onSkip={() => { skipAllCoach(); setCoachHintStep(-1); }}
+                            onClose={() => setCoachHintStep(-1)}
+                        />
+                    )}
                 </div>
 
                 {/* Lækker fuld-skærms bekræftelse ved sletning */}

@@ -34,6 +34,8 @@ import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
+import Coachmark from './Coachmark';
+import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { computeQuoteExpiry } from '../../utils/quoteExpiry';
 import { getRoleLabel } from '../../utils/roles';
@@ -871,6 +873,9 @@ const Dashboard = () => {
     const [feedbackText, setFeedbackText] = useState('');
     const [isSendingFeedback, setIsSendingFeedback] = useState(false);
     const [isCreateLeadModalOpen, setIsCreateLeadModalOpen] = useState(false);
+    // Kom-i-gang: helte-prik der peger på "Opret Ny Kunde" (kun desktop, første gang).
+    const createLeadBtnRef = useRef(null);
+    const [heroCoachDismissed, setHeroCoachDismissed] = useState(false);
     const [showCreateLeadCancelConfirm, setShowCreateLeadCancelConfirm] = useState(false);
     const [createLeadMode, setCreateLeadMode] = useState(null);
     // Når en gemt tilbudskladde (selvlavet hurtigt tilbud) åbnes, redigeres den i QuickQuoteBuilder.
@@ -3752,10 +3757,27 @@ const Dashboard = () => {
                                         )}
                                     </div>
                                     {leadFilter !== 'Bekræftet opgave' && leadFilter !== 'Afsluttet opgave' && (
-                                        <button className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, padding: '10px 20px', borderRadius: '30px' }}>
+                                        <>
+                                        <button ref={createLeadBtnRef} className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, padding: '10px 20px', borderRadius: '30px' }}>
                                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                             Opret Ny Kunde
                                         </button>
+                                        {shouldShowCoach('hero_quote') && !heroCoachDismissed && !isCreateLeadModalOpen && !showOnboarding && !showSetPassword && (
+                                            <Coachmark
+                                                anchorRef={createLeadBtnRef}
+                                                placement="bottom"
+                                                eyebrow="👋 Kom i gang"
+                                                title="Start her — lav dit første tilbud"
+                                                body="Prøv et hurtigt tilbud på et minut. Så har du fornemmelsen med det samme."
+                                                primaryLabel="Vis mig"
+                                                onPrimary={() => { markCoachSeen('hero_quote'); setHeroCoachDismissed(true); setIsCreateLeadModalOpen(true); }}
+                                                secondaryLabel="Senere"
+                                                onSecondary={() => { markCoachSeen('hero_quote'); setHeroCoachDismissed(true); }}
+                                                onSkip={() => { skipAllCoach(); setHeroCoachDismissed(true); }}
+                                                onClose={() => { markCoachSeen('hero_quote'); setHeroCoachDismissed(true); }}
+                                            />
+                                        )}
+                                        </>
                                     )}
                                 </div>
                                 
