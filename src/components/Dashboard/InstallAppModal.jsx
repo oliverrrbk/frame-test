@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { X, Share, PlusSquare, MoreVertical, Smartphone, Download, Monitor } from 'lucide-react';
+import { X, Share, PlusSquare, MoreVertical, MoreHorizontal, Smartphone, Download, Monitor } from 'lucide-react';
 import { canInstallNatively, promptNativeInstall, onInstallAvailabilityChange } from '../../utils/pwaInstall';
 
 // "Få Frame som app" — fælles dialog brugt både fra menupunktet (desktop + mobil)
@@ -47,7 +47,7 @@ const InstallAppModal = ({ onClose, onRemindLater }) => {
                 <h2 style={{ margin: '0 0 6px', fontSize: '1.3rem', fontWeight: 800, color: '#0f172a' }}>Få Frame som app</h2>
                 <p style={{ margin: '0 0 22px', fontSize: '0.9rem', color: '#64748b', lineHeight: 1.5 }}>
                     {isMobile
-                        ? 'Læg Frame på din hjemmeskærm, så du åbner den med ét tryk — som en rigtig app.'
+                        ? 'Læg Frame på din hjemmeskærm. Så har du den som app og kan modtage notifikationer om din virksomhed.'
                         : 'Frame virker fint i browseren. Vil du have den som app, kan du installere den her — eller åbne den på din telefon.'}
                 </p>
 
@@ -55,12 +55,16 @@ const InstallAppModal = ({ onClose, onRemindLater }) => {
                 {isIOS ? (
                     <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fff', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', flexShrink: 0 }}><MoreHorizontal size={16} /></div>
+                            <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>1. Tryk på de tre prikker <strong>•••</strong> nederst i Safari.</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fff', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', flexShrink: 0 }}><Share size={16} /></div>
-                            <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>1. Tryk på <strong>Del</strong> i bunden af Safari.</span>
+                            <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>2. Tryk på <strong>Del</strong>.</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fff', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', flexShrink: 0 }}><PlusSquare size={16} /></div>
-                            <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>2. Vælg <strong>Føj til hjemmeskærm</strong>.</span>
+                            <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>3. Rul ned og vælg <strong>Føj til hjemmeskærm</strong>.</span>
                         </div>
                     </div>
                 ) : canInstall ? (
