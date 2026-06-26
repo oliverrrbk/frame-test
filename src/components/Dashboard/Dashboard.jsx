@@ -3877,9 +3877,13 @@ const Dashboard = () => {
                                                             }
                                                             return null;
                                                         })() : (
-                                                            <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '6px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #bfdbfe' }}>
-                                                                <Calculator size={12} /> Ny online forespørgsel
-                                                            </span>
+                                                            // Kun ægte online-forespørgsler (via beregneren) får dette mærkat —
+                                                            // ikke manuelt oprettede tilbud/kladder.
+                                                            !lead.raw_data?.is_manual_quote ? (
+                                                                <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '6px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #bfdbfe' }}>
+                                                                    <Calculator size={12} /> Ny online forespørgsel
+                                                                </span>
+                                                            ) : null
                                                         )}
                                                     </h3>
                                                     <p style={{ margin: '0', color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
