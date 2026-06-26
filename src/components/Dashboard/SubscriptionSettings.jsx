@@ -50,7 +50,7 @@ const SubscriptionSettings = () => {
             for (let i = 0; i < 4 && !cancelled; i++) {
                 try { await supabase.functions.invoke('verify-subscription'); } catch { /* prøv igen */ }
                 const fresh = await loadSubscriptionData();
-                if (fresh?.subscription_status === 'active') { if (justPaid) toast.success('Abonnementet er aktivt! 🎉'); break; }
+                if (fresh?.subscription_status === 'active') { if (justPaid) toast.success('Abonnementet er bekræftet.'); break; }
                 await new Promise(r => setTimeout(r, 1500));
             }
             if (!cancelled) setVerifying(false);
