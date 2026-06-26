@@ -35,6 +35,7 @@ import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import Coachmark from './Coachmark';
+import DashboardTour from './DashboardTour';
 import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { computeQuoteExpiry } from '../../utils/quoteExpiry';
@@ -877,6 +878,7 @@ const Dashboard = () => {
     // Kom-i-gang: helte-prik der peger på "Opret Ny Kunde" (kun desktop, første gang).
     const createLeadBtnRef = useRef(null);
     const [heroCoachDismissed, setHeroCoachDismissed] = useState(false);
+    const [dashboardTourDone, setDashboardTourDone] = useState(false);
     // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
     // så man lander præcis hvor man tilføjer kort — ikke i toppen ved firmaoplysninger.
     const goToBilling = () => {
@@ -2851,7 +2853,7 @@ const Dashboard = () => {
                     )}
 
                     {['admin'].includes(effectiveRole) && (
-                        <button className={activeTab === 'leads' ? 'active' : ''} onClick={() => { setActiveTab('leads'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
+                        <button data-tour="nav-leads" className={activeTab === 'leads' ? 'active' : ''} onClick={() => { setActiveTab('leads'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
                             <Users size={20} /> Kunder & Leads
                             {(() => {
                                 const unreadCount = leadsData.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel' && l.is_read === false).length;
@@ -2868,12 +2870,12 @@ const Dashboard = () => {
                     )}
 
                     {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
-                        <button className={activeTab === 'cases' ? 'active' : ''} onClick={() => { setActiveTab('cases'); setIsMobileMenuOpen(false); }}>
+                        <button data-tour="nav-cases" className={activeTab === 'cases' ? 'active' : ''} onClick={() => { setActiveTab('cases'); setIsMobileMenuOpen(false); }}>
                             <Briefcase size={20} /> {['worker', 'apprentice'].includes(effectiveRole) ? 'Mine opgaver' : 'Sager & Ordrestyring'}
                         </button>
                     )}
                     {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
-                        <button className={activeTab === 'calendar' ? 'active' : ''} onClick={() => { setActiveTab('calendar'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
+                        <button data-tour="nav-calendar" className={activeTab === 'calendar' ? 'active' : ''} onClick={() => { setActiveTab('calendar'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
                             <Calendar size={20} /> Kalender
                             {(() => {
                                 // Bekræftede sager der endnu ikke er lagt i kalenderen (mangler planlægning).
@@ -2905,7 +2907,7 @@ const Dashboard = () => {
                     )}
                     {['admin', 'accountant'].includes(effectiveRole) && (
                         <>
-                        <button className={activeTab === 'finance' ? 'active' : ''} onClick={() => { setActiveTab('finance'); setIsMobileMenuOpen(false); }}>
+                        <button data-tour="nav-finance" className={activeTab === 'finance' ? 'active' : ''} onClick={() => { setActiveTab('finance'); setIsMobileMenuOpen(false); }}>
                             <Wallet size={20} /> Økonomi & Faktura
                         </button>
                         <button className={activeTab === 'admin_timesheet' ? 'active' : ''} onClick={() => { setActiveTab('admin_timesheet'); setIsMobileMenuOpen(false); }}>
@@ -3627,7 +3629,7 @@ const Dashboard = () => {
                                             <Coachmark
                                                 anchorRef={createLeadBtnRef}
                                                 placement="bottom"
-                                                eyebrow="👋 Kom i gang"
+                                                eyebrow="Kom i gang"
                                                 title="Start her — lav dit første tilbud"
                                                 body="Prøv et hurtigt tilbud på et minut. Så har du fornemmelsen med det samme."
                                                 primaryLabel="Vis mig"
@@ -6888,6 +6890,11 @@ const Dashboard = () => {
                     onClose={() => setInstallModalSource(null)}
                     onRemindLater={installModalSource === 'auto' ? snoozeInstall : undefined}
                 />
+            )}
+
+            {/* Velkomstrundtur — efter onboarding, kun desktop, kun første gang. Peger på menuen + den blå knap. */}
+            {effectiveRole === 'admin' && activeTab === 'overview' && !showOnboarding && !showSetPassword && !dashboardTourDone && shouldShowCoach('dashboard_tour') && (
+                <DashboardTour onDone={() => setDashboardTourDone(true)} />
             )}
             <PushNotificationPrompt />
         </div>

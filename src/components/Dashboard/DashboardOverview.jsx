@@ -222,7 +222,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                         <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.05rem' }}>
                             Her er dit visuelle overblik for forretningen lige nu.
                         </p>
-                        {onCreateQuote && <CreateQuoteButton onClick={onCreateQuote} />}
+                        {onCreateQuote && <span data-tour="create-quote" style={{ display: 'inline-flex' }}><CreateQuoteButton onClick={onCreateQuote} /></span>}
                     </div>
                 </div>
                 <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
@@ -267,7 +267,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
             </div>
 
             {/* NY SEKTION: Top-Level KPI Kort */}
-            <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
+            <div className="kpi-grid" data-tour="overview-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
                 {[
                     metrics.won_revenue,
                     metrics.active_cases,
