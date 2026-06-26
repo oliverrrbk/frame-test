@@ -8,6 +8,7 @@ import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
 import { isValidLonnummer } from '../../utils/payroll';
 import UserAvatar from '../ui/UserAvatar';
 import { priceForAddingRole, formatKr } from '../../utils/pricing';
+import { getEmployeeInviteTemplate } from '../../utils/emailTemplates';
 
 const roles = [
     { value: 'sales', label: 'Projektleder', desc: 'Kan styre tildelte sager, oprette ordrer og se materialepriser. (Kan ikke ændre andres timer).' },
@@ -324,6 +325,8 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             }
 
             const lon = result.lonnummer;
+            const empName = inviteData.name;
+            const empEmail = inviteData.email;
             // Vis medarbejderen MED DET SAMME (optimistisk) — så han ses i listen uden reload.
             if (result.member) {
                 setTeam(prev => prev.some(m => m.id === result.member.id)
@@ -331,11 +334,36 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                     : [...prev, result.member]);
             }
 
-            const mailNote = result.emailSent
+            // Velkomstmail: edge-funktionen sender selv, hvis en Resend-nøgle er sat i
+            // Supabase. Er den ikke (standard), sender vi den via den eksisterende Vercel-
+            // rute der allerede virker — så kræver det INGEN ekstra opsætning.
+            let mailDelivered = result.emailSent;
+            if (!mailDelivered && result.tempPassword) {
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const html = getEmployeeInviteTemplate(
+                        empName.split(' ')[0],
+                        empEmail,
+                        result.tempPassword,
+                        { company_name: profile.company_name }
+                    );
+                    const r = await fetch('/api/send-email', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+                        },
+                        body: JSON.stringify({ to: empEmail, subject: 'Velkommen til Bison Frame – dine login-oplysninger', html })
+                    });
+                    mailDelivered = r.ok;
+                } catch { /* ignoreres — vi viser login som fallback nedenfor */ }
+            }
+
+            const mailNote = mailDelivered
                 ? 'Der er sendt en velkomstmail med login-oplysninger.'
                 : (result.tempPassword
-                    ? `Velkomstmailen kunne ikke sendes — giv selv login videre: ${inviteData.email} / ${result.tempPassword}`
-                    : 'Velkomstmailen kunne ikke sendes — bed medarbejderen om at bruge "Glemt adgangskode" på login.');
+                    ? `Mailen kunne ikke sendes — giv selv login videre: ${empEmail} / ${result.tempPassword}`
+                    : 'Mailen kunne ikke sendes — bed medarbejderen om at bruge "Glemt adgangskode" på login.');
             setSuccessMsg(`Medarbejder oprettet${lon ? ` med lønnummer ${lon}` : ''}! ${mailNote}`);
             setInviteData({ name: '', email: '', phone: '', role: 'sales' });
             if (isMobile) { setIsInviteModalOpen(false); toast.success(`Medarbejder oprettet${lon ? ` (lønnr. ${lon})` : ''}`); }
