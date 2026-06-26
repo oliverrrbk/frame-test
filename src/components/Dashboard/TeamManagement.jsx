@@ -320,7 +320,13 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             });
 
             if (fnErr || !result?.success) {
-                setErrorMsg(result?.error || fnErr?.message || 'Kunne ikke oprette medarbejder.');
+                // supabase-js skjuler funktionens rigtige fejl bag "non-2xx" — den ligger
+                // i error.context (Response). Pak den ud så vi ser den faktiske årsag.
+                let serverMsg = result?.error || fnErr?.message;
+                if (fnErr?.context && typeof fnErr.context.json === 'function') {
+                    try { const body = await fnErr.context.json(); if (body?.error) serverMsg = body.error; } catch { /* ignorér */ }
+                }
+                setErrorMsg(serverMsg || 'Kunne ikke oprette medarbejder.');
                 return;
             }
 

@@ -94,10 +94,24 @@ serve(async (req) => {
             user_metadata: { owner_name: name, email: normEmail, phone: phone || '', role, company_id: companyId },
         })
         if (created.error) {
-            const list = await admin.auth.admin.listUsers()
-            const existing = list.data?.users?.find((u) => (u.email || '').toLowerCase() === normEmail)
-            if (!existing) return json({ error: created.error.message }, 400)
+            // Brugeren findes sandsynligvis allerede (fx fra et tidligere mislykket
+            // forsøg via Vercel-ruten, hvor login'et blev lavet men rækken ikke).
+            // Søg den frem (gennem flere sider for en sikkerheds skyld) og genbrug den.
+            let existing: { id: string } | undefined
+            for (let page = 1; page <= 10 && !existing; page++) {
+                const list = await admin.auth.admin.listUsers({ page, perPage: 200 })
+                const users = list.data?.users || []
+                existing = users.find((u) => (u.email || '').toLowerCase() === normEmail)
+                if (users.length < 200) break
+            }
+            if (!existing) return json({ error: `Kunne ikke oprette login: ${created.error.message}` }, 400)
             userId = existing.id
+            // Sørg for at en evt. gammel adgangskode/metadata bringes i orden igen.
+            await admin.auth.admin.updateUserById(userId, {
+                password: finalPassword,
+                email_confirm: true,
+                user_metadata: { owner_name: name, email: normEmail, phone: phone || '', role, company_id: companyId },
+            }).catch(() => {})
         } else {
             userId = created.data.user.id
         }
