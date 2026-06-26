@@ -28,6 +28,7 @@ const SubscriptionSettings = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isManaging, setIsManaging] = useState(false);
     const [verifying, setVerifying] = useState(false);
+    const [showWelcome, setShowWelcome] = useState(false);
 
     useEffect(() => {
         loadSubscriptionData();
@@ -50,7 +51,7 @@ const SubscriptionSettings = () => {
             for (let i = 0; i < 4 && !cancelled; i++) {
                 try { await supabase.functions.invoke('verify-subscription'); } catch { /* prøv igen */ }
                 const fresh = await loadSubscriptionData();
-                if (fresh?.subscription_status === 'active') { if (justPaid) toast.success('Abonnementet er bekræftet.'); break; }
+                if (fresh?.subscription_status === 'active') { if (justPaid) setShowWelcome(true); break; }
                 await new Promise(r => setTimeout(r, 1500));
             }
             if (!cancelled) setVerifying(false);
@@ -178,6 +179,31 @@ const SubscriptionSettings = () => {
                     </div>
                 </div>,
                 document.body
+            )}
+
+            {/* Velkomst-bekræftelse efter betaling — rolig, ingen pop-up. */}
+            {showWelcome && (
+                <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #10b981', boxShadow: '0 8px 24px rgba(16,185,129,0.10)', padding: '20px 22px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                        <CheckCircle size={20} color="#10b981" />
+                        <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a' }}>Tak fordi I valgte Bison Frame</span>
+                    </div>
+                    <p style={{ margin: '0 0 16px', color: '#475569', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                        Jeres abonnement er aktivt, og I har fuld adgang til hele systemet. Har I brug for hjælp, så ring til os på <a href="tel:+4540265002" style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}>40 26 50 02</a> — vi sidder klar.
+                    </p>
+                    <button
+                        onClick={() => { try { localStorage.setItem('dashboard_active_tab', 'overview'); } catch { /* ignore */ } window.location.assign('/dashboard'); }}
+                        style={{ background: '#0f172a', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 20px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}
+                    >
+                        Gå til dit dashboard →
+                    </button>
+                    <button
+                        onClick={() => setShowWelcome(false)}
+                        style={{ background: 'transparent', color: '#64748b', border: 'none', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', marginLeft: '12px' }}
+                    >
+                        Bliv her
+                    </button>
+                </div>
             )}
 
             {/* Trial Banner */}
