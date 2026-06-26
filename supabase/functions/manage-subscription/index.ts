@@ -33,8 +33,13 @@ serve(async (req) => {
         const { data: { user }, error: ue } = await supa.auth.getUser(jwt)
         if (ue || !user) return json({ error: 'Bruger ikke logget ind' }, 401)
 
-        let action = 'status'
-        try { const b = await req.json(); if (b?.action) action = b.action } catch { /* default status */ }
+        let action = 'status', reason: string | null = null, note: string | null = null
+        try {
+            const b = await req.json()
+            if (b?.action) action = b.action
+            if (b?.reason) reason = String(b.reason)
+            if (b?.note) note = String(b.note).slice(0, 300)
+        } catch { /* default status */ }
 
         const { data: caller } = await supa.from('carpenters').select('id, role, company_id').eq('id', user.id).single()
         if (!caller) return json({ error: 'Bruger findes ikke' }, 403)
@@ -77,8 +82,12 @@ serve(async (req) => {
             status: sub.status,
         }
 
-        await supa.from('carpenters')
-            .update({ raw_data: { ...(owner.raw_data || {}), billing } }).eq('id', companyId)
+        const newRaw: Record<string, unknown> = { ...(owner.raw_data || {}), billing }
+        // Gem opsigelses-grunden (så vi har en historik og kan se mønstre).
+        if (action === 'cancel') {
+            newRaw.cancellation = { reason, note, at: new Date().toISOString() }
+        }
+        await supa.from('carpenters').update({ raw_data: newRaw }).eq('id', companyId)
 
         return json({ success: true, hasSubscription: true, ...billing })
     } catch (error) {

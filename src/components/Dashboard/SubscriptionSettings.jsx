@@ -23,6 +23,16 @@ const teamForPricing = (rawTeam = {}) => {
     };
 };
 
+// Opsigelses-grunde (churn-feedback). Ét klik — så vi altid får en grund.
+const CANCEL_REASONS = [
+    { key: 'for_dyrt', label: 'For dyrt' },
+    { key: 'bruger_ikke_nok', label: 'Bruger det ikke nok' },
+    { key: 'mangler_funktion', label: 'Mangler en funktion' },
+    { key: 'for_besvaerligt', label: 'For besværligt at bruge' },
+    { key: 'skiftet_system', label: 'Skiftet til andet system' },
+    { key: 'andet', label: 'Andet' },
+];
+
 const SubscriptionSettings = () => {
     const [company, setCompany] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -32,6 +42,8 @@ const SubscriptionSettings = () => {
     const [billing, setBilling] = useState(null);        // { cancelAtPeriodEnd, periodEnd, status }
     const [confirmCancel, setConfirmCancel] = useState(false);
     const [subBusy, setSubBusy] = useState(false);
+    const [cancelReason, setCancelReason] = useState(null);
+    const [cancelNote, setCancelNote] = useState('');
 
     useEffect(() => {
         loadSubscriptionData();
@@ -171,14 +183,48 @@ const SubscriptionSettings = () => {
 
     const applyBilling = (data) => setBilling({ cancelAtPeriodEnd: data.cancelAtPeriodEnd, periodEnd: data.periodEnd, status: data.status });
 
+    const closeCancel = () => { setConfirmCancel(false); setCancelReason(null); setCancelNote(''); };
+
+    // Send opsigelses-feedback til teamet (best-effort, via den eksisterende mail-rute).
+    const sendChurnEmail = async (reasonLabel, note) => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const row = (k, v) => `<tr><td style="padding:6px 0;color:#64748b;font-size:13px;">${k}</td><td style="padding:6px 0 6px 16px;color:#0f172a;font-size:14px;font-weight:600;">${v}</td></tr>`;
+            const html = `
+              <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#f1f5f9;padding:28px;">
+                <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+                  <div style="background:#0f172a;padding:18px 24px;color:#fff;font-weight:700;">Opsigelse i Bison Frame</div>
+                  <div style="padding:24px;">
+                    <p style="margin:0 0 16px;color:#334155;">En kunde har opsagt sit abonnement. Her er deres begrundelse:</p>
+                    <table style="width:100%;border-collapse:collapse;">
+                      ${row('Firma', company.company_name || '—')}
+                      ${row('E-mail', company.email || '—')}
+                      ${row('Pris/md', `${formatKr(price.total)} kr`)}
+                      ${row('Grund', reasonLabel)}
+                    </table>
+                    ${note ? `<div style="margin-top:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;color:#334155;font-size:14px;font-style:italic;">"${note}"</div>` : ''}
+                    <p style="margin:18px 0 0;color:#94a3b8;font-size:12px;">Abonnementet kører perioden ud — kunden kan stadig nås for et opkald.</p>
+                  </div>
+                </div>
+              </div>`;
+            await fetch('/api/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}) },
+                body: JSON.stringify({ to: 'team@bisoncompany.dk', subject: `Opsigelse: ${company.company_name || 'Et firma'} (${reasonLabel})`, html }),
+            });
+        } catch { /* notifikation er best-effort — opsigelsen lykkes uanset */ }
+    };
+
     // Opsig i appen (kører perioden ud — ingen ny opkrævning).
     const handleCancel = async () => {
         setSubBusy(true);
         try {
-            const { data, error } = await supabase.functions.invoke('manage-subscription', { body: { action: 'cancel' } });
+            const reasonLabel = CANCEL_REASONS.find(r => r.key === cancelReason)?.label || 'Ikke angivet';
+            const { data, error } = await supabase.functions.invoke('manage-subscription', { body: { action: 'cancel', reason: reasonLabel, note: cancelNote } });
             if (error || !data?.success) throw new Error(data?.error || error?.message || 'Kunne ikke opsige abonnementet.');
             applyBilling(data);
-            setConfirmCancel(false);
+            await sendChurnEmail(reasonLabel, cancelNote.trim());
+            closeCancel();
             toast.success('Abonnementet er opsagt — det kører den betalte periode ud.');
         } catch (e) {
             toast.error(e.message);
@@ -421,27 +467,67 @@ const SubscriptionSettings = () => {
                 Kort og fakturaer håndteres sikkert via Stripe.
             </div>
 
-            {/* Bekræft opsigelse — rolig fuldskærms-popup i Bison-stil */}
+            {/* Opsigelse + churn-feedback — lækker, interaktiv Bison-popup */}
             {confirmCancel && createPortal(
-                <div onClick={() => !subBusy && setConfirmCancel(false)}
+                <div onClick={() => !subBusy && closeCancel()}
                     style={{ position: 'fixed', inset: 0, zIndex: 100002, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
                     <div onClick={(e) => e.stopPropagation()}
-                        style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '24px', boxShadow: '0 30px 60px -15px rgba(15,23,42,0.4)', overflow: 'hidden' }}>
-                        <div style={{ padding: '36px 32px 32px', textAlign: 'center' }}>
-                            <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 24px -6px rgba(245,158,11,0.5)' }}>
-                                <AlertTriangle size={32} />
+                        style={{ width: '100%', maxWidth: '470px', maxHeight: '92vh', overflowY: 'auto', background: '#fff', borderRadius: '24px', boxShadow: '0 30px 60px -15px rgba(15,23,42,0.4)' }}>
+                        <div style={{ padding: '32px 30px 28px' }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ width: '62px', height: '62px', borderRadius: '18px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', boxShadow: '0 12px 24px -6px rgba(245,158,11,0.5)' }}>
+                                    <AlertTriangle size={30} />
+                                </div>
+                                <h3 style={{ margin: '0 0 8px', fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>Før I opsiger</h3>
+                                <p style={{ margin: '0 0 22px', color: '#64748b', fontSize: '0.92rem', lineHeight: 1.55 }}>
+                                    I beholder fuld adgang frem til <strong style={{ color: '#334155' }}>{fmtDate(billing?.periodEnd) || 'udgangen af perioden'}</strong>. Der trækkes ikke mere, og I kan altid <strong style={{ color: '#334155' }}>aktivere igen</strong> inden da.
+                                </p>
                             </div>
-                            <h3 style={{ margin: '0 0 8px', fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>Opsig abonnement?</h3>
-                            <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.95rem', lineHeight: 1.55 }}>
-                                I beholder fuld adgang frem til <strong style={{ color: '#334155' }}>{fmtDate(billing?.periodEnd) || 'udgangen af perioden'}</strong>. Der bliver ikke trukket mere, og I kan altid <strong style={{ color: '#334155' }}>aktivere igen</strong> inden da.
-                            </p>
+
+                            <div style={{ fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '10px' }}>
+                                Hvorfor opsiger I?
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                                {CANCEL_REASONS.map((r) => {
+                                    const sel = cancelReason === r.key;
+                                    return (
+                                        <button key={r.key} type="button" onClick={() => setCancelReason(r.key)}
+                                            style={{
+                                                padding: '9px 14px', borderRadius: '11px', fontSize: '0.86rem', fontWeight: 600, cursor: 'pointer',
+                                                border: sel ? '1px solid #0f172a' : '1px solid #e2e8f0',
+                                                background: sel ? '#0f172a' : '#fff',
+                                                color: sel ? '#fff' : '#475569',
+                                                transition: 'all 0.15s ease',
+                                            }}
+                                            onMouseEnter={(e) => { if (!sel) e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                                            onMouseLeave={(e) => { if (!sel) e.currentTarget.style.borderColor = '#e2e8f0'; }}>
+                                            {r.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div style={{ position: 'relative', marginBottom: '22px' }}>
+                                <textarea
+                                    value={cancelNote}
+                                    onChange={(e) => setCancelNote(e.target.value.slice(0, 300))}
+                                    placeholder="Vil I uddybe? (valgfrit) — det hjælper os med at blive bedre."
+                                    rows={3}
+                                    style={{ width: '100%', resize: 'none', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '0.9rem', color: '#0f172a', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                                    onFocus={(e) => e.currentTarget.style.borderColor = '#94a3b8'}
+                                    onBlur={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
+                                />
+                                <span style={{ position: 'absolute', right: '12px', bottom: '8px', fontSize: '0.72rem', color: '#cbd5e1', fontVariantNumeric: 'tabular-nums' }}>{cancelNote.length}/300</span>
+                            </div>
+
                             <div style={{ display: 'flex', gap: '12px' }}>
-                                <button onClick={() => setConfirmCancel(false)} disabled={subBusy}
+                                <button onClick={closeCancel} disabled={subBusy}
                                     style={{ flex: 1, padding: '13px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, cursor: 'pointer' }}>
                                     Behold abonnement
                                 </button>
-                                <button onClick={handleCancel} disabled={subBusy}
-                                    style={{ flex: 1, padding: '13px', borderRadius: '14px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700, cursor: subBusy ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <button onClick={handleCancel} disabled={subBusy || !cancelReason}
+                                    title={!cancelReason ? 'Vælg en grund først' : undefined}
+                                    style={{ flex: 1, padding: '13px', borderRadius: '14px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700, cursor: (subBusy || !cancelReason) ? 'not-allowed' : 'pointer', opacity: (!cancelReason) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                     {subBusy ? <Loader2 size={17} className="spin" /> : null} Ja, opsig
                                 </button>
                             </div>
