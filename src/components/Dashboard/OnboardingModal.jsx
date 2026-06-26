@@ -6,19 +6,28 @@ import { Building2, Image as ImageIcon, Coins, Check, Upload, Copy, ChevronRight
 import toast from 'react-hot-toast';
 
 const OnboardingModal = ({ profile, onComplete }) => {
-    const [step, setStep] = useState(1);
-    const [accepted, setAccepted] = useState(false);
-    
+    // Genoptag onboarding på det trin man var nået til ved en refresh — onboarding
+    // markeres FØRST som gennemført til allersidst (saveAndComplete), så et reload
+    // aldrig lukker en forbi uden at have gennemført alle trin.
+    const STORAGE_KEY = profile?.id ? `bison_onboarding_progress_${profile.id}` : null;
+    const savedProgress = (() => {
+        try { return STORAGE_KEY ? JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') : null; }
+        catch { return null; }
+    })();
+
+    const [step, setStep] = useState(savedProgress?.step || 1);
+    const [accepted, setAccepted] = useState(savedProgress?.accepted || false);
+
     // Uploads
-    const [logoUrl, setLogoUrl] = useState(profile?.logo_url || '');
-    const [ownerImageUrl, setOwnerImageUrl] = useState(profile?.portrait_url || '');
+    const [logoUrl, setLogoUrl] = useState(savedProgress?.logoUrl || profile?.logo_url || '');
+    const [ownerImageUrl, setOwnerImageUrl] = useState(savedProgress?.ownerImageUrl || profile?.portrait_url || '');
     const [uploadingImage, setUploadingImage] = useState(null);
     const logoInputRef = useRef(null);
     const ownerInputRef = useRef(null);
 
     // Priser
-    const [hourlyRate, setHourlyRate] = useState(profile?.hourly_rate || 500);
-    
+    const [hourlyRate, setHourlyRate] = useState(savedProgress?.hourlyRate || profile?.hourly_rate || 500);
+
     const [isSaving, setIsSaving] = useState(false);
     const [mounted, setMounted] = useState(false);
 
@@ -27,6 +36,13 @@ const OnboardingModal = ({ profile, onComplete }) => {
         setMounted(true);
         return () => setMounted(false);
     }, []);
+
+    // Gem fremdriften løbende, så en refresh genoptager præcis hvor man var.
+    useEffect(() => {
+        if (!STORAGE_KEY) return;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ step, accepted, logoUrl, ownerImageUrl, hourlyRate })); }
+        catch { /* localStorage kan være blokeret — ignorér */ }
+    }, [STORAGE_KEY, step, accepted, logoUrl, ownerImageUrl, hourlyRate]);
 
     const handleImageUpload = async (e, type, droppedFile = null) => {
         const file = droppedFile || e?.target?.files?.[0];
@@ -82,6 +98,8 @@ const OnboardingModal = ({ profile, onComplete }) => {
             .eq('carpenter_id', profile.company_id || profile.id);
 
         setIsSaving(false);
+        // Onboarding er nu reelt gennemført → ryd den gemte fremdrift.
+        try { if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
         if (!error) {
             // Send Velkomstmail til kunden (flyttet fra Register.jsx)
             if (profile?.email) {
@@ -165,11 +183,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
 
                                 <button 
                                     disabled={!accepted}
-                                    onClick={() => {
-                                        // Gem immediately i DB så den aldrig popper op igen hvis brugeren lukker siden
-                                        supabase.from('carpenters').update({ has_completed_onboarding: true }).eq('id', profile.id).then();
-                                        setStep(2);
-                                    }}
+                                    onClick={() => setStep(2)}
                                     className={`w-full py-3.5 font-semibold rounded-xl transition-all flex justify-center items-center gap-2 mt-2
                                         ${accepted ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-lg' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
                                 >
