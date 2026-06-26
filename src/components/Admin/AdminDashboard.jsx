@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { ArrowLeft, Shield, Users, Power, Lock, CheckCircle, ExternalLink, Copy, FileText, X, Trash2, ChevronDown, ChevronUp, LogOut, Upload } from 'lucide-react';
+import { ArrowLeft, Shield, Users, Power, Lock, CheckCircle, ExternalLink, Copy, FileText, X, Trash2, ChevronDown, ChevronUp, LogOut, Upload, CalendarClock, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AiTrainingView from '../Dashboard/AiTrainingView';
@@ -16,6 +16,9 @@ const AdminDashboard = () => {
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'danger', onConfirm: null });
 
     const [expandedCompanies, setExpandedCompanies] = useState({});
+    const [extendTarget, setExtendTarget] = useState(null); // firma hvis prøveperiode forlænges
+    const [extendDays, setExtendDays] = useState(14);
+    const [extendBusy, setExtendBusy] = useState(false);
 
     useEffect(() => {
         const loadAll = async () => {
@@ -51,6 +54,26 @@ const AdminDashboard = () => {
             ...prev,
             [companyId]: !prev[companyId]
         }));
+    };
+
+    const submitExtendTrial = async () => {
+        if (!extendTarget) return;
+        const n = Math.round(Number(extendDays));
+        if (!Number.isFinite(n) || n < 1 || n > 365) { toast.error('Vælg mellem 1 og 365 dage.'); return; }
+        setExtendBusy(true);
+        try {
+            const { data, error } = await supabase.functions.invoke('admin-extend-trial', {
+                body: { companyId: extendTarget.id, days: n }
+            });
+            if (error || !data?.success) throw new Error(data?.error || error?.message || 'Kunne ikke forlænge.');
+            setCarpenters(prev => prev.map(c => c.id === extendTarget.id
+                ? { ...c, trial_ends_at: data.trial_ends_at, subscription_status: data.subscription_status }
+                : c));
+            toast.success(`Prøveperiode forlænget til ${new Date(data.trial_ends_at).toLocaleDateString('da-DK')}.`);
+            setExtendTarget(null);
+        } catch (e) {
+            toast.error(e.message);
+        } finally { setExtendBusy(false); }
     };
 
     const fetchLeads = async () => {
@@ -205,6 +228,18 @@ const AdminDashboard = () => {
                                                     {carp.tier === 'enterprise' && <span style={{ fontSize: '10px', background: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px' }}>Enterprise</span>}
                                                 </div>
                                                 <div style={{ color: '#94a3b8', fontSize: '13px' }}>Slug: /{carp.slug}</div>
+                                                {(() => {
+                                                    const s = carp.subscription_status || 'trialing';
+                                                    const map = {
+                                                        active: { t: 'Aktiv', c: '#10b981' },
+                                                        trialing: { t: carp.trial_ends_at ? `Prøve til ${new Date(carp.trial_ends_at).toLocaleDateString('da-DK')}` : 'Prøveperiode', c: '#3b82f6' },
+                                                        canceled: { t: 'Opsagt', c: '#ef4444' },
+                                                        past_due: { t: 'Betaling fejlede', c: '#f59e0b' },
+                                                        exempt: { t: 'Gratis (exempt)', c: '#8b5cf6' },
+                                                    };
+                                                    const m = map[s] || { t: s, c: '#94a3b8' };
+                                                    return <div style={{ marginTop: '5px', display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: m.c }}><span style={{ width: '7px', height: '7px', borderRadius: '50%', background: m.c }} />{m.t}</div>;
+                                                })()}
                                                 {carp.team && carp.team.length > 0 && (
                                                     <button 
                                                         onClick={() => toggleCompanyExpanded(carp.id)}
@@ -240,7 +275,16 @@ const AdminDashboard = () => {
                                                 )}
                                             </td>
                                             <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                                    {carp.subscription_status !== 'exempt' && (
+                                                        <button
+                                                            onClick={() => { setExtendTarget(carp); setExtendDays(14); }}
+                                                            title="Forlæng prøveperiode"
+                                                            style={{ background: '#7c3aed', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                                        >
+                                                            <CalendarClock size={16} /> Forlæng
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => setSelectedCarpenterData(carp)}
                                                         style={{
@@ -605,7 +649,52 @@ const AdminDashboard = () => {
                     </div>
                 </div>
             )}
-            
+
+            {/* Forlæng prøveperiode */}
+            {extendTarget && (
+                <div onClick={() => !extendBusy && setExtendTarget(null)}
+                    style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div onClick={(e) => e.stopPropagation()}
+                        style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.6)', animation: 'slideUp 0.3s ease-out' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(124,58,237,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a78bfa' }}>
+                                <CalendarClock size={22} />
+                            </div>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#f8fafc' }}>Forlæng prøveperiode</h3>
+                        </div>
+                        <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: '0 0 20px' }}>
+                            <strong style={{ color: '#f8fafc' }}>{extendTarget.company_name || 'Firma'}</strong>
+                            {extendTarget.trial_ends_at && <> · nuværende slut: {new Date(extendTarget.trial_ends_at).toLocaleDateString('da-DK')}</>}
+                        </p>
+
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                            {[7, 14, 30].map(d => (
+                                <button key={d} onClick={() => setExtendDays(d)}
+                                    style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', border: extendDays === d ? '1px solid #7c3aed' : '1px solid #334155', background: extendDays === d ? 'rgba(124,58,237,0.2)' : 'transparent', color: extendDays === d ? '#c4b5fd' : '#cbd5e1' }}>
+                                    +{d} dage
+                                </button>
+                            ))}
+                        </div>
+
+                        <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Eller vælg antal dage</label>
+                        <input type="number" min="1" max="365" value={extendDays}
+                            onChange={(e) => setExtendDays(e.target.value)}
+                            style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', fontSize: '15px', fontWeight: 700, outline: 'none', boxSizing: 'border-box', marginBottom: '22px' }} />
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setExtendTarget(null)} disabled={extendBusy}
+                                style={{ padding: '11px 18px', borderRadius: '10px', border: '1px solid #334155', background: 'transparent', color: '#f8fafc', fontWeight: 700, cursor: 'pointer' }}>
+                                Annuller
+                            </button>
+                            <button onClick={submitExtendTrial} disabled={extendBusy}
+                                style={{ padding: '11px 18px', borderRadius: '10px', border: 'none', background: '#7c3aed', color: 'white', fontWeight: 700, cursor: extendBusy ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                {extendBusy ? <Loader2 size={16} className="spin" /> : <CalendarClock size={16} />} Forlæng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <style>
                 {`
                 @keyframes slideUp {
