@@ -171,6 +171,9 @@ const PREVIEW_CSS = `
 export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null }) {
     const [busy, setBusy] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    // Felt-fejl ved afsendelse (markeres rødt) + bekræftelses-popup før mailen sendes.
+    const [fieldErrors, setFieldErrors] = useState({});
+    const [showSendConfirm, setShowSendConfirm] = useState(false);
 
     // Redigerer vi en eksisterende tilbudskladde? Forudfyld så alt fra den gemte lead.
     const isEditing = !!initialLead?.id;
@@ -471,6 +474,35 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
 
     useEffect(() => () => { slotUrlsRef.current.forEach(u => u && URL.revokeObjectURL(u)); }, []);
 
+    // ---- Validering før afsendelse ----
+    // Et tilbud må kun sendes når det vigtigste er på plads — så man altid fremstår professionel.
+    const validateForSend = () => {
+        const errs = {};
+        if (!customer.name.trim()) errs.name = true;
+        if (!customer.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) errs.email = true;
+        if (!customer.address.trim()) errs.address = true;
+        if (!String(customer.zip).trim()) errs.zip = true;
+        if (!customer.city.trim()) errs.city = true;
+        return errs;
+    };
+    // Ryd en felt-fejl så snart brugeren retter feltet.
+    const clearFieldError = (key) => setFieldErrors(prev => {
+        if (!prev[key]) return prev;
+        const next = { ...prev }; delete next[key]; return next;
+    });
+
+    // Tryk på "Send tilbud" → valider, markér manglende felter, og vis bekræftelse (sender ikke endnu).
+    const requestSend = () => {
+        const errs = validateForSend();
+        setFieldErrors(errs);
+        if (Object.keys(errs).length > 0) {
+            toast.error('Udfyld de markerede felter, før du sender tilbuddet.');
+            if (isMobile) setPreviewTab('edit'); // skift til Rediger-fanen, så fejlene er synlige
+            return;
+        }
+        setShowSendConfirm(true);
+    };
+
     // ---- Gem (kladde eller send) ----
     const save = async (sendToCustomer) => {
         if (!customer.name.trim()) return toast.error('Udfyld kundens navn.');
@@ -736,11 +768,19 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         </>
     );
 
-    const renderCustomerInputs = () => (
+    const renderCustomerInputs = () => {
+        // Rød kant når et påkrævet felt mangler ved afsendelse.
+        const fieldStyle = (key) => fieldErrors[key]
+            ? { ...input, borderColor: '#ef4444', boxShadow: '0 0 0 3px rgba(239,68,68,0.12)' }
+            : input;
+        const errText = (key, text) => fieldErrors[key]
+            ? <span style={{ display: 'block', marginTop: '4px', fontSize: '0.72rem', fontWeight: 600, color: '#ef4444' }}>{text}</span>
+            : null;
+        return (
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-            <div><label style={label}>Navn *</label><input className="qqb-input" style={input} value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} /></div>
+            <div><label style={label}>Navn *</label><input className="qqb-input" style={fieldStyle('name')} value={customer.name} onChange={(e) => { setCustomer({ ...customer, name: e.target.value }); clearFieldError('name'); }} />{errText('name', 'Udfyld kundens navn.')}</div>
             <div><label style={label}>Telefon</label><input className="qqb-input" style={input} type="tel" inputMode="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: formatDkPhone(e.target.value) })} placeholder="+45 12 34 56 78" /></div>
-            <div><label style={label}>Email</label><input className="qqb-input" style={input} type="email" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} /></div>
+            <div><label style={label}>Email{' '}<span style={{ color: '#94a3b8', fontWeight: 500 }}>(kræves for at sende)</span></label><input className="qqb-input" style={fieldStyle('email')} type="email" value={customer.email} onChange={(e) => { setCustomer({ ...customer, email: e.target.value }); clearFieldError('email'); }} />{errText('email', 'Udfyld en gyldig email.')}</div>
             <div>
                 <label style={label}>Adresse</label>
                 {gmapsLoaded ? (
@@ -749,16 +789,18 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         onPlaceChanged={onAddressPlaceChanged}
                         options={{ componentRestrictions: { country: 'dk' }, fields: ['address_components', 'name'] }}
                     >
-                        <input className="qqb-input" style={input} value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} placeholder="Begynd at skrive adressen…" />
+                        <input className="qqb-input" style={fieldStyle('address')} value={customer.address} onChange={(e) => { setCustomer({ ...customer, address: e.target.value }); clearFieldError('address'); }} placeholder="Begynd at skrive adressen…" />
                     </Autocomplete>
                 ) : (
-                    <input className="qqb-input" style={input} value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
+                    <input className="qqb-input" style={fieldStyle('address')} value={customer.address} onChange={(e) => { setCustomer({ ...customer, address: e.target.value }); clearFieldError('address'); }} />
                 )}
+                {errText('address', 'Udfyld adressen.')}
             </div>
-            <div><label style={label}>Postnummer</label><input className="qqb-input" style={input} inputMode="numeric" maxLength={4} value={customer.zip} onChange={(e) => setCustomer({ ...customer, zip: e.target.value.replace(/[^\d]/g, '').slice(0, 4) })} /></div>
-            <div><label style={label}>By</label><input className="qqb-input" style={input} value={customer.city} onChange={(e) => setCustomer({ ...customer, city: e.target.value })} /></div>
+            <div><label style={label}>Postnummer</label><input className="qqb-input" style={fieldStyle('zip')} inputMode="numeric" maxLength={4} value={customer.zip} onChange={(e) => { setCustomer({ ...customer, zip: e.target.value.replace(/[^\d]/g, '').slice(0, 4) }); clearFieldError('zip'); }} />{errText('zip', 'Udfyld postnr.')}</div>
+            <div><label style={label}>By</label><input className="qqb-input" style={fieldStyle('city')} value={customer.city} onChange={(e) => { setCustomer({ ...customer, city: e.target.value }); clearFieldError('city'); }} />{errText('city', 'Udfyld by.')}</div>
         </div>
-    );
+        );
+    };
 
     // Træk i en skillelinje for at gøre kolonnerne større/mindre (desktop).
     // requestAnimationFrame-throttling + et fuldskærms-overlay (se render) holder det smooth —
@@ -1024,7 +1066,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             <Save size={18} /> Gem kladde
                         </button>
                         )}
-                        <button ref={coachSendRef} className="qqb-send" disabled={busy} onClick={() => save(true)} style={{ padding: '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
+                        <button ref={coachSendRef} className="qqb-send" disabled={busy} onClick={requestSend} style={{ padding: '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
                             <Send size={18} /> {busy ? 'Sender…' : (wasSent ? 'Send opdateret tilbud' : 'Send tilbud')}
                         </button>
                     </div>
@@ -1059,6 +1101,73 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         />
                     )}
                 </div>
+
+                {/* Bekræftelse før afsendelse — viser overblik + en lille forhåndsvisning af mailen */}
+                {showSendConfirm && (
+                    <div
+                        className="qqb-confirm-backdrop"
+                        onClick={() => !busy && setShowSendConfirm(false)}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100080, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 'calc(24px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
+                    >
+                        <div
+                            className="qqb-confirm-card"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: 'min(520px, 100%)', maxHeight: '92vh', overflowY: 'auto', background: '#fff', borderRadius: 24, padding: '30px 28px 24px', boxShadow: '0 30px 80px rgba(15,23,42,0.45)' }}
+                        >
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '20px' }}>
+                                <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+                                    <Send size={28} color="#10b981" />
+                                </div>
+                                <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 800, color: '#0f172a' }}>
+                                    {wasSent ? 'Send opdateret tilbud?' : 'Er du sikker på, at du vil sende?'}
+                                </h2>
+                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                                    Tjek lige mailen herunder, før den ryger afsted til kunden.
+                                </p>
+                            </div>
+
+                            {/* Overblik */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f8fafc', border: '1px solid #eef2f6', borderRadius: 14, padding: '14px 16px', marginBottom: '16px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '0.88rem' }}>
+                                    <span style={{ color: '#64748b' }}>Til</span>
+                                    <span style={{ color: '#0f172a', fontWeight: 700, textAlign: 'right', wordBreak: 'break-word' }}>{customer.name}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '0.88rem' }}>
+                                    <span style={{ color: '#64748b' }}>Email</span>
+                                    <span style={{ color: '#0f172a', fontWeight: 700, textAlign: 'right', wordBreak: 'break-word' }}>{customer.email}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '0.88rem' }}>
+                                    <span style={{ color: '#64748b' }}>Beløb inkl. moms</span>
+                                    <span style={{ color: '#0f172a', fontWeight: 800 }}>{kr(calc.totalIncVat)} kr</span>
+                                </div>
+                            </div>
+
+                            {/* Lille forhåndsvisning af mailen */}
+                            <div style={{ fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#94a3b8', marginBottom: '8px' }}>Sådan ser mailen ud</div>
+                            <div style={{ height: '260px', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden', marginBottom: '20px', boxShadow: '0 8px 24px rgba(15,23,42,0.08)' }}>
+                                <iframe title="Bekræft mail preview" srcDoc={emailHtml} style={{ width: '100%', height: '100%', border: 'none' }} />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 12 }}>
+                                <button
+                                    disabled={busy}
+                                    onClick={() => setShowSendConfirm(false)}
+                                    style={{ flex: 1, padding: '14px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
+                                >
+                                    Tilbage
+                                </button>
+                                <button
+                                    className="qqb-send"
+                                    disabled={busy}
+                                    onClick={() => { setShowSendConfirm(false); save(true); }}
+                                    style={{ flex: 1.4, padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(16,185,129,0.32)' }}
+                                >
+                                    <Send size={17} /> {busy ? 'Sender…' : 'Ja, send tilbud'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Lækker fuld-skærms bekræftelse ved sletning */}
                 {confirmDelete && (
