@@ -27,10 +27,41 @@ const SubscriptionSettings = () => {
     const [company, setCompany] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isManaging, setIsManaging] = useState(false);
+    const [verifying, setVerifying] = useState(false);
 
     useEffect(() => {
         loadSubscriptionData();
     }, []);
+
+    // Når man kommer tilbage fra Stripe (?success=true) — ELLER har et betalingskort men
+    // stadig står som 'trialing' — så bekræfter vi DIREKTE mod Stripe og henter status igen.
+    // Det gør at siden viser "AKTIV" med det samme efter betaling, uden manuelt reload, og
+    // uafhængigt af om webhook'en nåede frem.
+    useEffect(() => {
+        if (!company) return;
+        const params = new URLSearchParams(window.location.search);
+        const justPaid = params.get('success') === 'true';
+        const maybePaid = !!company.payment_customer_id && company.subscription_status === 'trialing';
+        if (!justPaid && !maybePaid) return;
+
+        let cancelled = false;
+        (async () => {
+            setVerifying(true);
+            for (let i = 0; i < 4 && !cancelled; i++) {
+                try { await supabase.functions.invoke('verify-subscription'); } catch { /* prøv igen */ }
+                const fresh = await loadSubscriptionData();
+                if (fresh?.subscription_status === 'active') { if (justPaid) toast.success('Abonnementet er aktivt! 🎉'); break; }
+                await new Promise(r => setTimeout(r, 1500));
+            }
+            if (!cancelled) setVerifying(false);
+            if (justPaid) {
+                params.delete('success');
+                window.history.replaceState({}, '', window.location.pathname + (params.toString() ? `?${params}` : ''));
+            }
+        })();
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [company?.id]);
 
     const loadSubscriptionData = async () => {
         setIsLoading(true);
@@ -68,9 +99,11 @@ const SubscriptionSettings = () => {
             }
 
             setCompany(finalCompany);
+            return finalCompany;
         } catch (error) {
             console.error('Error fetching subscription:', error);
             toast.error('Kunne ikke hente abonnementsdata');
+            return null;
         } finally {
             setIsLoading(false);
         }
@@ -133,12 +166,16 @@ const SubscriptionSettings = () => {
     return (
         <div className="space-y-6 animate-fadeIn" style={{ maxWidth: '600px', margin: '0 auto' }}>
 
-            {/* Fuld-skærms loader mens vi henter det sikre Stripe-link (så man ser at der sker noget). */}
-            {isManaging && createPortal(
+            {/* Fuld-skærms loader: enten på vej til Stripe, eller mens vi bekræfter betalingen. */}
+            {(isManaging || verifying) && createPortal(
                 <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
                     <Loader2 size={48} color="#fff" className="spin" />
-                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.05rem' }}>Sender dig til sikker betaling…</div>
-                    <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>Et øjeblik — du føres videre til Stripe.</div>
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.05rem' }}>
+                        {verifying ? 'Aktiverer dit abonnement…' : 'Sender dig til sikker betaling…'}
+                    </div>
+                    <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>
+                        {verifying ? 'Vi bekræfter din betaling — et øjeblik.' : 'Et øjeblik — du føres videre til Stripe.'}
+                    </div>
                 </div>,
                 document.body
             )}
