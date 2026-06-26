@@ -13,19 +13,19 @@ const ROLE_CARDS = [
     {
         id: 'mester', name: 'Mester', sub: 'Dig der ejer butikken — bruger 1.', icon: 'user',
         price: '249', per: 'kr/md',
-        features: ['Hele systemet inkl. økonomi', 'Din tilbudsside + hele dit hold'],
+        features: ['Hele systemet — tilbud, ordrestyring, tegneprogram, økonomi & faktura', 'Økonomisk overblik + let samspil med dit lønsystem', 'Hold styr på hele din forretning og dine ansatte', 'Gratis hjælp til opstart — vi følger dig hele vejen, til du mestrer det'],
         note: 'Fast grundpris · altid din første bruger',
     },
     {
         id: 'kontor', name: 'Kontor', sub: 'Projektleder · bogholder · ekstra mester.', icon: 'users',
         price: '149', per: 'kr/md pr. bruger',
-        features: ['Fuld web- og app-adgang', 'Tilbud, sager & fakturering'],
+        features: ['Tilbud, sager & fakturering', 'Styr på økonomi & lønkørsel'],
         note: '↓ 119 kr/md fra bruger nr. 11',
     },
     {
         id: 'felt', name: 'Felt', sub: 'Svend · lærling — ude på pladsen.', icon: 'hammer',
         price: '99', per: 'kr/md pr. bruger',
-        features: ['Timer, opgaver & materialer', "App'en — det de bruger i marken"],
+        features: ['Timer, opgaver & materialer', "App'en i marken — timer der bliver til løn"],
         note: '↓ 79 kr/md fra bruger nr. 11',
     },
     {
@@ -45,7 +45,7 @@ const CardIcon = ({ type, size = 80, strokeWidth = 1 }) => {
 
 // Den interaktive "Byg dit hold"-beregner (rolig, hvid stil — som "Hvad koster tilbud dig?").
 function TeamCalculator({ onStart }) {
-    const [team, setTeam] = useState({ mester: 1, pl: 2, bog: 0, svend: 12, laer: 0 });
+    const [team, setTeam] = useState({ mester: 1, pl: 0, bog: 0, svend: 0, laer: 0 });
     const result = useMemo(() => computePrice(team), [team]);
 
     const ROWS = [
