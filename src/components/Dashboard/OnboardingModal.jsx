@@ -113,7 +113,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
     if (!mounted) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+        <div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, WebkitOverflowScrolling: 'touch' }}>
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -190,9 +190,9 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                     <ImageIcon size={40} />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Gør din beregner personlig</h2>
+                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Gør systemet personligt</h2>
                                     <p className="text-slate-600 text-sm">
-                                        Når kunderne bruger din prisberegner, er det dit logo og dit ansigt, der byder dem velkommen. Det skaber tryghed og øger chancen for, at de vælger netop dig til opgaven. Du kan altid tilføje billederne senere under indstillinger.
+                                        Dit logo og dit ansigt kommer med overalt — på din prisberegner, i tilbud og på de mails, der sendes til kunderne. Så fremstår hele systemet som dit eget og ser skarpt og professionelt ud. Du kan altid tilføje billederne senere under indstillinger.
                                     </p>
                                 </div>
 
