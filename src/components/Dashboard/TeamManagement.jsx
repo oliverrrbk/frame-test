@@ -727,12 +727,17 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                                                     {getRoleLabel(member.role)}
                                                                 </span>
                                                                 {member.requires_password_change ? (
-                                                                    <span title="Medarbejderen har endnu ikke logget ind og oprettet sin adgangskode. Mind dem om at oprette sig på Bison Frame." style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '9999px', background: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e' }}>
-                                                                        ⏳ Afventer oprettelse
+                                                                    <span title="Medarbejderen er oprettet og tæller med — afventer kun at han selv logger ind og vælger sin adgangskode." style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '4px 11px 4px 9px', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.01em', borderRadius: '9999px', background: 'rgba(245, 158, 11, 0.09)', border: '1px solid rgba(245, 158, 11, 0.28)', color: '#b45309' }}>
+                                                                        <span style={{ position: 'relative', display: 'inline-flex', width: '7px', height: '7px', flexShrink: 0 }}>
+                                                                            <span className="animate-ping" style={{ position: 'absolute', inset: 0, borderRadius: '9999px', background: '#f59e0b', opacity: 0.7 }} />
+                                                                            <span style={{ position: 'relative', width: '7px', height: '7px', borderRadius: '9999px', background: '#f59e0b' }} />
+                                                                        </span>
+                                                                        Afventer login
                                                                     </span>
                                                                 ) : (
-                                                                    <span title="Medarbejderen har logget ind og er aktiv." style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '9999px', background: '#dcfce7', border: '1px solid #86efac', color: '#166534' }}>
-                                                                        ✓ Aktiv
+                                                                    <span title="Medarbejderen har logget ind og er aktiv." style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '4px 11px 4px 9px', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.01em', borderRadius: '9999px', background: 'rgba(16, 185, 129, 0.09)', border: '1px solid rgba(16, 185, 129, 0.28)', color: '#047857' }}>
+                                                                        <span style={{ width: '7px', height: '7px', borderRadius: '9999px', background: '#10b981', flexShrink: 0 }} />
+                                                                        Aktiv
                                                                     </span>
                                                                 )}
                                                             </h4>
