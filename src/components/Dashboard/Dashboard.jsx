@@ -33,6 +33,7 @@ const GuestDashboard = lazy(() => import('../Guest/GuestDashboard'));
 import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
+import { getFeatures } from '../../utils/features';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import Coachmark from './Coachmark';
 import DashboardTour from './DashboardTour';
@@ -1565,6 +1566,7 @@ const Dashboard = () => {
                 email: metadata.email || authUser?.email || '',
                 role: metadata.role || 'admin',
                 company_id: metadata.company_id || null,
+                business_type: metadata.business_type || 'tomrer',
                 tier: metadata.tier || 'standard',
                 raw_data: {
                     ...(autoLonnummer ? { lonnummer: autoLonnummer } : {}),
@@ -2593,6 +2595,8 @@ const Dashboard = () => {
     
     const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const effectiveRole = simulatedRole || myProfile?.role || 'admin';
+    // Branche-baserede funktioner (kun tømrer = beregner/materialer). Læser FIRMAETS type.
+    const features = getFeatures(carpenterProfile?.business_type);
 
     // --- SØGEFUNKTION & FILTRERING ---
     const roleFilteredLeads = leadsData.filter(l => {
@@ -2925,12 +2929,12 @@ const Dashboard = () => {
                             <PenTool size={20} /> Skitser & Tegninger
                         </button>
                     )}
-                    {['admin', 'sales'].includes(effectiveRole) && (
+                    {['admin', 'sales'].includes(effectiveRole) && features.materials && (
                         <button className={activeTab === 'materials' ? 'active' : ''} onClick={() => { setActiveTab('materials'); setIsMobileMenuOpen(false); }}>
                             <Package size={20} /> Materialer
                         </button>
                     )}
-                    {['admin'].includes(effectiveRole) && (
+                    {['admin'].includes(effectiveRole) && features.calculator && (
                         <button className={activeTab === 'settings' ? 'active' : ''} onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}>
                             <Sliders size={20} /> Prisberegning
                         </button>
@@ -6271,7 +6275,7 @@ const Dashboard = () => {
 
                     
                     {/* AI TRÆNING */}
-                    {activeTab === 'ai-training' && (
+                    {activeTab === 'ai-training' && features.calculator && (
                         <div className="tab-content fade-in">
                             <AiTrainingView carpenterId={carpenterProfile?.id} />
                         </div>
@@ -6525,6 +6529,7 @@ const Dashboard = () => {
                             {createLeadMode === null && (
                                 <CreateLeadSelector
                                     isMobile={isMobile}
+                                    allowCalculator={features.calculator}
                                     onSelectClassic={() => setCreateLeadMode('classic')}
                                     onSelectCustom={() => setCreateLeadMode('custom')}
                                     onSelectQuick={() => setCreateLeadMode('quick')}

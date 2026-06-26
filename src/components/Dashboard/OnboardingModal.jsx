@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
 import { Building2, Image as ImageIcon, Coins, Check, Upload, Copy, ChevronRight, Loader2, MessageSquare, Globe, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getFeatures } from '../../utils/features';
 
 const OnboardingModal = ({ profile, onComplete }) => {
     // Genoptag onboarding på det trin man var nået til ved en refresh — onboarding
@@ -27,6 +28,10 @@ const OnboardingModal = ({ profile, onComplete }) => {
 
     // Priser
     const [hourlyRate, setHourlyRate] = useState(savedProgress?.hourlyRate || profile?.hourly_rate || 500);
+
+    // Kun tømrere har beregner → ikke-tømrere springer timepris-trin (3) og
+    // prisberegner-link-trin over. Onboarding bliver da: vilkår → logo → "klar + app".
+    const hasCalc = getFeatures(profile?.business_type).calculator;
 
     const [isSaving, setIsSaving] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -281,16 +286,16 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                 </div>
 
                                 <div className="flex flex-col gap-3 mt-4 w-full">
-                                    <button 
+                                    <button
                                         disabled={!(logoUrl || ownerImageUrl)}
-                                        onClick={() => setStep(3)}
+                                        onClick={() => setStep(hasCalc ? 3 : 4)}
                                         className={`w-full py-3.5 font-semibold rounded-xl transition-all flex justify-center items-center gap-2
                                             ${(logoUrl || ownerImageUrl) ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-lg' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
                                     >
                                         Gem billeder og fortsæt <ChevronRight size={18} />
                                     </button>
-                                    <button 
-                                        onClick={() => setStep(3)}
+                                    <button
+                                        onClick={() => setStep(hasCalc ? 3 : 4)}
                                         className="w-full py-2.5 bg-transparent hover:bg-slate-50 text-slate-500 font-medium rounded-lg transition-colors text-sm"
                                     >
                                         Spring over foreløbig
@@ -352,10 +357,13 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                 <div>
                                     <h2 className="text-2xl font-bold text-slate-900 mb-2">Klar til brug</h2>
                                     <p className="text-slate-600 text-sm">
-                                        Dit personlige link er nu aktivt. Kopiér det herunder og start med at modtage opgaver.
+                                        {hasCalc
+                                            ? 'Dit personlige link er nu aktivt. Kopiér det herunder og start med at modtage opgaver.'
+                                            : 'Du er klar! Læg appen på din hjemmeskærm og slå notifikationer til, så du aldrig misser noget på dine sager.'}
                                     </p>
                                 </div>
 
+                                {hasCalc && (<>
                                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center gap-3">
                                     <span className="font-mono text-sm font-medium text-slate-700 break-all select-all">
                                         bisonframe.dk/{profile?.slug || 't'}
@@ -386,6 +394,8 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                     </div>
                                 </div>
 
+                                </>)}
+
                                 <div className="text-left mt-4 border-t border-slate-100 pt-4">
                                     <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
                                         <Phone size={18} className="text-slate-700 shrink-0 mt-0.5" />
@@ -413,7 +423,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
                 <div className="bg-slate-50/50 p-4 flex justify-center gap-2 border-t border-slate-100">
                     <div className={`h-1.5 rounded-full transition-all duration-300 ${step >= 1 ? 'w-8 bg-emerald-500' : 'w-2 bg-slate-200'}`} />
                     <div className={`h-1.5 rounded-full transition-all duration-300 ${step >= 2 ? 'w-8 bg-emerald-500' : 'w-2 bg-slate-200'}`} />
-                    <div className={`h-1.5 rounded-full transition-all duration-300 ${step >= 3 ? 'w-8 bg-emerald-500' : 'w-2 bg-slate-200'}`} />
+                    {hasCalc && <div className={`h-1.5 rounded-full transition-all duration-300 ${step >= 3 ? 'w-8 bg-emerald-500' : 'w-2 bg-slate-200'}`} />}
                     <div className={`h-1.5 rounded-full transition-all duration-300 ${step === 4 ? 'w-8 bg-emerald-500' : 'w-2 bg-slate-200'}`} />
                 </div>
             </motion.div>

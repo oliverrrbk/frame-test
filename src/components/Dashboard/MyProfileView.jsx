@@ -3,6 +3,7 @@ import { supabase } from '../../supabaseClient';
 import { User, Lock, Camera, Copy, CheckCircle, Phone, MessageSquare, Shield, Bell } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PushSubscriber from './PushSubscriber';
+import { getFeatures } from '../../utils/features';
 
 const labelStyle = { display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '6px', letterSpacing: '0.01em' };
 const inputStyle = { width: '100%', boxSizing: 'border-box', padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '1rem', color: '#0f172a', background: '#f8fafc', outline: 'none', transition: 'border-color .15s, box-shadow .15s, background .15s' };
@@ -405,7 +406,7 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
             </div>
 
             {/* SMS TILBUDS-GENVEJ — kun for mester/admin */}
-            {isAdmin && smsSection}
+            {isAdmin && getFeatures(myProfile?.business_type).publicPortal && smsSection}
         </div>
     );
 };

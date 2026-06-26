@@ -30,6 +30,7 @@ afløser/supplerer hinanden.
 | `add_digital_quotes.sql` | Kolonner til digitale web-tilbud |
 | `supabase/add_case_number.sql` | Sekvens + `case_number` (starter ved 1000) |
 | `setup_profile_fields.sql` | Profilfelter på `carpenters` |
+| `setup_business_type.sql` | `business_type` på `carpenters` (default `'tomrer'`). Branche valgt ved oprettelse. KUN `'tomrer'` har prisberegner/materialer/Wizard — alle andre fag (inkl. entreprenør) laver kun Hurtigt tilbud. Gating sker i klienten (`src/utils/features.js`); låste beregner-filer røres ikke. |
 
 ### 2) Tabeller & features
 | Fil | Formål |
@@ -49,6 +50,7 @@ afløser/supplerer hinanden.
 | `supabase/setup_chat_notifications.sql` | Chat: `last_read_at` (ulæst) + push-trigger på nye beskeder (kør sidst, efter setup_chat) |
 | `supabase/setup_chat_edit_delete_hide.sql` | Chat: `edited_at`/`deleted_at` på beskeder (rediger/fortryd) + `hidden_at` på `chat_participants` (skjul samtale pr. bruger) + UPDATE-RLS for egen besked/deltager-række + `REPLICA IDENTITY FULL`. Kør EFTER `setup_chat.sql` |
 | `setup_error_logs.sql` | In-house fejlfinder: `error_logs`-tabel + RLS (alle må logge, kun superadmin må læse) |
+| `setup_quote_dataset.sql` | **Tilbuds-datasæt (datavold til fremtidig AI-tilbudsmotor).** `quote_dataset`-tabel (én række pr. sag: tilbud + udfald: accepteret/faktureret/faktiske timer) + superadmin-RLS + **fejl-sikker trigger på `leads`** (`capture_quote_dataset`) der snapshotter ved tilbud/status/udfald. Triggeren kan ALDRIG vælte et lead-skriv. **Jura:** at TRÆNE/SÆLGE på tværs af kunder kræver licens-klausul i vilkårene først. |
 
 ### 3) RPC'er (funktioner)
 | Fil | Formål |

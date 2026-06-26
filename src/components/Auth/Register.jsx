@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
-import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus } from 'lucide-react';
+import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { computePrice, formatKr } from '../../utils/pricing';
+import { BUSINESS_TYPES } from '../../utils/features';
 
 const Register = ({ setSession }) => {
     const navigate = useNavigate();
@@ -28,6 +29,7 @@ const Register = ({ setSession }) => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [businessType, setBusinessType] = useState('tomrer');   // branche — styrer beregner/materialer-adgang
     // Rollebaseret hold — starter ALTID på 1 mester (249 kr). Man tilføjer selv resten.
     const [team, setTeam] = useState({ mester: 1, pl: 0, bog: 0, svend: 0, laer: 0 });
     const teamPrice = computePrice(team);
@@ -148,6 +150,7 @@ const Register = ({ setSession }) => {
                     city: city,
                     phone: phone,
                     email: email,
+                    business_type: businessType,
                     tier: 'role_based',
                     team: team,                          // {mester,pl,bog,svend,laer} — holdet de byggede
                     monthly_total: teamPrice.total       // kr/md ekskl. moms (til reference)
@@ -312,7 +315,7 @@ const Register = ({ setSession }) => {
                             <div className="w-16 h-16 bg-blue-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-blue-100 dark:border-slate-700">
                                 <img src="/logo.png" alt="Bison Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
                             </div>
-                            <h2 className="text-3xl font-bold tracking-tight mb-2">Opret tømrer-system</h2>
+                            <h2 className="text-3xl font-bold tracking-tight mb-2">Opret dit håndværker-system</h2>
                             <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm">Få fuld adgang til Bison Frame på under 1 minut.</p>
                         </div>
                         
@@ -322,6 +325,19 @@ const Register = ({ setSession }) => {
                                     {errorMsg}
                                 </div>
                             )}
+
+                            {/* Branche — afgør om man får prisberegner + materialer */}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Hvilken slags håndværker er du? *</label>
+                                <div className="relative">
+                                    <Wrench className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                                    <select value={businessType} onChange={e => setBusinessType(e.target.value)} required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl pl-11 pr-10 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-[15px] appearance-none cursor-pointer">
+                                        {BUSINESS_TYPES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
+                                    </select>
+                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                                </div>
+                                <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">Tømrere får prisberegner + materialer. Andre fag laver hurtige tilbud — alt det øvrige er ens.</span>
+                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 {/* Firmanavn */}

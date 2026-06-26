@@ -12,6 +12,7 @@ import AftalesedlerTab from './AftalesedlerTab';
 import CaseDrawingsTab from './CaseDrawingsTab';
 import BilagManager from './BilagManager';
 import { SubcontractorModal } from './Subcontractors';
+import { getFeatures } from '../../utils/features';
 import ProfileCard from './ProfileCard';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
 import { useClickOutside } from '../../hooks/useClickOutside';
@@ -3448,7 +3449,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     {(() => {
                         const caseTabs = [
                             { id: 'todo', label: selectedCase.status === 'Afbrudt Sag' ? 'Bygge To-Do (Låst)' : 'Bygge To-Do (KS)', mobileLabel: 'To-Do', icon: <CheckSquare size={isMobile ? 22 : 18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: true },
-                            { id: 'materials', label: 'Materialer & Indkøb', mobileLabel: 'Materialer', icon: <PackageCheck size={isMobile ? 22 : 18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
+                            { id: 'materials', label: 'Materialer & Indkøb', mobileLabel: 'Materialer', icon: <PackageCheck size={isMobile ? 22 : 18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' && getFeatures(carpenterProfile?.business_type).materials },
                             { id: 'logs', label: 'Byggeproces', mobileLabel: 'Proces', icon: <ClipboardList size={isMobile ? 22 : 18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
                             { id: 'timesheet', label: 'Timeregistrering', mobileLabel: 'Timer', icon: <Clock size={isMobile ? 22 : 18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
                             { id: 'invoices', label: 'Bilag', mobileLabel: 'Bilag', icon: <Receipt size={isMobile ? 22 : 18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },

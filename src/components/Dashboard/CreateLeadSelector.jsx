@@ -28,10 +28,11 @@ const TOUR = [
     { eyebrow: 'Sådan laver du tilbud', title: 'Tilbud fra bunden (avanceret)', body: 'Byg tilbuddet op trin for trin, og lad AI hjælpe undervejs. Prøv den når du er varm i systemet.' },
 ];
 
-const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, isMobile = false }) => {
+const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, isMobile = false, allowCalculator = true }) => {
     const cardRefs = [useRef(null), useRef(null), useRef(null)];
-    // Guidet gennemgang kun på computer + første gang.
-    const [tourStep, setTourStep] = useState(() => (!isMobile && shouldShowCoach('chooser_tour')) ? 0 : -1);
+    // Guidet gennemgang kun på computer + første gang — og kun når der er flere kort
+    // (ikke-tømrere ser kun Hurtigt tilbud, så ingen gennemgang).
+    const [tourStep, setTourStep] = useState(() => (!isMobile && allowCalculator && shouldShowCoach('chooser_tour')) ? 0 : -1);
     const guiding = tourStep >= 0;
 
     useEffect(() => {
@@ -67,7 +68,7 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, is
             <h2 style={{ textAlign: 'center', marginBottom: '10px', fontSize: isMobile ? '1.7rem' : '2rem', color: '#0f172a' }}>Opret ny sag</h2>
             <p style={{ textAlign: 'center', color: '#64748b', marginBottom: isMobile ? '24px' : '40px', fontSize: isMobile ? '1rem' : '1.1rem' }}>Vælg hvordan du vil oprette</p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? '16px' : '24px', maxWidth: '1080px', margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: (isMobile || !allowCalculator) ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? '16px' : '24px', maxWidth: allowCalculator ? '1080px' : '460px', margin: '0 auto' }}>
 
                 {/* 1) Hurtigt tilbud (manuelt) — letteste, står først */}
                 <div
@@ -90,6 +91,7 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, is
                     </div>
                 </div>
 
+                {allowCalculator && (<>
                 {/* 2) Prisberegner (standard-skabeloner) */}
                 <div
                     ref={cardRefs[1]}
@@ -129,6 +131,7 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, is
                         Opret fra bunden <ChevronRight size={18} />
                     </div>
                 </div>
+                </>)}
             </div>
 
             {/* Guidet gennemgang — boble peger på det aktive kort */}

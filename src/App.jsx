@@ -23,6 +23,7 @@ import { supabase } from './supabaseClient';
 import { isStandalonePWA } from './utils/pwa';
 import { logError } from './utils/errorLogger';
 import { ensurePushSubscription } from './utils/pushSubscription';
+import { getFeatures } from './utils/features';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 // Protected Route Komponent
 class ErrorBoundary extends React.Component {
@@ -124,6 +125,14 @@ const PublicWizardPage = () => {
   );
   
   if (!carpenterData) return <div style={{textAlign: 'center', padding: '100px', height: '100vh', background: '#f8fafc'}}><h2>Leder efter håndværkerens portal...</h2></div>;
+
+  // Kun tømrere har en offentlig online-prisberegner. Andre fag tager imod henvendelser direkte.
+  if (!getFeatures(carpenterData.business_type).publicPortal) return (
+      <div style={{textAlign: 'center', padding: '100px', background: '#f8fafc', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
+          <h2>Online tilbud er ikke tilgængelig her</h2>
+          <p className="text-muted" style={{maxWidth: '500px'}}>{carpenterData.company_name || 'Virksomheden'} tager imod henvendelser direkte. Kontakt dem for et tilbud på din opgave.</p>
+      </div>
+  );
 
   return (
     <>
