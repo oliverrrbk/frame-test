@@ -68,10 +68,10 @@ export const TheInfiniteGrid = () => {
             className="space-y-6"
          >
           <h1 className="text-[clamp(2.5rem,6vw,5.5rem)] font-headline font-bold tracking-tight leading-[1.05] text-on-surface text-balance drop-shadow-sm">
-            Brug mindre tid på kontoret, og send præcise overslag.
+            Lavet i samarbejde med håndværkere til håndværkere.
           </h1>
           <p className="text-[clamp(1.125rem,2vw,1.375rem)] text-on-surface-variant max-w-[65ch] mx-auto text-balance leading-relaxed">
-            Systemet der hjælper tømrere og håndværkere med at give præcise tilbud på sekunder. Simpelt for dig, gennemsigtigt for kunden.
+            Systemet der hjælper tømrere og håndværkere med at holde styr på deres forretning. På både mobil og computer.
           </p>
         </motion.div>
         
@@ -88,7 +88,7 @@ export const TheInfiniteGrid = () => {
               onClick={() => navigate('/register')}
               className="bg-inverse-surface text-inverse-primary rounded-full px-8 py-4 font-medium hover:bg-primary transition-colors shadow-[0_10px_40px_-10px_rgba(43,52,55,0.4)]"
           >
-              Start Prøveperiode
+              Start din gratis prøveperiode
           </motion.button>
           <div className="relative z-50">
             <motion.button 
@@ -98,7 +98,7 @@ export const TheInfiniteGrid = () => {
                 style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}
                 className="bg-surface-container-high text-on-surface rounded-full px-8 py-4 font-medium hover:bg-surface-container-highest transition-colors shadow-sm border border-outline-variant/10"
             >
-                Beregn din profit
+                Læs om det
             </motion.button>
           </div>
         </motion.div>

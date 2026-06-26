@@ -68,7 +68,7 @@ export default function AboutUsPage({ setSession }) {
                             viewport={{ once: true }}
                             className="text-[clamp(1.125rem,2vw,1.25rem)] text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed"
                         >
-                            Vi er to gutter, der så en mulighed for at gøre hverdagen lettere for både håndværkere og deres kunder. Vi byggede Bison Frame for at fjerne tidsspildet ved tilbudsgivning – så kunden får et hurtigt svar, og tømreren kan bruge tiden på det rigtige håndværk.
+                            Vi er to gutter, der er gode til at bygge systemer – og som havde en flok kammerater i håndværksfaget. De var trætte af programmer, der ikke virkede, og af at timeregistrering og papirarbejde fyldte alt for meget. Så satte vi os ned sammen med dem og byggede det system, de selv ville have lavet, hvis de havde haft færdighederne til det.
                         </motion.p>
                     </div>
                 </header>
@@ -81,7 +81,7 @@ export default function AboutUsPage({ setSession }) {
                         viewport={{ once: true }}
                         className="text-[clamp(1.5rem,2vw,1.75rem)] font-semibold text-slate-900 dark:text-slate-100 tracking-[-0.02em] mb-12 border-l-4 border-blue-600 dark:border-blue-500 pl-4"
                     >
-                        Systemets Grundsten
+                        Det vi står for
                     </motion.h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {/* Standard Card 1 */}
@@ -99,10 +99,10 @@ export default function AboutUsPage({ setSession }) {
                                 <div className="text-blue-600 dark:text-blue-400">
                                     <Compass size={28} />
                                 </div>
-                                <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">Absolut Nøjagtighed</h3>
+                                <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">Bygget sammen med håndværkere</h3>
                             </div>
                             <p className="text-slate-500 dark:text-slate-400 leading-relaxed flex-grow relative z-10">
-                                Tilbud er ikke gætteri. Det er byggeklodserne for opgaverne. Vi udvikler de værktøjer der sikrer fuld nøjagtighed på dit linje-niveau, ned til den mindste detalje.
+                                Vi har ikke gættet os til, hvad du har brug for. Vi satte os ned med rigtige tømrere og byggede kun det, der reelt bliver brugt i hverdagen. Alt det overflødige har vi sparket væk.
                             </p>
                         </motion.div>
 
@@ -120,10 +120,10 @@ export default function AboutUsPage({ setSession }) {
                                 <div className="text-slate-600 dark:text-slate-400">
                                     <Layers size={28} />
                                 </div>
-                                <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">Fuld Gennemsigtighed</h3>
+                                <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">Ærligt og uden binding</h3>
                             </div>
                             <p className="text-slate-500 dark:text-slate-400 leading-relaxed flex-grow relative z-10">
-                                Hvert et materiale, hver time og enhver avance er synlig. Vi fjerner alt det 'uoverskuelige' ved dit tilbud, og giver skarp gennemsigtighed på projektets omkostninger.
+                                Du får hele systemet gratis den første måned. Vi beder ikke om betalingskort for at komme i gang, og der er ingen binding. Er det ikke godt nok til dig, skal du heller ikke betale for det.
                             </p>
                         </motion.div>
 
@@ -142,10 +142,10 @@ export default function AboutUsPage({ setSession }) {
                                 <div className="text-orange-600 dark:text-orange-400">
                                     <Gauge size={28} />
                                 </div>
-                                <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">Hurtig Udførsel</h3>
+                                <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">Vi hjælper dig i gang</h3>
                             </div>
                             <p className="text-slate-500 dark:text-slate-400 leading-relaxed flex-grow relative z-10">
-                                Præcision behøver ikke være langsomt. Ved at automatisere tunge udregninger gør vi det muligt at sende fejlfrie tilbud hurtigt, hvilket giver dig en professionel fordel.
+                                Du står ikke alene med opsætningen. Vi hjælper dig i gang, sætter det hele op og er på telefonen, hvis du har spørgsmål – uden timepris, indtil du har styr på det.
                             </p>
                         </motion.div>
                     </div>
@@ -168,18 +168,18 @@ export default function AboutUsPage({ setSession }) {
 
                         <div className="flex-1">
                             <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight mb-6">
-                                Gør det nemmere for begge parter
+                                Ærlighed kommer man længst med
                             </h2>
                             <div className="space-y-6 text-[clamp(1.125rem,1.5vw,1.25rem)] text-slate-600 dark:text-slate-400 leading-relaxed">
                                 <p>
-                                    At lave et godt og præcist tilbud tager tid. For håndværkeren betyder det ofte timer på landevejen og sene aftener med regnearket. For kunden betyder det uundgåelig ventetid på at få en pris, før drømmeprojektet kan gå i gang.
+                                    Vores filosofi er enkel: med ærlighed kommer man længst. Du skal kunne stole på det, du betaler for. Derfor får du hele systemet gratis den første måned – uden binding og uden at indtaste et kort. Passer det ikke til dig, går du bare videre.
                                 </p>
                                 <p>
-                                    Det ville vi gerne løse. Derfor allierede vi os med faglærte håndværkere for at bygge et system, der skaber værdi for alle. Kunden kan lynhurtigt få et realistisk overslag hjemme fra sofaen, og tømreren får en automatisk beregning, der snakker direkte sammen med regnskabsprogrammet. Ingen stress, og ingen forgæves kørsel.
+                                    Og du står ikke alene. Vi hjælper dig i gang og sætter det hele op, så det passer til din forretning. Har du spørgsmål, ringer du bare – der er ingen timepris. Vi bliver ved, indtil du har styr på det. For timeregistrering og det at have ansatte skal ikke være en byrde – det skal være enkelt og overskueligt at holde styr på sin forretning.
                                 </p>
                                 <div className="mt-8 inline-flex flex-col gap-1 border-l-2 border-slate-300 dark:border-slate-700 pl-4 py-2">
                                     <span className="text-[0.75rem] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Vores Mission</span>
-                                    <span className="text-slate-900 dark:text-slate-100 font-semibold text-lg">Slut med forgæves kørte kilometer og spildtid på kontoret – få mere tid til det, der skaber værdi.</span>
+                                    <span className="text-slate-900 dark:text-slate-100 font-semibold text-lg">Slut med systemer, der spænder ben. Det skal være enkelt, ærligt og overskueligt at drive din forretning.</span>
                                 </div>
                             </div>
                         </div>
@@ -209,9 +209,9 @@ export default function AboutUsPage({ setSession }) {
                         <motion.div style={{ opacity: glowOpacity }} className="absolute top-[-50%] left-[-10%] w-[60%] h-[150%] bg-blue-600/5 blur-[100px] rounded-full pointer-events-none"></motion.div>
                         
                         <div className="flex flex-col gap-4 relative z-10 max-w-xl text-center md:text-left">
-                            <span className="text-[0.75rem] font-bold uppercase tracking-widest text-slate-400 block dark:text-slate-500">Systemet Er Klar</span>
+                            <span className="text-[0.75rem] font-bold uppercase tracking-widest text-slate-400 block dark:text-slate-500">Helt uden binding</span>
                             <h2 className="text-[clamp(2.5rem,4vw,3.5rem)] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
-                                Vælg Dit Fundament
+                                Prøv det gratis i en måned
                             </h2>
                         </div>
                         
@@ -224,7 +224,7 @@ export default function AboutUsPage({ setSession }) {
                                     style={{ WebkitTransform: "translateZ(0)" }}
                                     className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-8 py-4 rounded-full font-bold text-[clamp(1rem,1.5vw,1.125rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl flex items-center gap-3 w-full sm:w-auto justify-center group whitespace-nowrap"
                                 >
-                                    Prøv Det Gratis
+                                    Opret dig gratis
                                 </motion.button>
                                 <motion.button 
                                     whileHover={{ scale: 1.02 }}
