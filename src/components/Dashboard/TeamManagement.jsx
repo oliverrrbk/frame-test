@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
-import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin, X, Clock, Hash } from 'lucide-react';
+import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, Target, DollarSign, ChevronDown, ChevronUp, Shield, HardHat, MapPin, X, Clock, Hash, CheckCircle2, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
 import { isValidLonnummer } from '../../utils/payroll';
 import UserAvatar from '../ui/UserAvatar';
-import { priceForAddingRole, formatKr } from '../../utils/pricing';
+import { priceForAddingRole, formatKr, computePrice } from '../../utils/pricing';
 import { getEmployeeInviteTemplate } from '../../utils/emailTemplates';
 
 const roles = [
@@ -55,6 +55,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
     const [roleMenuFor, setRoleMenuFor] = useState(null);   // hvilken medarbejders rolle-menu er åben
     const [pendingPromo, setPendingPromo] = useState(null); // { member, role } — afventer admin-bekræftelse
     const [removeTarget, setRemoveTarget] = useState(null); // medarbejder der skal fjernes
+    const [priceChange, setPriceChange] = useState(null);   // { name, newMonthly, status } — vises efter fjernelse
     const [actionBusy, setActionBusy] = useState(false);
 
     // Mobil: invite-formularen vises som modal i stedet for inline
@@ -168,9 +169,17 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             } else {
                 await callManage('deactivate', { employeeId: removeTarget.id });
             }
-            setTeam(prev => prev.filter(m => m.id !== removeTarget.id));
+            const removed = removeTarget;
+            const remaining = team.filter(m => m.id !== removed.id);
+            setTeam(remaining);
             syncSeats();
-            toast.success(mode === 'delete' ? 'Medarbejderen er slettet.' : 'Medarbejderen er deaktiveret.');
+
+            // Vis en rolig bekræftelse med den NYE fremtidige pris (kun for betalende/prøve;
+            // exempt-konti betaler ikke pr. bruger, så de får en simpel besked).
+            const kontor = remaining.filter(m => KONTOR_BILLING_ROLES.includes(m.role)).length;
+            const felt = remaining.filter(m => FELT_BILLING_ROLES.includes(m.role)).length;
+            const newMonthly = computePrice({ mester: 1, pl: kontor, bog: 0, svend: felt, laer: 0 }).total;
+            setPriceChange({ name: removed.owner_name || 'Medarbejderen', newMonthly, status: profile.subscription_status });
         } catch (err) {
             toast.error(err.message);
         } finally {
@@ -1059,6 +1068,54 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                     <button onClick={() => setRemoveTarget(null)} disabled={actionBusy}
                                         style={{ padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
                                 </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                </AnimatePresence>, document.body
+            )}
+
+            {/* ---- BEKRÆFTELSE EFTER FJERNELSE: ny fremtidig pris ---- */}
+            {priceChange && createPortal(
+                <AnimatePresence>
+                    <motion.div key="pricechange-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPriceChange(null)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 100002, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                        <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.96 }} transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
+                            style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '24px', boxShadow: '0 30px 60px -15px rgba(15,23,42,0.4)', overflow: 'hidden' }}>
+                            <div style={{ padding: '36px 32px 32px', textAlign: 'center' }}>
+                                <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.08, type: 'spring', stiffness: 260, damping: 18 }}
+                                    style={{ width: '68px', height: '68px', borderRadius: '20px', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 24px -6px rgba(16,185,129,0.5)' }}>
+                                    <CheckCircle2 size={34} strokeWidth={2.4} />
+                                </motion.div>
+
+                                <h3 style={{ margin: '0 0 8px', fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>Holdet er opdateret</h3>
+                                <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                                    <strong style={{ color: '#334155' }}>{priceChange.name}</strong> er fjernet fra holdet.
+                                </p>
+
+                                {priceChange.status === 'exempt' ? (
+                                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px' }}>
+                                        <p style={{ margin: 0, color: '#475569', fontSize: '0.92rem' }}>Jeres konto er gratis — I betaler ikke pr. bruger.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px 24px' }}>
+                                        <p style={{ margin: '0 0 6px', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8' }}>
+                                            {priceChange.status === 'active' ? 'Dit abonnement fra næste måned' : 'Når prøveperioden slutter'}
+                                        </p>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '2.4rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{formatKr(priceChange.newMonthly)}</span>
+                                            <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#64748b' }}>kr/md · eks. moms</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <p style={{ margin: '20px 0 0', color: '#94a3b8', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                                    Du finder altid det fulde overblik under <strong style={{ color: '#64748b' }}>Indstillinger → Frame Aftale</strong>.
+                                </p>
+
+                                <button onClick={() => setPriceChange(null)}
+                                    style={{ width: '100%', marginTop: '24px', padding: '14px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #1a1a1a, #0f172a)', color: '#fff', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(15,23,42,0.2)' }}>
+                                    OK, forstået <ArrowRight size={18} />
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>
