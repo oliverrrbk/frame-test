@@ -181,11 +181,34 @@ const Register = ({ setSession }) => {
         };
         window.addEventListener('storage', handleStorageChange);
 
+        // Cross-device: bekræfter man mailen på TELEFONEN, får denne fane (fx på desktop) ingen
+        // auth-event. Vi poller derfor med brugerens egne loginoplysninger — signInWithPassword
+        // fejler indtil e-mailen er bekræftet, og lykkes i samme øjeblik den er. Så snart det sker,
+        // sættes sessionen og siden skifter til kontrolpanelet/onboarding — uanset hvilken enhed
+        // bekræftelsen skete på.
+        let stopped = false;
+        const poll = setInterval(async () => {
+            if (stopped) return;
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+            if (stopped) return;
+            if (!signInError && signInData?.session) {
+                stopped = true;
+                clearInterval(poll);
+                if (typeof setSession === 'function') {
+                    localStorage.setItem('dashboard_active_tab', 'overview');
+                    setSession(signInData.session);
+                }
+                navigate('/dashboard');
+            }
+        }, 4000);
+
         return () => {
+            stopped = true;
+            clearInterval(poll);
             subscription.unsubscribe();
             window.removeEventListener('storage', handleStorageChange);
         };
-    }, [isSuccess, navigate, setSession]);
+    }, [isSuccess, navigate, setSession, email, password]);
 
     if (isSuccess) {
         return (

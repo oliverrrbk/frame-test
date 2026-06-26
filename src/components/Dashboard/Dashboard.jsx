@@ -682,6 +682,9 @@ const Dashboard = () => {
     }, []);
     const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
     const [isTestWizardOpen, setIsTestWizardOpen] = useState(false);
+    // Trial-påmindelse på mobil: lille pille der kan foldes ud / skjules — så den aldrig blokerer.
+    const [trialPillExpanded, setTrialPillExpanded] = useState(false);
+    const [trialPillDismissed, setTrialPillDismissed] = useState(false);
     
     // DAILY MESSAGE GLOBAL STATE
     const [showDailyMessagePopup, setShowDailyMessagePopup] = useState(false);
@@ -7072,70 +7075,111 @@ const Dashboard = () => {
                 document.body
             )}
             {/* Floating Trial Toast */}
-            {trialDaysLeft > 0 && !isPaywallActive && effectiveRole === 'admin' && createPortal(
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={`trial-toast-${activeTab}`} // Re-triggers animation on tab change
-                        initial={{ opacity: 0, y: 50, x: 50, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 50, x: 50, scale: 0.95 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.2 }}
-                        style={{
-                            position: 'fixed',
-                            bottom: '32px',
-                            right: '32px',
-                            background: '#ffffff',
-                            borderRadius: '16px',
-                            padding: '24px',
-                            boxShadow: '0 20px 40px -10px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.05)',
-                            zIndex: 10000,
-                            width: '340px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '14px'
-                        }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.2)' }}></span>
-                                <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#0f172a' }}>
-                                    Gratis Prøve
+            {/* Trial-påmindelse — vises ALDRIG mens onboarding/password-modal er åben (ellers spærrer den
+                for at trykke videre, særligt på mobil). På mobil er den en lille, diskret pille der kan
+                foldes ud eller skjules, så den aldrig blokerer for arbejdet. */}
+            {trialDaysLeft > 0 && !isPaywallActive && effectiveRole === 'admin' && !showOnboarding && !showSetPassword && !trialPillDismissed && createPortal(
+                isMobile ? (
+                    <div style={{ position: 'fixed', right: '12px', bottom: 'calc(84px + env(safe-area-inset-bottom))', zIndex: 9000 }}>
+                        {trialPillExpanded ? (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                style={{ background: '#fff', borderRadius: '14px', padding: '14px', width: '252px', boxShadow: '0 14px 34px -8px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '10px' }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: 'bold', fontSize: '13.5px', color: '#0f172a' }}>
+                                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#3b82f6' }} />
+                                        Gratis prøve · {trialDaysLeft} dage
+                                    </span>
+                                    <button onClick={() => setTrialPillExpanded(false)} aria-label="Luk" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', lineHeight: 1, padding: '0 2px' }}>×</button>
+                                </div>
+                                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.5 }}>
+                                    Tilknyt et kort i god tid for at undgå afbrydelser.
+                                </p>
+                                <button
+                                    onClick={() => { setActiveTab('account_settings'); setTrialPillExpanded(false); }}
+                                    style={{ width: '100%', background: '#0f172a', color: '#fff', border: 'none', padding: '10px', borderRadius: '9px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                >
+                                    <CreditCard size={14} /> Tilføj kort
+                                </button>
+                                <button onClick={() => setTrialPillDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '11px' }}>Skjul indtil senere</button>
+                            </motion.div>
+                        ) : (
+                            <button
+                                onClick={() => setTrialPillExpanded(true)}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '999px', padding: '7px 12px', boxShadow: '0 6px 16px rgba(0,0,0,0.14)', cursor: 'pointer', fontWeight: 700, fontSize: '12px', color: '#0f172a' }}
+                            >
+                                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#3b82f6' }} />
+                                {trialDaysLeft} dage
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={`trial-toast-${activeTab}`} // Re-triggers animation on tab change
+                            initial={{ opacity: 0, y: 50, x: 50, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 50, x: 50, scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.2 }}
+                            style={{
+                                position: 'fixed',
+                                bottom: '32px',
+                                right: '32px',
+                                background: '#ffffff',
+                                borderRadius: '16px',
+                                padding: '24px',
+                                boxShadow: '0 20px 40px -10px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.05)',
+                                zIndex: 10000,
+                                width: '340px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '14px'
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.2)' }}></span>
+                                    <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#0f172a' }}>
+                                        Gratis Prøve
+                                    </span>
+                                </div>
+                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#2563eb', background: '#eff6ff', padding: '4px 10px', borderRadius: '12px' }}>
+                                    {trialDaysLeft} dage tilbage
                                 </span>
                             </div>
-                            <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#2563eb', background: '#eff6ff', padding: '4px 10px', borderRadius: '12px' }}>
-                                {trialDaysLeft} dage tilbage
-                            </span>
-                        </div>
-                        <p style={{ fontSize: '13.5px', color: '#64748b', margin: 0, lineHeight: '1.6' }}>
-                            Du har brugt {30 - trialDaysLeft} ud af 30 dage. Tilknyt et kort i god tid for at undgå afbrydelser.
-                        </p>
-                        <button
-                            onClick={() => setActiveTab('account_settings')}
-                            style={{
-                                marginTop: '4px',
-                                width: '100%',
-                                background: '#0f172a',
-                                color: 'white',
-                                border: 'none',
-                                padding: '12px 16px',
-                                borderRadius: '10px',
-                                fontWeight: '600',
-                                fontSize: '14px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.background = '#1e293b'}
-                            onMouseOut={(e) => e.currentTarget.style.background = '#0f172a'}
-                        >
-                            <CreditCard size={16} />
-                            Tilføj kortoplysninger
-                        </button>
-                    </motion.div>
-                </AnimatePresence>,
+                            <p style={{ fontSize: '13.5px', color: '#64748b', margin: 0, lineHeight: '1.6' }}>
+                                Du har brugt {30 - trialDaysLeft} ud af 30 dage. Tilknyt et kort i god tid for at undgå afbrydelser.
+                            </p>
+                            <button
+                                onClick={() => setActiveTab('account_settings')}
+                                style={{
+                                    marginTop: '4px',
+                                    width: '100%',
+                                    background: '#0f172a',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '12px 16px',
+                                    borderRadius: '10px',
+                                    fontWeight: '600',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = '#1e293b'}
+                                onMouseOut={(e) => e.currentTarget.style.background = '#0f172a'}
+                            >
+                                <CreditCard size={16} />
+                                Tilføj kortoplysninger
+                            </button>
+                        </motion.div>
+                    </AnimatePresence>
+                ),
                 document.body
             )}
             {activeTab === 'overview' && effectiveRole === 'admin' && (

@@ -140,7 +140,7 @@ const OnboardingModal = ({ profile, onComplete }) => {
                                 <div>
                                     <h2 className="text-2xl font-bold text-slate-900 mb-2">Velkommen til Bison Frame</h2>
                                     <p className="text-slate-600">
-                                        Din portal for <strong>{profile?.company_name || 'virksomheden'}</strong> er klar. Gennemfør denne korte opsætning for at gøre din beregner klar til kunderne.
+                                        Din portal for <strong>{profile?.company_name || 'virksomheden'}</strong> er klar. Gennemfør denne korte opsætning, så du hurtigt og let kan komme i gang med hele systemet.
                                     </p>
                                 </div>
 
