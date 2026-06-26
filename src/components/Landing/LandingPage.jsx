@@ -192,10 +192,7 @@ const LandingPage = ({ setSession }) => {
                     </p>
                     <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
                         <span className="font-bold text-xl text-slate-700 dark:text-slate-300">e-conomic</span>
-                        <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Ordrestyring</span>
                         <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Dinero</span>
-                        <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Apacta</span>
-                        <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Minuba</span>
                     </div>
                 </section>
 

@@ -6643,6 +6643,9 @@ const Dashboard = () => {
                                     )}
                                 </div>
 
+                                {/* Lag 1: Ordrestyring/Apacta/Minuba skjult i UI — vi reklamerer ikke længere for dem.
+                                    Backend (edge functions + DB-kolonner) er bevaret med vilje og kan genaktiveres ved at fjerne wrapperen. */}
+                                {false && (<>
                                 <div className="glass-panel">
                                     <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => setExpandedIntegration(prev => prev === 'ordrestyring' ? null : 'ordrestyring')}>
                                         <div style={{ width: '40px', height: '40px', background: '#fce7f3', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#db2777' }}>
@@ -6835,7 +6838,8 @@ const Dashboard = () => {
                                     </div>
                                     )}
                                 </div>
-                                    <SmtpIntegration 
+                                </>)}
+                                    <SmtpIntegration
                                         carpenterProfile={carpenterProfile} 
                                         expandedIntegration={expandedIntegration} 
                                         setExpandedIntegration={setExpandedIntegration} 

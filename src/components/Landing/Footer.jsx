@@ -135,7 +135,7 @@ const TermsContent = ({ onOpenDpa }) => (
         <p className="mb-4 text-justify">6.8. Bison Company er berettiget til at foretage en årlig indeksregulering af abonnementspriserne (typisk 3-5%) uden at dette udgør en væsentlig ændring af aftalen, som kræver særskilt accept.</p>
 
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">7. Integrationer til tredjepart (Regnskabsprogrammer m.v.)</h2>
-        <p className="mb-4 text-justify">7.1. Applikationen tilbyder integrationer til tredjepartssystemer (fx E-conomic, Dinero, Ordrestyring og Apacta). Bison Company påtager sig intet ansvar for fejl, datatab eller nedbrud, der skyldes ændringer i disse tredjepartssystemers API'er eller generelle funktionalitet.</p>
+        <p className="mb-4 text-justify">7.1. Applikationen tilbyder integrationer til tredjepartssystemer (fx E-conomic og Dinero). Bison Company påtager sig intet ansvar for fejl, datatab eller nedbrud, der skyldes ændringer i disse tredjepartssystemers API'er eller generelle funktionalitet.</p>
         <p className="mb-4 text-justify">7.2. Kunden er alene ansvarlig for at kontrollere, at data, der overføres mellem Applikationen og tredjepartssystemer (fx fakturaudkast, varer eller sagsoprettelser), er korrekte og fyldestgørende i overensstemmelse med gældende lovgivning.</p>
 
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-8 mb-4">8. Referenceret i markedsføring</h2>
@@ -259,7 +259,7 @@ const DpaContent = () => (
                     <tr className="border-b border-slate-100 dark:border-slate-800"><td className="py-2 pr-4 align-top">OpenAI, L.L.C.</td><td className="py-2 align-top">Stemmetransskribering og AI-tekstgenerering</td></tr>
                     <tr className="border-b border-slate-100 dark:border-slate-800"><td className="py-2 pr-4 align-top">Anthropic, PBC</td><td className="py-2 align-top">AI-genererede tilbud og support</td></tr>
                     <tr className="border-b border-slate-100 dark:border-slate-800"><td className="py-2 pr-4 align-top">Google LLC (Google Maps)</td><td className="py-2 align-top">Adresseopslag</td></tr>
-                    <tr><td className="py-2 pr-4 align-top">e-conomic, Dinero (Visma), Minuba, Apacta, Ordrestyring</td><td className="py-2 align-top">Regnskab/sagsstyring — aktiveres kun ved Kundens eget tilvalg af integrationen</td></tr>
+                    <tr><td className="py-2 pr-4 align-top">e-conomic, Dinero (Visma)</td><td className="py-2 align-top">Regnskab/sagsstyring — aktiveres kun ved Kundens eget tilvalg af integrationen</td></tr>
                 </tbody>
             </table>
         </div>
