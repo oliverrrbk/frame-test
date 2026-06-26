@@ -44,6 +44,8 @@ const SubscriptionSettings = () => {
     const [subBusy, setSubBusy] = useState(false);
     const [cancelReason, setCancelReason] = useState(null);
     const [cancelNote, setCancelNote] = useState('');
+    const [invoices, setInvoices] = useState([]);
+    const [invoicesLoading, setInvoicesLoading] = useState(false);
 
     useEffect(() => {
         loadSubscriptionData();
@@ -176,6 +178,14 @@ const SubscriptionSettings = () => {
                         setBilling({ cancelAtPeriodEnd: data.cancelAtPeriodEnd, periodEnd: data.periodEnd, status: data.status });
                     }
                 } catch { /* DB-værdien bruges */ }
+            })();
+            (async () => {
+                setInvoicesLoading(true);
+                try {
+                    const { data: inv } = await supabase.functions.invoke('get-invoices');
+                    if (inv?.success) setInvoices(inv.invoices || []);
+                } catch { /* ingen fakturaer vises */ }
+                finally { setInvoicesLoading(false); }
             })();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -340,6 +350,34 @@ const SubscriptionSettings = () => {
                 </div>
             )}
 
+            {/* Betaling fejlede (past_due) — bed dem opdatere kort */}
+            {company.subscription_status === 'past_due' && (
+                <div style={{ background: '#fff', padding: '18px', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #ef4444', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', fontWeight: 'bold', fontSize: '1rem', marginBottom: '4px' }}>
+                        <AlertTriangle size={18} /> Betalingen kunne ikke gennemføres
+                    </div>
+                    <p style={{ color: '#64748b', margin: '0 0 16px 0', fontSize: '0.9rem', lineHeight: '1.5' }}>Vi kunne ikke trække den seneste betaling. Opdater jeres betalingskort, så genoptages adgangen automatisk — der prøves igen af sig selv.</p>
+                    <button onClick={handleManagePortal} disabled={isManaging}
+                        style={{ width: '100%', padding: '11px', borderRadius: '10px', background: '#ef4444', color: 'white', fontWeight: 700, border: 'none', cursor: isManaging ? 'not-allowed' : 'pointer' }}>
+                        {isManaging ? 'Vent venligst...' : 'Opdater betalingskort'}
+                    </button>
+                </div>
+            )}
+
+            {/* Opsagt/udløbet — tilbyd at starte igen */}
+            {company.subscription_status === 'canceled' && (
+                <div style={{ background: '#fff', padding: '18px', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #f59e0b', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b45309', fontWeight: 'bold', fontSize: '1rem', marginBottom: '4px' }}>
+                        <AlertTriangle size={18} /> Abonnementet er udløbet
+                    </div>
+                    <p style={{ color: '#64748b', margin: '0 0 16px 0', fontSize: '0.9rem', lineHeight: '1.5' }}>Jeres adgang er sat på pause. Start abonnementet igen, så er I i gang med det samme — alle jeres data er bevaret.</p>
+                    <button onClick={handleStartCheckout} disabled={isManaging}
+                        style={{ width: '100%', padding: '11px', borderRadius: '10px', background: '#0f172a', color: 'white', fontWeight: 700, border: 'none', cursor: isManaging ? 'not-allowed' : 'pointer' }}>
+                        {isManaging ? 'Vent venligst...' : 'Start abonnement igen'}
+                    </button>
+                </div>
+            )}
+
             {/* ABONNEMENT */}
             <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
 
@@ -443,24 +481,54 @@ const SubscriptionSettings = () => {
                 </div>
             </div>
 
-            {/* Fakturaer */}
+            {/* Faktura-arkiv — vises direkte i Frame */}
             <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <FileText size={20} color="#94a3b8" style={{ marginRight: '16px', flexShrink: 0 }}/>
-                        <div>
-                            <div style={{ fontSize: '1rem', color: '#0f172a' }}>Faktura-arkiv</div>
-                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Bogførings-PDF'er — alle dine kvitteringer</div>
-                        </div>
+                <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', borderBottom: invoices.length > 0 ? '1px solid #f1f5f9' : 'none' }}>
+                    <FileText size={20} color="#94a3b8" style={{ flexShrink: 0 }}/>
+                    <div>
+                        <div style={{ fontSize: '1rem', color: '#0f172a' }}>Faktura-arkiv</div>
+                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Bogførings-PDF'er — alle jeres kvitteringer</div>
                     </div>
-                    <button
-                        onClick={handleManagePortal}
-                        disabled={isManaging || !hasCard}
-                        style={{ background: '#f1f5f9', color: '#334155', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '0.85rem', fontWeight: '600', cursor: isManaging || !hasCard ? 'not-allowed' : 'pointer', opacity: !hasCard ? 0.5 : 1 }}
-                    >
-                        Åbn
-                    </button>
                 </div>
+
+                {invoicesLoading ? (
+                    <div style={{ padding: '28px', display: 'flex', justifyContent: 'center', color: '#94a3b8' }}>
+                        <Loader2 size={22} className="spin" />
+                    </div>
+                ) : invoices.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
+                        {hasCard ? 'Ingen fakturaer endnu — de dukker op her efter første betaling.' : 'Fakturaer vises her, når I har et aktivt abonnement.'}
+                    </div>
+                ) : (
+                    <div>
+                        {invoices.map((inv) => {
+                            const st = inv.status === 'paid'
+                                ? { t: 'Betalt', bg: 'rgba(16,185,129,0.1)', c: '#047857' }
+                                : inv.status === 'open'
+                                    ? { t: 'Åben', bg: 'rgba(245,158,11,0.12)', c: '#b45309' }
+                                    : { t: inv.status, bg: 'rgba(100,116,139,0.1)', c: '#64748b' };
+                            return (
+                                <div key={inv.id} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', borderBottom: '1px solid #f6f8fa' }}>
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: '0.92rem', fontWeight: 600, color: '#0f172a' }}>
+                                            {inv.created ? new Date(inv.created).toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' }) : (inv.number || 'Faktura')}
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                                            <span style={{ background: st.bg, color: st.c, padding: '1px 8px', borderRadius: '6px', fontWeight: 700, fontSize: '0.72rem' }}>{st.t}</span>
+                                            {inv.total != null && <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inv.total.toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {inv.currency} · inkl. moms</span>}
+                                        </div>
+                                    </div>
+                                    {inv.pdf && (
+                                        <a href={inv.pdf} target="_blank" rel="noopener noreferrer"
+                                            style={{ flexShrink: 0, background: '#f1f5f9', color: '#334155', textDecoration: 'none', borderRadius: '9px', padding: '8px 13px', fontSize: '0.84rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                            <FileText size={14} /> Hent PDF
+                                        </a>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#94a3b8' }}>
