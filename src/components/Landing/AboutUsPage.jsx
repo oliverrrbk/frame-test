@@ -5,7 +5,7 @@ import Login from '../Auth/Login';
 import Footer from './Footer';
 import TopNavBar from './TopNavBar';
 import PageTransition from '../ui/PageTransition';
-import { Compass, Layers, Gauge, Code, ArrowRight } from 'lucide-react';
+import { Compass, Layers, Gauge, Code, ArrowRight, RefreshCw } from 'lucide-react';
 import Lenis from 'lenis';
 
 export default function AboutUsPage({ setSession }) {
@@ -83,7 +83,7 @@ export default function AboutUsPage({ setSession }) {
                     >
                         Det vi står for
                     </motion.h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {/* Standard Card 1 */}
                         <motion.div 
                             whileHover={{ y: -5 }}
@@ -148,8 +148,49 @@ export default function AboutUsPage({ setSession }) {
                                 Du står ikke alene med opsætningen. Vi hjælper dig i gang, sætter det hele op og er på telefonen, hvis du har spørgsmål – uden timepris, indtil du har styr på det.
                             </p>
                         </motion.div>
+
+                        {/* Standard Card 4 */}
+                        <motion.div
+                            whileHover={{ y: -5 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.4 }}
+                            viewport={{ once: true }}
+                            style={{ WebkitTransform: "translateZ(0)", willChange: "transform", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
+                            className="bg-white dark:bg-slate-900 rounded-[2rem] p-10 flex flex-col h-full shadow-sm hover:shadow-md transition-all duration-500 border border-slate-100 dark:border-slate-800 relative overflow-hidden group"
+                        >
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-600/5 rounded-full blur-[40px] group-hover:bg-emerald-600/10 transition-all pointer-events-none"></div>
+                            <div className="mb-6 flex items-center gap-3 relative z-10">
+                                <div className="text-emerald-600 dark:text-emerald-400">
+                                    <RefreshCw size={28} />
+                                </div>
+                                <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">Et system i konstant udvikling</h3>
+                            </div>
+                            <p className="text-slate-500 dark:text-slate-400 leading-relaxed flex-grow relative z-10">
+                                Vi ser ikke vores brugere som kunder, men som samarbejdspartnere. Mangler du en funktion, eller har du en idé, der gør det lettere at være håndværker, bygger vi den i fællesskab. Systemet bliver aldrig færdigt – det udvikler sig hele tiden sammen med dem, der bruger det.
+                            </p>
+                        </motion.div>
                     </div>
                 </section>
+
+                {/* Bridge CTA between values and story */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="w-full flex justify-center mb-32 relative z-10"
+                >
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate('/register')}
+                        style={{ WebkitTransform: "translateZ(0)" }}
+                        className="group bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-8 py-4 rounded-full font-bold text-[clamp(1rem,1.5vw,1.125rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl whitespace-nowrap flex items-center gap-3"
+                    >
+                        Kom i gang her
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </motion.button>
+                </motion.div>
 
                 {/* Origin Section */}
                 <section className="mb-40 w-full max-w-[1440px] relative z-10">

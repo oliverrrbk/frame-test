@@ -303,7 +303,7 @@ export default function Footer() {
                             <div className="text-md font-bold text-slate-700 dark:text-slate-200 mb-6">
                                 Bison Frame
                             </div>
-                            <p className="mb-6 leading-relaxed">Præcise overslag til den moderne håndværker. Spar mere tid i hverdagen, og vind flere opgaver hos kunden.</p>
+                            <p className="mb-6 leading-relaxed">Et simpelt system, der virker.<br />Lavet i samarbejde med håndværkere til håndværkere.</p>
                             
                             <div className="flex flex-col gap-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800 pt-6">
                                 <div className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Udviklet af Bison Company ApS</div>
