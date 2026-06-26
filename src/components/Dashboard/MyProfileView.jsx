@@ -438,6 +438,18 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                 </div>
             </div>
 
+            {/* DINE DATA — GDPR-dataportabilitet (kun mester/admin) */}
+            {isAdmin && (
+                <div style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: '20px', padding: isMobile ? '20px' : '24px', boxShadow: '0 10px 30px rgba(15,23,42,0.06)', marginTop: '8px' }}>
+                    <h3 style={{ fontSize: isMobile ? '1.1rem' : '1.4rem', color: '#0f172a', margin: '0 0 6px', fontWeight: 800, letterSpacing: '-0.5px' }}>Dine data</h3>
+                    <p style={{ margin: '0 0 18px', color: '#64748b', fontSize: isMobile ? '0.9rem' : '1rem' }}>Hent alle dine sager, tilbud og underleverandører som én fil. Det er dine data — du kan altid tage dem med.</p>
+                    <button onClick={exportMyData} disabled={exporting}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '13px 20px', borderRadius: '14px', border: 'none', background: exporting ? '#64748b' : '#0f172a', color: '#fff', fontWeight: 700, fontSize: '0.95rem', cursor: exporting ? 'wait' : 'pointer' }}>
+                        <Download size={18} /> {exporting ? 'Henter…' : 'Eksportér mine data'}
+                    </button>
+                </div>
+            )}
+
             {/* SMS TILBUDS-GENVEJ — kun for mester/admin */}
             {isAdmin && getFeatures(myProfile?.business_type).publicPortal && smsSection}
         </div>
