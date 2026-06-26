@@ -929,7 +929,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             </div>
 
             {/* Underleverandører (eksterne partnere uden login) */}
-            <SubcontractorManager profile={profile} isMobile={isMobile} />
+            <SubcontractorManager profile={profile} isMobile={isMobile} leadsData={leadsData} />
 
             {/* ---- BEKRÆFT ADMIN-FORFREMMELSE ---- */}
             {pendingPromo && createPortal(

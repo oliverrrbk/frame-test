@@ -35,9 +35,15 @@ export default async function handler(req, res) {
 
         // 2. Find kalderens firma + bekræft at han ejer/administrerer sagen
         const { data: callerProfile } = await supabase
-            .from('carpenters').select('id, role, company_id, company_name').eq('id', caller.id).single();
+            .from('carpenters').select('id, role, company_id, company_name, subscription_status').eq('id', caller.id).single();
         if (!callerProfile) return res.status(403).json({ error: 'Profil ikke fundet.' });
         const callerCompanyId = callerProfile.company_id || callerProfile.id;
+
+        // Guardrail: kun aktive/prøve-konti må sprede gæste-logins (en udløbet konto skal ikke kunne blive ved).
+        const subStatus = callerProfile.subscription_status || 'trialing';
+        if (!['active', 'trialing'].includes(subStatus)) {
+            return res.status(402).json({ error: 'Dit abonnement er ikke aktivt. Forny for at sende gæste-logins.' });
+        }
 
         const { data: lead } = await supabase.from('leads').select('id, carpenter_id').eq('id', leadId).single();
         if (!lead) return res.status(404).json({ error: 'Sagen blev ikke fundet.' });
@@ -103,37 +109,56 @@ export default async function handler(req, res) {
             invite_sent_at: new Date().toISOString(),
         }], { onConflict: 'lead_id,auth_user_id' });
 
-        // 6. Generér et personligt link hvor gæsten vælger adgangskode + godkender vilkår
-        const redirectTo = `${origin || 'https://bisonframe.dk'}/guest/aktiver`;
-        const { data: linkData } = await supabase.auth.admin.generateLink({
-            type: 'recovery',
-            email,
-            options: { redirectTo },
-        });
-        const actionLink = linkData?.properties?.action_link || `${redirectTo}`;
+        // 6. NOTIFIKATION — afhænger af om personen er ny eller en EKSISTERENDE gæst:
+        if (isNewUser) {
+            // NY: send password-/vilkårs-mail (engangs-onboarding).
+            const redirectTo = `${origin || 'https://bisonframe.dk'}/guest/aktiver`;
+            const { data: linkData } = await supabase.auth.admin.generateLink({
+                type: 'recovery',
+                email,
+                options: { redirectTo },
+            });
+            const actionLink = linkData?.properties?.action_link || `${redirectTo}`;
 
-        // 7. Send white-label invitations-mail (på vegne af mesterens firma)
-        const resendApiKey = process.env.RESEND_API_KEY;
-        if (resendApiKey) {
-            const html = getGuestInviteTemplate(
-                (name || '').split(' ')[0],
-                callerProfile.company_name || 'En virksomhed',
-                projectTitle || 'et byggeprojekt',
-                actionLink
-            );
+            const resendApiKey = process.env.RESEND_API_KEY;
+            if (resendApiKey) {
+                const html = getGuestInviteTemplate(
+                    (name || '').split(' ')[0],
+                    callerProfile.company_name || 'En virksomhed',
+                    projectTitle || 'et byggeprojekt',
+                    actionLink
+                );
+                try {
+                    await fetch('https://api.resend.com/emails', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            from: 'Bison Frame <info@bisonframe.dk>',
+                            to: [email],
+                            subject: `Du er tilføjet som underentreprenør i Bison Frame`,
+                            html,
+                        }),
+                    });
+                } catch (mailErr) {
+                    console.error('Gæste-mail fejlede:', mailErr);
+                }
+            }
+        } else {
+            // EKSISTERENDE gæst tilføjet til en NY sag → ingen genlogin, bare en let PUSH.
             try {
-                await fetch('https://api.resend.com/emails', {
+                await fetch(`${supabaseUrl}/functions/v1/send-push-reminders`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseKey}` },
                     body: JSON.stringify({
-                        from: 'Bison Frame <info@bisonframe.dk>',
-                        to: [email],
-                        subject: `Du er tilføjet som underentreprenør i Bison Frame`,
-                        html,
+                        type: 'guest_new_project',
+                        user_id: guestUserId,
+                        lead_id: leadId,
+                        company_name: callerProfile.company_name || 'En virksomhed',
+                        project_title: projectTitle || 'et projekt',
                     }),
                 });
-            } catch (mailErr) {
-                console.error('Gæste-mail fejlede:', mailErr);
+            } catch (pushErr) {
+                console.error('Gæste-push fejlede:', pushErr);
             }
         }
 

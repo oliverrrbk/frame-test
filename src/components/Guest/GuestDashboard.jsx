@@ -7,6 +7,7 @@ import {
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { fetchMyMemberships, getMemberRoleLabel, logGuestTimeEntry } from '../../utils/projectMembers';
+import { subscribeToPush, isPushSupported } from '../../utils/pushSubscription';
 
 // Gæste-appen: en bevidst MINIMAL, mobil-først visning for underentreprenører.
 // Han ser KUN de sager han er koblet på, kan læse projektet og føre SINE egne timer.
@@ -47,6 +48,19 @@ export default function GuestDashboard({ myProfile }) {
     const [showNudge, setShowNudge] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [showTimeForm, setShowTimeForm] = useState(false);
+    const [pushState, setPushState] = useState('unknown');   // 'unknown' | 'prompt' | 'on' | 'unsupported'
+
+    // Det første en gæst møder: tilbud om at slå notifikationer til (giver bedst mening).
+    useEffect(() => {
+        if (!isPushSupported()) { setPushState('unsupported'); return; }
+        setPushState(Notification.permission === 'granted' ? 'on' : 'prompt');
+    }, []);
+
+    const enablePush = async () => {
+        const { ok } = await subscribeToPush();
+        if (ok) { setPushState('on'); toast.success('Notifikationer slået til!'); }
+        else toast('Du kan slå dem til senere i indstillinger.', { icon: '🔔' });
+    };
 
     const reload = async () => {
         try {
@@ -165,6 +179,17 @@ export default function GuestDashboard({ myProfile }) {
                 <h1 style={{ margin: 0, fontSize: '1.7rem', fontWeight: 900, color: '#0f172a' }}>Hej {firstName}!</h1>
                 <p style={{ margin: '4px 0 0', color: '#64748b' }}>Dine sager og timer ét sted.</p>
             </div>
+
+            {pushState === 'prompt' && (
+                <div style={{ borderRadius: '20px', padding: '18px 20px', background: 'linear-gradient(135deg, #0f172a, #1e293b)', color: '#fff', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 16px 34px -12px rgba(15,23,42,0.5)' }}>
+                    <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: '14px', background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>🔔</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.98rem' }}>Slå notifikationer til</div>
+                        <div style={{ fontSize: '0.82rem', opacity: 0.85 }}>Få besked når du tilføjes på en sag eller mangler at registrere timer.</div>
+                    </div>
+                    <button onClick={enablePush} style={{ flexShrink: 0, padding: '10px 16px', borderRadius: '12px', border: 'none', background: '#fff', color: '#0f172a', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' }}>Slå til</button>
+                </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div style={{ ...GLASS, borderRadius: '20px', padding: '18px' }}>

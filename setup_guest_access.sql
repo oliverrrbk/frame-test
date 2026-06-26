@@ -262,6 +262,17 @@ BEGIN
                                 FROM jsonb_array_elements(COALESCE(l.raw_data->'material_list', '[]'::jsonb)) m
                             ), l.raw_data->'material_list')
                         )
+                        -- GÆST: må KUN se sine EGNE timer (ikke andres). Ellers kunne en snu
+                        -- underentreprenør-mester læse sine svendes/andres timer i payloaden →
+                        -- begyndelsen på gratis team-overblik. Svend/lærling beholder fuldt hold.
+                        || (CASE WHEN v_role = 'guest' THEN jsonb_build_object(
+                            'time_entries',
+                            COALESCE((
+                                SELECT jsonb_agg(t)
+                                FROM jsonb_array_elements(COALESCE(l.raw_data->'time_entries', '[]'::jsonb)) t
+                                WHERE t->>'employeeId' = auth.uid()::text
+                            ), '[]'::jsonb)
+                        ) ELSE '{}'::jsonb END)
                      )
             END
         FROM leads l

@@ -369,6 +369,31 @@ serve(async (req) => {
             });
         }
 
+        if (type === "guest_new_project") {
+            // En gæst er tilføjet på en NY sag (uden genaktivering). Send en let push.
+            const userId = String(bodyData?.user_id || "");
+            const leadId = String(bodyData?.lead_id || "");
+            const companyName = bodyData?.company_name || "En virksomhed";
+            const projectTitle = bodyData?.project_title || "et projekt";
+            if (userId) {
+                await sendToUser(supabaseClient, stats, {
+                    userId,
+                    type: "guest_new_project",
+                    relatedId: leadId,
+                    slot: `guest-project-${leadId}-${userId}`,
+                    payload: {
+                        title: "Ny sag i Bison Frame",
+                        body: `${companyName} har tilføjet dig på ${projectTitle}.`,
+                        url: "/dashboard"
+                    }
+                });
+            }
+            return new Response(JSON.stringify({ success: true, ...stats }), {
+                headers: { "Content-Type": "application/json" },
+                status: 200
+            });
+        }
+
         if (type === "case_message_notification") {
             const leadId = bodyData?.lead_id;
             const message = bodyData?.message;
