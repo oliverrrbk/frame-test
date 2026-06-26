@@ -171,7 +171,7 @@ const PREVIEW_CSS = `
   .qqb-rec{animation:qqbrec 1s ease-in-out infinite;}
 `;
 
-export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null }) {
+export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null, draftCreator = null }) {
     const [busy, setBusy] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     // Felt-fejl ved afsendelse (markeres rødt) + bekræftelses-popup før mailen sendes.
@@ -586,8 +586,16 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
 
     // ---- Gem (kladde eller send) ----
     const save = async (sendToCustomer) => {
-        if (!customer.name.trim()) return toast.error('Udfyld kundens navn.');
+        if (!customer.name.trim()) {
+            // Markér feltet rødt (som ved afsendelse) i stedet for kun en toast.
+            setFieldErrors(prev => ({ ...prev, name: true }));
+            if (isMobile) setPreviewTab('edit'); // skift til Rediger-fanen så fejlen er synlig
+            toast.error('Udfyld kundens navn for at gemme.');
+            return;
+        }
         if (sendToCustomer && (!customer.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email))) {
+            setFieldErrors(prev => ({ ...prev, email: true }));
+            if (isMobile) setPreviewTab('edit');
             return toast.error('Udfyld en gyldig email for at sende tilbuddet.');
         }
         setBusy(true);
@@ -632,8 +640,19 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             const nextQuoteSettings = { ...(initialLead?.raw_data?.quote_settings || {}), validityDays: num(validityDays) || 14 };
             if (isSendingNow) delete nextQuoteSettings.validUntil;
 
+            // Hvem lavede tilbuddet (avatar-attribution). En MEDARBEJDER tilføjes til
+            // assigned_workers, så han kan se sin EGEN kladde (eksisterende RLS tillader det).
+            // Mester ser den altid via carpenter_id, så ejeren tilføjes ikke (overflødigt).
+            const ownerId = carpenter?.company_id || carpenter?.id;
+            const isEmployeeCreator = !!draftCreator?.id && draftCreator.id !== ownerId;
+            const existingAssigned = initialLead?.raw_data?.assigned_workers || [];
+
             const raw_data = {
                 ...(initialLead?.raw_data || {}),
+                created_by: initialLead?.raw_data?.created_by || draftCreator?.id || null,
+                ...(isEmployeeCreator && !existingAssigned.includes(draftCreator.id)
+                    ? { assigned_workers: [...existingAssigned, draftCreator.id] }
+                    : {}),
                 is_manual_quote: true,
                 manual_quote: quoteObj,
                 quote_settings: nextQuoteSettings,

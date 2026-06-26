@@ -6565,6 +6565,7 @@ const Dashboard = () => {
                             {(createLeadMode === 'quick' || (createLeadMode === null && !features.calculator)) && (
                                 <QuickQuoteBuilder
                                     carpenter={carpenterProfile}
+                                    draftCreator={myProfile}
                                     isMobile={isMobile}
                                     onCancel={() => {
                                         setIsCreateLeadModalOpen(false);
@@ -6629,6 +6630,7 @@ const Dashboard = () => {
                         <div style={{ padding: '0' }}>
                             <QuickQuoteBuilder
                                 carpenter={carpenterProfile}
+                                draftCreator={myProfile}
                                 isMobile={isMobile}
                                 initialLead={editQuoteLead}
                                 onCancel={() => setEditQuoteLead(null)}
