@@ -94,6 +94,20 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Fang browserens "installer app"-event tidligt (det fyrer ofte før React er mountet),
+         så vi kan tilbyde en rigtig ét-tryks-installation senere via pwaInstall.js. -->
+    <script>
+      window.__bisonInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__bisonInstallPrompt = e;
+        window.dispatchEvent(new Event('bison-install-available'));
+      });
+      window.addEventListener('appinstalled', function () {
+        window.__bisonInstallPrompt = null;
+        window.dispatchEvent(new Event('bison-install-done'));
+      });
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

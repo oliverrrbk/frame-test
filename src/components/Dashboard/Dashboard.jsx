@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Droplets, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown, Play, X, CalendarClock } from 'lucide-react';
+import { Home, Droplets, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown, Play, X, CalendarClock, Smartphone } from 'lucide-react';
 // jsPDF + html2canvas udskydes (dynamisk import i PDF-handlerne) for hurtigere load
 import { GoogleMap, useLoadScript, Marker, InfoWindow, MarkerClusterer } from '@react-google-maps/api';
 import { supabase } from '../../supabaseClient';
@@ -40,8 +40,9 @@ import { getRoleLabel } from '../../utils/roles';
 import CustomProjectCreator from './CustomProjectCreator';
 import DrawingsGallery from '../Drawings/DrawingsGallery';
 import CalendarView from './CalendarView';
-import PwaOnboarding from './PwaOnboarding';
 import PushNotificationPrompt from './PushNotificationPrompt';
+import InstallAppModal from './InstallAppModal';
+import { isStandalonePWA } from '../../utils/pwa';
 import AccountSettingsView from './AccountSettingsView';
 import ChatTab from './ChatTab';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
@@ -685,6 +686,13 @@ const Dashboard = () => {
     // Trial-påmindelse på mobil: lille pille der kan foldes ud / skjules — så den aldrig blokerer.
     const [trialPillExpanded, setTrialPillExpanded] = useState(false);
     const [trialPillDismissed, setTrialPillDismissed] = useState(false);
+    // "Få Frame som app": 'menu' (brugeren klikkede) | 'auto' (venligt tilbud efter onboarding på mobil) | null
+    const [installModalSource, setInstallModalSource] = useState(null);
+    const installAutoShownRef = useRef(false);
+    const snoozeInstall = () => {
+        try { localStorage.setItem('bison_install_snooze_until', String(Date.now() + 3 * 24 * 60 * 60 * 1000)); } catch { /* ignore */ }
+        setInstallModalSource(null);
+    };
     
     // DAILY MESSAGE GLOBAL STATE
     const [showDailyMessagePopup, setShowDailyMessagePopup] = useState(false);
@@ -842,7 +850,22 @@ const Dashboard = () => {
     const [teamMembers, setTeamMembers] = useState([]);
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [showSetPassword, setShowSetPassword] = useState(false);
-    
+
+    // Venligt "Få Frame som app"-tilbud på mobil — kun når onboarding/password er overstået,
+    // appen ikke allerede er installeret, og man ikke har trykket "Mind mig senere" for nylig.
+    useEffect(() => {
+        if (installAutoShownRef.current) return;
+        if (!carpenterProfile || carpenterProfile.requires_password_change) return;
+        if (showOnboarding || showSetPassword) return;
+        if (!isMobile || isStandalonePWA()) return;
+        try {
+            const until = parseInt(localStorage.getItem('bison_install_snooze_until') || '0', 10);
+            if (Date.now() < until) return;
+        } catch { /* ignore */ }
+        const t = setTimeout(() => { installAutoShownRef.current = true; setInstallModalSource('auto'); }, 1500);
+        return () => clearTimeout(t);
+    }, [carpenterProfile, showOnboarding, showSetPassword, isMobile]);
+
     // Feedback State
     const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
     const [feedbackText, setFeedbackText] = useState('');
@@ -3291,6 +3314,17 @@ const Dashboard = () => {
                                         <MessageSquare size={18} className="text-blue-500" />
                                         Giv feedback
                                     </button>
+                                    {/* Skjules automatisk når appen allerede er installeret (standalone). */}
+                                    {!isStandalonePWA() && (
+                                        <button
+                                            onClick={() => { setInstallModalSource('menu'); setIsProfileMenuOpen(false); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', color: 'var(--text-primary)', fontWeight: '500', transition: 'background 0.2s' }}
+                                            className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        >
+                                            <Smartphone size={18} className="text-blue-500" />
+                                            Få Frame som app
+                                        </button>
+                                    )}
                                     <div style={{ height: '1px', background: 'var(--border-light)', margin: '4px 0' }}></div>
                                     <button 
                                         onClick={() => { supabase.auth.signOut(); setIsProfileMenuOpen(false); }}
@@ -7248,7 +7282,12 @@ const Dashboard = () => {
                 document.body
             )}
 
-            {!carpenterProfile?.requires_password_change && <PwaOnboarding />}
+            {installModalSource && (
+                <InstallAppModal
+                    onClose={() => setInstallModalSource(null)}
+                    onRemindLater={installModalSource === 'auto' ? snoozeInstall : undefined}
+                />
+            )}
             <PushNotificationPrompt />
         </div>
     );
