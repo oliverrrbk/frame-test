@@ -284,10 +284,12 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const [previewTab, setPreviewTab] = useState('edit'); // 'edit' | 'pdf' | 'mail'
     const [regenerating, setRegenerating] = useState(false);
     // Trækbare kolonne-bredder (desktop) + scroll-container (mobil swipe).
-    // Standard-størrelsesforhold: fokus på tilbuddet — bredt Rediger-panel + størst PDF i midten,
-    // mailen er smallere (den kigger man på til sidst). Kan stadig trækkes manuelt bagefter.
-    const [leftW, setLeftW] = useState(420);
-    const [rightW, setRightW] = useState(320);
+    // Standard-fordeling: ~34% Rediger · ~37% PDF i midten · ~29% Mail — den mest
+    // behagelige startvisning. Beregnes ud fra skærmbredden ved åbning, så forholdet
+    // holder på både store skærme og almindelig desktop. Kan stadig trækkes manuelt.
+    const initVw = typeof window !== 'undefined' ? window.innerWidth : 1440;
+    const [leftW, setLeftW] = useState(Math.round(Math.min(980, Math.max(360, initVw * 0.345))));
+    const [rightW, setRightW] = useState(Math.round(Math.min(840, Math.max(300, initVw * 0.295))));
     const [resizing, setResizing] = useState(false);
     const scrollRef = useRef(null);
     // PDF-fokus: på bærbare skærme er midter-kolonnen for smal til at læse tilbuddet.
