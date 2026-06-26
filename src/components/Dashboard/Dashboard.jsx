@@ -3978,7 +3978,7 @@ const Dashboard = () => {
                                                             <Calculator size={18} style={{ color: '#60a5fa' }} />
                                                             <div>
                                                                 <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                                                    {lead.project_category === 'special' ? 'Estimat (Intern kladde)' : 'Overslag givet'}
+                                                                    {lead.project_category === 'special' ? 'Estimat (Intern kladde)' : (lead.raw_data?.is_manual_quote ? 'Tilbudspris' : 'Overslag givet')}
                                                                 </span>
                                                                 <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{lead.raw_data?.calc_data?.finalEstimateIncVat ? `${lead.raw_data.calc_data.finalEstimateIncVat.toLocaleString('da-DK')} kr.` : lead.price_estimate}</span>
                                                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}> inkl. moms</span>
