@@ -78,7 +78,7 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, is
                     onMouseEnter={(e) => hover(e, '#f59e0b', true)}
                     onMouseLeave={(e) => hover(e, '#f59e0b', false)}
                 >
-                    {!isMobile && <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: '#111', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '4px 12px', borderRadius: '999px', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,0,0,.15)' }}>Nemmest · start her</div>}
+                    {!isMobile && allowCalculator && <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: '#111', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '4px 12px', borderRadius: '999px', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,0,0,.15)' }}>Nemmest · start her</div>}
                     <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <FileText size={40} color="#f59e0b" />
                     </div>

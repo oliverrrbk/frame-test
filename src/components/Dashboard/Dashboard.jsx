@@ -3498,6 +3498,7 @@ const Dashboard = () => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingBottom: '10px', flexWrap: 'wrap', gap: '16px' }}>
                                     <div className="desktop-filters" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
                                         {['Tilbudskladder', 'Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag', 'Historik']
+                                            .filter(status => features.publicPortal || status !== 'Ny forespørgsel')
                                             .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Sæt i bero' || status === 'Historik')
                                             .map(status => (
                                             <button 
@@ -3591,6 +3592,7 @@ const Dashboard = () => {
                                                 overflow: 'hidden'
                                             }}>
                                                 {['Tilbudskladder', 'Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Afbrudt Sag', 'Historik']
+                                                    .filter(status => features.publicPortal || status !== 'Ny forespørgsel')
                                                     .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Historik')
                                                     .map(status => (
                                                         <button
@@ -6526,7 +6528,7 @@ const Dashboard = () => {
                     setCreateLeadMode(null);
                 }} style={{ position: isMobile ? 'fixed' : 'absolute', top: isMobile ? 'calc(env(safe-area-inset-top) + 12px)' : '20px', right: isMobile ? '16px' : '20px', background: '#f3f1ed', border: 'none', fontSize: isMobile ? '1.4rem' : '1.2rem', width: isMobile ? '42px' : '36px', height: isMobile ? '42px' : '36px', borderRadius: '50%', cursor: 'pointer', color: '#6b7280', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100001, boxShadow: isMobile ? '0 2px 8px rgba(0,0,0,0.15)' : 'none' }}>×</button>
                         <div style={{ padding: '0' }}>
-                            {createLeadMode === null && (
+                            {createLeadMode === null && features.calculator && (
                                 <CreateLeadSelector
                                     isMobile={isMobile}
                                     allowCalculator={features.calculator}
@@ -6559,7 +6561,8 @@ const Dashboard = () => {
                                 />
                             )}
 
-                            {createLeadMode === 'quick' && (
+                            {/* Ikke-tømrere har kun Hurtigt tilbud → spring vælgeren over og åbn den direkte. */}
+                            {(createLeadMode === 'quick' || (createLeadMode === null && !features.calculator)) && (
                                 <QuickQuoteBuilder
                                     carpenter={carpenterProfile}
                                     isMobile={isMobile}
@@ -6824,7 +6827,7 @@ const Dashboard = () => {
                 ),
                 document.body
             )}
-            {activeTab === 'overview' && effectiveRole === 'admin' && (
+            {activeTab === 'overview' && effectiveRole === 'admin' && features.publicPortal && (
                 <MobileQuickShare carpenterProfile={carpenterProfile} />
             )}
 

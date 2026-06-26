@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { getFeatures } from '../../utils/features';
 import { 
     Info, 
     TrendingUp, 
@@ -71,6 +72,8 @@ function CreateQuoteButton({ onClick, fullWidth = false }) {
 }
 
 export default function DashboardOverview({ leadsData, carpenterProfile, myProfile, setActiveTab, setSelectedLead, setTargetCaseId, onCreateQuote }) {
+    // Kun tømrere har en offentlig beregner-portal at dele → skjul del/kopiér-link-UI for andre fag.
+    const canSharePortal = getFeatures(carpenterProfile?.business_type).publicPortal;
     const [timeframe, setTimeframe] = useState('30d'); // '7d', '30d', 'ytd', 'all'
     const [selectedMetric, setSelectedMetric] = useState('won_revenue'); 
 
@@ -232,20 +235,23 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                     {/* Mobil: Lav tilbud + Kopiér link side om side (50/50). Desktop bruger blokken ovenfor + banneret til højre. */}
                     <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
                         {onCreateQuote && <div style={{ flex: 1, display: 'flex' }}><CreateQuoteButton onClick={onCreateQuote} fullWidth /></div>}
-                        <button
-                            onClick={() => {
-                                const baseUrl = window.location.origin.includes('localhost') ? window.location.origin : 'https://bisonframe.dk';
-                                navigator.clipboard.writeText(`${baseUrl}/${carpenterProfile?.slug || 't'}`);
-                                toast.success('Kopieret til udklipsholder!');
-                            }}
-                            style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px 12px', borderRadius: '999px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.35)', color: '#059669', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                        >
-                            <Link size={16} /> Kopiér link
-                        </button>
+                        {canSharePortal && (
+                            <button
+                                onClick={() => {
+                                    const baseUrl = window.location.origin.includes('localhost') ? window.location.origin : 'https://bisonframe.dk';
+                                    navigator.clipboard.writeText(`${baseUrl}/${carpenterProfile?.slug || 't'}`);
+                                    toast.success('Kopieret til udklipsholder!');
+                                }}
+                                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px 12px', borderRadius: '999px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.35)', color: '#059669', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                                <Link size={16} /> Kopiér link
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 {/* Thin, compact link banner — kun desktop (mobil har egen kompakt række ovenfor) */}
+                {canSharePortal && (
                 <div className="copy-link-banner hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '8px 12px 8px 16px', borderRadius: '999px' }}>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Link size={14} color="#10b981" /> Dit tilbudslink:
@@ -264,6 +270,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                         <Copy size={12} /> Kopiér
                     </button>
                 </div>
+                )}
             </div>
 
             {/* NY SEKTION: Top-Level KPI Kort */}
