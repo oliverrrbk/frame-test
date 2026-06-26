@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
 import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus } from 'lucide-react';
-import { Autocomplete } from '@react-google-maps/api';
 import toast from 'react-hot-toast';
 import { computePrice, formatKr } from '../../utils/pricing';
 
@@ -12,8 +11,18 @@ const Register = ({ setSession }) => {
     const [companyName, setCompanyName] = useState('');
     const [cvr, setCvr] = useState('');
     const [ownerName, setOwnerName] = useState('');
-    const [address, setAddress] = useState('');
+    const [address, setAddress] = useState('');      // vej + husnr
+    const [zip, setZip] = useState('');               // postnummer
+    const [city, setCity] = useState('');             // by
     const [isAddressValid, setIsAddressValid] = useState(false);
+    const [addrSuggestions, setAddrSuggestions] = useState([]);
+    const [showAddrSuggestions, setShowAddrSuggestions] = useState(false);
+    const addrDebounceRef = useRef(null);
+    const addrBlurRef = useRef(null);
+    useEffect(() => () => {
+        if (addrDebounceRef.current) clearTimeout(addrDebounceRef.current);
+        if (addrBlurRef.current) clearTimeout(addrBlurRef.current);
+    }, []);
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -28,21 +37,50 @@ const Register = ({ setSession }) => {
     const [errorMsg, setErrorMsg] = useState('');
     const [isSuccess, setIsSuccess] = useState(false);
 
-    const [autocomplete, setAutocomplete] = useState(null);
+    // Adresse-autofuldførelse via DAWA (dataforsyningen) — officiel dansk adresse-API,
+    // ingen nøgle nødvendig. Giver vej, husnr, postnr OG by i ét hug. Samme kilde som
+    // resten af systemet bruger til postnr→by.
+    const handleAddressChange = (value) => {
+        setAddress(value);
+        setIsAddressValid(false);
+        if (addrDebounceRef.current) clearTimeout(addrDebounceRef.current);
+        if (!value || value.trim().length < 3) {
+            setAddrSuggestions([]);
+            setShowAddrSuggestions(false);
+            return;
+        }
+        addrDebounceRef.current = setTimeout(async () => {
+            try {
+                const res = await fetch(`https://api.dataforsyningen.dk/adgangsadresser/autocomplete?q=${encodeURIComponent(value)}&per_side=6`);
+                if (!res.ok) return;
+                const data = await res.json();
+                setAddrSuggestions(Array.isArray(data) ? data : []);
+                setShowAddrSuggestions(true);
+            } catch { /* netværksfejl — ignorér, brugeren kan skrive manuelt */ }
+        }, 200);
+    };
 
-    const onLoad = (autoC) => setAutocomplete(autoC);
-    
-    const onPlaceChanged = () => {
-        if (autocomplete) {
-            const place = autocomplete.getPlace();
-            // Hvis Google returnerer en 'formatted_address' eller et 'name' som ikke bare er den rå tekst,
-            // er det et ægte sted valgt fra listen.
-            if (place && (place.formatted_address || place.address_components)) {
-                setAddress(place.formatted_address || place.name);
-                setIsAddressValid(true);
-            } else {
-                setIsAddressValid(false);
-            }
+    const selectAddress = (item) => {
+        const a = item?.adgangsadresse || {};
+        const street = [a.vejnavn, a.husnr].filter(Boolean).join(' ').trim();
+        setAddress(street || item.tekst || '');
+        if (a.postnr) setZip(a.postnr);
+        if (a.postnrnavn) setCity(a.postnrnavn);
+        setIsAddressValid(!!(street && a.postnr));
+        setAddrSuggestions([]);
+        setShowAddrSuggestions(false);
+    };
+
+    // Skriver man et postnummer manuelt, slår vi byen op (DAWA) — så systemet altid
+    // kender byen lige så snart det kender postnummeret.
+    const handleZipChange = (value) => {
+        const z = value.replace(/[^\d]/g, '').slice(0, 4);
+        setZip(z);
+        if (z.length === 4) {
+            fetch(`https://api.dataforsyningen.dk/postnumre/${z}`)
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(d => { if (d && d.navn) setCity(d.navn); })
+                .catch(() => { /* ukendt postnr — lad brugeren udfylde by selv */ });
         }
     };
 
@@ -74,8 +112,18 @@ const Register = ({ setSession }) => {
             return;
         }
 
+        if (!zip || !city) {
+            setErrorMsg("Vælg din adresse fra listen, eller udfyld postnummer og by — så systemet kan udregne køreafstande.");
+            return;
+        }
+
         setLoading(true);
         setErrorMsg('');
+
+        // Fuld adresse (vej, postnr by) — bevares som ét felt så resten af systemet
+        // (køreafstande, fakturahoved m.m.) fungerer uændret. Postnr + by sendes også
+        // separat, så de kan genbruges struktureret.
+        const fullAddress = [address, [zip, city].filter(Boolean).join(' ')].filter(Boolean).join(', ').trim();
 
         // 1. Opret bruger i Supabase Auth og GEM data i "rygsækken" (user_metadata)
         const { data, error } = await supabase.auth.signUp({
@@ -86,7 +134,9 @@ const Register = ({ setSession }) => {
                     company_name: companyName,
                     cvr: cvr,
                     owner_name: ownerName,
-                    address: address,
+                    address: fullAddress,
+                    zip: zip,
+                    city: city,
                     phone: phone,
                     email: email,
                     tier: 'role_based',
@@ -292,38 +342,58 @@ const Register = ({ setSession }) => {
                                     </div>
                                 </div>
 
-                                {/* Adresse */}
+                                {/* Adresse (DAWA-autofuldførelse) */}
                                 <div className="flex flex-col gap-1.5 md:col-span-2">
                                     <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Firmaadresse *</label>
                                     <div className="relative">
                                         <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10" size={18} />
-                                        {window.google && window.google.maps && window.google.maps.places ? (
-                                            <Autocomplete 
-                                                onLoad={onLoad} 
-                                                onPlaceChanged={onPlaceChanged} 
-                                                options={{ 
-                                                    componentRestrictions: { country: "dk" },
-                                                    fields: ['formatted_address', 'name']
-                                                }}
-                                            >
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Søg på firmaets adresse"
-                                                    value={address}
-                                                    onChange={(e) => {
-                                                        setAddress(e.target.value);
-                                                        setIsAddressValid(false);
-                                                    }}
-                                                    required 
-                                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl pl-11 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium relative z-0 text-[15px]"
-                                                    onKeyDown={(e) => {
-                                                        if(e.key === 'Enter') e.preventDefault();
-                                                    }}
-                                                />
-                                            </Autocomplete>
-                                        ) : (
-                                            <input type="text" placeholder="Byggevej 12, 1234 Byen" value={address} onChange={e=>setAddress(e.target.value)} required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl pl-11 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-[15px]" />
+                                        <input
+                                            type="text"
+                                            placeholder="Søg på firmaets adresse"
+                                            value={address}
+                                            onChange={(e) => handleAddressChange(e.target.value)}
+                                            onFocus={() => { if (addrSuggestions.length) setShowAddrSuggestions(true); }}
+                                            onBlur={() => { addrBlurRef.current = setTimeout(() => setShowAddrSuggestions(false), 150); }}
+                                            autoComplete="off"
+                                            required
+                                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl pl-11 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-[15px]"
+                                            onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+                                        />
+                                        {showAddrSuggestions && addrSuggestions.length > 0 && (
+                                            <ul className="absolute z-20 left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden max-h-64 overflow-y-auto">
+                                                {addrSuggestions.map((item, idx) => (
+                                                    <li key={item.tekst + idx}>
+                                                        <button
+                                                            type="button"
+                                                            onMouseDown={(e) => { e.preventDefault(); selectAddress(item); }}
+                                                            className="w-full text-left px-4 py-3 text-[14px] text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2.5 border-b border-slate-50 dark:border-slate-800 last:border-0"
+                                                        >
+                                                            <MapPin size={15} className="text-slate-400 shrink-0" />
+                                                            <span className="truncate">{item.tekst}</span>
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ul>
                                         )}
+                                    </div>
+                                    <p className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">Vælg din adresse fra listen — så udfyldes postnummer og by automatisk.</p>
+                                </div>
+
+                                {/* Postnummer */}
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Postnummer *</label>
+                                    <div className="relative">
+                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                        <input type="text" inputMode="numeric" placeholder="1234" value={zip} onChange={(e) => handleZipChange(e.target.value)} required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl pl-11 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-[15px]" />
+                                    </div>
+                                </div>
+
+                                {/* By */}
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">By *</label>
+                                    <div className="relative">
+                                        <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                        <input type="text" placeholder="København" value={city} onChange={(e) => setCity(e.target.value)} required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl pl-11 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-[15px]" />
                                     </div>
                                 </div>
 
