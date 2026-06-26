@@ -233,7 +233,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                         {onCreateQuote && <span data-tour="create-quote" style={{ display: 'inline-flex' }}><CreateQuoteButton onClick={onCreateQuote} /></span>}
                     </div>
                 </div>
-                <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '26px', width: '100%' }}>
+                <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '56px', width: '100%' }}>
                     <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
                         Oversigt over din forretning
                     </h2>
