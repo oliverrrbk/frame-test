@@ -15,11 +15,19 @@ const appearance = {
     variables: { colorPrimary: '#0f172a', borderRadius: '10px', fontFamily: 'inherit', colorText: '#0f172a' },
 };
 
-function CardForm({ onClose, onSuccess }) {
+function CardForm({ onClose, onSuccess, defaultName, defaultEmail }) {
     const stripe = useStripe();
     const elements = useElements();
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState('');
+
+    // Rene kortfelter: skjul navn/e-mail/telefon (dem har vi allerede) — det fjerner
+    // også Stripe Link-tilmeldingen. Værdierne sendes med via defaultValues.
+    const peOptions = {
+        layout: 'tabs',
+        fields: { billingDetails: { name: 'never', email: 'never', phone: 'never' } },
+        defaultValues: { billingDetails: { name: defaultName || undefined, email: defaultEmail || undefined } },
+    };
 
     const submit = async (e) => {
         e.preventDefault();
@@ -45,7 +53,7 @@ function CardForm({ onClose, onSuccess }) {
 
     return (
         <form onSubmit={submit}>
-            <PaymentElement options={{ layout: 'tabs' }} />
+            <PaymentElement options={peOptions} />
             {err && (
                 <div style={{ marginTop: '14px', padding: '12px 14px', borderRadius: '10px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)', color: '#b91c1c', fontSize: '0.85rem' }}>{err}</div>
             )}
@@ -63,7 +71,7 @@ function CardForm({ onClose, onSuccess }) {
     );
 }
 
-export default function UpdateCardModal({ onClose, onSuccess }) {
+export default function UpdateCardModal({ onClose, onSuccess, defaultName, defaultEmail }) {
     const [clientSecret, setClientSecret] = useState(null);
     const [loadErr, setLoadErr] = useState('');
 
@@ -112,7 +120,7 @@ export default function UpdateCardModal({ onClose, onSuccess }) {
                         <>
                             <p style={{ margin: '0 0 18px', color: '#64748b', fontSize: '0.88rem', lineHeight: 1.5 }}>Indtast jeres nye kort herunder. Det bliver brugt til jeres næste fornyelse.</p>
                             <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
-                                <CardForm onClose={onClose} onSuccess={onSuccess} />
+                                <CardForm onClose={onClose} onSuccess={onSuccess} defaultName={defaultName} defaultEmail={defaultEmail} />
                             </Elements>
                             <p style={{ margin: '16px 0 0', textAlign: 'center', color: '#cbd5e1', fontSize: '0.75rem' }}>Kortet håndteres sikkert af Stripe — vi gemmer aldrig dine kortoplysninger.</p>
                         </>

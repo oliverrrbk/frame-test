@@ -548,6 +548,8 @@ const SubscriptionSettings = () => {
 
             {showCardModal && (
                 <UpdateCardModal
+                    defaultName={company.owner_name || company.company_name}
+                    defaultEmail={company.email}
                     onClose={() => setShowCardModal(false)}
                     onSuccess={() => { setShowCardModal(false); loadSubscriptionData(); }}
                 />
