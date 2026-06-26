@@ -47,6 +47,7 @@ afløser/supplerer hinanden.
 | `supabase/fix_chat_rls.sql` | Rettelse af chat-RLS-politikker |
 | `supabase/fix_chat_rls_case_private.sql` | **Gør sagschat (case) privat** — kun deltagere kan se den; kun `company`-chat er firma-bred. Kør EFTER `fix_chat_rls.sql` (overskriver dens case-led) |
 | `supabase/setup_chat_notifications.sql` | Chat: `last_read_at` (ulæst) + push-trigger på nye beskeder (kør sidst, efter setup_chat) |
+| `supabase/setup_chat_edit_delete_hide.sql` | Chat: `edited_at`/`deleted_at` på beskeder (rediger/fortryd) + `hidden_at` på `chat_participants` (skjul samtale pr. bruger) + UPDATE-RLS for egen besked/deltager-række + `REPLICA IDENTITY FULL`. Kør EFTER `setup_chat.sql` |
 | `setup_error_logs.sql` | In-house fejlfinder: `error_logs`-tabel + RLS (alle må logge, kun superadmin må læse) |
 
 ### 3) RPC'er (funktioner)

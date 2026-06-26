@@ -3,7 +3,8 @@ import { supabase } from '../../supabaseClient';
 import { 
   MessageSquare, Send, Phone, Search, Users, User,
   Sparkles, Paperclip, Mic, ArrowLeft, ShieldAlert, CheckCircle2,
-  Megaphone, HardHat, Square, Info, Image as ImageIcon, FileText, Plus, ChevronDown
+  Megaphone, HardHat, Square, Info, Image as ImageIcon, FileText, Plus, ChevronDown,
+  Trash2, Pencil, X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import UserAvatar from '../ui/UserAvatar';
@@ -24,9 +25,14 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
   const [pendingCaseChat, setPendingCaseChat] = useState(null); // sag uden chat → tilbyd manuel oprettelse
   const [isCreatingCaseChat, setIsCreatingCaseChat] = useState(false);
   const [showAddParticipant, setShowAddParticipant] = useState(false); // udvid deltager-vælger i info-panelet
+  const [swipedThreadId, setSwipedThreadId] = useState(null); // tråd-række der er swipet til venstre (viser Slet)
+  const [editingMessage, setEditingMessage] = useState(null); // besked der redigeres (egen besked)
+  const [actionMenuMsg, setActionMenuMsg] = useState(null); // { msg, x, y } — long-press-menu på egen besked
 
   const messagesEndRef = useRef(null);
   const activeThreadRef = useRef(null);
+  const swipeRef = useRef({ id: null, startX: 0, startY: 0, moved: false }); // tråd-swipe (mobil)
+  const longPressRef = useRef(null); // timer til long-press på besked
 
   useEffect(() => {
     activeThreadRef.current = activeThread;
@@ -51,10 +57,29 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
           }
 
           // Always update the last message in the thread list for unread badges
-          setThreads((prevThreads) => 
-            prevThreads.map((t) => 
-              t.id === newMsg.thread_id 
-                ? { ...t, lastMessage: newMsg } 
+          setThreads((prevThreads) =>
+            prevThreads.map((t) =>
+              t.id === newMsg.thread_id
+                ? { ...t, lastMessage: newMsg }
+                : t
+            )
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'chat_messages' },
+        (payload) => {
+          const updated = payload.new;
+          // Synk redigeret/fortrudt besked ind i den åbne tråd.
+          if (activeThreadRef.current && updated.thread_id === activeThreadRef.current.id) {
+            setMessages((prev) => prev.map(m => m.id === updated.id ? { ...m, ...updated } : m));
+          }
+          // Hold tråd-listens sidste besked opdateret (fx hvis den nyeste blev slettet/redigeret).
+          setThreads((prevThreads) =>
+            prevThreads.map((t) =>
+              t.lastMessage && t.lastMessage.id === updated.id
+                ? { ...t, lastMessage: { ...t.lastMessage, ...updated } }
                 : t
             )
           );
@@ -280,9 +305,9 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
         .from('chat_threads')
         .select(`
           *,
-          chat_participants ( user_id, last_read_at ),
+          chat_participants ( user_id, last_read_at, hidden_at ),
           chat_messages (
-            text_content, created_at, sender_id, message_type, media_url
+            text_content, created_at, sender_id, message_type, media_url, deleted_at
           )
         `)
         .eq('company_id', companyId)
@@ -314,16 +339,19 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
       // Format threads and extract last_read_at
       const newThreadReads = {};
       const enrichedThreads = finalThreads.map((thread) => {
+        let hiddenAt = null;
         const participantIds = (thread.chat_participants || []).map(p => {
-          if (p.user_id === profile.id && p.last_read_at) {
-            newThreadReads[thread.id] = p.last_read_at;
+          if (p.user_id === profile.id) {
+            if (p.last_read_at) newThreadReads[thread.id] = p.last_read_at;
+            if (p.hidden_at) hiddenAt = p.hidden_at;
           }
           return p.user_id;
         });
-        
+
         return {
           ...thread,
           participantIds,
+          hiddenAt,
           lastMessage: thread.chat_messages?.[0] || null
         };
       });
@@ -532,6 +560,30 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
+
+    // Redigerer vi en eksisterende besked? Så gem ændringen i stedet for at sende ny.
+    if (editingMessage) {
+      const target = editingMessage;
+      const newText = newMessageText.trim();
+      setEditingMessage(null);
+      setNewMessageText('');
+      if (!newText || newText === (target.text_content || '')) return; // tom/uændret → bare luk
+      const now = new Date().toISOString();
+      setMessages(prev => prev.map(m => m.id === target.id ? { ...m, text_content: newText, edited_at: now } : m));
+      try {
+        const { error } = await supabase
+          .from('chat_messages')
+          .update({ text_content: newText, edited_at: now })
+          .eq('id', target.id);
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error editing message:', error);
+        toast.error('Kunne ikke gemme ændringen.');
+        if (activeThread) loadMessages(activeThread.id);
+      }
+      return;
+    }
+
     if (!newMessageText.trim() || !activeThread) return;
 
     const textToSend = newMessageText.trim();
@@ -607,7 +659,102 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
     };
   };
 
+  // Skjul samtaler brugeren selv har "slettet" — men vis dem igen hvis der er
+  // kommet en ny besked EFTER de blev skjult (så man ikke går glip af nyt).
+  const isThreadHidden = (thread) => {
+    if (!thread.hiddenAt) return false;
+    const lm = thread.lastMessage;
+    if (!lm) return true;
+    return new Date(lm.created_at) <= new Date(thread.hiddenAt);
+  };
+
+  // Skjul en samtale for SIG SELV (de andre beholder den). En ny besked viser den igen.
+  const deleteThreadForMe = async (thread) => {
+    const now = new Date().toISOString();
+    setSwipedThreadId(null);
+    if (activeThread?.id === thread.id) { setActiveThread(null); setMobileViewState('list'); }
+    // Optimistisk: marker som skjult lokalt med det samme.
+    setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, hiddenAt: now } : t));
+    try {
+      const { error } = await supabase
+        .from('chat_participants')
+        .upsert(
+          { thread_id: thread.id, user_id: profile.id, hidden_at: now },
+          { onConflict: 'thread_id,user_id' }
+        );
+      if (error) throw error;
+      toast.success('Samtale fjernet fra din liste');
+    } catch (error) {
+      console.error('Error hiding thread:', error);
+      toast.error('Kunne ikke fjerne samtalen.');
+      setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, hiddenAt: null } : t));
+    }
+  };
+
+  // Swipe-håndtering på tråd-rækker (mobil): træk til venstre → vis "Slet".
+  const onRowTouchStart = (e, id) => {
+    const t = e.touches[0];
+    swipeRef.current = { id, startX: t.clientX, startY: t.clientY, moved: false };
+  };
+  const onRowTouchMove = (e) => {
+    const s = swipeRef.current;
+    if (s.id == null) return;
+    const t = e.touches[0];
+    const dx = t.clientX - s.startX;
+    const dy = t.clientY - s.startY;
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) s.moved = true;
+  };
+  const onRowTouchEnd = (e, thread) => {
+    const s = swipeRef.current;
+    if (s.id == null) return;
+    const dx = (e.changedTouches[0]?.clientX ?? s.startX) - s.startX;
+    if (dx < -50) setSwipedThreadId(thread.id);
+    else if (dx > 30) setSwipedThreadId(prev => (prev === thread.id ? null : prev));
+    swipeRef.current = { ...s, id: null };
+  };
+
+  // ---- Long-press på egen besked → rediger / fortryd (slet for alle) ----
+  const openMsgMenu = (msg) => {
+    if (!msg || msg.sender_id !== profile.id || msg.deleted_at) return;
+    setActionMenuMsg({ msg });
+  };
+  const onMsgTouchStart = (e, msg) => {
+    if (msg.sender_id !== profile.id || msg.deleted_at) return;
+    clearLongPress();
+    longPressRef.current = setTimeout(() => openMsgMenu(msg), 500);
+  };
+  const clearLongPress = () => { if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; } };
+
+  const startEditMessage = (msg) => {
+    setActionMenuMsg(null);
+    setEditingMessage(msg);
+    setNewMessageText(msg.text_content || '');
+    setTimeout(() => textareaRef.current?.focus(), 50);
+  };
+  const cancelEdit = () => { setEditingMessage(null); setNewMessageText(''); };
+
+  // Fortryd (slet for alle): blød sletning + ryd indhold, så beskeden reelt forsvinder.
+  const deleteMessage = async (msg) => {
+    setActionMenuMsg(null);
+    const now = new Date().toISOString();
+    setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, deleted_at: now, text_content: null, media_url: null } : m));
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({ deleted_at: now, text_content: null, media_url: null })
+        .eq('id', msg.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast.error('Kunne ikke fortryde beskeden.');
+      if (activeThread) loadMessages(activeThread.id);
+    }
+  };
+
   const filteredThreads = threads.filter(thread => {
+    // Skjulte (selv-slettede) samtaler vises ikke — medmindre der er kommet nyt.
+    if (isThreadHidden(thread)) return false;
+
     // Apply Type Filter
     if (activeFilter !== 'all' && thread.type !== activeFilter) return false;
 
@@ -720,31 +867,54 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
               const isUnread = !isActive && !!lm && String(lm.sender_id) !== String(profile?.id)
                 && (!lastRead || new Date(lm.created_at) > new Date(lastRead));
 
+              const isSwiped = swipedThreadId === thread.id;
+
               return (
-                <div
-                  key={thread.id}
-                  onClick={() => {
-                    setActiveThread(thread);
-                    setMobileViewState('chat');
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px',
-                    borderRadius: '14px',
-                    backgroundColor: isActive ? 'rgba(15, 23, 42, 0.08)' : 'transparent',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    marginBottom: '4px'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.03)';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
+                <div key={thread.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: '14px', marginBottom: '4px' }}>
+                  {/* Slet-handling bag rækken — afsløres når man swiper til venstre */}
+                  {isSwiped && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteThreadForMe(thread); }}
+                      aria-label="Slet samtale"
+                      style={{
+                        position: 'absolute', top: 0, right: 0, bottom: 0, width: '88px',
+                        border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        gap: '3px', fontSize: '0.72rem', fontWeight: 700
+                      }}
+                    >
+                      <Trash2 size={18} /> Slet
+                    </button>
+                  )}
+                  <div
+                    onClick={() => {
+                      if (isSwiped) { setSwipedThreadId(null); return; }
+                      if (swipeRef.current.moved) return;
+                      setActiveThread(thread);
+                      setMobileViewState('chat');
+                    }}
+                    onTouchStart={(e) => onRowTouchStart(e, thread.id)}
+                    onTouchMove={onRowTouchMove}
+                    onTouchEnd={(e) => onRowTouchEnd(e, thread)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
+                      borderRadius: '14px',
+                      backgroundColor: isSwiped ? '#ffffff' : (isActive ? 'rgba(15, 23, 42, 0.08)' : 'transparent'),
+                      cursor: 'pointer',
+                      transform: isSwiped ? 'translateX(-88px)' : 'translateX(0)',
+                      transition: 'transform 0.22s ease, background-color 0.2s ease',
+                      position: 'relative'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive && !isSwiped) e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.03)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive && !isSwiped) e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
                   <div style={{
                     width: '44px',
                     height: '44px',
@@ -771,10 +941,11 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <p style={{ margin: 0, fontSize: '0.8rem', color: isUnread ? '#0f172a' : '#64748b', fontWeight: isUnread ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                        {thread.lastMessage ? thread.lastMessage.text_content : 'Ingen beskeder endnu'}
+                        {thread.lastMessage ? (thread.lastMessage.deleted_at ? 'Besked slettet' : (thread.lastMessage.text_content || 'Vedhæftning')) : 'Ingen beskeder endnu'}
                       </p>
                       {isUnread && <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#2563eb', flexShrink: 0, boxShadow: '0 0 0 3px rgba(37,99,235,0.15)' }} />}
                     </div>
+                  </div>
                   </div>
                 </div>
               );
@@ -929,7 +1100,9 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
                   const isOwn = msg.sender_id === profile.id;
                   const sender = teammates.find(t => t.id === msg.sender_id);
                   const senderName = sender?.owner_name || 'Kollega';
-                  
+                  const isDeleted = !!msg.deleted_at;
+                  const canModify = isOwn && !isDeleted;
+
                   return (
                     <div
                       key={msg.id}
@@ -949,27 +1122,42 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
                       )}
 
                       {/* Bubble */}
-                      <div style={{
+                      <div
+                        onContextMenu={canModify ? (e) => { e.preventDefault(); openMsgMenu(msg); } : undefined}
+                        onTouchStart={canModify ? (e) => onMsgTouchStart(e, msg) : undefined}
+                        onTouchEnd={clearLongPress}
+                        onTouchMove={clearLongPress}
+                        style={{
                         padding: '10px 14px',
                         borderRadius: '16px',
                         borderTopRightRadius: isOwn ? '4px' : '16px',
                         borderTopLeftRadius: isOwn ? '16px' : '4px',
-                        background: isOwn 
-                          ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' 
-                          : 'rgba(255, 255, 255, 0.75)',
-                        border: isOwn ? 'none' : '1px solid rgba(226, 232, 240, 0.8)',
-                        color: isOwn ? '#ffffff' : '#0f172a',
+                        background: isDeleted
+                          ? 'rgba(241, 245, 249, 0.9)'
+                          : (isOwn
+                              ? 'linear-gradient(135deg, #2563eb, #1d4ed8)'
+                              : 'rgba(255, 255, 255, 0.75)'),
+                        border: (isOwn && !isDeleted) ? 'none' : '1px solid rgba(226, 232, 240, 0.8)',
+                        color: isDeleted ? '#94a3b8' : (isOwn ? '#ffffff' : '#0f172a'),
                         fontSize: '0.9rem',
+                        fontStyle: isDeleted ? 'italic' : 'normal',
                         lineHeight: 1.4,
                         boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                        wordBreak: 'break-word'
+                        wordBreak: 'break-word',
+                        cursor: canModify ? 'pointer' : 'default',
+                        WebkitUserSelect: canModify ? 'none' : 'auto',
+                        userSelect: canModify ? 'none' : 'auto'
                       }}>
-                        {msg.message_type === 'image' && msg.media_url ? (
+                        {isDeleted ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <Trash2 size={13} /> Besked slettet
+                          </span>
+                        ) : msg.message_type === 'image' && msg.media_url ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <img 
-                              src={msg.media_url} 
-                              alt="Vedhæftning" 
-                              style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', cursor: 'pointer', objectFit: 'contain' }} 
+                            <img
+                              src={msg.media_url}
+                              alt="Vedhæftning"
+                              style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', cursor: 'pointer', objectFit: 'contain' }}
                               onClick={() => window.open(msg.media_url, '_blank')}
                             />
                           </div>
@@ -990,9 +1178,10 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
                         )}
                       </div>
 
-                      {/* Timestamp */}
+                      {/* Timestamp + redigeret-mærkat */}
                       <span style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '3px', marginRight: isOwn ? '4px' : '0', marginLeft: isOwn ? '0' : '4px' }}>
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {msg.edited_at && !isDeleted && ' · redigeret'}
                       </span>
                     </div>
                   );
@@ -1001,12 +1190,23 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Rediger-banner — vises mens man retter en allerede sendt besked */}
+            {editingMessage && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 20px', background: 'rgba(37, 99, 235, 0.08)', borderTop: '1px solid rgba(226, 232, 240, 0.8)' }}>
+                <Pencil size={15} color="#2563eb" />
+                <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, color: '#1d4ed8' }}>Redigerer besked</span>
+                <button type="button" onClick={cancelEdit} title="Annullér redigering" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', padding: '2px' }}>
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
             {/* Input bar */}
-            <form 
+            <form
               onSubmit={handleSendMessage}
               style={{
                 padding: '16px 20px',
-                borderTop: '1px solid rgba(226, 232, 240, 0.8)',
+                borderTop: editingMessage ? 'none' : '1px solid rgba(226, 232, 240, 0.8)',
                 backgroundColor: 'rgba(255, 255, 255, 0.6)',
                 display: 'flex',
                 alignItems: 'flex-end',
@@ -1143,7 +1343,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
                   marginBottom: '2px'
                 }}
               >
-                <Send size={16} style={{ marginLeft: '2px' }} />
+                {editingMessage ? <CheckCircle2 size={18} /> : <Send size={16} style={{ marginLeft: '2px' }} />}
               </button>
             </form>
           </>
@@ -1305,6 +1505,40 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
               </div>
             );
           })()}
+        </div>
+      )}
+
+      {/* Long-press-menu på egen besked: Rediger / Fortryd (slet for alle) */}
+      {actionMenuMsg && (
+        <div
+          onClick={() => setActionMenuMsg(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 100040, background: 'rgba(15, 23, 42, 0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '16px' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '420px', background: '#fff', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.3)', marginBottom: 'env(safe-area-inset-bottom)' }}
+          >
+            {actionMenuMsg.msg.message_type === 'text' && (
+              <button
+                onClick={() => startEditMessage(actionMenuMsg.msg)}
+                style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%', padding: '16px 20px', border: 'none', borderBottom: '1px solid #f1f5f9', background: '#fff', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 600, color: '#0f172a' }}
+              >
+                <Pencil size={19} color="#2563eb" /> Rediger besked
+              </button>
+            )}
+            <button
+              onClick={() => deleteMessage(actionMenuMsg.msg)}
+              style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%', padding: '16px 20px', border: 'none', borderBottom: '1px solid #f1f5f9', background: '#fff', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 600, color: '#ef4444' }}
+            >
+              <Trash2 size={19} /> Fortryd besked (slet for alle)
+            </button>
+            <button
+              onClick={() => setActionMenuMsg(null)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '16px 20px', border: 'none', background: '#fff', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 700, color: '#64748b' }}
+            >
+              Annullér
+            </button>
+          </div>
         </div>
       )}
 

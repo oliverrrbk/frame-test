@@ -65,6 +65,17 @@ const htmlToPlainLines = (html) => {
 };
 const uid = () => (crypto?.randomUUID ? crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
+// Auto-kladde til "fortsæt hvor du slap": kun for HELT nye tilbud (ikke redigering
+// af en allerede gemt lead). Nøgle pr. tømrer, så kladder ikke deles på tværs af logins.
+const DRAFT_KEY = (carpenterId) => `qqb_working_draft_${carpenterId || 'anon'}`;
+// Har en gemt arbejds-kladde reelt indhold (ud over tomme standard-felter)?
+const draftHasContent = (d) => !!(d && (
+    (d.customer && (d.customer.name || d.customer.email || d.customer.phone || d.customer.address)) ||
+    d.materialCost || d.laborFixed || d.laborHours || d.title ||
+    htmlToPlainLines(d.workDescHtml || '').join('').trim() ||
+    (Array.isArray(d.extras) && d.extras.some(e => (e.desc || '').trim() || num(e.amount) > 0))
+));
+
 // Besked på tilbuddet (PDF) — rich-text/HTML. Leder naturligt over i beskrivelsen nedenfor.
 const STANDARD_PDF_NOTE_HTML = (kundeNavn) =>
 `Hej ${escapeHtml(kundeNavn || 'der')},<br><br>Hermed fremsendes tilbud på følgende arbejde:`;
@@ -164,6 +175,28 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     // Redigerer vi et tilbud der ALLEREDE er sendt? Så kan man kun sende en opdateret mail.
     const wasSent = initialLead?.status === 'Sendt tilbud';
     const mq0 = initialLead?.raw_data?.manual_quote || {};
+
+    // ---- Auto-kladde ("fortsæt hvor du slap") ----
+    // Læs en evt. gemt arbejds-kladde ÉN gang ved mount. Findes der en med indhold,
+    // og er vi ikke i gang med at redigere en eksisterende lead, så spørger vi brugeren.
+    const draftKey = DRAFT_KEY(carpenter?.id);
+    const savedDraftRef = useRef(null);
+    const [restorePrompt, setRestorePrompt] = useState(() => {
+        if (isEditing || typeof window === 'undefined') return false;
+        try {
+            const raw = window.localStorage.getItem(draftKey);
+            if (!raw) return false;
+            const d = JSON.parse(raw);
+            if (!draftHasContent(d)) return false;
+            savedDraftRef.current = d;
+            return true;
+        } catch { return false; }
+    });
+    // Autosave er pauset mens vi venter på brugerens valg (fortsæt/forfra) — ellers
+    // ville den tomme nye formular nå at overskrive den gemte kladde. Redigering af en
+    // eksisterende lead auto-gemmes aldrig (den har sin egen "Gem kladde").
+    const canAutosave = useRef(!isEditing && !restorePrompt);
+    const clearWorkingDraft = () => { try { window.localStorage.removeItem(draftKey); } catch { /* ignore */ } };
 
     const [title, setTitle] = useState(initialLead?.project_category && initialLead.project_category !== 'Manuelt tilbud' ? initialLead.project_category : '');
     // Materialer
@@ -289,6 +322,58 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         if (workEditorRef.current) workEditorRef.current.innerHTML = mq0.workHtml || '';
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // ---- Autosave af arbejds-kladden (debounced) ----
+    // Gemmer løbende et øjebliksbillede i localStorage, så et nyt tilbud kan genoptages
+    // hvis vinduet lukkes uden at gemme. Springer over indtil brugeren har valgt fortsæt/forfra.
+    useEffect(() => {
+        if (!canAutosave.current) return;
+        const t = setTimeout(() => {
+            try {
+                const snap = { title, materialCost, markup, laborMode, laborFixed, laborRate, laborHours, extras, workDescHtml, pdfNote, customer, emailMessage, validityDays, savedAt: Date.now() };
+                if (draftHasContent(snap)) window.localStorage.setItem(draftKey, JSON.stringify(snap));
+            } catch { /* localStorage kan være fuld/blokeret — ignorér */ }
+        }, 600);
+        return () => clearTimeout(t);
+    }, [title, materialCost, markup, laborMode, laborFixed, laborRate, laborHours, extras, workDescHtml, pdfNote, customer, emailMessage, validityDays, draftKey]);
+
+    // Fortsæt i den gemte kladde: indlæs øjebliksbilledet i alle felter.
+    const continueDraft = () => {
+        const d = savedDraftRef.current;
+        if (d) {
+            setTitle(d.title || '');
+            setMaterialCost(d.materialCost || '');
+            setMarkup(d.markup != null ? String(d.markup) : '35');
+            setLaborMode(d.laborMode || 'fixed');
+            setLaborFixed(d.laborFixed || '');
+            setLaborRate(d.laborRate || String(carpenter?.hourly_rate || carpenter?.raw_data?.hourly_rate || '550'));
+            setLaborHours(d.laborHours || '');
+            setExtras((Array.isArray(d.extras) && d.extras.length) ? d.extras.map(e => ({ id: uid(), desc: e.desc || '', amount: e.amount != null ? String(e.amount) : '' })) : [{ id: uid(), desc: '', amount: '' }]);
+            setWorkDescHtml(d.workDescHtml || '');
+            setPdfNote(d.pdfNote || '');
+            if (d.customer) setCustomer({ name: '', email: '', phone: '', address: '', zip: '', city: '', ...d.customer });
+            setEmailMessage(d.emailMessage || STANDARD_EMAIL_MSG);
+            setValidityDays(d.validityDays || 14);
+            // contentEditable-editorerne er ukontrollerede → sæt indholdet imperativt.
+            // Markér som "rørt" så standard-hilsenerne ikke overskriver det genindlæste.
+            pdfNoteTouched.current = true;
+            emailMsgTouched.current = true;
+            requestAnimationFrame(() => {
+                if (workEditorRef.current) workEditorRef.current.innerHTML = d.workDescHtml || '';
+                if (pdfNoteRef.current) pdfNoteRef.current.innerHTML = d.pdfNote || '';
+            });
+        }
+        canAutosave.current = true;
+        setRestorePrompt(false);
+    };
+
+    // Start forfra: kassér den gemte kladde og fortsæt med tom formular.
+    const startFreshDraft = () => {
+        clearWorkingDraft();
+        savedDraftRef.current = null;
+        canAutosave.current = true;
+        setRestorePrompt(false);
+    };
 
     // ---- Live-beregning ----
     const calc = useMemo(() => {
@@ -475,6 +560,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 });
             }
 
+            // Tilbuddet er nu gemt rigtigt i databasen → ryd den midlertidige auto-kladde.
+            clearWorkingDraft();
             toast.success(sendToCustomer ? (wasSent ? 'Opdateret tilbud sendt til kunden! 🎉' : 'Tilbuddet er sendt til kunden! 🎉') : 'Kladden er gemt.');
             onComplete && onComplete(lead);
         } catch (e) {
@@ -798,7 +885,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             Opdaterer…
                         </div>
                     )}
-                    <div style={{ flex: 1, minHeight: 0, width: '100%', maxWidth: pdfFocus ? '920px' : 'none', position: 'relative', borderRadius: '14px', background: '#fff', boxShadow: pdfFocus ? '0 24px 60px rgba(0,0,0,0.45)' : '0 10px 30px rgba(15,23,42,0.10)' }}>
+                    <div style={{ flex: 1, minHeight: 0, width: '100%', maxWidth: pdfFocus ? '920px' : 'clamp(720px, 60vw, 1180px)', position: 'relative', borderRadius: '14px', background: '#fff', boxShadow: pdfFocus ? '0 24px 60px rgba(0,0,0,0.45)' : '0 10px 30px rgba(15,23,42,0.10)' }}>
                         {[0, 1].map(i => slotUrls[i] ? (
                             <iframe key={i} title={`Tilbud PDF ${i}`} src={viewerSrc(slotUrls[i])} onLoad={() => onSlotLoaded(i)}
                                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: '1px solid #e2e8f0', borderRadius: '14px', background: '#fff', opacity: front === i ? 1 : 0, transition: 'opacity .18s ease', pointerEvents: (resizing || front !== i) ? 'none' : 'auto' }} />
@@ -817,8 +904,9 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 {zoneHead(<Mail size={16} color="#8b5cf6" />, 'Mailen til kunden', '#ffffff')}
                 <div style={{ flex: 1, minHeight: 0, padding: '18px', display: 'flex', flexDirection: 'column' }}>
                     <label style={label}>Personlig besked i mailen</label>
-                    <textarea className="qqb-input" value={emailMessage} onChange={(e) => { emailMsgTouched.current = true; setEmailMessage(e.target.value); }} rows={5} style={{ ...input, resize: 'vertical', fontFamily: 'inherit', marginBottom: '14px' }} />
-                    <div style={{ flex: 1, minHeight: '320px', border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(15,23,42,0.08)' }}>
+                    {/* På mobil er skrivefeltet større, så man kan se hele beskeden mens man retter den. */}
+                    <textarea className="qqb-input" value={emailMessage} onChange={(e) => { emailMsgTouched.current = true; setEmailMessage(e.target.value); }} rows={isMobile ? 8 : 5} style={{ ...input, resize: 'vertical', fontFamily: 'inherit', marginBottom: '14px', minHeight: isMobile ? '180px' : undefined, fontSize: isMobile ? '16px' : input.fontSize }} />
+                    <div style={{ flex: 1, minHeight: isMobile ? '420px' : '320px', border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(15,23,42,0.08)' }}>
                         <iframe title="Email preview" srcDoc={emailHtml} style={{ width: '100%', height: '100%', border: 'none', pointerEvents: resizing ? 'none' : 'auto' }} />
                     </div>
                 </div>
@@ -839,6 +927,33 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 <style>{PREVIEW_CSS}</style>
                 {/* Fanger musen under træk, så iframes ikke "stjæler" events og laver lag */}
                 {resizing && <div style={{ position: 'fixed', inset: 0, zIndex: 100060, cursor: 'col-resize' }} />}
+
+                {/* "Fortsæt hvor du slap?" — vises hvis et tidligere, ugemt tilbud blev fundet i localStorage. */}
+                {restorePrompt && (() => {
+                    const d = savedDraftRef.current || {};
+                    const navn = (d.customer && d.customer.name && d.customer.name.trim()) || (d.title && d.title.trim()) || '';
+                    return (
+                        <div style={{ position: 'fixed', inset: 0, zIndex: 100070, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                            <div style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '20px', boxShadow: '0 30px 80px rgba(0,0,0,0.35)', padding: '30px 28px 24px', textAlign: 'center', animation: 'qqbConfirmPop .28s cubic-bezier(.34,1.56,.64,1) both' }}>
+                                <div style={{ width: '58px', height: '58px', borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+                                    <FileText size={28} color="#3b82f6" />
+                                </div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>Fortsæt hvor du slap?</div>
+                                <div style={{ fontSize: '0.95rem', color: '#64748b', lineHeight: 1.5, marginBottom: '24px' }}>
+                                    Du var i gang med et tilbud{navn ? <> til <strong style={{ color: '#334155' }}>{navn}</strong></> : null}, som ikke nåede at blive gemt. Vil du fortsætte med det — eller starte forfra?
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <button onClick={continueDraft} className="qqb-send" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 10px 26px rgba(16,185,129,.4)' }}>
+                                        <FileText size={17} /> Fortsæt mit tilbud
+                                    </button>
+                                    <button onClick={startFreshDraft} className="qqb-ghost" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
+                                        <Plus size={17} /> Start et nyt tilbud
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {/* Topbjælke — safe-area-padding så titel/luk ikke gemmer sig under statusbjælken på mobil */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: isMobile ? '12px 16px' : '14px 22px', paddingTop: isMobile ? 'calc(12px + env(safe-area-inset-top))' : undefined, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
