@@ -1,21 +1,23 @@
 // ============================================================================
 // FoundersWelcome.jsx — personlig velkomst fra Oliver & Mads, allerførst på
-// kontrolpanelet (før overant-rundturen). Historien i små bidder, glas-stil,
-// ingen emojis. Spring-bar. markCoachSeen('founders_welcome') ved afslutning.
-// Billeder: public/founders/mads.jpg + oliver.jpg (initial-fallback hvis de mangler).
+// kontrolpanelet. Større, interaktiv, med en figur pr. slide der afspejler
+// emnet. Ingen emojis. Spring-bar. markCoachSeen('founders_welcome') ved slut.
+// Fotos: public/founders/mads.jpg + oliver.jpg (initial-fallback hvis de mangler).
 // ============================================================================
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X, ThumbsUp, Wrench, Hammer, ListChecks, Clock, MapPin, Coins, Phone, HeartHandshake, Users, Sparkles } from 'lucide-react';
 import { markCoachSeen } from './coachmarks';
 
 const BLUE = '#2563eb';
+const MADS = '/founders/mads.jpg';
+const OLIVER = '/founders/oliver.jpg';
 
-const Avatar = ({ src, name, size = 88 }) => {
+const Avatar = ({ src, name, size = 96 }) => {
     const [ok, setOk] = useState(true);
     const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('');
     return (
-        <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 14px 30px rgba(15,23,42,0.28)', border: '3px solid #fff', flexShrink: 0 }}>
+        <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 16px 34px rgba(15,23,42,0.30)', border: '4px solid #fff', flexShrink: 0 }}>
             {ok
                 ? <img src={src} alt={name} onError={() => setOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : <span style={{ color: '#fff', fontWeight: 800, fontSize: size * 0.34 }}>{initials}</span>}
@@ -23,56 +25,62 @@ const Avatar = ({ src, name, size = 88 }) => {
     );
 };
 
-const MADS = '/founders/mads.jpg';
-const OLIVER = '/founders/oliver.jpg';
+// Scene: blød farve-flade med en stor primær-figur + flydende accent-badges.
+const Scene = ({ bg, primary, accents = [] }) => (
+    <div style={{ width: '100%', height: 184, borderRadius: 22, background: bg, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 96, height: 96, borderRadius: 28, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 16px 34px rgba(15,23,42,0.14)' }}>{primary}</div>
+        {accents.map((a, i) => (
+            <div key={i} style={{ position: 'absolute', ...a.pos, width: 54, height: 54, borderRadius: 17, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 22px rgba(15,23,42,0.12)' }}>{a.icon}</div>
+        ))}
+    </div>
+);
 
 export default function FoundersWelcome({ onDone }) {
     const [step, setStep] = useState(0);
     const finish = () => { markCoachSeen('founders_welcome'); onDone && onDone(); };
 
-    // Lille duo-stak til toppen af de øvrige slides.
-    const duo = (
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
-            <div style={{ marginRight: -14 }}><Avatar src={MADS} name="Mads" size={52} /></div>
-            <Avatar src={OLIVER} name="Oliver" size={52} />
+    const duo = (mads = 52) => (
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+            <div style={{ marginRight: -16 }}><Avatar src={MADS} name="Mads" size={mads} /></div>
+            <Avatar src={OLIVER} name="Oliver" size={mads} />
         </div>
     );
 
     const STEPS = [
         {
-            hero: (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 6 }}>
-                    <div style={{ textAlign: 'center' }}><Avatar src={MADS} name="Mads" size={92} /><div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: '#0f172a' }}>Mads</div></div>
-                    <div style={{ textAlign: 'center' }}><Avatar src={OLIVER} name="Oliver" size={92} /><div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: '#0f172a' }}>Oliver</div></div>
+            scene: (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22 }}>
+                    <div style={{ textAlign: 'center' }}><Avatar src={MADS} name="Mads" size={108} /><div style={{ marginTop: 10, fontSize: 13, fontWeight: 800, color: '#0f172a' }}>Mads</div></div>
+                    <div style={{ textAlign: 'center' }}><Avatar src={OLIVER} name="Oliver" size={108} /><div style={{ marginTop: 10, fontSize: 13, fontWeight: 800, color: '#0f172a' }}>Oliver</div></div>
                 </div>
             ),
             title: 'Hej — vi er Oliver & Mads',
             body: 'Det er os, der har bygget Frame. Lad os lige hilse på, inden du går i gang.',
         },
         {
-            hero: duo,
+            scene: <Scene bg="linear-gradient(135deg,#fffbeb,#fef3c7)" primary={<ThumbsUp size={48} color="#f59e0b" />} accents={[{ icon: <Wrench size={26} color={BLUE} />, pos: { top: 22, left: 26 } }, { icon: <Hammer size={26} color="#0f172a" />, pos: { bottom: 22, right: 26 } }]} />,
             title: 'Vi har ti tommelfingre',
-            body: 'Men sammen med en flok tømrer-venner — der var dødtrætte af, at der ikke fandtes et system, der bare gav mening — byggede vi Frame.',
+            body: 'Men til gengæld er vi pissegode til at bygge systemer. Vi har en flok tømrer-venner, der sagde, at der ikke fandtes ét, som bare gav mening — så byggede vi Frame sammen med dem. Hver eneste del er afprøvet af rigtige tømrere, der bruger det hver dag.',
         },
         {
-            hero: duo,
+            scene: <Scene bg="linear-gradient(135deg,#f8fafc,#eef2f6)" primary={<ListChecks size={46} color="#94a3b8" />} accents={[{ icon: <Clock size={26} color="#ef4444" />, pos: { top: 24, right: 30 } }, { icon: <Sparkles size={24} color="#10b981" />, pos: { bottom: 22, left: 28 } }]} />,
             title: 'Vi hader irriterende guides',
-            body: 'Også selv, når vi prøver nye systemer. Derfor har vi gjort vores så korte og lette som overhovedet muligt.',
+            body: 'Dem der tager ti år at komme igennem, før man overhovedet kan bruge systemet. Derfor har vi gjort vores så korte som overhovedet muligt.',
         },
         {
-            hero: duo,
-            title: 'Du møder en lille guide hvert nyt sted',
-            body: 'Den viser, hvordan det er tænkt brugt — ikke en lov. Du bestemmer, og vi finder den bedste måde sammen. Giv den en chance: de 10-15 minutter sparer dig timer og gør det hurtigere at tjene penge.',
+            scene: <Scene bg="linear-gradient(135deg,#eff6ff,#dbeafe)" primary={<MapPin size={48} color={BLUE} />} accents={[{ icon: <Clock size={26} color="#0f172a" />, pos: { top: 22, left: 28 } }, { icon: <Coins size={26} color="#f59e0b" />, pos: { bottom: 22, right: 28 } }]} />,
+            title: 'Du møder en kort guide hvert nyt sted',
+            body: 'Den viser, hvordan vi og vores tømrere har tænkt det brugt — ikke en lov, du bestemmer selv. Men giv den en chance: de 10-15 minutter sparer dig en helvedes masse timer og bøvl, så du hurtigere tjener penge.',
         },
         {
-            hero: duo,
+            scene: <Scene bg="linear-gradient(135deg,#ecfdf5,#d1fae5)" primary={<Phone size={46} color="#059669" />} accents={[{ icon: <HeartHandshake size={28} color={BLUE} />, pos: { top: 22, right: 28 } }, { icon: <img src="/logo.png" alt="" style={{ width: 30, height: 30, objectFit: 'contain' }} />, pos: { bottom: 20, left: 26 } }]} />,
             title: 'Driller noget? Så ring',
-            body: 'Vi fikser det. Mangler du en feature, laver vi den med det samme. Ærlighed kommer længst — derfor holder vi alt så gennemsigtigt som muligt.',
+            body: 'Vi fikser det — og mangler du en feature, laver vi den. Vores motto i Bison Company: med ærlighed kommer man længst. Derfor samarbejder vi så tæt med jer som muligt.',
         },
         {
-            hero: duo,
-            title: 'Du er ikke bare bruger',
-            body: 'Du er med-udvikler af Frame. Vi bygger det videre sammen med dig. Velkommen — lad os komme i gang.',
+            scene: <Scene bg="linear-gradient(135deg,#eef2ff,#e0e7ff)" primary={<HeartHandshake size={48} color={BLUE} />} accents={[{ icon: <Users size={26} color="#0f172a" />, pos: { top: 24, left: 28 } }, { icon: <Wrench size={24} color="#7c3aed" />, pos: { bottom: 22, right: 30 } }]} />,
+            title: 'Du er ikke bare en bruger',
+            body: 'Du er med-udvikler af Frame — et system, der hele tiden følger med branchen, så det hjælper jer bedst muligt. Vi glæder os til at bygge videre sammen med jer. De bedste hilsener, Mads & Oliver.',
         },
     ];
 
@@ -82,41 +90,44 @@ export default function FoundersWelcome({ onDone }) {
     const s = STEPS[step];
 
     return createPortal(
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100150, background: 'rgba(15,23,42,0.78)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div style={{ width: '100%', maxWidth: 460, maxHeight: '92vh', overflowY: 'auto', background: '#fff', borderRadius: 28, boxShadow: '0 34px 90px rgba(0,0,0,0.45)', padding: '30px 28px 22px', position: 'relative', animation: 'fwPop .35s cubic-bezier(.34,1.4,.64,1) both' }}>
-                <button onClick={finish} title="Luk" style={{ position: 'absolute', top: 16, right: 16, width: 34, height: 34, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}><X size={18} /></button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100150, background: 'rgba(15,23,42,0.80)', backdropFilter: 'blur(9px)', WebkitBackdropFilter: 'blur(9px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ width: '100%', maxWidth: 580, maxHeight: '94vh', overflowY: 'auto', background: '#fff', borderRadius: 30, boxShadow: '0 40px 100px rgba(0,0,0,0.5)', padding: '34px 36px 26px', position: 'relative', animation: 'fwPop .38s cubic-bezier(.34,1.4,.64,1) both' }}>
+                <button onClick={finish} title="Luk" style={{ position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}><X size={18} /></button>
 
-                <div style={{ fontSize: 11, letterSpacing: '.10em', textTransform: 'uppercase', fontWeight: 800, color: BLUE, marginBottom: 18, textAlign: 'center' }}>Fra Oliver & Mads</div>
-
-                <div key={step} style={{ minHeight: 250, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fwFade .3s ease both' }}>
-                    {s.hero}
-                    <h2 style={{ margin: '18px 0 8px', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#0f172a' }}>{s.title}</h2>
-                    <p style={{ margin: 0, fontSize: 14.5, color: '#5e5e5e', lineHeight: 1.6, maxWidth: 380 }}>{s.body}</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 800, color: BLUE, marginBottom: 20 }}>
+                    {step > 0 && duo(26)}
+                    <span>Fra Oliver &amp; Mads</span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, margin: '20px 0 16px' }}>
+                <div key={step} style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', animation: 'fwFade .32s ease both' }}>
+                    {s.scene}
+                    <h2 style={{ margin: '22px 0 10px', fontSize: '1.75rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#0f172a', lineHeight: 1.15 }}>{s.title}</h2>
+                    <p style={{ margin: '0 auto', fontSize: 15.5, color: '#5e5e5e', lineHeight: 1.65, maxWidth: 440 }}>{s.body}</p>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 7, margin: '24px 0 18px' }}>
                     {[...Array(total)].map((_, i) => (
-                        <div key={i} style={{ height: 6, borderRadius: 99, transition: 'all .25s', width: i === step ? 24 : 6, background: i <= step ? BLUE : '#e2e8f0' }} />
+                        <div key={i} style={{ height: 7, borderRadius: 99, transition: 'all .25s', width: i === step ? 26 : 7, background: i <= step ? BLUE : '#e2e8f0' }} />
                     ))}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {canBack && (
-                        <button onClick={() => setStep(s => s - 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#64748b', fontWeight: 700, fontSize: 14, cursor: 'pointer', padding: '8px 6px' }}><ChevronLeft size={16} /> Tilbage</button>
+                        <button onClick={() => setStep(s => s - 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#64748b', fontWeight: 700, fontSize: 15, cursor: 'pointer', padding: '10px 6px' }}><ChevronLeft size={17} /> Tilbage</button>
                     )}
                     <button onClick={() => (isLast ? finish() : setStep(s => s + 1))}
-                        style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, background: '#111', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 22px', fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.2)' }}>
-                        {isLast ? 'Lad os komme i gang' : 'Næste'} {!isLast && <ChevronRight size={16} />}
+                        style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, background: '#111', color: '#fff', border: 'none', borderRadius: 14, padding: '13px 26px', fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 10px 24px rgba(0,0,0,0.22)' }}>
+                        {isLast ? 'Lad os komme i gang' : 'Næste'} {!isLast && <ChevronRight size={17} />}
                     </button>
                 </div>
 
-                <div style={{ textAlign: 'center', marginTop: 10 }}>
-                    <button onClick={finish} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>Spring over</button>
+                <div style={{ textAlign: 'center', marginTop: 12 }}>
+                    <button onClick={finish} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 12.5, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>Spring over</button>
                 </div>
 
                 <style>{`
-                    @keyframes fwPop { from { opacity:0; transform: translateY(14px) scale(.97); } to { opacity:1; transform:none; } }
-                    @keyframes fwFade { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
+                    @keyframes fwPop { from { opacity:0; transform: translateY(16px) scale(.96); } to { opacity:1; transform:none; } }
+                    @keyframes fwFade { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
                 `}</style>
             </div>
         </div>,
