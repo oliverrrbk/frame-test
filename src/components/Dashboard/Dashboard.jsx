@@ -43,7 +43,7 @@ import { shouldShowCoach, markCoachSeen } from './coachmarks';
 
 // Rundtur for Kunder & Forespørgsler (Bølge 3). Forklarer salgs-pipelinen.
 const LEADS_TOUR_STEPS = [
-    { sel: '[data-tour="leads-pipeline"]', placement: 'bottom', eyebrow: 'Kunder & Forespørgsler', title: 'Hele salgsprocessen', body: 'Hver kunde flytter sig gennem trinnene: forespørgsel → sendt tilbud → bekræftet opgave. Klik en fane for at se kunderne i hvert trin.' },
+    { sel: '[data-tour="leads-pipeline"]', placement: 'bottom', eyebrow: 'Kunder & Forespørgsler', title: 'Hele kundeforløbet', body: 'Hver kunde flytter sig gennem trinnene: forespørgsel → sendt tilbud → bekræftet opgave. Klik en fane for at se kunderne i hvert trin.' },
     { sel: '[data-tour="leads-create"]', placement: 'bottom', eyebrow: 'Tilføj', title: 'Opret en kunde', body: 'Mangler en kunde i systemet? Opret en forespørgsel eller et tilbud manuelt her.' },
     { sel: '[data-tour="leads-search"]', placement: 'bottom', eyebrow: 'Find hurtigt', title: 'Søg på tværs', body: 'Søg på kundenavn, adresse, mail, telefon eller opgavetype — også når listen vokser.' },
 ];
@@ -2705,7 +2705,7 @@ const Dashboard = () => {
     const getTabHeaderInfo = () => {
         switch (activeTab) {
             case 'leads':
-                return { title: 'Kunder & Forespørgsler', desc: 'Her kan du styre dine kundeemner hele vejen gennem salgsprocessen.' };
+                return { title: 'Kunder & Forespørgsler', desc: 'Her styrer du dine kunder hele vejen — fra forespørgsel til færdig opgave.' };
             case 'map':
                 return { title: 'Geografisk Overblik', desc: 'Se dine leads og nuværende forespørgsler direkte på Danmarkskortet.' };
             case 'materials':
