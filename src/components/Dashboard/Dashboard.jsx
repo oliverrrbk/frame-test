@@ -2918,7 +2918,7 @@ const Dashboard = () => {
                         <button data-tour="nav-finance" className={activeTab === 'finance' ? 'active' : ''} onClick={() => { setActiveTab('finance'); setIsMobileMenuOpen(false); }}>
                             <Wallet size={20} /> Økonomi & Faktura
                         </button>
-                        <button className={activeTab === 'admin_timesheet' ? 'active' : ''} onClick={() => { setActiveTab('admin_timesheet'); setIsMobileMenuOpen(false); }}>
+                        <button data-tour="nav-timesheet" className={activeTab === 'admin_timesheet' ? 'active' : ''} onClick={() => { setActiveTab('admin_timesheet'); setIsMobileMenuOpen(false); }}>
                             <FileText size={20} /> Løn & Timer
                         </button>
                         </>

@@ -9,7 +9,17 @@ import { friendlyError } from '../../utils/friendlyError';
 import { buildQuotePdf } from '../../utils/quotePdf';
 import { getCustomerOfferSentTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
 import Coachmark from './Coachmark';
+import SectionTour from './SectionTour';
 import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
+
+// Første-gangs walkthrough af Hurtigt tilbud (kun desktop, kun én gang, altid spring-bar).
+const QUICKQUOTE_TOUR_STEPS = [
+    { sel: '[data-tour="qq-customer"]', placement: 'right', eyebrow: 'Hurtigt tilbud', title: 'Start med kunden', body: 'Skriv kundens navn ind (telefon/mail kan du tilføje nu eller senere).' },
+    { sel: '[data-tour="qq-title"]', placement: 'right', eyebrow: 'Trin 2', title: 'Titel & gyldighed', body: 'Giv opgaven en titel, og vælg hvor mange dage tilbuddet er gyldigt.' },
+    { sel: '[data-tour="qq-pdf"]', placement: 'bottom', eyebrow: 'Live', title: 'Dit tilbud — live', body: 'Her ser du PDF-tilbuddet opdatere sig med det samme, mens du udfylder felterne.' },
+    { sel: '[data-tour="qq-mail"]', placement: 'bottom', eyebrow: 'Mailen', title: 'Mailen kunden får', body: 'Tjek mailteksten og knappen kunden trykker på for at bekræfte tilbuddet.' },
+    { sel: '[data-tour="qq-send"]', placement: 'top', eyebrow: 'Klar', title: 'Send tilbuddet', body: 'Send når du er klar. Har du koblet din egen mail på under Integrationer, sendes det fra din mail — så det også ligger i din indbakke.', last: true },
+];
 
 // Stabil reference (react-google-maps kræver at libraries-arrayet ikke gendannes pr. render).
 // Samme id+libraries som Dashboard, så scriptet dedupliceres.
@@ -1002,11 +1012,11 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         const leftCol = (
             <div className="qqb-col" style={leftStyle}>
                 {zoneHead(<Pencil size={16} color="#3b82f6" />, 'Rediger tilbuddet', '#ffffff')}
-                <div style={editSection}>
+                <div style={editSection} data-tour="qq-customer">
                     <h3 style={editH}><User size={18} color="#0f172a" /> Kunde</h3>
                     {renderCustomerInputs()}
                 </div>
-                <div style={editSection}>
+                <div style={editSection} data-tour="qq-title">
                     <label style={label}>Opgavetitel</label>
                     {renderTitleInput()}
                 </div>
@@ -1059,7 +1069,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         );
 
         const midCol = (
-            <div style={pdfFocus ? { ...midStyle, flex: '1 1 auto' } : midStyle}>
+            <div style={pdfFocus ? { ...midStyle, flex: '1 1 auto' } : midStyle} data-tour="qq-pdf">
                 {zoneHead(<FileText size={16} color="#3b82f6" />, "Sådan ser PDF'en ud", '#f8fafc', maxBtn)}
                 <div style={{ flex: 1, minHeight: 0, padding: pdfFocus ? '22px clamp(16px, 4vw, 64px)' : '16px', display: 'flex', flexDirection: 'column', alignItems: pdfFocus ? 'center' : 'stretch', position: 'relative', background: pdfFocus ? '#1e293b' : 'transparent' }}>
                     {regenerating && (
@@ -1083,7 +1093,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         );
 
         const rightCol = (
-            <div className="qqb-col" style={rightStyle}>
+            <div className="qqb-col" style={rightStyle} data-tour="qq-mail">
                 {zoneHead(<Mail size={16} color="#8b5cf6" />, 'Mailen til kunden', '#ffffff')}
                 <div style={{ flex: 1, minHeight: 0, padding: '18px', display: 'flex', flexDirection: 'column' }}>
                     <label style={label}>Personlig besked i mailen</label>
@@ -1205,39 +1215,15 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             <Save size={18} /> Gem kladde
                         </button>
                         )}
-                        <button ref={coachSendRef} className="qqb-send" disabled={busy} onClick={requestSend} style={{ padding: '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
+                        <button ref={coachSendRef} data-tour="qq-send" className="qqb-send" disabled={busy} onClick={requestSend} style={{ padding: '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
                             <Send size={18} /> {busy ? 'Sender…' : (wasSent ? 'Send opdateret tilbud' : 'Send tilbud')}
                         </button>
                     </div>
 
                     {/* Kom-i-gang: 2 hints (kun desktop, første gang) */}
-                    {coachHintStep === 0 && (
-                        <Coachmark
-                            anchorRef={coachMaterialRef}
-                            placement="bottom"
-                            step="1 / 2"
-                            eyebrow="Hurtigt tilbud"
-                            title="Skriv pris & avance"
-                            body="Du styrer tallene helt selv — tilbuddet i midten opdateres med det samme."
-                            primaryLabel="Forstået →"
-                            onPrimary={() => setCoachHintStep(1)}
-                            onSkip={() => { skipAllCoach(); setCoachHintStep(-1); }}
-                            onClose={() => setCoachHintStep(-1)}
-                        />
-                    )}
-                    {coachHintStep === 1 && (
-                        <Coachmark
-                            anchorRef={coachSendRef}
-                            placement="top"
-                            step="2 / 2"
-                            eyebrow="Hurtigt tilbud"
-                            title="Send med det samme"
-                            body="Send som link eller PDF — kunden kan svare direkte."
-                            primaryLabel="Forstået"
-                            onPrimary={() => setCoachHintStep(-1)}
-                            onSkip={() => { skipAllCoach(); setCoachHintStep(-1); }}
-                            onClose={() => setCoachHintStep(-1)}
-                        />
+                    {/* Første-gangs walkthrough: kunde → titel/gyldighed → live PDF → mail → send */}
+                    {!isMobile && shouldShowCoach('quickquote_tour') && (
+                        <SectionTour tourKey="quickquote_tour" steps={QUICKQUOTE_TOUR_STEPS} />
                     )}
                 </div>
 

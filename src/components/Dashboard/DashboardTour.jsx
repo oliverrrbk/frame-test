@@ -14,7 +14,8 @@ const STEPS = [
     { sel: '[data-tour="nav-leads"]', placement: 'right', eyebrow: 'Menuen', title: 'Kunder & Leads', body: 'Her lander alle forespørgsler og tilbud. Klik en kunde for at åbne sagen.' },
     { sel: '[data-tour="nav-cases"]', placement: 'right', eyebrow: 'Menuen', title: 'Sager & Ordrestyring', body: 'Når et tilbud bliver til en opgave, styrer du den her — fra bekræftet til faktureret.' },
     { sel: '[data-tour="nav-calendar"]', placement: 'right', eyebrow: 'Menuen', title: 'Kalender', body: 'Planlæg dine sager og hold styr på hvem der er hvor.' },
-    { sel: '[data-tour="nav-finance"]', placement: 'right', eyebrow: 'Menuen', title: 'Økonomi & Løn', body: 'Overblik over økonomi, fakturaer og løn — kør løn direkte fra timerne.' },
+    { sel: '[data-tour="nav-finance"]', placement: 'right', eyebrow: 'Menuen', title: 'Økonomi & Faktura', body: 'Her fakturerer du dine sager og overfører til dit regnskab — det hænger sammen med ordrestyringen.' },
+    { sel: '[data-tour="nav-timesheet"]', placement: 'right', eyebrow: 'Menuen', title: 'Løn & Timer', body: 'Se, redigér og eksportér medarbejdernes timer — og kør løn direkte herfra.' },
     { sel: '[data-tour="create-quote"]', placement: 'bottom', eyebrow: 'Så er du klar', title: 'Klar til at gå i gang', body: 'Det var det — du finder selv rundt. Og "Lav et tilbud" er altid lige her.', last: true },
 ];
 
