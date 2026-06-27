@@ -37,8 +37,16 @@ import { getFeatures } from '../../utils/features';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import Coachmark from './Coachmark';
 import DashboardTour from './DashboardTour';
+import SectionTour from './SectionTour';
 import MobileInstallGuide from './MobileInstallGuide';
 import { shouldShowCoach, markCoachSeen } from './coachmarks';
+
+// Rundtur for Kunder & Forespørgsler (Bølge 3). Forklarer salgs-pipelinen.
+const LEADS_TOUR_STEPS = [
+    { sel: '[data-tour="leads-pipeline"]', placement: 'bottom', eyebrow: 'Kunder & Forespørgsler', title: 'Hele salgsprocessen', body: 'Hver kunde flytter sig gennem trinnene: forespørgsel → sendt tilbud → bekræftet opgave. Klik en fane for at se kunderne i hvert trin.' },
+    { sel: '[data-tour="leads-create"]', placement: 'bottom', eyebrow: 'Tilføj', title: 'Opret en kunde', body: 'Mangler en kunde i systemet? Opret en forespørgsel eller et tilbud manuelt her.' },
+    { sel: '[data-tour="leads-search"]', placement: 'bottom', eyebrow: 'Find hurtigt', title: 'Søg på tværs', body: 'Søg på kundenavn, adresse, mail, telefon eller opgavetype — også når listen vokser.' },
+];
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { computeQuoteExpiry } from '../../utils/quoteExpiry';
 import { getRoleLabel } from '../../utils/roles';
@@ -882,6 +890,7 @@ const Dashboard = () => {
     const [heroCoachDismissed, setHeroCoachDismissed] = useState(false);
     const [dashboardTourDone, setDashboardTourDone] = useState(false);
     const [mobileGuideDone, setMobileGuideDone] = useState(false);
+    const [leadsTourDone, setLeadsTourDone] = useState(false);
     // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
     // så man lander præcis hvor man tilføjer kort — ikke i toppen ved firmaoplysninger.
     const goToBilling = () => {
@@ -3498,13 +3507,16 @@ const Dashboard = () => {
                     )}
                     {activeTab === 'leads' && (
                         <div className="dashboard-workspace leads-overview space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                            {effectiveRole === 'admin' && !isMobile && !showOnboarding && !showSetPassword && !leadsTourDone && shouldShowCoach('leads_tour') && (
+                                <SectionTour tourKey="leads_tour" steps={LEADS_TOUR_STEPS} onDone={() => setLeadsTourDone(true)} />
+                            )}
                             <div className="settings-card">
                                 
                                 
                                 <div className="card-body">
                                     {/* Pipeline Menu with Action Button */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingBottom: '10px', flexWrap: 'wrap', gap: '16px' }}>
-                                    <div className="desktop-filters" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                    <div data-tour="leads-pipeline" className="desktop-filters" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
                                         {['Tilbudskladder', 'Ny forespørgsel', 'Sendt tilbud', 'Bekræftet opgave', 'Sæt i bero', 'Afbrudt Sag', 'Historik']
                                             .filter(status => features.publicPortal || status !== 'Ny forespørgsel')
                                             .filter(status => effectiveRole !== 'accountant' || status === 'Bekræftet opgave' || status === 'Sæt i bero' || status === 'Historik')
@@ -3635,7 +3647,7 @@ const Dashboard = () => {
                                     </div>
                                     {leadFilter !== 'Bekræftet opgave' && leadFilter !== 'Afsluttet opgave' && (
                                         <>
-                                        <button ref={createLeadBtnRef} className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, padding: '10px 20px', borderRadius: '30px' }}>
+                                        <button ref={createLeadBtnRef} data-tour="leads-create" className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, padding: '10px 20px', borderRadius: '30px' }}>
                                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                             Opret Ny Kunde
                                         </button>
@@ -3658,7 +3670,7 @@ const Dashboard = () => {
                                     )}
                                 </div>
                                 
-                                <div style={{ marginBottom: '20px', position: 'relative' }}>
+                                <div data-tour="leads-search" style={{ marginBottom: '20px', position: 'relative' }}>
                                 <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}>
                                     <Search size={20} />
                                 </div>
