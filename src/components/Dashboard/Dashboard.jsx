@@ -7009,6 +7009,11 @@ const Dashboard = () => {
                         <div style={{ flex: 1, maxWidth: '1000px', margin: '0 auto', width: '100%', backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}>
                             {/* Vi sender isTestMode med ned til Wizard */}
                             <Wizard carpenter={carpenterProfile} isTestMode={true} testSettings={settingsData} testMaterials={materialsData} onComplete={() => setIsTestWizardOpen(false)} />
+                            {/* Samme guide som ved Prisberegner — vises også her i simulatoren første gang
+                                (deler 'calculator_guide'-nøglen, så den kun kommer én gang i alt). */}
+                            {!isMobile && !calcGuideDone && shouldShowCoach('calculator_guide') && (
+                                <CalculatorGuide slug={carpenterProfile?.slug} onDone={() => setCalcGuideDone(true)} />
+                            )}
                         </div>
                     </div>
                 </div>,
