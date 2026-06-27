@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { 
-    Wallet, TrendingUp, TrendingDown, Clock, Search, 
-    ArrowRight, PackageCheck, AlertCircle, CheckCircle2 
+import { createPortal } from 'react-dom';
+import {
+    Wallet, TrendingUp, TrendingDown, Clock, Search,
+    ArrowRight, PackageCheck, AlertCircle, CheckCircle2, FileText
 } from 'lucide-react';
 import InvoiceEditor from './InvoiceEditor';
 import { computeCaseFinance } from '../../utils/caseFinance';
@@ -19,6 +20,7 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
     const [searchTerm, setSearchTerm] = useState('');
     const [activeInvoiceCase, setActiveInvoiceCase] = useState(null);
     const [financeTourActive, setFinanceTourActive] = useState(() => !isMobile && shouldShowCoach('finance_tour'));
+    const [showFinanceEnd, setShowFinanceEnd] = useState(false);
 
     const financeData = useMemo(() => {
         let totalRevenue = 0;
@@ -320,7 +322,44 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                     </div>
 
                     {financeTourActive && (
-                        <SectionTour tourKey="finance_tour" steps={FINANCE_TOUR_STEPS} onDone={() => setFinanceTourActive(false)} />
+                        <SectionTour tourKey="finance_tour" steps={FINANCE_TOUR_STEPS} onDone={(skipped) => { setFinanceTourActive(false); if (!skipped) setShowFinanceEnd(true); }} />
+                    )}
+
+                    {/* Afslutning: forklarer flowet + at det er tomt nu (ingen bekræftede sager) */}
+                    {showFinanceEnd && createPortal(
+                        <div onClick={() => setShowFinanceEnd(false)} style={{ position: 'fixed', inset: 0, zIndex: 100130, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 470, maxHeight: '90vh', overflowY: 'auto', background: '#fff', borderRadius: 26, boxShadow: '0 30px 80px rgba(0,0,0,0.4)', padding: '26px 26px 22px', position: 'relative' }}>
+                                <button onClick={() => setShowFinanceEnd(false)} style={{ position: 'absolute', top: 16, right: 16, width: 34, height: 34, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem' }}>✕</button>
+                                {/* Faktura-mockup — viser hvordan en faktura ser ud, når du opretter den */}
+                                <div style={{ margin: '4px auto 18px', width: 230, borderRadius: 14, border: '1px solid #e2e8f0', boxShadow: '0 16px 36px -14px rgba(15,23,42,0.35)', overflow: 'hidden' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#0f172a', color: '#fff' }}>
+                                        <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '0.04em' }}>FAKTURA</span>
+                                        <FileText size={16} />
+                                    </div>
+                                    <div style={{ padding: 14 }}>
+                                        {[['Tagarbejde', '32.000'], ['Materialer', '12.800'], ['Aftaleseddel #2', '4.500']].map(([k, v]) => (
+                                            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569', marginBottom: 8 }}><span>{k}</span><span style={{ fontWeight: 700, color: '#334155' }}>{v}</span></div>
+                                        ))}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: 10, marginTop: 2 }}><span style={{ fontSize: 12, fontWeight: 800, color: '#0f172a' }}>I alt</span><span style={{ fontSize: 13, fontWeight: 900, color: '#047857' }}>49.300 kr</span></div>
+                                        <div style={{ marginTop: 12, textAlign: 'center', padding: '8px 0', borderRadius: 9, background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontSize: 10.5, fontWeight: 800 }}>Send til regnskab</div>
+                                    </div>
+                                </div>
+                                <h3 style={{ margin: '0 0 8px', fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>Sådan kommer sagerne ind</h3>
+                                <p style={{ margin: '0 0 12px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
+                                    Når en kunde <strong>bekræfter et tilbud</strong>, ryger sagen i ordrestyringen — og dukker automatisk op her, klar til faktura.
+                                </p>
+                                <p style={{ margin: '0 0 16px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
+                                    Tryk <strong>Opret Faktura</strong>, så samler Frame det hele: sagens linjer + de bilag og aftalesedler, du har lagt på sagen.
+                                </p>
+                                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
+                                    <div style={{ color: '#475569', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                                        Du har ingen bekræftede sager endnu, så <strong>her er tomt lige nu</strong> — det fylder sig selv, så snart dine sager kommer i hus.
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowFinanceEnd(false)} style={{ width: '100%', padding: 13, borderRadius: 14, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 800, fontSize: '0.98rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(15,23,42,0.25)' }}>Forstået</button>
+                            </div>
+                        </div>,
+                        document.body
                     )}
                 </>
             )}
