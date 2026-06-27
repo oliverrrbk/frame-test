@@ -29,6 +29,29 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const userId = myProfile?.id;
     // Rundtur: aktiv ved første besøg (desktop, første gang).
     const [calendarTourActive, setCalendarTourActive] = useState(() => shouldShowCoach('calendar_tour'));
+    const [calendarStep, setCalendarStep] = useState(0);
+    const calMainRef = useRef(null);     // kalender-hovedområdet (mål for fly-animationen)
+    const sidebarDemoRef = useRef(null); // eksempel-sagskortet i sidebaren (start)
+    const [flyVars, setFlyVars] = useState(null);
+
+    // På sidste rundtur-trin: mål kortet + kalenderen og lad en spøgelses-kopi
+    // "flyve" fra sidebaren ind i kalenderen, så man ser man kan trække sagen ind.
+    useEffect(() => {
+        const onLast = calendarTourActive && calendarStep === CALENDAR_TOUR_STEPS.length - 1;
+        if (!onLast) { setFlyVars(null); return; }
+        const compute = () => {
+            const card = sidebarDemoRef.current, main = calMainRef.current;
+            if (!card || !main) return;
+            const c = card.getBoundingClientRect();
+            const m = main.getBoundingClientRect();
+            const targetX = m.left + m.width * 0.42;
+            const targetY = m.top + m.height * 0.48;
+            setFlyVars({ left: Math.round(c.left), top: Math.round(c.top), width: Math.round(c.width), dx: Math.round(targetX - c.left), dy: Math.round(targetY - c.top) });
+        };
+        const id = requestAnimationFrame(compute);
+        window.addEventListener('resize', compute);
+        return () => { cancelAnimationFrame(id); window.removeEventListener('resize', compute); };
+    }, [calendarTourActive, calendarStep]);
 
     // Åben firmakalender: alle roller må se folk-/tidslinje-visningen.
     const canViewTimeline = ['admin', 'boss', 'accountant', 'sales', 'worker', 'apprentice'].includes(effectiveRole);
@@ -1706,7 +1729,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '24px', height: 'calc(100vh - 80px)', fontFamily: "'Inter', sans-serif" }}>
             
             {/* Kalender Main Area */}
-            <div style={{ flex: 1, background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(16px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.8)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)', padding: '32px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div ref={calMainRef} style={{ flex: 1, background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(16px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.8)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)', padding: '32px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 
                 {/* Header Row 1: Titel og Filter */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -1812,15 +1835,14 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         </div>
                     )}
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
-                        {/* Under rundvisningen: en eksempel-sag (mockup) der viser, at man kan
-                            trække den ind i kalenderen. Forsvinder når turen slutter. */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: calendarTourActive ? 'visible' : 'auto' }}>
+                        {/* Under rundvisningen: en eksempel-sag (mockup). En spøgelses-kopi
+                            "flyver" ind i kalenderen (se flyVars-portal). Forsvinder når turen slutter. */}
                         {calendarTourActive ? (
                             <>
-                                <style>{`@keyframes calDragHint{0%,100%{transform:translate(0,0) rotate(0);box-shadow:0 2px 8px rgba(0,0,0,.06);}50%{transform:translate(-14px,-4px) rotate(-2deg);box-shadow:0 16px 34px rgba(15,23,42,.20);}}`}</style>
-                                <div style={{ position: 'relative' }}>
-                                    <span style={{ position: 'absolute', top: -9, left: 14, zIndex: 1, background: '#0f172a', color: '#fff', fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: '20px' }}>Eksempel</span>
-                                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'grab', animation: 'calDragHint 1.9s ease-in-out infinite' }}>
+                                <div style={{ position: 'relative', marginTop: 12 }}>
+                                    <span style={{ position: 'absolute', top: -10, left: 14, zIndex: 1, background: '#0f172a', color: '#fff', fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: '20px', boxShadow: '0 4px 10px rgba(15,23,42,0.25)' }}>Eksempel</span>
+                                    <div ref={sidebarDemoRef} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'grab' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#64748b', background: '#f1f5f9', padding: '4px 8px', borderRadius: '8px', alignSelf: 'flex-start' }}>Sag 1043</span>
                                             <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '700' }}>Nyt trægulv i stue</h4>
@@ -2472,8 +2494,23 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 <SectionTour
                     tourKey="calendar_tour"
                     steps={CALENDAR_TOUR_STEPS}
+                    onStepChange={setCalendarStep}
                     onDone={() => setCalendarTourActive(false)}
                 />
+            )}
+
+            {/* Spøgelses-kopi der "flyver" fra eksempel-sagen ind i kalenderen (sidste trin).
+                Lagt over spotlight-dæmpningen (z over hullet, under boblen), så den ses. */}
+            {flyVars && createPortal(
+                <div style={{ position: 'fixed', left: flyVars.left, top: flyVars.top, width: flyVars.width, zIndex: 100045, pointerEvents: 'none', ['--fly-dx']: `${flyVars.dx}px`, ['--fly-dy']: `${flyVars.dy}px`, animation: 'calFly 2.8s ease-in-out infinite' }}>
+                    <style>{`@keyframes calFly{0%{transform:translate(0,0) scale(1) rotate(0);opacity:0;}10%{opacity:1;}16%{transform:translate(-6px,-8px) scale(1.03) rotate(-2deg);}66%{transform:translate(var(--fly-dx),var(--fly-dy)) scale(.82) rotate(-3deg);opacity:1;}82%{transform:translate(var(--fly-dx),var(--fly-dy)) scale(.66) rotate(0);opacity:0;}100%{transform:translate(var(--fly-dx),var(--fly-dy)) scale(.66);opacity:0;}}`}</style>
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '14px', boxShadow: '0 24px 48px rgba(15,23,42,0.30)' }}>
+                        <span style={{ display: 'inline-block', fontSize: '0.78rem', fontWeight: 800, color: '#64748b', background: '#f1f5f9', padding: '3px 8px', borderRadius: '8px' }}>Sag 1043</span>
+                        <h4 style={{ margin: '8px 0 2px', fontSize: '0.95rem', fontWeight: 700 }}>Nyt trægulv i stue</h4>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Bruns Byg ApS</p>
+                    </div>
+                </div>,
+                document.body
             )}
         </>
     );
