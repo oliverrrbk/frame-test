@@ -70,7 +70,7 @@ export default function FoundersWelcome({ onDone }) {
         {
             scene: <Scene bg="linear-gradient(135deg,#eff6ff,#dbeafe)" primary={<MapPin size={48} color={BLUE} />} accents={[{ icon: <Clock size={26} color="#0f172a" />, pos: { top: 22, left: 28 } }, { icon: <Coins size={26} color="#f59e0b" />, pos: { bottom: 22, right: 28 } }]} />,
             title: 'Du møder en kort guide hvert nyt sted',
-            body: 'Den viser, hvordan vi og vores tømrere har tænkt det brugt — ikke en lov, du bestemmer selv. Men giv det en chance: de 10-15 minutter sparer dig en helvedes masse timer og bøvl, så du hurtigere tjener penge.',
+            body: 'Den viser, hvordan vi har tænkt, at det skulle bruges. Det er ikke en lov — du bestemmer helt selv, hvordan det skal bruges. Men giv lige de korte guides en chance: de 10-15 minutter sparer dig en helvedes masse timer og bøvl, så du hurtigere tjener penge.',
         },
         {
             scene: <Scene bg="linear-gradient(135deg,#ecfdf5,#d1fae5)" primary={<Phone size={46} color="#059669" />} accents={[{ icon: <HeartHandshake size={28} color={BLUE} />, pos: { top: 22, right: 28 } }, { icon: <img src="/logo.png" alt="" style={{ width: 30, height: 30, objectFit: 'contain' }} />, pos: { bottom: 20, left: 26 } }]} />,
