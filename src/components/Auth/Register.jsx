@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
-import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus, ChevronDown } from 'lucide-react';
+import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus, ChevronDown, HelpCircle, X, Briefcase, HardHat, Gift } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { computePrice, formatKr } from '../../utils/pricing';
+import { computePrice, formatKr, PRICES, VOLUME_FROM } from '../../utils/pricing';
 import { BUSINESS_TYPES, ENABLED_SIGNUP_TRADES, signupTradeOptions } from '../../utils/features';
 
 // Lækker Bison Frame-dropdown til branchevalg (erstatter den grimme native select).
@@ -54,6 +54,110 @@ const BusinessTypeSelect = ({ value, onChange, options = BUSINESS_TYPES }) => {
     );
 };
 
+// Ultrakort forklaring af hold + prisstruktur — popper op i Frame-stil fra "?"-ikonet
+// ved "Byg dit hold". Lukkes med X, klik udenfor eller Esc. Portales til <body>.
+const TeamHelpPopup = ({ open, onClose }) => {
+    useEffect(() => {
+        if (!open) return;
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [open, onClose]);
+
+    if (!open) return null;
+
+    const rows = [
+        {
+            icon: <CheckCircle2 size={18} />,
+            color: 'text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800',
+            title: '1 mester er din grundplads',
+            body: `Du starter altid med dig selv som mester for ${formatKr(PRICES.mester)} kr/md. Det er hele dit system — sager, tilbud, kunder og økonomi.`,
+        },
+        {
+            icon: <Briefcase size={18} />,
+            color: 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/15',
+            title: `Kontor: ${formatKr(PRICES.kontor)} kr/md pr. plads`,
+            body: 'Ekstra mestre, projektledere og bogholdere — fuld adgang fra computeren. Du tilføjer kun dem, du faktisk har brug for.',
+        },
+        {
+            icon: <HardHat size={18} />,
+            color: 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/15',
+            title: `Felt: ${formatKr(PRICES.felt)} kr/md pr. plads`,
+            body: 'Svende og lærlinge — app på telefonen til timer, billeder og tjeklister ude på sagen.',
+        },
+    ];
+
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={onClose}
+            style={{ animation: 'thpFade .15s ease-out' }}
+        >
+            <div
+                className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-2xl shadow-slate-900/20 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+                style={{ animation: 'thpPop .22s cubic-bezier(0.16,1,0.3,1)' }}
+            >
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Luk"
+                    className="absolute top-3.5 right-3.5 w-8 h-8 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                    <X size={18} />
+                </button>
+
+                <div className="p-6 pb-5">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        <Gift size={12} /> Sådan bygger du dit hold
+                    </span>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 mt-3 leading-tight">Betal kun for dem, du tilføjer</h3>
+                    <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1.5">
+                        Frame koster pr. person — du sætter holdet sammen rolle for rolle. Ingen pakker, ingen binding.
+                    </p>
+                </div>
+
+                <div className="px-6 flex flex-col gap-3">
+                    {rows.map((r, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                            <span className={`shrink-0 w-9 h-9 rounded-xl inline-flex items-center justify-center ${r.color}`}>{r.icon}</span>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{r.title}</span>
+                                <span className="text-[12.5px] text-slate-500 dark:text-slate-400 leading-relaxed">{r.body}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="px-6 mt-4">
+                    <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-3.5 flex items-start gap-2.5">
+                        <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" strokeWidth={2.5} />
+                        <p className="text-[12.5px] text-emerald-800 dark:text-emerald-200 leading-relaxed">
+                            <strong>30 dage gratis — helt uden kort.</strong> Prøv hele holdet af i en hel måned. Bliver I mange, falder prisen automatisk fra den {VOLUME_FROM}. plads i hver rolle.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="p-6 pt-4">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl py-3 hover:opacity-90 transition-opacity"
+                    >
+                        Forstået — byg mit hold
+                    </button>
+                </div>
+
+                <style>{`
+                    @keyframes thpFade { from { opacity:0; } to { opacity:1; } }
+                    @keyframes thpPop { from { opacity:0; transform: translateY(12px) scale(.97); } to { opacity:1; transform: translateY(0) scale(1); } }
+                `}</style>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
 const Register = ({ setSession }) => {
     const navigate = useNavigate();
     const [companyName, setCompanyName] = useState('');
@@ -81,6 +185,7 @@ const Register = ({ setSession }) => {
     const [team, setTeam] = useState({ mester: 1, pl: 0, bog: 0, svend: 0, laer: 0 });
     const teamPrice = computePrice(team);
     const stepTeam = (key, d, min) => setTeam(t => ({ ...t, [key]: Math.max(min, Math.min(299, (t[key] || 0) + d)) }));
+    const [showTeamHelp, setShowTeamHelp] = useState(false);   // forklarings-popup til "Byg dit hold"
     
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
@@ -376,22 +481,13 @@ const Register = ({ setSession }) => {
                             {/* Branche — vises kun når der er ÅBNET for mere end ét fag (ENABLED_SIGNUP_TRADES).
                                 Med kun ét åbent fag er Frame et rent tømrer-system: business_type = 'tomrer',
                                 og ikke-tømrere henvises til "kontakt os". Se utils/features.js for at åbne fag. */}
-                            {signupTradeOptions().length > 1 ? (
+                            {/* Branche-vælger vises kun når der er åbnet for mere end ét fag.
+                                Med kun tømrer åbent er Frame et rent tømrer-system — ingen branche-boks. */}
+                            {signupTradeOptions().length > 1 && (
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Hvilken slags håndværker er du? *</label>
                                     <BusinessTypeSelect value={businessType} onChange={setBusinessType} options={signupTradeOptions()} />
                                     <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">Tømrere får prisberegner + materialer. Andre fag laver hurtige tilbud — alt det øvrige er ens.</span>
-                                </div>
-                            ) : (
-                                <div className="rounded-xl border border-blue-100 dark:border-blue-500/20 bg-blue-50/60 dark:bg-blue-500/10 p-4">
-                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1">Er du ikke tømrer?</p>
-                                    <p className="text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                                        Frame er lige nu bygget specifikt til tømrere. Er du nysgerrig og tror, det kunne passe i din forretning, så kontakt os, før du opretter — så finder vi en løsning sammen.
-                                    </p>
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-[13px] font-semibold">
-                                        <a href="tel:+4540265002" className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline"><Phone size={14} /> 40 26 50 02</a>
-                                        <a href="mailto:team@bisoncompany.dk" className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline"><Mail size={14} /> team@bisoncompany.dk</a>
-                                    </div>
                                 </div>
                             )}
 
@@ -519,7 +615,17 @@ const Register = ({ setSession }) => {
 
                             <div className="flex flex-col gap-3">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Byg dit hold (30 Dage Gratis) *</label>
+                                    <div className="flex items-center gap-1.5 ml-1">
+                                        <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Byg dit hold (30 Dage Gratis) *</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowTeamHelp(true)}
+                                            aria-label="Sådan fungerer holdet og priserne"
+                                            className="shrink-0 w-5 h-5 inline-flex items-center justify-center rounded-full text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
+                                        >
+                                            <HelpCircle size={14} strokeWidth={2.5} />
+                                        </button>
+                                    </div>
                                     <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md uppercase tracking-wider inline-flex items-center gap-1 w-max">
                                         <CheckCircle2 size={12} /> Intet kort påkrævet
                                     </span>
@@ -561,6 +667,8 @@ const Register = ({ setSession }) => {
                                     <p className="text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">Over 40 ansatte? Vi laver en fast entreprisepris — skriv til <a href="mailto:kontakt@bisonframe.dk" className="text-blue-600 dark:text-blue-400 font-bold">kontakt@bisonframe.dk</a>.</p>
                                 )}
                             </div>
+
+                            <TeamHelpPopup open={showTeamHelp} onClose={() => setShowTeamHelp(false)} />
 
                             <div className="mt-2">
                                 <label className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 cursor-pointer group hover:border-slate-300 dark:hover:border-slate-700 transition-colors">

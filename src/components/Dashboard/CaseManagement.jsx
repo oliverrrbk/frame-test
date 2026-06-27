@@ -22,6 +22,8 @@ import { friendlyError } from '../../utils/friendlyError';
 import { mutateLeadRawData } from '../../utils/leadRawData';
 import { getChecklistForCategory, buildPhasesChecklist } from '../../utils/checklistGenerator';
 import UserAvatar from '../ui/UserAvatar';
+import SectionTour from './SectionTour';
+import { shouldShowCoach } from './coachmarks';
 import QuarterTimePicker from '../ui/QuarterTimePicker';
 import { snapToQuarter } from '../../utils/timeUtils';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
@@ -559,8 +561,20 @@ const isConfirmedCase = (lead) => {
     return false;
 };
 
+// Rundtur for Sager & Ordrestyring (Bølge 2). Lyser hele afsnit op + en
+// eksempel-sag (mockup, ikke en rigtig DB-sag) så nye brugere uden sager
+// stadig kan se hvordan en sag ser ud. Kun desktop, første gang.
+const CASES_TOUR_STEPS = [
+    { sel: '[data-tour="cases-header"]', placement: 'bottom', eyebrow: 'Sager & Ordrestyring', title: 'Her bor dine opgaver', body: 'Når en kunde accepterer et tilbud, bliver det automatisk til en sag her — klar til at blive styret fra start til faktura.' },
+    { sel: '[data-tour="cases-tabs"]', placement: 'bottom', eyebrow: 'Overblik', title: 'Mine sager vs. alle sager', body: '"Mine sager" er dem, du selv er sat på. "Alle sager" viser hele firmaets — så du altid kan finde en sag og hjælpe til.' },
+    { sel: '[data-tour="cases-search"]', placement: 'bottom', eyebrow: 'Find hurtigt', title: 'Søg på tværs', body: 'Søg på sagsnummer, kunde, adresse eller telefon — også når listen vokser.' },
+    { sel: '[data-tour="cases-demo-card"]', placement: 'right', eyebrow: 'Sådan ser en sag ud', title: 'Alt om opgaven ét sted', body: 'Status, fremdrift på to-do-listen, registrerede timer mod estimat, og hvem på holdet der er sat på. Klik en sag for at åbne den og styre det hele.' },
+];
+
 export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile }) {
     const [activeCases, setActiveCases] = useState([]);
+    // Rundtur: aktiv ved første besøg (desktop, ikke i modal-visning).
+    const [casesTourActive, setCasesTourActive] = useState(() => !isModalView && shouldShowCoach('cases_tour'));
     const [caseViewTab, setCaseViewTab] = useState('mine'); // 'mine' = mine sager (standard), 'all' = alle firmaets bekræftede sager
     const [caseSearch, setCaseSearch] = useState('');
     const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
@@ -2080,7 +2094,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             {/* OVERBYGNING ELLER MODAL LUK-KNAP */}
             {!selectedCase ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div data-tour="cases-header" style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <HardHat size={24} />
                         </div>
@@ -2090,11 +2104,56 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         </div>
                     </div>
 
+                    {/* Eksempel-sag — vises kun under rundvisningen, så nye brugere uden sager
+                        stadig kan se hvordan en sag ser ud. Ikke en rigtig DB-sag. */}
+                    {casesTourActive && (
+                        <div style={{ position: 'relative', maxWidth: '380px' }}>
+                            <span style={{ position: 'absolute', top: '-10px', left: '16px', zIndex: 1, background: '#0f172a', color: '#fff', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px' }}>Eksempel</span>
+                            <div data-tour="cases-demo-card" style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                                    <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 'bold', borderRadius: '30px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>Aktiv Sag</span>
+                                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{new Date().toLocaleDateString('da-DK')}</span>
+                                </div>
+                                <h4 style={{ margin: '0 0 4px 0', fontSize: '1.05rem', fontWeight: 'bold', color: '#1a1a1a' }}>Sag 1042 - Nyt trægulv i stue</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ background: '#e2e8f0', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>Erhverv</span>
+                                        Bruns Byg ApS
+                                    </span>
+                                    <span style={{ fontSize: '0.825rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <MapPin size={14} style={{ color: '#94a3b8' }} /> Byggevej 12, 8000 Aarhus C
+                                    </span>
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#4b5563', marginBottom: '4px', fontWeight: '500' }}>
+                                        <span>Fremdrift (To-Do)</span>
+                                        <strong>60%</strong>
+                                    </div>
+                                    <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                                        <div style={{ width: '60%', height: '100%', background: '#10b981' }} />
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#6b7280', borderTop: '1px solid #f1f1ef', paddingTop: '12px', marginBottom: '12px' }}>
+                                    <span>Timer registreret:</span>
+                                    <strong style={{ color: '#1e293b' }}>24 t / 40 t</strong>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', borderTop: '1px solid #f1f1ef', paddingTop: '12px' }}>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: '#eff6ff', color: '#1d4ed8', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '500' }}>
+                                        <UserAvatar name="Christian" size={16} ring={false} /> Christian (PM)
+                                    </span>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: '#f8fafc', color: '#475569', borderRadius: '6px', fontSize: '0.75rem', border: '1px solid #e2e8f0' }}>
+                                        <UserAvatar name="Niklas" size={16} ring={false} /> Niklas
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Sagsliste overblik */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         {/* Faner (Mine / Alle) + søgning */}
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '12px', padding: '4px', gap: '4px' }}>
+                            <div data-tour="cases-tabs" style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '12px', padding: '4px', gap: '4px' }}>
                                 <button onClick={() => setCaseViewTab('mine')} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem', background: caseViewTab === 'mine' ? '#ffffff' : 'transparent', color: caseViewTab === 'mine' ? '#0f172a' : '#64748b', boxShadow: caseViewTab === 'mine' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
                                     Mine sager{myCasesCount > 0 ? ` (${myCasesCount})` : ''}
                                 </button>
@@ -2102,7 +2161,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     Alle sager ({activeCases.length})
                                 </button>
                             </div>
-                            <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: '420px' }}>
+                            <div data-tour="cases-search" style={{ position: 'relative', flex: '1 1 280px', maxWidth: '420px' }}>
                                 <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
                                 <input
                                     type="text"
@@ -2166,7 +2225,13 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         )}
                     </div>
 
-
+                    {casesTourActive && (
+                        <SectionTour
+                            tourKey="cases_tour"
+                            steps={CASES_TOUR_STEPS}
+                            onDone={() => setCasesTourActive(false)}
+                        />
+                    )}
                 </div>
             ) : (
                 /* MOBIL & DESKTOP WRAPPER */
