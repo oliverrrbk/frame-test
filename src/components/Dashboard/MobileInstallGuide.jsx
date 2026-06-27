@@ -36,8 +36,11 @@ export default function MobileInstallGuide({ onDone }) {
     const isIOS = platform === 'ios';
 
     // ---- Mockups pr. trin ----
+    // Ægte app-ikon: bison-logoet på mørk baggrund (som det ser ud på hjemmeskærmen).
     const appIcon = (
-        <div style={{ width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg,#2563eb,#1e3a8a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 13, boxShadow: '0 8px 16px rgba(37,99,235,0.4)' }}>Frame</div>
+        <div style={{ width: 56, height: 56, borderRadius: 14, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(15,23,42,0.35)', overflow: 'hidden' }}>
+            <img src="/logo.png" alt="Bison Frame" style={{ width: 42, height: 42, objectFit: 'contain' }} />
+        </div>
     );
 
     const screens = {
@@ -53,7 +56,7 @@ export default function MobileInstallGuide({ onDone }) {
             <Phone label="Mobilens browser">
                 <div style={{ padding: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: `2px solid ${BLUE}`, borderRadius: 999, padding: '8px 12px', boxShadow: `0 0 0 4px ${BLUE}22` }}>
-                        <Globe size={14} color={BLUE} />
+                        <img src="/logo.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>bisonframe.dk</span>
                     </div>
                 </div>
@@ -84,14 +87,37 @@ export default function MobileInstallGuide({ onDone }) {
                 <div style={{ flex: 1 }} />
             </Phone>
         ),
-        add: (
-            <Phone label={isIOS ? 'Del-menuen' : 'Menuen'}>
+        add: isIOS ? (
+            <Phone label="Føj til hjemmeskærm">
+                <div style={{ flex: 1, background: '#1c1c1e', color: '#fff', padding: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#3a3a3c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={12} color="#fff" /></span>
+                        <span style={{ fontSize: 11.5, fontWeight: 700 }}>Føj til hjemmeskærm</span>
+                        <Pulse><span style={{ background: '#0a84ff', color: '#fff', borderRadius: 999, padding: '4px 11px', fontSize: 11.5, fontWeight: 700 }}>Tilføj</span></Pulse>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#2c2c2e', borderRadius: 10, padding: 8 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 9, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                            <img src="/logo.png" alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700 }}>Bison Frame</div>
+                            <div style={{ fontSize: 10, color: '#8e8e93', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>bisonframe.dk</div>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#2c2c2e', borderRadius: 10, padding: '8px 10px' }}>
+                        <span style={{ fontSize: 11 }}>Åbn som webapp</span>
+                        <span style={{ width: 30, height: 18, borderRadius: 999, background: '#34c759', position: 'relative' }}><span style={{ position: 'absolute', top: 2, right: 2, width: 14, height: 14, borderRadius: '50%', background: '#fff' }} /></span>
+                    </div>
+                </div>
+            </Phone>
+        ) : (
+            <Phone label="Menuen">
                 <div style={{ marginTop: 'auto', background: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 10, boxShadow: '0 -8px 20px rgba(0,0,0,0.06)' }}>
-                    {['Kopiér', 'Læs senere'].map(t => (
+                    {['Ny fane', 'Historik'].map(t => (
                         <div key={t} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 8px', color: '#94a3b8', fontSize: 12 }}>{t}<div style={{ width: 18, height: 18, borderRadius: 5, background: '#e2e8f0' }} /></div>
                     ))}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 10px', borderRadius: 12, background: '#eff6ff', border: `2px solid ${BLUE}`, color: '#0f172a', fontSize: 12.5, fontWeight: 800 }}>
-                        Føj til hjemmeskærm <PlusSquare size={18} color={BLUE} />
+                        Føj til startskærm <PlusSquare size={18} color={BLUE} />
                     </div>
                 </div>
             </Phone>
@@ -147,7 +173,7 @@ export default function MobileInstallGuide({ onDone }) {
                 <h2 style={ttl}>{isIOS ? 'Tryk på Del' : 'Tryk på menuen'}</h2>
                 <p style={txt}>
                     {isIOS
-                        ? <>Tryk på <strong>Del</strong>-ikonet i bunden af Safari (firkanten med pilen op).</>
+                        ? <>På nyere iPhones skal du først trykke på <strong>linjen i bunden</strong> af Safari, så knapperne kommer frem — tryk derefter på <strong>Del</strong>-ikonet (firkant med pil op).</>
                         : <>Tryk på <strong>de tre prikker</strong> øverst til højre i Chrome.</>}
                 </p>
             </>
@@ -156,7 +182,7 @@ export default function MobileInstallGuide({ onDone }) {
             <>
                 {screens.add}
                 <h2 style={ttl}>Føj til hjemmeskærm</h2>
-                <p style={txt}>{isIOS ? <>Rul ned og vælg <strong>“Føj til hjemmeskærm”</strong>.</> : <>Vælg <strong>“Installér app”</strong> eller <strong>“Føj til startskærm”</strong>.</>}</p>
+                <p style={txt}>{isIOS ? <>Rul ned i Del-menuen og vælg <strong>“Føj til hjemmeskærm”</strong> — tryk så <strong>“Tilføj”</strong> øverst. (Lad gerne “Åbn som webapp” være slået til.)</> : <>Vælg <strong>“Installér app”</strong> eller <strong>“Føj til startskærm”</strong>.</>}</p>
             </>
         );
         return (
