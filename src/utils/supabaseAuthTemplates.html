@@ -1,14 +1,21 @@
 <!-- ==========================================
-     SUPABASE AUTH<!-- 1. BEKRÆFT DIN BRUGER (Confirm Signup) -->ENTICATION EMAIL TEMPLATES
+     SUPABASE AUTHENTICATION EMAIL TEMPLATES
 ==========================================
-<!-- 2. LOG IND MED MAGIC LINK (Magic Link) -->
 Brug disse skabeloner inde i dit Supabase Dashboard.
 Gå til: Authentication -> Email Templates
+
+Der er TO skabeloner i denne fil:
+  1) "Confirm signup"  -> indsæt blokken under overskrift (1) nedenfor
+  2) "Magic Link"      -> indsæt blokken under overskrift (2) nedenfor
+Kopiér KUN selve <!DOCTYPE html> ... </html>-blokken ind i det relevante felt.
 -->
 
 
-<!-- 1. BEKRÆFT DIN BRUGER (Confirm Signup) -->
-<!-- Emne: Bekræft din bruger hos Bison Frame -->
+<!-- ======================================================================== -->
+<!-- 1. BEKRÆFT DIN BRUGER (Confirm Signup)                                   -->
+<!--    Supabase Dashboard -> Authentication -> Email Templates -> Confirm signup -->
+<!--    Emne: Bekræft din bruger hos Bison Frame                              -->
+<!-- ======================================================================== -->
 
 <!DOCTYPE html>
 <html>
@@ -20,20 +27,20 @@ Gå til: Authentication -> Email Templates
 </head>
 
 <body
-    style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; line-height: 1.6; margin: 0; padding: 40px 20px;">
+    style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #e0f2fe 0%, #fce7f3 50%, #ffedd5 100%); background-color: #f8fafc; color: #0f172a; line-height: 1.6; margin: 0; padding: 60px 20px;">
     <span
         style="display:none;font-size:1px;color:#f8fafc;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">Velkommen
         til Bison Frame! Klik for at bekræfte din e-mail.</span>
     <div
-        style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border: 1px solid #e2e8f0;">
-        <div style="background: #0f172a; color: #ffffff; padding: 32px 40px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em;">Bison Frame</h1>
+        style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border: 1px solid rgba(255, 255, 255, 0.5);">
+        <div style="background: #ffffff; padding: 32px 40px 24px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+            <img src="https://bisonframe.dk/logo.png" alt="Bison Frame"
+                style="max-height: 56px; max-width: 200px; display: inline-block;" />
         </div>
         <div style="padding: 40px; text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 16px;">👋</div>
             <h2 style="margin-top: 0; color: #0f172a; font-size: 24px;">Velkommen ombord!</h2>
-            <p style="color: #334155; font-size: 16px;">Du er kun ét skridt fra at få adgang til dit nye professionelle
-                tømrer-dashboard. Bekræft din e-mailadresse for at komme i gang.</p>
+            <p style="color: #334155; font-size: 16px;">Du er kun ét skridt fra at få adgang til dit professionelle
+                håndværker-dashboard. Bekræft din e-mailadresse for at komme i gang.</p>
 
             <a href="{{ .ConfirmationURL }}"
                 style="display: inline-block; background-color: #10b981; color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: 600; margin: 32px 0; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">Bekræft
@@ -53,12 +60,11 @@ Gå til: Authentication -> Email Templates
 
 
 
-<!-- ========================================== -->
-
-
-
-<!-- 2. LOG IND MED MAGIC LINK (Magic Link) -->
-<!-- Emne: Dit login-link til Bison Frame -->
+<!-- ======================================================================== -->
+<!-- 2. LOG IND MED MAGIC LINK (Magic Link)                                   -->
+<!--    Supabase Dashboard -> Authentication -> Email Templates -> Magic Link -->
+<!--    Emne: Dit login-link til Bison Frame                                  -->
+<!-- ======================================================================== -->
 
 <!DOCTYPE html>
 <html>
@@ -70,17 +76,17 @@ Gå til: Authentication -> Email Templates
 </head>
 
 <body
-    style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; line-height: 1.6; margin: 0; padding: 40px 20px;">
+    style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #e0f2fe 0%, #fce7f3 50%, #ffedd5 100%); background-color: #f8fafc; color: #0f172a; line-height: 1.6; margin: 0; padding: 60px 20px;">
     <span
         style="display:none;font-size:1px;color:#f8fafc;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">Brug
         dette link for at logge sikkert ind på din konto.</span>
     <div
-        style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border: 1px solid #e2e8f0;">
-        <div style="background: #0f172a; color: #ffffff; padding: 32px 40px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em;">Bison Frame</h1>
+        style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border: 1px solid rgba(255, 255, 255, 0.5);">
+        <div style="background: #ffffff; padding: 32px 40px 24px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+            <img src="https://bisonframe.dk/logo.png" alt="Bison Frame"
+                style="max-height: 56px; max-width: 200px; display: inline-block;" />
         </div>
         <div style="padding: 40px; text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
             <h2 style="margin-top: 0; color: #0f172a; font-size: 24px;">Sikkert Login</h2>
             <p style="color: #334155; font-size: 16px;">Vi har modtaget en anmodning om at logge ind på din konto. Klik
                 på knappen nedenfor for at få adgang til dit dashboard med det samme.</p>
