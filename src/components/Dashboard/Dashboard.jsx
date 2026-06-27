@@ -6071,7 +6071,36 @@ const Dashboard = () => {
                     )}
                     {activeTab === 'settings' && settingsData && (
                         <div className="dashboard-workspace settings-overview settings-grid">
-                            
+
+                            {/* Tilpas hvilke opgaver beregneren viser — bor her under "Prisberegning" */}
+                            {effectiveRole === 'admin' && (
+                            <div className="settings-card">
+                                <div className="card-header">
+                                    <div className="icon-wrapper"><Sliders size={24} /></div>
+                                    <h3>Tilpas din beregner</h3>
+                                </div>
+                                <div className="card-body">
+                                    <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: '0.9rem', lineHeight: 1.5 }}>Slå de opgaver fra, du ikke laver — så viser prisberegneren kun det, der er relevant for dig og dine kunder.</p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {initialCategories.map(cat => {
+                                            const isActive = !disabledCategories.includes(cat.id);
+                                            return (
+                                                <button key={cat.id} onClick={() => toggleCategoryActive(cat.id)} disabled={isSaving}
+                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '13px 16px', borderRadius: 14, border: '1px solid ' + (isActive ? '#bbf7d0' : '#e2e8f0'), background: isActive ? 'rgba(236,253,245,0.7)' : '#f8fafc', cursor: isSaving ? 'wait' : 'pointer', textAlign: 'left', transition: 'all 0.18s' }}
+                                                    onMouseEnter={(e) => { if (!isSaving) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(15,23,42,0.06)'; } }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
+                                                    <span style={{ fontSize: '0.98rem', fontWeight: 700, color: isActive ? '#0f172a' : '#94a3b8' }}>{cat.label}</span>
+                                                    <span style={{ position: 'relative', width: 46, height: 26, borderRadius: 999, background: isActive ? 'linear-gradient(145deg,#10b981,#059669)' : '#cbd5e1', transition: 'background 0.2s', flexShrink: 0, boxShadow: isActive ? '0 4px 10px rgba(16,185,129,0.35)' : 'none' }}>
+                                                        <span style={{ position: 'absolute', top: 3, left: isActive ? 23 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.2s cubic-bezier(.34,1.4,.64,1)', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }} />
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                            )}
+
                             <div className="settings-card">
                                 <div className="card-header">
                                     <div className="icon-wrapper">

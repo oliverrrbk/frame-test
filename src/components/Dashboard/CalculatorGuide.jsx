@@ -171,7 +171,7 @@ export default function CalculatorGuide({ onDone, slug }) {
         { mockup: screens.questions, title: 'Svar på spørgsmål', body: 'Et par enkle spørgsmål. Tager under et minut.' },
         { mockup: screens.price, title: 'Få prisen', body: 'Et prisoverslag med det samme — bygget på dine priser.' },
         { mockup: screens.quote, title: 'Tilbud + materialeliste', body: 'Prisen bliver automatisk til både tilbud og materialeliste.' },
-        { mockup: screens.share, title: 'Lad kunden regne selv', body: <>Dit eget link — <strong>{linkText}</strong>. Læg det på hjemmesiden, så kunden regner selv.</> },
+        { mockup: screens.share, title: 'Lad kunden regne selv', body: <>Dit eget link — <strong>{linkText}</strong>. Læg det på hjemmesiden eller send på SMS/mail, så kunden regner selv.</> },
         { mockup: screens.complex, title: 'Komplekse opgaver', body: 'Er en opgave for kompleks til en fast pris? Så beskriver kunden den og sender en forespørgsel — og I aftaler en besigtigelse.' },
         { mockup: screens.customize, title: 'Tilpas din beregner', body: 'Slå de opgaver fra, du ikke laver — så viser beregneren kun det relevante.' },
     ];
