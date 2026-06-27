@@ -33,8 +33,9 @@ export default function DashboardTour({ onDone }) {
         const resolve = () => {
             const el = document.querySelector(STEPS[idx].sel);
             if (el) { anchorRef.current = el; setReady(true); return; }
-            // mål mangler endnu — prøv kort, ellers spring frem
-            if (++tries > 8) {
+            // mål mangler endnu — vent på at (evt. lazy-loadet) indhold monterer,
+            // ellers spring frem. ~150 frames ≈ 2,5s er rigeligt til lazy-chunks.
+            if (++tries > 150) {
                 if (idx < STEPS.length - 1) setIdx(i => i + 1);
                 else finish();
                 return;

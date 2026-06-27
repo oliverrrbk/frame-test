@@ -32,8 +32,9 @@ export default function SectionTour({ steps = [], tourKey, onDone, zBase = 10004
                 setReady(true);
                 return;
             }
-            // Målet findes ikke (endnu) — prøv kort, ellers spring stoppet over.
-            if (++tries > 10) {
+            // Målet findes ikke (endnu) — vent på (evt. lazy-loadet) indhold før vi
+            // springer stoppet over. ~150 frames ≈ 2,5s dækker lazy-chunks.
+            if (++tries > 150) {
                 if (idx < steps.length - 1) setIdx(i => i + 1);
                 else finish();
                 return;
