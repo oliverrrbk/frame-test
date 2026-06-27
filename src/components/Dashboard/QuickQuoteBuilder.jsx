@@ -144,6 +144,8 @@ const PREVIEW_CSS = `
   .qqb-maxbtn:hover{transform:translateY(-1px);}
   .qqb-maxbtn-hint{box-shadow:0 0 0 0 rgba(59,130,246,.5);animation:qqbPulse 2.4s ease-out infinite;}
   @keyframes qqbPulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.45);}70%{box-shadow:0 0 0 7px rgba(59,130,246,0);}100%{box-shadow:0 0 0 0 rgba(59,130,246,0);}}
+  .qqb-send-pulse{animation:qqbSendPulse 1.4s ease-out infinite;}
+  @keyframes qqbSendPulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.55);transform:translateY(0);}50%{transform:translateY(-2px);}70%{box-shadow:0 0 0 12px rgba(16,185,129,0);}100%{box-shadow:0 0 0 0 rgba(16,185,129,0);transform:translateY(0);}}
   @keyframes qqbFade{from{opacity:0;}to{opacity:1;}}
   @keyframes qqbConfirmPop{0%{opacity:0;transform:translateY(16px) scale(.92);}60%{opacity:1;transform:translateY(-4px) scale(1.01);}100%{opacity:1;transform:translateY(0) scale(1);}}
   @keyframes qqbIconPop{0%{transform:scale(.4);}70%{transform:scale(1.12);}100%{transform:scale(1);}}
@@ -230,6 +232,9 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     // Husk om SMTP-opsætningen blev åbnet fra afslutnings-kæden, så vi kan
     // føre brugeren videre til "Prøv et eksempel", når den lukkes.
     const smtpFromFinish = useRef(false);
+    // Efter eksemplet er udfyldt: pulsér "Send tilbud" + pil, så man intuitivt
+    // sender det til sig selv og oplever kunderejsen.
+    const [pulseSendExample, setPulseSendExample] = useState(false);
     const [coachHintStep, setCoachHintStep] = useState(() => (!isMobile && shouldShowCoach('quick_hints')) ? 0 : -1);
     useEffect(() => { if (coachHintStep >= 0) markCoachSeen('quick_hints'); }, [coachHintStep]);
 
@@ -593,6 +598,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
 
     // Tryk på "Send tilbud" → valider, markér manglende felter, og vis bekræftelse (sender ikke endnu).
     const requestSend = () => {
+        setPulseSendExample(false); // pulsen har gjort sit job, så snart man trykker
         const errs = validateForSend();
         setFieldErrors(errs);
         if (Object.keys(errs).length > 0) {
@@ -1236,7 +1242,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             <Save size={18} /> Gem kladde
                         </button>
                         )}
-                        <button ref={coachSendRef} data-tour="qq-send" className="qqb-send" disabled={busy} onClick={requestSend} style={{ padding: '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
+                        <button ref={coachSendRef} data-tour="qq-send" className={`qqb-send${pulseSendExample ? ' qqb-send-pulse' : ''}`} disabled={busy} onClick={requestSend} style={{ padding: '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
                             <Send size={18} /> {busy ? 'Sender…' : (wasSent ? 'Send opdateret tilbud' : 'Send tilbud')}
                         </button>
                     </div>
@@ -1259,7 +1265,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                 </p>
                                 <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
                                     <div style={{ color: '#1e3a8a', fontSize: '0.88rem', lineHeight: 1.5 }}>
-                                        Det kræver et par tekniske detaljer om din mail, så <strong>det gør vi i fællesskab</strong>. Ring til os på <strong>40 26 50 02</strong>, så sætter vi det op sammen.
+                                        Du kan sætte det op selv, når du har lyst — eller helt springe det over og gøre det senere. Løber du ind i problemer, så <strong>ring til os på 40 26 50 02</strong>, så hjælper vi dig på plads.
                                     </div>
                                 </div>
 
@@ -1284,7 +1290,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                     Vi udfylder et færdigt eksempel og sender det til dig selv — så mærker du præcis, hvordan dit tilbud ser ud for kunden.
                                 </p>
 
-                                <button onClick={() => { fillExampleQuote(); setFinishStep(null); toast('Vi har udfyldt et eksempel med din egen mail — tryk "Send tilbud" for at modtage det selv.', { duration: 7000 }); }}
+                                <button onClick={() => { fillExampleQuote(); setFinishStep(null); setPulseSendExample(true); }}
                                     style={{ width: '100%', padding: '14px', cursor: 'pointer', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', borderRadius: 14, fontWeight: 800, fontSize: '0.98rem', boxShadow: '0 8px 20px rgba(16,185,129,0.3)', marginBottom: 8 }}>
                                     Udfyld eksempel
                                 </button>
@@ -1295,6 +1301,21 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             </div>
                         </div>,
                         document.body
+                    )}
+
+                    {/* Efter eksemplet: peg ned på "Send tilbud" (uden spotlight, så knappen kan trykkes). */}
+                    {pulseSendExample && (
+                        <Coachmark
+                            anchorRef={coachSendRef}
+                            placement="top"
+                            zBase={100090}
+                            eyebrow="Sidste skridt"
+                            title="Send det til dig selv"
+                            body='Tryk på "Send tilbud", så lander eksemplet i din egen indbakke — præcis som kunden ville modtage det.'
+                            primaryLabel="Forstået"
+                            onPrimary={() => setPulseSendExample(false)}
+                            onClose={() => setPulseSendExample(false)}
+                        />
                     )}
 
                     {/* Inline SMTP-opsætning (genbruger Integrationer-komponenten) — uden at forlade tilbuddet.
