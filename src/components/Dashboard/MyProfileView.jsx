@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import PushSubscriber from './PushSubscriber';
 import { getFeatures } from '../../utils/features';
+import { resetCoach } from './coachmarks';
 
 const labelStyle = { display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '6px', letterSpacing: '0.01em' };
 const inputStyle = { width: '100%', boxSizing: 'border-box', padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '1rem', color: '#0f172a', background: '#f8fafc', outline: 'none', transition: 'border-color .15s, box-shadow .15s, background .15s' };
@@ -449,6 +450,16 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                     </button>
                 </div>
             )}
+
+            {/* GENSTART RUNDVISNING — gense alle kom-i-gang-guides forfra */}
+            <div style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: '20px', padding: isMobile ? '20px' : '24px', boxShadow: '0 10px 30px rgba(15,23,42,0.06)', marginTop: '8px' }}>
+                <h3 style={{ fontSize: isMobile ? '1.1rem' : '1.4rem', color: '#0f172a', margin: '0 0 6px', fontWeight: 800, letterSpacing: '-0.5px' }}>Rundvisning</h3>
+                <p style={{ margin: '0 0 18px', color: '#64748b', fontSize: isMobile ? '0.9rem' : '1rem' }}>Vil du gense kom-i-gang-guiderne? Nulstil dem, så de starter forfra næste gang du åbner skærmene.</p>
+                <button onClick={() => { resetCoach(); toast.success('Rundvisningen er nulstillet — starter forfra.'); setTimeout(() => window.location.reload(), 700); }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '13px 20px', borderRadius: '14px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#2563eb', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
+                    Genstart rundvisning
+                </button>
+            </div>
 
             {/* SMS TILBUDS-GENVEJ — kun for mester/admin */}
             {isAdmin && getFeatures(myProfile?.business_type).publicPortal && smsSection}

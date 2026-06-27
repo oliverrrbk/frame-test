@@ -43,3 +43,15 @@ export const markCoachSeen = (key) => {
 
 // Skal denne boble vises nu? (desktop + ikke set + ikke sprunget over)
 export const shouldShowCoach = (key) => isCoachDesktop() && !coachSeen(key);
+
+// Nulstil ALLE guides: rydder "set", "sprunget over" og gemt onboarding-fremdrift,
+// så alle rundture kan køres forfra (efter et reload). Bruges af "Genstart rundvisning".
+export const resetCoach = () => {
+    try {
+        localStorage.removeItem(SEEN_KEY);
+        localStorage.removeItem(SKIP_KEY);
+        Object.keys(localStorage)
+            .filter(k => k.startsWith('bison_onboarding_progress'))
+            .forEach(k => localStorage.removeItem(k));
+    } catch { /* ignore */ }
+};
