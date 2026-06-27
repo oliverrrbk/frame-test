@@ -624,7 +624,12 @@ const CASES_TOUR_STEPS = [
     { sel: '[data-tour="case-tab-todo"]', placement: 'bottom', subTab: 'todo', eyebrow: 'Fane 1', title: 'Bygge To-Do (KS)', body: 'Kryds bygge-trin af efterhånden — fremdrift og kvalitetssikring følger automatisk med.' },
     { sel: '[data-tour="case-tab-materials"]', placement: 'bottom', subTab: 'materials', eyebrow: 'Fane 2', title: 'Materialer & Indkøb', body: 'Hold styr på materialelisten og send bestillinger — alt knyttet til den enkelte opgave.' },
     { sel: '[data-tour="case-tab-logs"]', placement: 'bottom', subTab: 'logs', eyebrow: 'Fane 3', title: 'Byggeproces', body: 'Tidslinje med log og ekstraarbejde — så I altid kan dokumentere, hvad der er sket på pladsen.' },
-    { sel: '[data-tour="case-tab-timesheet"]', placement: 'bottom', subTab: 'timesheet', eyebrow: 'Fane 4', title: 'Timeregistrering', body: 'Registrér timer på sagen — klar til løn og fakturering. Bilag, aftalesedler og tegninger ligger også her ved siden af.' },
+    { sel: '[data-tour="case-tab-timesheet"]', placement: 'bottom', subTab: 'timesheet', eyebrow: 'Fane 4', title: 'Timeregistrering', body: 'Registrér timer på sagen — klar til løn og fakturering.' },
+    // De sidste tre faner vises kun (skifter ikke fane), så vi ikke loader fra
+    // databasen på prøvesagen — man kan altid åbne dem på en rigtig sag.
+    { sel: '[data-tour="case-tab-invoices"]', placement: 'bottom', eyebrow: 'Fane 5', title: 'Bilag', body: 'Saml kvitteringer og bilag på sagen — klar til bogføring og fakturering.' },
+    { sel: '[data-tour="case-tab-extra-work"]', placement: 'bottom', eyebrow: 'Fane 6', title: 'Aftalesedler', body: 'Dokumentér ekstraarbejde som aftalesedler, så du altid kan fakturere det, der kommer til undervejs.' },
+    { sel: '[data-tour="case-tab-drawings"]', placement: 'bottom', eyebrow: 'Fane 7', title: 'Tegninger', body: 'Hav tegninger og plantegninger lige ved hånden — knyttet direkte til sagen.' },
 ];
 
 export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile, onCreateQuote }) {

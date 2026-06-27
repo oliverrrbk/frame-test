@@ -11,11 +11,24 @@ import GorgeousMultiSelect from './GorgeousMultiSelect';
 import GorgeousSingleSelect from './GorgeousSingleSelect';
 import { getDanishHolidays } from '../../utils/holidays';
 import { mutateCalendarEvents } from '../../utils/calendarEvents';
+import SectionTour from './SectionTour';
+import { shouldShowCoach } from './coachmarks';
+
+// Rundtur for Kalender (Bølge 2). Lyser hele afsnit op. Kun desktop, første gang.
+const CALENDAR_TOUR_STEPS = [
+    { sel: '[data-tour="calendar-title"]', placement: 'bottom', eyebrow: 'Kalender', title: 'Hold styr på holdet', body: 'Planlæg dine sager og se hvem der er hvor — på én tavle for hele firmaet.' },
+    { sel: '[data-tour="calendar-views"]', placement: 'bottom', eyebrow: 'Visninger', title: 'Måned, uge, år — eller personale', body: 'Skift visning, alt efter om du vil have overblik eller se præcis hvem der laver hvad ("Personale").' },
+    { sel: '[data-tour="calendar-filter"]', placement: 'bottom', eyebrow: 'Filtrér', title: 'Vis kun bestemte folk', body: 'Filtrér på medarbejder, så du kun ser deres aftaler og sager i kalenderen.' },
+    { sel: '[data-tour="calendar-newevent"]', placement: 'bottom', eyebrow: 'Aftaler', title: 'Tilføj aftaler', body: 'Opret møder, materialeleveringer og andre aftaler direkte i kalenderen — med påmindelser.' },
+    { sel: '[data-tour="calendar-sidebar"]', placement: 'left', eyebrow: 'Planlægning', title: 'Sager der venter på en dato', body: 'Bekræftede sager uden dato lander her. Træk dem ind i kalenderen — eller tryk Planlæg.' },
+];
 
 const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLeadsData, teamMembers = [], carpenterProfile, setCarpenterProfile }) => {
     const effectiveRole = simulatedRole || myProfile?.role;
     const isManager = ['admin', 'boss', 'accountant'].includes(effectiveRole);
     const userId = myProfile?.id;
+    // Rundtur: aktiv ved første besøg (desktop, første gang).
+    const [calendarTourActive, setCalendarTourActive] = useState(() => shouldShowCoach('calendar_tour'));
 
     // Åben firmakalender: alle roller må se folk-/tidslinje-visningen.
     const canViewTimeline = ['admin', 'boss', 'accountant', 'sales', 'worker', 'apprentice'].includes(effectiveRole);
@@ -1697,7 +1710,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 
                 {/* Header Row 1: Titel og Filter */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <div>
+                    <div data-tour="calendar-title">
                         <h2 style={{ margin: 0, fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>
                             {view === 'year' ? currentDate.getFullYear() : `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
                         </h2>
@@ -1719,7 +1732,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         </div>
 
                         {/* Medarbejder Filter */}
-                        <GorgeousMultiSelect 
+                        <div data-tour="calendar-filter" style={{ display: 'flex' }}>
+                        <GorgeousMultiSelect
                             options={[
                                 { id: myProfile?.id, name: myProfile?.owner_name || myProfile?.company_name || 'Mig', isMe: true },
                                 ...teamMembers.filter(m => String(m.id) !== String(myProfile?.id)).map(m => ({
@@ -1731,10 +1745,11 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             selectedIds={selectedEmployeeIds}
                             onChange={setSelectedEmployeeIds}
                         />
+                        </div>
 
                         {/* + Ny Aftale */}
                         {(
-                            <button onClick={() => setShowEventModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', background: '#0f172a', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'none'}>
+                            <button data-tour="calendar-newevent" onClick={() => setShowEventModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', background: '#0f172a', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'none'}>
                                 <Plus size={18} /> Ny Aftale
                             </button>
                         )}
@@ -1743,7 +1758,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
                 {/* Header Row 2: View Toggles & Navigation */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                    <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+                    <div data-tour="calendar-views" style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
                         {['month', 'week', 'year', ...(canViewTimeline ? ['timeline'] : [])].map(v => (
                             <button 
                                 key={v}
@@ -1777,7 +1792,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             {canViewTimeline && (() => {
                 const pending = unscheduledLeads.filter(l => canEditLead(l));
                 return (
-                <div style={{ width: '340px', background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(16px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.8)', padding: '24px', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)' }}>
+                <div data-tour="calendar-sidebar" style={{ width: '340px', background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(16px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.8)', padding: '24px', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 4px' }}>
                         <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800' }}>Klar til planlægning</h3>
                         {pending.length > 0 && (
@@ -2430,6 +2445,15 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     </motion.div>
                 </div>,
                 document.body
+            )}
+
+            {/* Rundtur for Kalender — kun desktop, første gang. */}
+            {!isMobile && calendarTourActive && (
+                <SectionTour
+                    tourKey="calendar_tour"
+                    steps={CALENDAR_TOUR_STEPS}
+                    onDone={() => setCalendarTourActive(false)}
+                />
             )}
         </>
     );
