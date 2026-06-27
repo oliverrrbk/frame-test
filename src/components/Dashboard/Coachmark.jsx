@@ -97,7 +97,7 @@ export default function Coachmark({
                     {/* Gennemsigtigt lag der blokerer baggrundsklik under rundturen */}
                     <div style={{ position: 'fixed', inset: 0, zIndex: zBase - 1 }} />
                     {/* Spotlight-hul: dæmper alt udenom målet */}
-                    <div ref={holeRef} style={{ position: 'fixed', top: -9999, left: -9999, borderRadius: 14, zIndex: zBase, pointerEvents: 'none', boxShadow: '0 0 0 9999px rgba(15,23,42,0.48)', transition: 'all .18s ease' }} />
+                    <div ref={holeRef} style={{ position: 'fixed', top: -9999, left: -9999, borderRadius: 14, zIndex: zBase, pointerEvents: 'none', boxShadow: '0 0 0 9999px rgba(15,23,42,0.6), 0 0 0 2px rgba(255,255,255,0.95), 0 0 26px 6px rgba(59,130,246,0.55)', transition: 'all .18s ease' }} />
                 </>
             )}
             <div

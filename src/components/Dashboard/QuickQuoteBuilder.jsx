@@ -1241,27 +1241,28 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     </div>
 
                     {/* Kom-i-gang: 2 hints (kun desktop, første gang) */}
-                    {/* Første-gangs walkthrough: kunde → titel → gyldighed → materialer → arbejde → beskrivelse → PDF → mail */}
-                    {!isMobile && shouldShowCoach('quickquote_tour') && (
+                    {/* Første-gangs walkthrough: kunde → titel → gyldighed → materialer → arbejde → beskrivelse → PDF → mail.
+                        Venter til "Fortsæt hvor du slap?" er væk, så de to ikke ligger oven på hinanden. */}
+                    {!isMobile && !restorePrompt && shouldShowCoach('quickquote_tour') && (
                         <SectionTour tourKey="quickquote_tour" steps={QUICKQUOTE_TOUR_STEPS} zBase={100100} onDone={(skipped) => { if (!skipped) setShowTourFinish(true); }} />
                     )}
 
                     {/* Afslutning på walkthrough: egen-mail + test-tilbud til dig selv */}
                     {showTourFinish && (
-                        <div style={{ position: 'fixed', inset: 0, zIndex: 100100, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-                            <div style={{ width: '100%', maxWidth: 470, background: '#fff', borderRadius: 24, padding: 28, boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
-                                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', marginBottom: 6 }}>Du er klar! 🎉</div>
+                        <div onClick={() => setShowTourFinish(false)} style={{ position: 'fixed', inset: 0, zIndex: 100100, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 470, background: '#fff', borderRadius: 24, padding: 28, boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+                                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', marginBottom: 6 }}>Du er klar!</div>
                                 <p style={{ margin: '0 0 20px', color: '#64748b', lineHeight: 1.5 }}>Du kender nu Hurtigt tilbud. To ting der gør det endnu stærkere:</p>
 
                                 <button onClick={() => { setShowTourFinish(false); setShowSmtpSetup(true); }}
                                     style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: '1px solid #bfdbfe', background: '#eff6ff', borderRadius: 16, padding: '16px 18px', marginBottom: 12 }}>
-                                    <div style={{ fontWeight: 800, color: '#1d4ed8', fontSize: '1rem' }}>✉️ Send fra din egen mail</div>
+                                    <div style={{ fontWeight: 800, color: '#1d4ed8', fontSize: '1rem' }}>Send fra din egen mail</div>
                                     <div style={{ color: '#475569', fontSize: '0.88rem', marginTop: 2 }}>Så lander tilbuddet også i din egen indbakke, og kunden svarer dig direkte.</div>
                                 </button>
 
-                                <button onClick={() => { fillExampleQuote(); setShowTourFinish(false); toast('Vi har udfyldt et eksempel med din egen mail — tryk "Send tilbud" for at modtage det selv.', { icon: '🧪', duration: 7000 }); }}
+                                <button onClick={() => { fillExampleQuote(); setShowTourFinish(false); toast('Vi har udfyldt et eksempel med din egen mail — tryk "Send tilbud" for at modtage det selv.', { duration: 7000 }); }}
                                     style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: '1px solid #a7f3d0', background: '#ecfdf5', borderRadius: 16, padding: '16px 18px', marginBottom: 16 }}>
-                                    <div style={{ fontWeight: 800, color: '#059669', fontSize: '1rem' }}>🧪 Prøv et eksempel-tilbud</div>
+                                    <div style={{ fontWeight: 800, color: '#059669', fontSize: '1rem' }}>Prøv et eksempel-tilbud</div>
                                     <div style={{ color: '#475569', fontSize: '0.88rem', marginTop: 2 }}>Vi udfylder et eksempel — send det til dig selv og mærk, hvordan det er at være kunde.</div>
                                 </button>
 
