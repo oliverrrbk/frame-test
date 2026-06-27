@@ -40,18 +40,29 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         const onLast = calendarTourActive && calendarStep === CALENDAR_TOUR_STEPS.length - 1;
         if (!onLast) { setFlyVars(null); return; }
         const compute = () => {
-            const card = sidebarDemoRef.current, main = calMainRef.current;
-            if (!card || !main) return;
+            const card = sidebarDemoRef.current;
+            if (!card) return;
             const c = card.getBoundingClientRect();
-            const m = main.getBoundingClientRect();
-            const targetX = m.left + m.width * 0.42;
-            const targetY = m.top + m.height * 0.48;
-            setFlyVars({ left: Math.round(c.left), top: Math.round(c.top), width: Math.round(c.width), dx: Math.round(targetX - c.left), dy: Math.round(targetY - c.top), tx: Math.round(targetX), ty: Math.round(targetY) });
+            // Vælg 3 på hinanden følgende dage i den viste måned (undgå måneds-kanten),
+            // så eksempel-sagen "lander" på rigtige dage i kalenderen.
+            const y = currentDate.getFullYear(), mo = currentDate.getMonth();
+            const dim = new Date(y, mo + 1, 0).getDate();
+            const todayInMonth = (new Date().getMonth() === mo && new Date().getFullYear() === y) ? new Date().getDate() : 15;
+            const base = Math.max(1, Math.min(todayInMonth, dim - 2));
+            const pad = (n) => String(n).padStart(2, '0');
+            const cells = [base, base + 1, base + 2]
+                .map(d => document.querySelector(`[data-cal-day="${y}-${pad(mo + 1)}-${pad(d)}"]`))
+                .filter(Boolean)
+                .map(el => { const r = el.getBoundingClientRect(); return { left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width) }; });
+            if (!cells.length) { setFlyVars(null); return; }
+            const first = cells[0];
+            const targetX = first.left + 8, targetY = first.top + 38;
+            setFlyVars({ left: Math.round(c.left), top: Math.round(c.top), width: Math.round(c.width), dx: Math.round(targetX - c.left), dy: Math.round(targetY - c.top), cells });
         };
         const id = requestAnimationFrame(compute);
         window.addEventListener('resize', compute);
         return () => { cancelAnimationFrame(id); window.removeEventListener('resize', compute); };
-    }, [calendarTourActive, calendarStep]);
+    }, [calendarTourActive, calendarStep, currentDate]);
 
     // Åben firmakalender: alle roller må se folk-/tidslinje-visningen.
     const canViewTimeline = ['admin', 'boss', 'accountant', 'sales', 'worker', 'apprentice'].includes(effectiveRole);
@@ -1504,8 +1515,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         const { isHoliday, leads, absences, events } = getItemsForDay(checkDate);
 
                         return (
-                            <div 
+                            <div
                                 key={day}
+                                data-cal-day={`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
                                 onClick={() => openModalForDate(checkDate)}
                                 onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
                                 onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = isToday ? '#3b82f6' : '#e2e8f0'; }}
@@ -2515,13 +2527,16 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Bruns Byg ApS</p>
                         </div>
                     </div>
-                    {/* den landede aftale — popper op i kalenderen, lige når kortet "slippes" */}
-                    <div style={{ position: 'fixed', left: flyVars.tx, top: flyVars.ty, zIndex: 100045, pointerEvents: 'none', transformOrigin: 'top left', animation: 'calLand 2.8s ease-in-out infinite' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', border: '1px solid #6ee7b7', borderLeft: '3px solid #10b981', borderRadius: '8px', padding: '6px 10px', boxShadow: '0 10px 24px rgba(16,185,129,0.28)', maxWidth: '170px' }}>
-                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
-                            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#047857', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Nyt trægulv i stue</span>
+                    {/* den landede aftale — popper op PÅ de rigtige dage i kalenderen,
+                        lige når kortet "slippes", og strækker sig over flere dage. */}
+                    {(flyVars.cells || []).map((cell, i) => (
+                        <div key={i} style={{ position: 'fixed', left: cell.left + 8, top: cell.top + 38, width: cell.width - 16, zIndex: 100045, pointerEvents: 'none', transformOrigin: 'top left', animation: 'calLand 2.8s ease-in-out infinite', animationDelay: `${i * 90}ms` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: '#ecfdf5', borderLeft: '3px solid #10b981', borderRadius: '4px', padding: '4px 6px', boxShadow: '0 6px 16px rgba(16,185,129,0.22)' }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{i === 0 ? 'Nyt trægulv i stue' : 'Trægulv'}</span>
+                            </div>
                         </div>
-                    </div>
+                    ))}
                 </>,
                 document.body
             )}
