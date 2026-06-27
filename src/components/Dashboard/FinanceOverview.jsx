@@ -5,10 +5,20 @@ import {
 } from 'lucide-react';
 import InvoiceEditor from './InvoiceEditor';
 import { computeCaseFinance } from '../../utils/caseFinance';
+import SectionTour from './SectionTour';
+import { shouldShowCoach } from './coachmarks';
+
+// Rundtur for Økonomi & Faktura (kun desktop, første gang).
+const FINANCE_TOUR_STEPS = [
+    { sel: '[data-tour="finance-kpi"]', placement: 'bottom', eyebrow: 'Økonomi & Faktura', title: 'Dit cashflow på ét sted', body: 'Samlet værdi, hvad der er faktureret, hvad der mangler — og hvad der faktisk er bogført i regnskabet.' },
+    { sel: '[data-tour="finance-pending"]', placement: 'bottom', eyebrow: 'Fakturering', title: 'Sager der mangler en faktura', body: 'Bekræftede sager med et restbeløb lander her — fakturér dem for at få pengene i kassen.' },
+    { sel: '[data-tour="finance-demo-invoice"]', placement: 'top', eyebrow: 'Ét klik', title: 'Opret faktura', body: 'Tryk Opret Faktura, så bygger Frame fakturaen for dig — og sender den direkte til dit regnskab (e-conomic/Dinero).' },
+];
 
 const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounting, onUpdateLead, targetInvoiceCaseId, clearTargetInvoiceCase, isMobile = false }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeInvoiceCase, setActiveInvoiceCase] = useState(null);
+    const [financeTourActive, setFinanceTourActive] = useState(() => !isMobile && shouldShowCoach('finance_tour'));
 
     const financeData = useMemo(() => {
         let totalRevenue = 0;
@@ -97,7 +107,7 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                     </div>
 
                     {/* KPI KORT */}
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(300px, 1fr))', gap: isMobile ? '12px' : '24px' }}>
+                    <div data-tour="finance-kpi" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(300px, 1fr))', gap: isMobile ? '12px' : '24px' }}>
                         <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '24px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '12px', gridColumn: isMobile ? '1 / -1' : 'auto' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '12px', color: '#64748b' }}>
                                 <div style={{ padding: isMobile ? '8px' : '10px', backgroundColor: '#f1f5f9', borderRadius: '12px', color: '#3b82f6' }}>
@@ -151,7 +161,7 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
 
                     {/* TABEL: MANGLENDE FAKTURERING */}
                     <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
-                        <div style={{ padding: isMobile ? '16px' : '24px', borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '14px' : '0' }}>
+                        <div data-tour="finance-pending" style={{ padding: isMobile ? '16px' : '24px', borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '14px' : '0' }}>
                             <div>
                                 <h2 style={{ margin: '0 0 4px 0', fontSize: isMobile ? '1.25rem' : '1.5rem', color: '#0f172a' }}>Åbne Sager med Restbeløb</h2>
                                 <p style={{ margin: 0, color: '#64748b', fontSize: isMobile ? '0.9rem' : '1rem' }}>Fakturér disse sager for at få penge i kassen</p>
@@ -167,6 +177,26 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                                 />
                             </div>
                         </div>
+
+                        {/* Demo-faktura-række — vises kun under rundvisningen (mockup, ingen rigtig sag),
+                            så nye brugere uden sager kan se "Opret Faktura"-flowet. */}
+                        {financeTourActive && (
+                            <div style={{ position: 'relative', padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                                <span style={{ position: 'absolute', top: -9, left: 22, background: '#0f172a', color: '#fff', fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: '20px' }}>Eksempel</span>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.05rem' }}>Sag 1042 - Tagarbejde</div>
+                                    <div style={{ color: '#64748b', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}><PackageCheck size={14} /> Bruns Byg ApS</div>
+                                    <div style={{ marginTop: '8px', display: 'flex', gap: '18px', fontSize: '0.85rem', color: '#475569' }}>
+                                        <span>Total: <strong>54.500 kr.</strong></span>
+                                        <span>Faktureret: <strong>27.250 kr.</strong></span>
+                                        <span style={{ color: '#e11d48' }}>Restbeløb: <strong>27.250 kr.</strong></span>
+                                    </div>
+                                </div>
+                                <div data-tour="finance-demo-invoice" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 22px', background: '#0f172a', color: '#fff', borderRadius: '12px', fontWeight: 700, fontSize: '0.98rem', boxShadow: '0 8px 20px rgba(15,23,42,0.2)' }}>
+                                    Opret Faktura <ArrowRight size={18} />
+                                </div>
+                            </div>
+                        )}
 
                         {isMobile ? (
                             <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -288,6 +318,10 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                         </div>
                         )}
                     </div>
+
+                    {financeTourActive && (
+                        <SectionTour tourKey="finance_tour" steps={FINANCE_TOUR_STEPS} onDone={() => setFinanceTourActive(false)} />
+                    )}
                 </>
             )}
         </div>
