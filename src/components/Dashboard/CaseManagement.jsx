@@ -4730,6 +4730,38 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         <p style={{ margin: '0 0 14px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
                             Eksempel-sagen forsvinder nu — herfra ser du kun dine egne, rigtige sager.
                         </p>
+                        {/* Lille bygmand-figur (ren SVG) — giver afslutningen lidt liv. */}
+                        <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 14px' }}>
+                            <svg width="96" height="96" viewBox="0 0 120 120" role="img" aria-label="Bygmand med hjelm" style={{ filter: 'drop-shadow(0 6px 14px rgba(15,23,42,0.12))' }}>
+                                <circle cx="60" cy="60" r="60" fill="#ecfdf5" />
+                                {/* skuldre / sikkerhedsvest */}
+                                <path d="M26 120 V104 C26 87 41 79 60 79 C79 79 94 87 94 104 V120 Z" fill="#10b981" />
+                                {/* refleks-striber */}
+                                <rect x="39" y="92" width="4.5" height="28" rx="2" fill="#fde68a" />
+                                <rect x="76.5" y="92" width="4.5" height="28" rx="2" fill="#fde68a" />
+                                {/* shirt-krave */}
+                                <path d="M51 80 L60 91 L69 80 L64 78 H56 Z" fill="#0f172a" />
+                                {/* hals */}
+                                <rect x="53" y="66" width="14" height="16" rx="6" fill="#e8b489" />
+                                {/* ører */}
+                                <circle cx="40" cy="54" r="4.5" fill="#f4c8a0" />
+                                <circle cx="80" cy="54" r="4.5" fill="#f4c8a0" />
+                                {/* ansigt */}
+                                <circle cx="60" cy="54" r="20" fill="#f4c8a0" />
+                                {/* øjne */}
+                                <circle cx="53" cy="54" r="2.6" fill="#0f172a" />
+                                <circle cx="67" cy="54" r="2.6" fill="#0f172a" />
+                                {/* smil */}
+                                <path d="M52 61 Q60 68 68 61" stroke="#0f172a" strokeWidth="2.6" fill="none" strokeLinecap="round" />
+                                {/* hjelm-skygge */}
+                                <ellipse cx="60" cy="40" rx="28" ry="7" fill="#f59e0b" />
+                                {/* hjelm-kuppel */}
+                                <path d="M40 41 C40 26 48 17 60 17 C72 17 80 26 80 41 Z" fill="#f59e0b" />
+                                {/* hjelm-detaljer */}
+                                <path d="M60 17 V41" stroke="#d97706" strokeWidth="2.6" strokeLinecap="round" />
+                                <path d="M48 41 C48 31 52 25 60 25 C68 25 72 31 72 41" stroke="#d97706" strokeWidth="2" fill="none" opacity="0.55" />
+                            </svg>
+                        </div>
                         <p style={{ margin: '0 0 20px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
                             Sådan får du din <strong>første sag</strong>: send et tilbud. Når kunden godkender det, bliver det helt automatisk til en sag her i ordrestyringen — klar til at blive styret fra start til faktura.
                         </p>
