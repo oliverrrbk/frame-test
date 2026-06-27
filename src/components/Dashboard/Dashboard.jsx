@@ -6843,9 +6843,14 @@ const Dashboard = () => {
             {/* Trial-påmindelse — vises ALDRIG mens onboarding/password-modal er åben (ellers spærrer den
                 for at trykke videre, særligt på mobil). På mobil er den en lille, diskret pille der kan
                 foldes ud eller skjules, så den aldrig blokerer for arbejdet. */}
-            {trialDaysLeft > 0 && !isPaywallActive && effectiveRole === 'admin' && !carpenterProfile?.payment_customer_id && !showOnboarding && !showSetPassword && !trialPillDismissed && createPortal(
+            {trialDaysLeft > 0 && !isPaywallActive && effectiveRole === 'admin' && !carpenterProfile?.payment_customer_id && !showOnboarding && !showSetPassword && !trialPillDismissed && (!isMobile || activeTab === 'overview') && createPortal(
                 isMobile ? (
-                    <div className="bison-trial-toast" style={{ position: 'fixed', right: '24px', bottom: 'calc(92px + env(safe-area-inset-bottom))', zIndex: 9000 }}>
+                    /* På mobil sidder pillen tæt OVEN PÅ den sorte del-knap (MobileQuickShare),
+                       der står i bunden ved bottom:24px/60px høj. Vi bruger SAMME koordinatsystem
+                       (plain px, ingen safe-area) så de altid følges ad uden mellemrum. Pillen vises
+                       kun på forsiden (overview) — ligesom del-knappen — så den ikke står som en plet
+                       på hver eneste fane. */
+                    <div className="bison-trial-toast" style={{ position: 'fixed', right: '24px', bottom: '92px', zIndex: 9000 }}>
                         {trialPillExpanded ? (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9, y: 10 }}
