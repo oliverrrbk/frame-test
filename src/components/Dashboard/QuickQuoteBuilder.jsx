@@ -1261,7 +1261,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                 <div style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8 }}>Valgfrit</div>
                                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Send fra din egen mail</div>
                                 <p style={{ margin: '0 0 12px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
-                                    Send tilbuddet fra din egen adresse — så ligger det også i din "Sendt", og kundens svar lander direkte hos dig.
+                                    Sætter du din egen mail op, sendes tilbuddet fra din adresse — så det også ligger i din egen "Sendt".
                                 </p>
                                 {/* Lille mailboks-illustration (ren SVG) — viser at tilbuddet havner i "Sendt". */}
                                 <div style={{ display: 'flex', justifyContent: 'center', margin: '0 0 14px' }}>
@@ -1301,7 +1301,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                 </div>
                                 <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
                                     <div style={{ color: '#1e3a8a', fontSize: '0.88rem', lineHeight: 1.5 }}>
-                                        Helt valgfrit — gør det nu, senere eller slet ikke. Brug for hjælp? <strong>Ring 40 26 50 02</strong>.
+                                        Kundens svar lander <strong>altid</strong> direkte hos dig — også helt uden opsætning. Det her er kun valgfrit ekstra; ring <strong>40 26 50 02</strong>, hvis du vil have hjælp.
                                     </div>
                                 </div>
 
