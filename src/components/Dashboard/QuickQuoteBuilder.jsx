@@ -18,6 +18,8 @@ const QUICKQUOTE_TOUR_STEPS = [
     { sel: '[data-tour="qq-edit"]', placement: 'right', eyebrow: 'Hurtigt tilbud', title: 'Her bygger du tilbuddet', body: 'Skriv kunden, en kort beskrivelse og dine priser — materialer og arbejde. Alt det kunden skal se, taster du ind her.' },
     { sel: '[data-tour="qq-pdf-col"]', placement: 'left', eyebrow: 'Live', title: 'Dit tilbud — i real-time', body: 'Mens du udfylder til venstre, opdaterer PDF-tilbuddet sig med det samme. Det er præcis sådan kunden ser det.' },
     { sel: '[data-tour="qq-mail-col"]', placement: 'left', eyebrow: 'Mailen', title: 'Mailen kunden får', body: 'Og her er selve mailen — med "Bekræft tilbud"-knappen, der fører kunden til en sikker portal.' },
+    { sel: '[data-tour="qq-save"]', placement: 'top', eyebrow: 'Gem til senere', title: 'Gem kladde', body: 'Ikke færdig? Gem som kladde og fortsæt senere — fx hvis du starter på farten og gør det færdigt, når du er hjemme. Det virker også på mobilen.' },
+    { sel: '[data-tour="qq-send"]', placement: 'top', eyebrow: 'Afsend', title: 'Send tilbud', body: 'Når du er klar, sender du her. Kunden får mailen med "Bekræft tilbud" — og svarer de, lander det direkte hos dig.' },
 ];
 
 // Stabil reference (react-google-maps kræver at libraries-arrayet ikke gendannes pr. render).
@@ -221,9 +223,13 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     // Kom-i-gang: 2 små hints første gang (kun desktop). Ankre sættes på pris/avance + send-knap.
     const coachMaterialRef = useRef(null);
     const coachSendRef = useRef(null);
-    // Afslutning af walkthrough: prompt om egen-mail + test-tilbud til dig selv.
-    const [showTourFinish, setShowTourFinish] = useState(false);
+    // Afslutning af walkthrough: kæde med ét fokus ad gangen —
+    // 'ownmail' (Send fra egen mail) → 'example' (Prøv et eksempel) → null.
+    const [finishStep, setFinishStep] = useState(null);
     const [showSmtpSetup, setShowSmtpSetup] = useState(false);
+    // Husk om SMTP-opsætningen blev åbnet fra afslutnings-kæden, så vi kan
+    // føre brugeren videre til "Prøv et eksempel", når den lukkes.
+    const smtpFromFinish = useRef(false);
     const [coachHintStep, setCoachHintStep] = useState(() => (!isMobile && shouldShowCoach('quick_hints')) ? 0 : -1);
     useEffect(() => { if (coachHintStep >= 0) markCoachSeen('quick_hints'); }, [coachHintStep]);
 
@@ -1226,7 +1232,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         </button>
                         )}
                         {!wasSent && (
-                        <button className="qqb-ghost" disabled={busy} onClick={() => save(false)} style={{ padding: '14px 22px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button data-tour="qq-save" className="qqb-ghost" disabled={busy} onClick={() => save(false)} style={{ padding: '14px 22px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Save size={18} /> Gem kladde
                         </button>
                         )}
@@ -1239,48 +1245,75 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     {/* Første-gangs walkthrough: kunde → titel → gyldighed → materialer → arbejde → beskrivelse → PDF → mail.
                         Venter til "Fortsæt hvor du slap?" er væk, så de to ikke ligger oven på hinanden. */}
                     {!isMobile && !restorePrompt && shouldShowCoach('quickquote_tour') && (
-                        <SectionTour tourKey="quickquote_tour" steps={QUICKQUOTE_TOUR_STEPS} zBase={100100} onDone={(skipped) => { if (!skipped) setShowTourFinish(true); }} />
+                        <SectionTour tourKey="quickquote_tour" steps={QUICKQUOTE_TOUR_STEPS} zBase={100100} onDone={(skipped) => { if (!skipped) setFinishStep('ownmail'); }} />
                     )}
 
-                    {/* Afslutning på walkthrough: egen-mail + test-tilbud til dig selv */}
-                    {showTourFinish && createPortal(
-                        <div onClick={() => setShowTourFinish(false)} style={{ position: 'fixed', inset: 0, zIndex: 100100, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                    {/* Afslutning: ét fokus ad gangen. Boks A (egen mail) → Boks B (eksempel). */}
+                    {finishStep === 'ownmail' && createPortal(
+                        <div onClick={() => setFinishStep(null)} style={{ position: 'fixed', inset: 0, zIndex: 100100, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
                             <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 470, background: '#fff', borderRadius: 24, padding: 28, boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
-                                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', marginBottom: 6 }}>Du er klar!</div>
-                                <p style={{ margin: '0 0 20px', color: '#64748b', lineHeight: 1.5 }}>Du kender nu Hurtigt tilbud. To ting der gør det endnu stærkere:</p>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8 }}>Valgfrit</div>
+                                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Send fra din egen mail</div>
+                                <p style={{ margin: '0 0 14px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
+                                    Kunden kan altid svare dig direkte tilbage — uanset om du sætter det op. Sætter du din egen mail op, sendes tilbuddet fra din adresse, så det også ligger i din "Sendt", og alle svar samles hos dig.
+                                </p>
+                                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
+                                    <div style={{ color: '#1e3a8a', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                                        Det kræver et par tekniske detaljer om din mail, så <strong>det gør vi i fællesskab</strong>. Ring til os på <strong>40 26 50 02</strong>, så sætter vi det op sammen.
+                                    </div>
+                                </div>
 
-                                <button onClick={() => { setShowTourFinish(false); setShowSmtpSetup(true); }}
-                                    style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: '1px solid #bfdbfe', background: '#eff6ff', borderRadius: 16, padding: '16px 18px', marginBottom: 12 }}>
-                                    <div style={{ fontWeight: 800, color: '#1d4ed8', fontSize: '1rem' }}>Send fra din egen mail</div>
-                                    <div style={{ color: '#475569', fontSize: '0.88rem', marginTop: 2 }}>Så lander tilbuddet også i din egen indbakke, og kunden svarer dig direkte.</div>
+                                <button onClick={() => { smtpFromFinish.current = true; setFinishStep(null); setShowSmtpSetup(true); }}
+                                    style={{ width: '100%', padding: '14px', cursor: 'pointer', border: 'none', background: 'linear-gradient(145deg,#2563eb,#1d4ed8)', color: '#fff', borderRadius: 14, fontWeight: 800, fontSize: '0.98rem', boxShadow: '0 8px 20px rgba(37,99,235,0.3)', marginBottom: 8 }}>
+                                    Sæt min mail op
                                 </button>
-
-                                <button onClick={() => { fillExampleQuote(); setShowTourFinish(false); toast('Vi har udfyldt et eksempel med din egen mail — tryk "Send tilbud" for at modtage det selv.', { duration: 7000 }); }}
-                                    style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: '1px solid #a7f3d0', background: '#ecfdf5', borderRadius: 16, padding: '16px 18px', marginBottom: 16 }}>
-                                    <div style={{ fontWeight: 800, color: '#059669', fontSize: '1rem' }}>Prøv et eksempel-tilbud</div>
-                                    <div style={{ color: '#475569', fontSize: '0.88rem', marginTop: 2 }}>Vi udfylder et eksempel — send det til dig selv og mærk, hvordan det er at være kunde.</div>
-                                </button>
-
-                                <button onClick={() => setShowTourFinish(false)}
+                                <button onClick={() => setFinishStep('example')}
                                     style={{ width: '100%', padding: 12, background: 'none', border: 'none', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>
-                                    Spring over — jeg er klar
+                                    Jeg er uinteresseret
                                 </button>
                             </div>
                         </div>,
                         document.body
                     )}
 
-                    {/* Inline SMTP-opsætning (genbruger Integrationer-komponenten) — uden at forlade tilbuddet */}
-                    {showSmtpSetup && createPortal(
-                        <div onClick={() => setShowSmtpSetup(false)} style={{ position: 'fixed', inset: 0, zIndex: 100110, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 24, overflowY: 'auto' }}>
-                            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 640, background: '#fff', borderRadius: 24, padding: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.35)', margin: 'auto' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                                    <h3 style={{ margin: 0, fontWeight: 900, color: '#0f172a' }}>Send fra din egen mail</h3>
-                                    <button onClick={() => setShowSmtpSetup(false)} style={{ width: 36, height: 36, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem' }}>✕</button>
-                                </div>
-                                <SmtpIntegration carpenterProfile={carpenter} expandedIntegration="smtp" setExpandedIntegration={(v) => { if (v !== 'smtp') setShowSmtpSetup(false); }} />
+                    {finishStep === 'example' && createPortal(
+                        <div onClick={() => setFinishStep(null)} style={{ position: 'fixed', inset: 0, zIndex: 100100, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 470, background: '#fff', borderRadius: 24, padding: 28, boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+                                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Prøv et eksempel-tilbud</div>
+                                <p style={{ margin: '0 0 18px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
+                                    Vi udfylder et færdigt eksempel og sender det til dig selv — så mærker du præcis, hvordan dit tilbud ser ud for kunden.
+                                </p>
+
+                                <button onClick={() => { fillExampleQuote(); setFinishStep(null); toast('Vi har udfyldt et eksempel med din egen mail — tryk "Send tilbud" for at modtage det selv.', { duration: 7000 }); }}
+                                    style={{ width: '100%', padding: '14px', cursor: 'pointer', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', borderRadius: 14, fontWeight: 800, fontSize: '0.98rem', boxShadow: '0 8px 20px rgba(16,185,129,0.3)', marginBottom: 8 }}>
+                                    Udfyld eksempel
+                                </button>
+                                <button onClick={() => setFinishStep(null)}
+                                    style={{ width: '100%', padding: 12, background: 'none', border: 'none', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>
+                                    Nej tak, jeg er klar
+                                </button>
                             </div>
                         </div>,
+                        document.body
+                    )}
+
+                    {/* Inline SMTP-opsætning (genbruger Integrationer-komponenten) — uden at forlade tilbuddet.
+                        Lukkes den fra afslutnings-kæden, fører vi videre til "Prøv et eksempel". */}
+                    {showSmtpSetup && createPortal(
+                        (() => {
+                            const closeSmtp = () => { setShowSmtpSetup(false); if (smtpFromFinish.current) { smtpFromFinish.current = false; setFinishStep('example'); } };
+                            return (
+                                <div onClick={closeSmtp} style={{ position: 'fixed', inset: 0, zIndex: 100110, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 24, overflowY: 'auto' }}>
+                                    <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 640, background: '#fff', borderRadius: 24, padding: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.35)', margin: 'auto' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                            <h3 style={{ margin: 0, fontWeight: 900, color: '#0f172a' }}>Send fra din egen mail</h3>
+                                            <button onClick={closeSmtp} style={{ width: 36, height: 36, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem' }}>✕</button>
+                                        </div>
+                                        <SmtpIntegration carpenterProfile={carpenter} expandedIntegration="smtp" setExpandedIntegration={(v) => { if (v !== 'smtp') closeSmtp(); }} />
+                                    </div>
+                                </div>
+                            );
+                        })(),
                         document.body
                     )}
                 </div>
