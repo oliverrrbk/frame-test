@@ -56,6 +56,12 @@ const INTEGRATIONS_TOUR_STEPS = [
     { sel: '[data-tour="integ-economic"]', placement: 'bottom', eyebrow: 'Regnskab', title: 'Eller e-conomic', body: 'Samme med e-conomic — forbind det her, så fakturaerne lander direkte i dit regnskab.' },
     { sel: '[data-tour="integ-smtp"]', placement: 'top', eyebrow: 'Mail', title: 'Send fra din egen mail', body: 'Forbind din mail, så tilbud sendes fra din egen adresse — og alt ligger i din "Sendt". Helt valgfrit.' },
 ];
+
+// Rundtur for Materialer (let). Kun desktop, første gang.
+const MATERIALS_TOUR_STEPS = [
+    { sel: '[data-tour="materials-grid"]', placement: 'top', eyebrow: 'Materialer', title: 'Dine indkøbspriser', body: 'Her er dine materialer samlet i kategorier — tag, gulv, vinduer og flere. Priserne er dine indkøbspriser ekskl. moms.' },
+    { sel: '[data-tour="materials-category"]', placement: 'right', eyebrow: 'Ret & tilpas', title: 'Fold ud og justér', body: 'Fold en kategori ud, ret indkøbsprisen, og slå materialer til eller fra. Det er præcis de her priser, Prisberegneren regner dine tilbud ud fra.' },
+];
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { computeQuoteExpiry } from '../../utils/quoteExpiry';
 import { getRoleLabel } from '../../utils/roles';
@@ -902,6 +908,7 @@ const Dashboard = () => {
     const [mobileGuideDone, setMobileGuideDone] = useState(false);
     const [leadsTourDone, setLeadsTourDone] = useState(false);
     const [integrationsTourDone, setIntegrationsTourDone] = useState(false);
+    const [materialsTourDone, setMaterialsTourDone] = useState(false);
     const [calcGuideDone, setCalcGuideDone] = useState(false);
     const [showCalcCategories, setShowCalcCategories] = useState(false);
     // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
@@ -6246,12 +6253,15 @@ const Dashboard = () => {
                     )}
                     {activeTab === 'materials' && !isMaterialsLoading && materialsData.length > 0 && (
                         <div className="dashboard-workspace materials-overview space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                            {['admin', 'sales'].includes(effectiveRole) && !isMobile && !showOnboarding && !showSetPassword && !materialsTourDone && shouldShowCoach('materials_tour') && (
+                                <SectionTour tourKey="materials_tour" steps={MATERIALS_TOUR_STEPS} onDone={() => setMaterialsTourDone(true)} />
+                            )}
                             <div className="settings-card">
                                 
                                 <div className="card-body">
-                            <div className="settings-grid" style={{ alignItems: 'flex-start' }}>
-                                {Object.keys(groupedMaterials).filter(k => k !== 'SYSTEM').map(catKey => (
-                                    <div className="glass-panel" key={catKey} style={{ alignSelf: 'flex-start' }}>
+                            <div data-tour="materials-grid" className="settings-grid" style={{ alignItems: 'flex-start' }}>
+                                {Object.keys(groupedMaterials).filter(k => k !== 'SYSTEM').map((catKey, mIdx) => (
+                                    <div className="glass-panel" data-tour={mIdx === 0 ? 'materials-category' : undefined} key={catKey} style={{ alignSelf: 'flex-start' }}>
                                         <div 
                                             className="card-header" 
                                             style={{ cursor: 'pointer', userSelect: 'none' }}
