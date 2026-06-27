@@ -57,6 +57,14 @@ const INTEGRATIONS_TOUR_STEPS = [
     { sel: '[data-tour="integ-smtp"]', placement: 'top', eyebrow: 'Mail', title: 'Send fra din egen mail', body: 'Forbind din mail, så tilbud sendes fra din egen adresse — og alt ligger i din "Sendt". Helt valgfrit.' },
 ];
 
+// Rundtur for Prisberegning-siden (indstillinger/simulator). Kun desktop, første gang.
+const PRICING_TOUR_STEPS = [
+    { sel: '[data-tour="settings-tilpas"]', placement: 'bottom', eyebrow: 'Prisberegning', title: 'Tilpas din beregner', body: 'Slå de opgaver fra, du ikke laver — så viser beregneren kun det, der er relevant for dig.' },
+    { sel: '[data-tour="settings-timepris"]', placement: 'top', eyebrow: 'Fundamentet', title: 'Timepris & avance', body: 'Sæt din timepris og avance — det er fundamentet under alle dine priser.' },
+    { sel: '[data-tour="settings-koersel"]', placement: 'bottom', eyebrow: 'Kørsel', title: 'Kørsel & logistik', body: 'Bestem hvordan kørsel beregnes i tilbuddene — statens takst plus timer, eller kun timepris.' },
+    { sel: '[data-tour="settings-test"]', placement: 'top', eyebrow: 'Prøv det', title: 'Test din beregner', body: 'Har du justeret dine priser? Åbn simulatoren og tjek, at alt regner som det skal — test-beregninger gemmes ikke som opgaver.' },
+];
+
 // Rundtur for Materialer (let). Kun desktop, første gang.
 const MATERIALS_TOUR_STEPS = [
     { sel: '[data-tour="materials-grid"]', placement: 'top', eyebrow: 'Materialer', title: 'Dine indkøbspriser', body: 'Her er dine materialer samlet i kategorier — tag, gulv, vinduer og flere. Priserne er dine indkøbspriser ekskl. moms.' },
@@ -909,6 +917,7 @@ const Dashboard = () => {
     const [leadsTourDone, setLeadsTourDone] = useState(false);
     const [integrationsTourDone, setIntegrationsTourDone] = useState(false);
     const [materialsTourDone, setMaterialsTourDone] = useState(false);
+    const [pricingTourDone, setPricingTourDone] = useState(false);
     const [calcGuideDone, setCalcGuideDone] = useState(false);
     const [showCalcCategories, setShowCalcCategories] = useState(false);
     // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
@@ -6081,9 +6090,13 @@ const Dashboard = () => {
                     {activeTab === 'settings' && settingsData && (
                         <div className="dashboard-workspace settings-overview settings-grid">
 
+                            {effectiveRole === 'admin' && !isMobile && !showOnboarding && !showSetPassword && !pricingTourDone && shouldShowCoach('pricing_tour') && (
+                                <SectionTour tourKey="pricing_tour" steps={PRICING_TOUR_STEPS} onDone={() => setPricingTourDone(true)} />
+                            )}
+
                             {/* Tilpas hvilke opgaver beregneren viser — bor her under "Prisberegning" */}
                             {effectiveRole === 'admin' && (
-                            <div className="settings-card">
+                            <div className="settings-card" data-tour="settings-tilpas">
                                 <div className="card-header">
                                     <div className="icon-wrapper"><Sliders size={24} /></div>
                                     <h3>Tilpas din beregner</h3>
@@ -6110,7 +6123,7 @@ const Dashboard = () => {
                             </div>
                             )}
 
-                            <div className="settings-card">
+                            <div className="settings-card" data-tour="settings-koersel">
                                 <div className="card-header">
                                     <div className="icon-wrapper">
                                         <Truck size={24} />
@@ -6158,7 +6171,7 @@ const Dashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="settings-card">
+                            <div className="settings-card" data-tour="settings-test">
                                 <div className="card-header">
                                     <div className="icon-wrapper">
                                         <Play size={24} />
@@ -6185,7 +6198,7 @@ const Dashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="settings-card">
+                            <div className="settings-card" data-tour="settings-timepris">
                                 <div className="card-header">
                                     <div className="icon-wrapper">
                                         <Users size={24} />
