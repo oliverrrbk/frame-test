@@ -8,8 +8,17 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import UserAvatar from '../ui/UserAvatar';
+import SectionTour from './SectionTour';
+import { shouldShowCoach } from './coachmarks';
+
+// Rundtur for Beskeder/chat (let). Kun desktop, første gang.
+const CHAT_TOUR_STEPS = [
+  { sel: '[data-tour="chat-filters"]', placement: 'right', eyebrow: 'Beskeder', title: 'Filtrér dine samtaler', body: 'Skift mellem alle, direkte beskeder, sags-tråde og firma-tråden — så du hurtigt finder den rigtige.' },
+  { sel: '[data-tour="chat-threads"]', placement: 'right', eyebrow: 'Samtaler', title: 'Skriv med holdet i realtid', body: 'Dine samtaler ligger her — fx Firma-fællestråden, der når hele holdet. Klik en for at åbne den og skrive. Du kan også chatte direkte på den enkelte sag.' },
+];
 
 const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThreadRead }) => {
+  const [chatTourActive, setChatTourActive] = useState(() => shouldShowCoach('chat_tour'));
   const [threads, setThreads] = useState([]);
   const [activeThread, setActiveThread] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -822,7 +831,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
         </div>
 
         {/* Filter Tabs */}
-        <div style={{ display: 'flex', padding: '10px 20px', gap: '8px', borderBottom: '1px solid rgba(226, 232, 240, 0.4)' }}>
+        <div data-tour="chat-filters" style={{ display: 'flex', padding: '10px 20px', gap: '8px', borderBottom: '1px solid rgba(226, 232, 240, 0.4)' }}>
           {['all', 'dm', 'case', 'company'].map((filter) => (
             <button
               key={filter}
@@ -848,7 +857,7 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
         </div>
 
         {/* Threads list container */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+        <div data-tour="chat-threads" style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
           {isLoadingThreads ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100px', color: '#64748b' }}>
               <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid #cbd5e1', borderTopColor: '#2563eb', borderRadius: '50%', marginBottom: '8px' }}></div>
@@ -1585,6 +1594,10 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
           }
         }
       `}</style>
+
+      {chatTourActive && (
+        <SectionTour tourKey="chat_tour" steps={CHAT_TOUR_STEPS} onDone={() => setChatTourActive(false)} />
+      )}
     </div>
   );
 };
