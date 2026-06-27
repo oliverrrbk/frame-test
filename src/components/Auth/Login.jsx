@@ -230,7 +230,7 @@ const Login = ({ setSession, onClose }) => {
                             
                             <div style={{ textAlign: 'center', margin: '24px 0 16px' }}>
                                 <Link to="/register" style={{ color: '#6b7280', textDecoration: 'none', fontSize: '14px', fontWeight: '500', display: 'inline-block', padding: '5px', transition: 'color 0.2s' }} onMouseOver={(e) => e.target.style.color = '#374151'} onMouseOut={(e) => e.target.style.color = '#6b7280'}>
-                                    Ny her? Opret dit håndværker-system her
+                                    Ny her? Opret dit tømrer-system her
                                 </Link>
                             </div>
                         </>

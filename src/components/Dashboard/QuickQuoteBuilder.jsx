@@ -1248,7 +1248,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     )}
 
                     {/* Afslutning på walkthrough: egen-mail + test-tilbud til dig selv */}
-                    {showTourFinish && (
+                    {showTourFinish && createPortal(
                         <div onClick={() => setShowTourFinish(false)} style={{ position: 'fixed', inset: 0, zIndex: 100100, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
                             <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 470, background: '#fff', borderRadius: 24, padding: 28, boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
                                 <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', marginBottom: 6 }}>Du er klar!</div>
@@ -1271,11 +1271,12 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                     Spring over — jeg er klar
                                 </button>
                             </div>
-                        </div>
+                        </div>,
+                        document.body
                     )}
 
                     {/* Inline SMTP-opsætning (genbruger Integrationer-komponenten) — uden at forlade tilbuddet */}
-                    {showSmtpSetup && (
+                    {showSmtpSetup && createPortal(
                         <div onClick={() => setShowSmtpSetup(false)} style={{ position: 'fixed', inset: 0, zIndex: 100110, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 24, overflowY: 'auto' }}>
                             <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 640, background: '#fff', borderRadius: 24, padding: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.35)', margin: 'auto' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -1284,7 +1285,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                 </div>
                                 <SmtpIntegration carpenterProfile={carpenter} expandedIntegration="smtp" setExpandedIntegration={(v) => { if (v !== 'smtp') setShowSmtpSetup(false); }} />
                             </div>
-                        </div>
+                        </div>,
+                        document.body
                     )}
                 </div>
 

@@ -66,7 +66,7 @@ export default function FeaturesPage({ setSession }) {
                         viewport={{ once: true }}
                         className="text-[clamp(1.125rem,2vw,1.25rem)] text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
                     >
-                        Præcise tilbudsberegninger designet specifikt til tømrere og håndværkere. Ingen skabeloner, blot ren matematik.
+                        Præcise tilbudsberegninger designet specifikt til tømrere. Ingen skabeloner, blot ren matematik.
                     </motion.p>
                 </header>
 

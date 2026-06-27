@@ -1,7 +1,7 @@
 {
   "name": "Bison Frame",
   "short_name": "Bison Frame",
-  "description": "Tilbud, sager, tegninger, økonomi og faktura ét sted. Lavet i samarbejde med håndværkere — til håndværkere.",
+  "description": "Tilbud, sager, tegninger, økonomi og faktura ét sted. Lavet i samarbejde med tømrere — til tømrere.",
   "start_url": "/login",
   "display": "standalone",
   "background_color": "#0f172a",

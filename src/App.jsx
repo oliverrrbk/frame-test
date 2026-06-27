@@ -124,7 +124,7 @@ const PublicWizardPage = () => {
       </div>
   );
   
-  if (!carpenterData) return <div style={{textAlign: 'center', padding: '100px', height: '100vh', background: '#f8fafc'}}><h2>Leder efter håndværkerens portal...</h2></div>;
+  if (!carpenterData) return <div style={{textAlign: 'center', padding: '100px', height: '100vh', background: '#f8fafc'}}><h2>Leder efter tømrerens portal...</h2></div>;
 
   // Kun tømrere har en offentlig online-prisberegner. Andre fag tager imod henvendelser direkte.
   if (!getFeatures(carpenterData.business_type).publicPortal) return (

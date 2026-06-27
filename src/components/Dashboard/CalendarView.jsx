@@ -2067,7 +2067,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginTop: '12px', background: '#eff6ff', padding: '12px', borderRadius: '8px' }}>
                                         <AlertCircle size={16} color="#3b82f6" style={{ flexShrink: 0, marginTop: '2px' }} />
-                                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#1e3a8a', lineHeight: '1.4' }}>De håndværkere og byggeledere, der er tilknyttet denne sag, bliver automatisk sat som deltagere for materialeleveringen.</p>
+                                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#1e3a8a', lineHeight: '1.4' }}>De tømrere og byggeledere, der er tilknyttet denne sag, bliver automatisk sat som deltagere for materialeleveringen.</p>
                                     </div>
                                 </div>
                             ) : (

@@ -208,7 +208,7 @@ const QuoteAcceptPage = () => {
     if (!lead) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f8fafc' }}>
-                <h2>Tilbuddet blev ikke fundet. Kontakt din håndværker.</h2>
+                <h2>Tilbuddet blev ikke fundet. Kontakt din tømrer.</h2>
             </div>
         );
     }
@@ -429,7 +429,7 @@ const QuoteAcceptPage = () => {
                             <h3 style={{ color: '#991b1b', margin: '0 0 8px 0', fontSize: '1.2rem' }}>Tilbuddet er udløbet</h3>
                             <p style={{ color: '#7f1d1d', margin: 0, lineHeight: '1.5' }}>
                                 Dette tilbud er mere end {validityDays} dage gammelt og er desværre ikke længere gældende. 
-                                Kontakt venligst {carpenter?.company_name || 'din håndværker'} for at få et opdateret tilbud.
+                                Kontakt venligst {carpenter?.company_name || 'din tømrer'} for at få et opdateret tilbud.
                             </p>
                         </div>
                     </div>

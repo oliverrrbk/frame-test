@@ -29,7 +29,7 @@ const ROLE_CARDS = [
         note: '↓ 79 kr/md fra bruger nr. 11',
     },
     {
-        id: 'enterprise', name: 'Entreprise', sub: 'Til den større håndværksvirksomhed.', icon: 'building',
+        id: 'enterprise', name: 'Entreprise', sub: 'Til den større tømrervirksomhed.', icon: 'building',
         price: 'Fast pris', per: '',
         features: ['Over 40 ansatte', 'Fast aftalt månedspris + onboarding'],
         contact: true,
@@ -162,7 +162,7 @@ export default function PricingPage({ setSession }) {
 
                     <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                         className="text-[clamp(2.15rem,6vw,4.5rem)] font-bold text-slate-900 dark:text-slate-50 tracking-tight leading-[1.15] max-w-3xl">
-                        Gennemskuelige <span className="text-orange-600 dark:text-orange-400">Priser</span> for Håndværkere.
+                        Gennemskuelige <span className="text-orange-600 dark:text-orange-400">Priser</span> for Tømrere.
                     </motion.h1>
 
                     <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}

@@ -33,7 +33,7 @@ export async function buildAgreementPdf(agreement, carpenter, customer = {}) {
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(15, 23, 42);
-    pdf.text(carpenter?.company_name || 'Håndværkerfirmaet', 20, 50);
+    pdf.text(carpenter?.company_name || 'Tømrerfirmaet', 20, 50);
 
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');

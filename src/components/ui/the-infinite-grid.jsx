@@ -68,10 +68,10 @@ export const TheInfiniteGrid = () => {
             className="space-y-6"
          >
           <h1 className="text-[clamp(2.5rem,6vw,5.5rem)] font-headline font-bold tracking-tight leading-[1.05] text-on-surface text-balance drop-shadow-sm">
-            Lavet i samarbejde med håndværkere til håndværkere.
+            Lavet i samarbejde med tømrere — til tømrere.
           </h1>
           <p className="text-[clamp(1.125rem,2vw,1.375rem)] text-on-surface-variant max-w-[65ch] mx-auto text-balance leading-relaxed">
-            Systemet der hjælper tømrere og håndværkere med at holde styr på deres forretning. På både mobil og computer.
+            Systemet der hjælper tømrere med at holde styr på deres forretning. På både mobil og computer.
           </p>
         </motion.div>
         

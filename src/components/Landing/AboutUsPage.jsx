@@ -68,7 +68,7 @@ export default function AboutUsPage({ setSession }) {
                             viewport={{ once: true }}
                             className="text-[clamp(1.125rem,2vw,1.25rem)] text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed"
                         >
-                            Vi er to gutter, der er gode til at bygge systemer – og som havde en flok kammerater i håndværksfaget. De var trætte af programmer, der ikke virkede, og af at timeregistrering og papirarbejde fyldte alt for meget. Så satte vi os ned sammen med dem og byggede det system, de selv ville have lavet, hvis de havde haft færdighederne til det.
+                            Vi er to gutter, der er gode til at bygge systemer – og som havde en flok kammerater i tømrerfaget. De var trætte af programmer, der ikke virkede, og af at timeregistrering og papirarbejde fyldte alt for meget. Så satte vi os ned sammen med dem og byggede det system, de selv ville have lavet, hvis de havde haft færdighederne til det.
                         </motion.p>
                     </div>
                 </header>
@@ -99,7 +99,7 @@ export default function AboutUsPage({ setSession }) {
                                 <div className="text-blue-600 dark:text-blue-400">
                                     <Compass size={28} />
                                 </div>
-                                <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">Bygget sammen med håndværkere</h3>
+                                <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">Bygget sammen med tømrere</h3>
                             </div>
                             <p className="text-slate-500 dark:text-slate-400 leading-relaxed flex-grow relative z-10">
                                 Vi har ikke gættet os til, hvad du har brug for. Vi satte os ned med rigtige tømrere og byggede kun det, der reelt bliver brugt i hverdagen. Alt det overflødige har vi sparket væk.
@@ -167,7 +167,7 @@ export default function AboutUsPage({ setSession }) {
                                 <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">Et system i konstant udvikling</h3>
                             </div>
                             <p className="text-slate-500 dark:text-slate-400 leading-relaxed flex-grow relative z-10">
-                                Vi ser ikke vores brugere som kunder, men som samarbejdspartnere. Mangler du en funktion, eller har du en idé, der gør det lettere at være håndværker, bygger vi den i fællesskab. Systemet bliver aldrig færdigt – det udvikler sig hele tiden sammen med dem, der bruger det.
+                                Vi ser ikke vores brugere som kunder, men som samarbejdspartnere. Mangler du en funktion, eller har du en idé, der gør det lettere at være tømrer, bygger vi den i fællesskab. Systemet bliver aldrig færdigt – det udvikler sig hele tiden sammen med dem, der bruger det.
                             </p>
                         </motion.div>
                     </div>

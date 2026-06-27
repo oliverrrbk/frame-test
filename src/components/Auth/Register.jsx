@@ -5,7 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { computePrice, formatKr } from '../../utils/pricing';
-import { BUSINESS_TYPES } from '../../utils/features';
+import { BUSINESS_TYPES, TRADE_PICKER_ENABLED } from '../../utils/features';
 
 // Lækker Bison Frame-dropdown til branchevalg (erstatter den grimme native select).
 const BusinessTypeSelect = ({ value, onChange }) => {
@@ -362,7 +362,7 @@ const Register = ({ setSession }) => {
                             <div className="w-16 h-16 bg-blue-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-blue-100 dark:border-slate-700">
                                 <img src="/logo.png" alt="Bison Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
                             </div>
-                            <h2 className="text-3xl font-bold tracking-tight mb-2">Opret dit håndværker-system</h2>
+                            <h2 className="text-3xl font-bold tracking-tight mb-2">Opret dit tømrer-system</h2>
                             <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm">Få fuld adgang til Bison Frame på under 1 minut.</p>
                         </div>
                         
@@ -373,12 +373,27 @@ const Register = ({ setSession }) => {
                                 </div>
                             )}
 
-                            {/* Branche — afgør om man får prisberegner + materialer */}
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Hvilken slags håndværker er du? *</label>
-                                <BusinessTypeSelect value={businessType} onChange={setBusinessType} />
-                                <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">Tømrere får prisberegner + materialer. Andre fag laver hurtige tilbud — alt det øvrige er ens.</span>
-                            </div>
+                            {/* Branche — kun synlig når fag-vælgeren er slået til (TRADE_PICKER_ENABLED).
+                                Ellers er Frame et rent tømrer-system: business_type = 'tomrer', og ikke-tømrere
+                                henvises til "kontakt os" i stedet for at oprette med det samme. */}
+                            {TRADE_PICKER_ENABLED ? (
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Hvilken slags håndværker er du? *</label>
+                                    <BusinessTypeSelect value={businessType} onChange={setBusinessType} />
+                                    <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">Tømrere får prisberegner + materialer. Andre fag laver hurtige tilbud — alt det øvrige er ens.</span>
+                                </div>
+                            ) : (
+                                <div className="rounded-xl border border-blue-100 dark:border-blue-500/20 bg-blue-50/60 dark:bg-blue-500/10 p-4">
+                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1">Er du ikke tømrer?</p>
+                                    <p className="text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                                        Frame er lige nu bygget specifikt til tømrere. Er du nysgerrig og tror, det kunne passe i din forretning, så kontakt os, før du opretter — så finder vi en løsning sammen.
+                                    </p>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-[13px] font-semibold">
+                                        <a href="tel:+4540265002" className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline"><Phone size={14} /> 40 26 50 02</a>
+                                        <a href="mailto:team@bisoncompany.dk" className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline"><Mail size={14} /> team@bisoncompany.dk</a>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 {/* Firmanavn */}

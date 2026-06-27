@@ -22,6 +22,16 @@ export const BUSINESS_TYPES = [
 // Fag der har den fulde beregner/materiale-pakke. Pt. kun tømrer.
 const CALCULATOR_TRADES = ['tomrer'];
 
+// ---------------------------------------------------------------------------
+// FAG-VÆLGER VED SELV-OPRETTELSE.
+// false = Frame markedsføres som rent TØMRER-system: fag-dropdownen skjules,
+//         nye selv-oprettelser sættes automatisk til 'tomrer', og ikke-tømrere
+//         henvises til "kontakt os". Multi-fag-motoren nedenfor er uændret —
+//         det er KUN den offentlige selv-oprettelse der er låst.
+// true  = "dial tilbage": fag-dropdownen vises igen, og alle fag kan selv-oprette.
+// ---------------------------------------------------------------------------
+export const TRADE_PICKER_ENABLED = false;
+
 export function getBusinessLabel(type) {
     return BUSINESS_TYPES.find(b => b.value === type)?.label || 'Håndværker';
 }

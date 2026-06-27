@@ -335,7 +335,7 @@ export const getCustomerFastTrackTemplate = (customerName, categoryName, carpent
 export const getCarpenterWelcomeTemplate = (companyName, loginUrl) => {
     const content = `
         <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Velkommen til Bison Frame, ${companyName}!</h2>
-        <p style="color: #334155; font-size: 16px; line-height: 1.6;">Vi er super glade for at have dig ombord. Din nye tilbuds- og ordrestyringsportal er nu oprettet. Vi har bygget systemet for at gøre din hverdag nemmere, spare dig for kontortid og give dine kunder en professionel oplevelse fra første klik til færdig opgave.</p>
+        <p style="color: #334155; font-size: 16px; line-height: 1.6;">Vi er super glade for at have dig ombord. Dit nye tømrer-system er nu oprettet. Vi har bygget systemet for at gøre din hverdag nemmere, spare dig for kontortid og give dine kunder en professionel oplevelse fra første klik til færdig opgave.</p>
         
         <div style="background-color: #f8fafc; padding: 24px; border-radius: 8px; margin: 32px 0; border: 1px solid #e2e8f0; border-left: 4px solid #10b981;">
             <h3 style="margin: 0 0 16px 0; color: #0f172a; font-size: 16px;">Kom godt fra start i 3 nemme trin:</h3>

@@ -121,7 +121,7 @@ const AgreementConfirmPage = () => {
     if (!agreement) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f8fafc' }}>
-                <h2>Aftalesedlen blev ikke fundet. Kontakt din håndværker.</h2>
+                <h2>Aftalesedlen blev ikke fundet. Kontakt din tømrer.</h2>
             </div>
         );
     }
@@ -143,7 +143,7 @@ const AgreementConfirmPage = () => {
                     </div>
                 )}
                 <h1 style={{ color: '#0f172a', margin: '0 0 8px', letterSpacing: '-0.02em', fontWeight: '800' }}>Aftaleseddel: Ekstraarbejde</h1>
-                <p style={{ color: '#64748b', fontSize: '1.1rem', margin: '0' }}>Til {customerName} fra {carpenter?.company_name || 'din håndværker'}</p>
+                <p style={{ color: '#64748b', fontSize: '1.1rem', margin: '0' }}>Til {customerName} fra {carpenter?.company_name || 'din tømrer'}</p>
             </div>
 
             {/* Document Container */}
@@ -154,7 +154,7 @@ const AgreementConfirmPage = () => {
                         <div style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>✓</div>
                         <div>
                             <h2 style={{ margin: '0 0 4px 0', color: '#065f46', fontSize: '1.4rem' }}>Aftalen er bekræftet</h2>
-                            <p style={{ margin: 0, color: '#047857', fontSize: '0.95rem' }}>Tak! {carpenter?.company_name || 'Din håndværker'} har fået besked, og arbejdet medtages på den endelige faktura.</p>
+                            <p style={{ margin: 0, color: '#047857', fontSize: '0.95rem' }}>Tak! {carpenter?.company_name || 'Din tømrer'} har fået besked, og arbejdet medtages på den endelige faktura.</p>
                         </div>
                     </div>
                 )}
@@ -216,7 +216,7 @@ const AgreementConfirmPage = () => {
             {/* Footer Trust */}
             <div style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8' }}>
                 <span style={{ fontSize: '1rem' }}>🔒</span>
-                <span style={{ fontSize: '0.85rem' }}>Sikker bekræftelse udsendt via <strong>Bison Frame</strong> for {carpenter?.company_name || 'din håndværker'}</span>
+                <span style={{ fontSize: '0.85rem' }}>Sikker bekræftelse udsendt via <strong>Bison Frame</strong> for {carpenter?.company_name || 'din tømrer'}</span>
             </div>
         </div>
     );
