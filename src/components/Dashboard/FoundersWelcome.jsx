@@ -60,7 +60,7 @@ export default function FoundersWelcome({ onDone }) {
         {
             scene: <Scene bg="linear-gradient(135deg,#fffbeb,#fef3c7)" primary={<ThumbsUp size={48} color="#f59e0b" />} accents={[{ icon: <Wrench size={26} color={BLUE} />, pos: { top: 22, left: 26 } }, { icon: <Hammer size={26} color="#0f172a" />, pos: { bottom: 22, right: 26 } }]} />,
             title: 'Vi har ti tommelfingre',
-            body: 'Men til gengæld er vi pissegode til at bygge systemer. Vi har en flok tømrer-venner, der sagde, at der ikke fandtes ét, som bare gav mening — så byggede vi Frame sammen med dem, som hvis de selv ville have gjort det. Hver eneste del er afprøvet af rigtige tømrere, der bruger det hver dag.',
+            body: <>Til gengæld bygger vi pissegode systemer. Frame er lavet <strong style={{ color: '#0f172a' }}>sammen med rigtige tømrere</strong> — fordi der ikke fandtes ét, der bare gav mening. Og hver eneste del er <strong style={{ color: '#0f172a' }}>testet af folk, der bruger det hver dag</strong>.</>,
         },
         {
             scene: <Scene bg="linear-gradient(135deg,#f8fafc,#eef2f6)" primary={<ListChecks size={46} color="#94a3b8" />} accents={[{ icon: <Clock size={26} color="#ef4444" />, pos: { top: 24, right: 30 } }, { icon: <Sparkles size={24} color="#10b981" />, pos: { bottom: 22, left: 28 } }]} />,
