@@ -16,6 +16,7 @@ import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
 // Første-gangs walkthrough af Hurtigt tilbud (kun desktop, kun én gang, altid spring-bar).
 const QUICKQUOTE_TOUR_STEPS = [
     { sel: '[data-tour="qq-edit"]', placement: 'right', eyebrow: 'Hurtigt tilbud', title: 'Her bygger du tilbuddet', body: 'Skriv kunden, en kort beskrivelse og dine priser — materialer og arbejde. Alt det kunden skal se, taster du ind her.' },
+    { sel: '[data-tour="qq-ai"]', placement: 'right', eyebrow: 'Spar tid', title: 'Eller indtal det hele', body: 'Tryk her og fortæl frit om kunden og opgaven — så udfylder Frame felterne for dig. Du retter bare til bagefter.' },
     { sel: '[data-tour="qq-pdf-col"]', placement: 'left', eyebrow: 'Live', title: 'Dit tilbud — i real-time', body: 'Mens du udfylder til venstre, opdaterer PDF-tilbuddet sig med det samme. Det er præcis sådan kunden ser det.' },
     { sel: '[data-tour="qq-mail-col"]', placement: 'left', eyebrow: 'Mailen', title: 'Mailen kunden får', body: 'Og her er selve mailen — med "Bekræft tilbud"-knappen, der fører kunden til en sikker portal.' },
     { sel: '[data-tour="qq-save"]', placement: 'top', eyebrow: 'Gem til senere', title: 'Gem kladde', body: 'Ikke færdig? Gem som kladde og fortsæt senere — fx hvis du starter på farten og gør det færdigt, når du er hjemme. Det virker også på mobilen.' },
@@ -281,6 +282,76 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         zip: cd0.zip || '',
         city: cd0.city || '',
     });
+    // Privat/erhverv — styrer moms-default på fakturaen senere. Default privat.
+    const [customerType, setCustomerType] = useState(cd0.customerType === 'erhverv' ? 'erhverv' : 'privat');
+    const [cvr, setCvr] = useState(cd0.cvr || '');
+
+    // AI-udfyld: tal frit om kunden + opgaven, så fyldes felterne ud (ren hjælpende hånd).
+    const [aiRecording, setAiRecording] = useState(false);
+    const [aiProcessing, setAiProcessing] = useState(false);
+    const aiRecorderRef = useRef(null);
+    const aiChunksRef = useRef([]);
+    // Udfyld KUN de felter, AI'en fandt — rør ikke resten.
+    const applyAiFill = (r) => {
+        setCustomer(c => ({
+            ...c,
+            name: r.customerName || c.name,
+            phone: r.phone ? formatDkPhone(r.phone) : c.phone,
+            email: r.email || c.email,
+            address: r.address || c.address,
+            zip: r.zip || c.zip,
+            city: r.city || c.city,
+        }));
+        if (r.customerType === 'erhverv' || r.cvr) setCustomerType('erhverv');
+        else if (r.customerType === 'privat') setCustomerType('privat');
+        if (r.cvr) setCvr(String(r.cvr).replace(/[^\d]/g, '').slice(0, 8));
+        if (r.title) setTitle(t => t || r.title);
+        if (r.workDescription) appendDictation(r.workDescription);
+        if (r.fixedPrice) { setLaborMode('fixed'); setLaborFixed(String(r.fixedPrice).replace(/[^\d]/g, '')); }
+        const vd = parseInt(r.validityDays, 10);
+        if (vd && vd > 0) setValidityDays(vd);
+    };
+    const toggleAiFill = async () => {
+        if (aiRecording) {
+            aiRecorderRef.current?.stop();
+            setAiRecording(false);
+            setAiProcessing(true);
+            toast('Lytter og udfylder…', { icon: '⚙️' });
+            return;
+        }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mr = new MediaRecorder(stream);
+            aiRecorderRef.current = mr;
+            aiChunksRef.current = [];
+            mr.ondataavailable = (e) => { if (e.data.size > 0) aiChunksRef.current.push(e.data); };
+            mr.onstop = async () => {
+                stream.getTracks().forEach(t => t.stop());
+                const blob = new Blob(aiChunksRef.current, { type: 'audio/webm' });
+                const fd = new FormData();
+                fd.append('audio', blob, 'voice.webm');
+                fd.append('mode', 'quickfill');
+                try {
+                    const res = await fetch('/api/process-voice', { method: 'POST', body: fd });
+                    if (!res.ok) throw new Error('Netværksfejl');
+                    const r = await res.json();
+                    if (r.error) throw new Error(r.error);
+                    applyAiFill(r);
+                    toast.success('Felterne er udfyldt — ret til efter behov.');
+                } catch (err) {
+                    toast.error('Kunne ikke udfylde via tale. Prøv igen.');
+                } finally {
+                    setAiProcessing(false);
+                }
+            };
+            mr.start();
+            setAiRecording(true);
+            toast('Optager… fortæl om kunden og opgaven', { icon: '🎙️' });
+        } catch (e) {
+            toast.error('Kunne ikke få adgang til mikrofonen. Tjek tilladelser.');
+            setAiProcessing(false);
+        }
+    };
 
     // Auto-udfyld by ud fra postnummer (DAWA) — samme kilde som wizardens kontakttrin.
     useEffect(() => {
@@ -543,7 +614,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 custom_message: emailMessage,
                 calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: num(laborHours), hourlyRate: num(laborRate) },
                 actual_quote_price: calc.totalExVat,
-                customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city },
+                customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city, customerType, cvr: customerType === 'erhverv' ? cvr : '' },
             };
             const { error } = await supabase.from('leads').update({
                 customer_name: customer.name,
@@ -699,7 +770,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: num(laborHours), hourlyRate: num(laborRate) },
                 actual_quote_price: calc.totalExVat,
                 // Strukturerede kundefelter bevares så de kan genindlæses korrekt ved redigering.
-                customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city },
+                customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city, customerType, cvr: customerType === 'erhverv' ? cvr : '' },
                 quote_pdf_url: quotePdfUrl ? `${quotePdfUrl}?t=${Date.now()}` : (initialLead?.raw_data?.quote_pdf_url),
                 material_pdfs: materialFile ? [...existingPdfs, ...materialPdfs] : existingPdfs,
                 checklist: initialLead?.raw_data?.checklist || seedChecklist(quoteObj.workLines),
@@ -944,8 +1015,24 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             ? <span style={{ display: 'block', marginTop: '4px', fontSize: '0.72rem', fontWeight: 600, color: '#ef4444' }}>{text}</span>
             : null;
         return (
+        <>
+        {/* Privat/Erhverv — sætter moms-default på fakturaen. Erhverv folder CVR ud. */}
+        <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '12px', marginBottom: '14px', maxWidth: isMobile ? '100%' : '280px' }}>
+            {[{ k: 'privat', l: 'Privat' }, { k: 'erhverv', l: 'Erhverv' }].map(o => {
+                const on = customerType === o.k;
+                return (
+                    <button key={o.k} type="button" onClick={() => setCustomerType(o.k)}
+                        style={{ flex: 1, padding: '8px', borderRadius: '9px', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', background: on ? '#fff' : 'transparent', color: on ? '#0f172a' : '#64748b', boxShadow: on ? '0 2px 6px rgba(15,23,42,0.1)' : 'none', transition: 'all .15s' }}>
+                        {o.l}
+                    </button>
+                );
+            })}
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
             <div><label style={label}>Navn *</label><input className="qqb-input" style={fieldStyle('name')} value={customer.name} onChange={(e) => { setCustomer({ ...customer, name: e.target.value }); clearFieldError('name'); }} />{errText('name', 'Udfyld kundens navn.')}</div>
+            {customerType === 'erhverv' && (
+                <div><label style={label}>CVR <span style={{ color: '#94a3b8', fontWeight: 500 }}>(valgfrit)</span></label><input className="qqb-input" style={input} inputMode="numeric" maxLength={8} value={cvr} onChange={(e) => setCvr(e.target.value.replace(/[^\d]/g, '').slice(0, 8))} placeholder="12345678" /></div>
+            )}
             <div><label style={label}>Telefon</label><input className="qqb-input" style={input} type="tel" inputMode="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: formatDkPhone(e.target.value) })} placeholder="+45 12 34 56 78" /></div>
             <div><label style={label}>Email{' '}<span style={{ color: '#94a3b8', fontWeight: 500 }}>(kræves for at sende)</span></label><input className="qqb-input" style={fieldStyle('email')} type="email" value={customer.email} onChange={(e) => { setCustomer({ ...customer, email: e.target.value }); clearFieldError('email'); }} />{errText('email', 'Udfyld en gyldig email.')}</div>
             <div>
@@ -966,6 +1053,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             <div><label style={label}>Postnummer</label><input className="qqb-input" style={fieldStyle('zip')} inputMode="numeric" maxLength={4} value={customer.zip} onChange={(e) => { setCustomer({ ...customer, zip: e.target.value.replace(/[^\d]/g, '').slice(0, 4) }); clearFieldError('zip'); }} />{errText('zip', 'Udfyld postnr.')}</div>
             <div><label style={label}>By</label><input className="qqb-input" style={fieldStyle('city')} value={customer.city} onChange={(e) => { setCustomer({ ...customer, city: e.target.value }); clearFieldError('city'); }} />{errText('city', 'Udfyld by.')}</div>
         </div>
+        </>
         );
     };
 
@@ -1039,6 +1127,20 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         const leftCol = (
             <div className="qqb-col" style={leftStyle} data-tour="qq-edit">
                 {zoneHead(<Pencil size={16} color="#3b82f6" />, 'Rediger tilbuddet', '#ffffff')}
+                {/* AI-udfyld: tal frit, så fyldes felterne ud (ren hjælpende hånd). */}
+                <div data-tour="qq-ai" style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9' }}>
+                    <button type="button" onClick={toggleAiFill} disabled={aiProcessing}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '13px 16px', borderRadius: '14px', border: '1px solid ' + (aiRecording ? '#fecaca' : '#bfdbfe'), background: aiRecording ? '#fef2f2' : 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: aiRecording ? '#dc2626' : '#1d4ed8', fontWeight: 800, fontSize: '0.92rem', cursor: aiProcessing ? 'wait' : 'pointer', transition: 'all .18s', boxShadow: aiRecording ? '0 0 0 4px rgba(239,68,68,0.12)' : '0 4px 12px rgba(37,99,235,0.10)' }}>
+                        {aiProcessing
+                            ? <><span className="qqb-spin" style={{ width: 15, height: 15, border: '2px solid #cbd5e1', borderTopColor: '#1d4ed8', borderRadius: '50%', display: 'inline-block' }} /> Udfylder…</>
+                            : aiRecording
+                                ? <><span style={{ width: 9, height: 9, borderRadius: '50%', background: '#dc2626', display: 'inline-block', animation: 'qqbrec 1s ease-in-out infinite' }} /> Optager — tryk for at udfylde</>
+                                : <><Mic size={17} /> Udfyld med stemme (AI)</>}
+                    </button>
+                    <p style={{ margin: '8px 2px 0', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.4, textAlign: 'center' }}>
+                        Fortæl frit om kunden og opgaven — Frame udfylder felterne, og du retter til bagefter.
+                    </p>
+                </div>
                 <div style={editSection} data-tour="qq-customer">
                     <h3 style={editH}><User size={18} color="#0f172a" /> Kunde</h3>
                     {renderCustomerInputs()}

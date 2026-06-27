@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calculator, Mic, FileText, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { Calculator, FileText, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import Coachmark from './Coachmark';
 import { shouldShowCoach, markCoachSeen } from './coachmarks';
 
@@ -25,11 +25,10 @@ const CARD_BASE = {
 const TOUR = [
     { eyebrow: 'Sådan laver du tilbud', title: 'Hurtigt tilbud — start her', body: 'Lettest og hurtigst: skriv din materialepris og avance, se tilbuddet, og send det på mail med det samme.' },
     { eyebrow: 'Sådan laver du tilbud', title: 'Prisberegner', body: 'Gå igennem som var du kunden — få et hurtigt overslag på opgaven, og ret til bagefter.' },
-    { eyebrow: 'Sådan laver du tilbud', title: 'Tilbud fra bunden (avanceret)', body: 'Byg tilbuddet op trin for trin, og lad AI hjælpe undervejs. Prøv den når du er varm i systemet.' },
 ];
 
 const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, onCustomizeCalculator, isMobile = false, allowCalculator = true }) => {
-    const cardRefs = [useRef(null), useRef(null), useRef(null)];
+    const cardRefs = [useRef(null), useRef(null)];
     // Guidet gennemgang kun på computer + første gang — og kun når der er flere kort
     // (ikke-tømrere ser kun Hurtigt tilbud, så ingen gennemgang).
     const [tourStep, setTourStep] = useState(() => (!isMobile && allowCalculator && shouldShowCoach('chooser_tour')) ? 0 : -1);
@@ -40,7 +39,7 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, on
     }, [guiding]);
 
     const endTour = () => setTourStep(-1);
-    const nextTour = () => setTourStep((s) => (s < 2 ? s + 1 : -1));
+    const nextTour = () => setTourStep((s) => (s < 1 ? s + 1 : -1));
     // Per-guide: at springe DENNE guide over markerer kun chooser_tour som set —
     // Hurtigt tilbud-introen kommer stadig, når man går ind på den.
     const skipTour = () => { markCoachSeen('chooser_tour'); endTour(); };
@@ -70,7 +69,7 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, on
             <h2 style={{ textAlign: 'center', marginBottom: '10px', fontSize: isMobile ? '1.7rem' : '2rem', color: '#0f172a' }}>Opret ny sag</h2>
             <p style={{ textAlign: 'center', color: '#64748b', marginBottom: isMobile ? '24px' : '40px', fontSize: isMobile ? '1rem' : '1.1rem' }}>Vælg hvordan du vil oprette</p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: (isMobile || !allowCalculator) ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? '16px' : '24px', maxWidth: allowCalculator ? '1080px' : '460px', margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: (isMobile || !allowCalculator) ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? '16px' : '24px', maxWidth: allowCalculator ? '760px' : '460px', margin: '0 auto' }}>
 
                 {/* 1) Hurtigt tilbud (manuelt) — letteste, står først */}
                 <div
@@ -114,27 +113,21 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, on
                     </div>
                 </div>
 
-                {/* 3) Tilbud fra bunden (AI / avanceret) */}
-                <div
-                    ref={cardRefs[2]}
-                    onClick={onSelectCustom}
-                    style={{ ...cardStyle(2), padding: pad }}
-                    onMouseEnter={(e) => hover(e, '#10b981', true)}
-                    onMouseLeave={(e) => hover(e, '#10b981', false)}
-                >
-                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Mic size={40} color="#10b981" />
-                    </div>
-                    <div>
-                        <h3 style={{ fontSize: '1.4rem', color: '#1e293b', marginBottom: '8px' }}>Tilbud fra bunden</h3>
-                        <p style={{ color: '#64748b', lineHeight: '1.5' }}>{isMobile ? 'Indtal noter med stemmen — AI bygger tilbuddet.' : 'Opret en specialopgave fra bunden. Indtal dine mål og noter med stemmen, og sammensæt selv materialelisten.'}</p>
-                    </div>
-                    <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontWeight: 'bold' }}>
-                        Opret fra bunden <ChevronRight size={18} />
-                    </div>
-                </div>
                 </>)}
             </div>
+
+            {/* Avanceret: tilbud fra bunden (AI / fler-etape) — demoteret fra primært kort,
+                men stadig tilgængelig her (og bruges af medarbejder-kladder). */}
+            {onSelectCustom && !guiding && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: isMobile ? '16px' : '20px' }}>
+                    <button onClick={onSelectCustom}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#94a3b8', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '3px', padding: '6px 10px' }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = '#475569'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                        Avanceret: byg tilbud fra bunden (fler-etape)
+                    </button>
+                </div>
+            )}
 
             {/* Tilpas hvilke opgaver beregneren viser — lige ved Prisberegneren (ikke gemt i Indstillinger) */}
             {allowCalculator && onCustomizeCalculator && !guiding && (
@@ -157,11 +150,11 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, on
                     anchorRef={cardRefs[tourStep]}
                     placement="bottom"
                     halo={false}
-                    step={`${tourStep + 1} / 3`}
+                    step={`${tourStep + 1} / 2`}
                     eyebrow={TOUR[tourStep].eyebrow}
                     title={TOUR[tourStep].title}
                     body={TOUR[tourStep].body}
-                    primaryLabel={tourStep < 2 ? 'Næste' : 'Kom i gang'}
+                    primaryLabel={tourStep < 1 ? 'Næste' : 'Kom i gang'}
                     onPrimary={nextTour}
                     onSkip={skipTour}
                     onClose={endTour}

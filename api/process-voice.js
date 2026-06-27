@@ -115,6 +115,65 @@ Regler:
     }
 }
 
+// Udfyld felterne i "Hurtigt tilbud" ud fra fri tale. Ren hjælpende hånd:
+// fylder KUN de felter, tømreren nævner — tilføjer intet ekstra (ingen materialeliste,
+// ingen opdigtede priser). Fejler aldrig flowet — returnerer tomme felter ved problemer.
+async function structureQuickQuote(text, apiKey) {
+    const systemPrompt = `Du er assistent for en dansk tømrer, der opretter et hurtigt tilbud og indtaler oplysningerne frit.
+Du modtager en transskriberet talebesked og skal udtrække DE FELTER, der nævnes — og KUN dem.
+
+Vigtige danske byggefagtermer (forstå dem korrekt, og ret fejlhørte varianter):
+${FAGTERMER_TEXT}
+
+Returnér KUN et JSON-objekt med denne struktur (udelad intet — men brug tom streng "" for felter der IKKE nævnes):
+{
+  "customerName": "Kundens navn, hvis nævnt. Ellers ''.",
+  "phone": "Telefonnummer (kun cifre/mellemrum), hvis nævnt. Ellers ''.",
+  "email": "Email, hvis nævnt. Ellers ''.",
+  "address": "Gade + husnummer, hvis nævnt. Ellers ''.",
+  "zip": "Postnummer (4 cifre), hvis nævnt. Ellers ''.",
+  "city": "By, hvis nævnt. Ellers ''.",
+  "customerType": "'erhverv' hvis der nævnes firma/CVR/erhverv, 'privat' hvis privatkunde, ellers ''.",
+  "cvr": "CVR-nummer (kun cifre), hvis nævnt. Ellers ''.",
+  "title": "Kort opgavetitel ud fra opgaven (fx 'Nyt trægulv i stue'). Max ca. 60 tegn. Ellers ''.",
+  "workDescription": "En klar, professionel arbejdsbeskrivelse i hele sætninger ud fra det sagte. Ret stavefejl og fagtermer. Ellers ''.",
+  "fixedPrice": "Hvis en fast pris nævnes: KUN tallet i kroner uden tusindtalsseparator og uden 'kr' (fx '30000'). Ellers ''.",
+  "validityDays": "Antal dage tilbuddet er gyldigt, hvis nævnt (kun tal). Ellers ''."
+}
+
+Regler:
+- Udfyld ALDRIG et felt, der ikke er nævnt — brug "".
+- Gæt aldrig en pris, et CVR eller kontaktoplysninger, der ikke er sagt.
+- Tilføj IKKE materialeliste, ekstra arbejde eller andet. Kun ren udtrækning.
+- Skriv på dansk. Returnér KUN JSON.`;
+
+    const empty = { customerName: '', phone: '', email: '', address: '', zip: '', city: '', customerType: '', cvr: '', title: '', workDescription: '', fixedPrice: '', validityDays: '' };
+    try {
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model: 'gpt-5.5',
+                response_format: { type: 'json_object' },
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: text }
+                ]
+            })
+        });
+        if (!resp.ok) {
+            console.error('Quick-quote-strukturering fejlede:', await resp.text());
+            return { ...empty, workDescription: text };
+        }
+        const data = await resp.json();
+        const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}');
+        return { ...empty, ...parsed };
+    } catch (e) {
+        console.error('Quick-quote-strukturering fejl:', e);
+        return { ...empty, workDescription: text };
+    }
+}
+
 export default async function handler(req) {
     if (req.method !== 'POST') {
         return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
@@ -163,6 +222,16 @@ export default async function handler(req) {
                 const corrected = await correctFagtermer(transcription, process.env.OPENAI_API_KEY);
                 const structured = await structureAftaleseddel(corrected, process.env.OPENAI_API_KEY);
                 return new Response(JSON.stringify({ transcription: corrected, ...structured }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // Hurtigt tilbud-diktering: ret fagtermer og udfyld tilbuds-felterne.
+            if (mode === 'quickfill') {
+                const corrected = await correctFagtermer(transcription, process.env.OPENAI_API_KEY);
+                const fields = await structureQuickQuote(corrected, process.env.OPENAI_API_KEY);
+                return new Response(JSON.stringify({ transcription: corrected, ...fields }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
