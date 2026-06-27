@@ -9,11 +9,37 @@ import { computeCaseFinance } from '../../utils/caseFinance';
 import SectionTour from './SectionTour';
 import { shouldShowCoach } from './coachmarks';
 
-// Rundtur for Økonomi & Faktura (kun desktop, første gang).
+// Rundtur for Økonomi & Faktura (kun desktop, første gang). Går IND i faktura-
+// editoren på en demo-sag (mockup) og viser delfakturering + bilag.
+const FINANCE_DEMO_ID = '__bison_tour_demo_invoice__';
+const FINANCE_DEMO_LEAD = {
+    id: FINANCE_DEMO_ID,
+    case_number: '1042',
+    project_category: 'Tagarbejde',
+    customer_name: 'Bruns Byg ApS',
+    customer_address: 'Byggevej 12, 8000 Aarhus C',
+    customer_phone: '40 26 50 02',
+    finance: { caseTotal: 54500, extraPrice: 4500, invoiced: 27250 },
+    raw_data: {
+        customerDetails: { customerType: 'erhverv', cvr: '12345678', fullName: 'Mads Bruns', email: 'kontakt@brunsbyg.dk', phone: '40 26 50 02', address: 'Byggevej 12', zip: '8000', city: 'Aarhus C' },
+        supplier_invoices: [
+            { id: 'demo-bilag-1', amount: 3200, description: 'Tagsten – Davidsen', category: 'Materialer', file_name: 'kvittering-davidsen.pdf', sent: false },
+            { id: 'demo-bilag-2', amount: 850, description: 'Stillads-leje', category: 'Leje', file_name: 'stillads.pdf', sent: false },
+        ],
+        material_lists_meta: [],
+        invoice_history: [],
+        details: { phases: [] },
+    },
+};
+// Trin 0-2 er på oversigten; trin 3+ åbner faktura-editoren på demo-sagen.
+const FINANCE_TOUR_DETAIL_FROM = 3;
 const FINANCE_TOUR_STEPS = [
     { sel: '[data-tour="finance-kpi"]', placement: 'bottom', eyebrow: 'Økonomi & Faktura', title: 'Dit cashflow på ét sted', body: 'Samlet værdi, hvad der er faktureret, hvad der mangler — og hvad der faktisk er bogført i regnskabet.' },
     { sel: '[data-tour="finance-pending"]', placement: 'bottom', eyebrow: 'Fakturering', title: 'Dine sager samles her', body: 'Her står dine sager. Fakturér dem for at få pengene i kassen — og når fakturaen er registreret og betalt i regnskabet, får sagen automatisk et flueben. De forsvinder ikke, så du beholder overblikket.' },
-    { sel: '[data-tour="finance-demo-invoice"]', placement: 'top', eyebrow: 'Ét klik', title: 'Opret faktura', body: 'Tryk Opret Faktura, så bygger Frame fakturaen for dig — og sender den direkte til dit regnskab (e-conomic/Dinero).' },
+    { sel: '[data-tour="finance-demo-invoice"]', placement: 'top', eyebrow: 'Ét klik', title: 'Opret faktura', body: 'Tryk Opret Faktura — så åbner vi fakturaen og kigger indenfor.' },
+    { sel: '[data-tour="invoice-billing"]', placement: 'right', eyebrow: 'Inde i fakturaen', title: 'Fakturér alt — eller delfakturér', body: 'Fakturér hele restbeløbet, eller vælg "Aconto (Delfakturering)" og send fx halvdelen nu — resten faktureres senere. Frame holder styr på hvad der mangler.' },
+    { sel: '[data-tour="invoice-bilag"]', placement: 'top', eyebrow: 'Bilag', title: 'Alle bilag samlet', body: 'Kvitteringer og bilag på sagen (fx fra Davidsen) ligger her — send dem med over i regnskabet sammen med fakturaen.' },
+    { sel: '[data-tour="invoice-send"]', placement: 'top', eyebrow: 'Afsend', title: 'Se og send', body: 'Se fakturaen visuelt, og send den direkte til dit regnskab (e-conomic/Dinero) med ét klik.' },
 ];
 
 const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounting, onUpdateLead, targetInvoiceCaseId, clearTargetInvoiceCase, isMobile = false }) => {
@@ -321,10 +347,6 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                         )}
                     </div>
 
-                    {financeTourActive && (
-                        <SectionTour tourKey="finance_tour" steps={FINANCE_TOUR_STEPS} onDone={(skipped) => { setFinanceTourActive(false); if (!skipped) setShowFinanceEnd(true); }} />
-                    )}
-
                     {/* Afslutning: forklarer flowet + at det er tomt nu (ingen bekræftede sager) */}
                     {showFinanceEnd && createPortal(
                         <div onClick={() => setShowFinanceEnd(false)} style={{ position: 'fixed', inset: 0, zIndex: 100130, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -366,6 +388,27 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                         document.body
                     )}
                 </>
+            )}
+
+            {/* Rundtur lever UDEN FOR liste/editor-grenen, så den overlever, når
+                demo-fakturaen åbnes i editoren (trin 3+). */}
+            {financeTourActive && (
+                <SectionTour
+                    tourKey="finance_tour"
+                    steps={FINANCE_TOUR_STEPS}
+                    onStepChange={(i) => {
+                        if (i >= FINANCE_TOUR_DETAIL_FROM) {
+                            if (activeInvoiceCase?.id !== FINANCE_DEMO_ID) setActiveInvoiceCase(FINANCE_DEMO_LEAD);
+                        } else if (activeInvoiceCase?.id === FINANCE_DEMO_ID) {
+                            setActiveInvoiceCase(null);
+                        }
+                    }}
+                    onDone={(skipped) => {
+                        setFinanceTourActive(false);
+                        if (activeInvoiceCase?.id === FINANCE_DEMO_ID) setActiveInvoiceCase(null);
+                        if (!skipped) setShowFinanceEnd(true);
+                    }}
+                />
             )}
         </div>
     );

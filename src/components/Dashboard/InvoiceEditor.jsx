@@ -381,7 +381,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                     </div>
 
                     {/* VALG AF FAKTURERING (FULDT / ACONTO) */}
-                    <div style={{ background: '#fff', borderRadius: isMobile ? '20px' : '16px', border: '1px solid #e2e8f0', padding: isMobile ? '18px' : '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                    <div data-tour="invoice-billing" style={{ background: '#fff', borderRadius: isMobile ? '20px' : '16px', border: '1px solid #e2e8f0', padding: isMobile ? '18px' : '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
                         <h3 style={{ margin: '0 0 16px 0', fontSize: isMobile ? '1.05rem' : '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Banknote size={18} color="#10b981" /> Hvad skal der faktureres?
                         </h3>
@@ -486,7 +486,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '12px' }}>
+                        <div data-tour="invoice-send" style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '12px' }}>
                             <button
                                 onClick={() => setShowPreview(true)}
                                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1', padding: '16px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px -1px rgba(0,0,0,0.05)' }}
@@ -568,7 +568,9 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
 
                 {/* HØJRE: LEVERANDØRBILAG */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div data-tour="invoice-bilag">
                     <BilagManager lead={lead} profile={carpenterProfile} onUpdateLead={onUpdateLead} isMobile={isMobile} />
+                    </div>
                 </div>
             </div>
 
