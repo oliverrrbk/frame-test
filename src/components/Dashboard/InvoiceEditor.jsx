@@ -332,12 +332,34 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                             )}
                         </div>
 
-                        {isReverseCharge && (
-                            <div style={{ marginTop: '16px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.3s ease-in' }}>
-                                <AlertCircle size={18} />
-                                <div>
-                                    <strong>Bemærk:</strong> Fakturaen oprettes <strong>uden moms</strong> (Omvendt betalingspligt for byggeydelser).
+                        {/* Moms-vælger (kun B2B): omvendt betalingspligt vs. almindelig moms — ét klik.
+                            Ikke alt B2B er byggeydelse (fx kontor), så man skal frit kunne skifte. */}
+                        {isB2B && (
+                            <div style={{ marginTop: '16px' }}>
+                                <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '14px' }}>
+                                    {[
+                                        { rc: true, label: 'Uden moms', sub: 'Omvendt betalingspligt', accent: '#1d4ed8' },
+                                        { rc: false, label: 'Med moms', sub: '25%', accent: '#059669' },
+                                    ].map(opt => {
+                                        const on = isReverseCharge === opt.rc;
+                                        return (
+                                            <button key={String(opt.rc)} onClick={() => setIsReverseCharge(opt.rc)}
+                                                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', padding: '9px 8px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: on ? '#fff' : 'transparent', boxShadow: on ? '0 2px 6px rgba(15,23,42,0.10)' : 'none', transition: 'all 0.18s' }}
+                                                onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.55)'; }}
+                                                onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 800, fontSize: '0.9rem', color: on ? opt.accent : '#64748b' }}>
+                                                    {on && <CheckCircle2 size={15} color={opt.accent} />}{opt.label}
+                                                </span>
+                                                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: on ? '#94a3b8' : '#cbd5e1' }}>{opt.sub}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
+                                <p style={{ margin: '8px 4px 0', fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.45 }}>
+                                    {isReverseCharge
+                                        ? 'Fakturaen oprettes uden moms — omvendt betalingspligt for bygge- og anlægsydelser.'
+                                        : 'Fakturaen oprettes med 25% moms — som ved almindeligt B2B-salg (fx kontor eller andet end byggeydelser).'}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -471,20 +493,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                             </div>
                         )}
 
-                        {isB2B && (
-                            <div style={{ marginBottom: '20px', padding: '12px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <input 
-                                    type="checkbox" 
-                                    id="reverseCharge" 
-                                    checked={isReverseCharge} 
-                                    onChange={(e) => setIsReverseCharge(e.target.checked)}
-                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                                />
-                                <label htmlFor="reverseCharge" style={{ fontSize: '0.9rem', color: '#0f172a', cursor: 'pointer' }}>
-                                    <strong>Omvendt betalingspligt</strong> (Momsfri B2B byggeydelse)
-                                </label>
-                            </div>
-                        )}
+                        {/* Moms-valget styres af den lækre vælger ved Fakturamodtager (ovenfor). */}
 
                         <div data-tour="invoice-send" style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '12px' }}>
                             <button
