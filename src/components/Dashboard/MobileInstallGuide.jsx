@@ -137,7 +137,7 @@ export default function MobileInstallGuide({ onDone }) {
             <>
                 {screens.intro}
                 <h2 style={ttl}>Få Frame i lommen</h2>
-                <p style={txt}>Det er på computeren du bygger — men ude på pladsen lever arbejdet. Læg Frame på din mobils hjemmeskærm, så har du den som en app. Det tager 20 sekunder.</p>
+                <p style={txt}>Tilbuddet laver du ved computeren — men ude på pladsen skal du kunne tilgå det hele. Læg Frame på mobilens hjemmeskærm, så har du hele dit system med i lommen. Det tager 20 sekunder.</p>
             </>
         );
         if (step === 1) return (
