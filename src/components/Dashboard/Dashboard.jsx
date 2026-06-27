@@ -1562,10 +1562,24 @@ const Dashboard = () => {
 
             // Første gang tømreren/medarbejderen logger ind, skabes hans profil ud fra auth metadata!
             const metadata = authUser?.user_metadata || {};
-            const baseSlug = metadata.company_name 
-                ? metadata.company_name.toLowerCase().replace(/[^a-z0-9æøå-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') 
+            const baseSlug = metadata.company_name
+                ? metadata.company_name.toLowerCase().replace(/[^a-z0-9æøå-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
                 : 'tomrer';
-            const randomSuffix = Math.floor(Math.random() * 10000);
+            // Pænt link fra start: brug kun firmanavnet. Tilføj kun en endelse,
+            // hvis navnet allerede er taget (-2, -3 … ellers tilfældig fallback).
+            let slug = baseSlug || 'tomrer';
+            try {
+                const { data: slugTaken } = await supabase.from('carpenters').select('id').eq('slug', slug).maybeSingle();
+                if (slugTaken) {
+                    let resolved = null;
+                    for (let n = 2; n <= 9; n++) {
+                        const candidate = `${baseSlug}-${n}`;
+                        const { data: t } = await supabase.from('carpenters').select('id').eq('slug', candidate).maybeSingle();
+                        if (!t) { resolved = candidate; break; }
+                    }
+                    slug = resolved || `${baseSlug}-${Math.floor(Math.random() * 10000)}`;
+                }
+            } catch { slug = `${baseSlug}-${Math.floor(Math.random() * 10000)}`; }
             let autoLonnummer = null;
             if (metadata.role && metadata.role !== 'admin' && metadata.company_id) {
                 const { data: existingTeam } = await supabase.from('carpenters').select('raw_data').eq('company_id', metadata.company_id);
@@ -1583,7 +1597,7 @@ const Dashboard = () => {
 
             const newProfile = {
                 id: targetId,
-                slug: `${baseSlug}-${randomSuffix}`,
+                slug,
                 company_name: metadata.company_name || 'Min Tømrervirksomhed',
                 cvr: metadata.cvr || '',
                 owner_name: metadata.owner_name || '',

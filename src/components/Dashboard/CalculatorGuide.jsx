@@ -6,7 +6,7 @@
 // ============================================================================
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Calculator, ChevronRight, ChevronLeft, X, Globe, Copy } from 'lucide-react';
+import { Calculator, ChevronRight, ChevronLeft, X, Globe, Copy, Search } from 'lucide-react';
 import { markCoachSeen } from './coachmarks';
 
 const BLUE = '#2563eb';
@@ -136,15 +136,44 @@ export default function CalculatorGuide({ onDone, slug }) {
                 </div>
             </Screen>
         ),
+        complex: (
+            <Screen label="Komplekse opgaver">
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: '#ecfdf5', border: '1px solid #a7f3d0', borderLeft: '3px solid #10b981', borderRadius: 10, padding: '9px 11px', marginBottom: 12 }}>
+                    <Search size={14} color="#059669" style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: '#047857', lineHeight: 1.4 }}>Vi aftaler en uforpligtende besigtigelse</span>
+                </div>
+                <div style={{ borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', padding: 10, display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                    <div style={{ height: 5, width: '50%', borderRadius: 3, background: '#cbd5e1' }} />
+                    <div style={{ height: 4, width: '100%', borderRadius: 2, background: '#eef2f6' }} />
+                    <div style={{ height: 4, width: '92%', borderRadius: 2, background: '#eef2f6' }} />
+                    <div style={{ height: 4, width: '70%', borderRadius: 2, background: '#eef2f6' }} />
+                </div>
+                <div style={{ textAlign: 'center', padding: '8px 0', borderRadius: 10, background: '#0f172a', color: '#fff', fontSize: 11, fontWeight: 800 }}>Send forespørgsel</div>
+            </Screen>
+        ),
+        customize: (
+            <Screen label="Tilpas din beregner">
+                {[['Tag', true], ['Gulv', true], ['Vinduer', false], ['Køkken', true]].map(([lbl, on]) => (
+                    <div key={lbl} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 4px', borderBottom: '1px solid #f1f5f9' }}>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, color: on ? '#0f172a' : '#94a3b8' }}>{lbl}</span>
+                        <span style={{ position: 'relative', width: 38, height: 22, borderRadius: 999, background: on ? 'linear-gradient(145deg,#10b981,#059669)' : '#cbd5e1', flexShrink: 0 }}>
+                            <span style={{ position: 'absolute', top: 3, left: on ? 19 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.25)' }} />
+                        </span>
+                    </div>
+                ))}
+            </Screen>
+        ),
     };
 
     const STEPS = [
-        { mockup: screens.intro, title: 'Prisberegner', body: 'Få en pris på de typiske opgaver — uden at regne selv. Perfekt når du vil give kunden et hurtigt, troværdigt overslag.' },
-        { mockup: screens.choose, title: 'Vælg opgaven', body: 'Start med at vælge hvad opgaven handler om — fx tag, gulv eller vinduer.' },
-        { mockup: screens.questions, title: 'Svar på et par spørgsmål', body: 'Beregneren spørger ind til mål og materialer — næsten som hvis du var kunden. Det tager under et minut.' },
-        { mockup: screens.price, title: 'Få prisen med det samme', body: 'Du får et prisoverslag bygget på Frames standardpriser — så du altid rammer rigtigt.' },
-        { mockup: screens.quote, title: 'Bliv til tilbud + materialeliste', body: 'Prisen bliver automatisk til både et færdigt tilbud og en materialeliste — ret til hvis du vil, og send direkte til kunden. Det hænger sammen hele vejen.' },
-        { mockup: screens.share, title: 'Lad kunden regne selv', body: <>Du har dit eget link — <strong>{linkText}</strong>. Send det på SMS/mail eller læg det på din hjemmeside, så kunden selv regner prisen og sender dig en færdig forespørgsel. Er der problemer, så ring <strong>40 26 50 02</strong> — så rådgiver vi dig.</> },
+        { mockup: screens.intro, title: 'Prisberegner', body: 'Få en pris på de typiske opgaver — uden at regne selv.' },
+        { mockup: screens.choose, title: 'Vælg opgaven', body: 'Vælg hvad opgaven handler om — tag, gulv, vinduer…' },
+        { mockup: screens.questions, title: 'Svar på spørgsmål', body: 'Et par enkle spørgsmål. Tager under et minut.' },
+        { mockup: screens.price, title: 'Få prisen', body: 'Et prisoverslag med det samme — bygget på dine priser.' },
+        { mockup: screens.quote, title: 'Tilbud + materialeliste', body: 'Prisen bliver automatisk til både tilbud og materialeliste.' },
+        { mockup: screens.share, title: 'Lad kunden regne selv', body: <>Dit eget link — <strong>{linkText}</strong>. Læg det på hjemmesiden, så kunden regner selv.</> },
+        { mockup: screens.complex, title: 'Komplekse opgaver', body: 'Er en opgave for kompleks til en fast pris? Så beskriver kunden den og sender en forespørgsel — og I aftaler en besigtigelse.' },
+        { mockup: screens.customize, title: 'Tilpas din beregner', body: 'Slå de opgaver fra, du ikke laver — så viser beregneren kun det relevante.' },
     ];
 
     const totalSteps = STEPS.length;
