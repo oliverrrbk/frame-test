@@ -70,17 +70,18 @@ export default function FoundersWelcome({ onDone }) {
         {
             scene: <Scene bg="linear-gradient(135deg,#eff6ff,#dbeafe)" primary={<MapPin size={48} color={BLUE} />} accents={[{ icon: <Clock size={26} color="#0f172a" />, pos: { top: 22, left: 28 } }, { icon: <Coins size={26} color="#f59e0b" />, pos: { bottom: 22, right: 28 } }]} />,
             title: 'Du møder en kort guide hvert nyt sted',
-            body: 'Den viser, hvordan vi og vores tømrere har tænkt det brugt — ikke en lov, du bestemmer selv. Men giv den en chance: de 10-15 minutter sparer dig en helvedes masse timer og bøvl, så du hurtigere tjener penge.',
+            body: 'Den viser, hvordan vi og vores tømrere har tænkt det brugt — ikke en lov, du bestemmer selv. Men giv det en chance: de 10-15 minutter sparer dig en helvedes masse timer og bøvl, så du hurtigere tjener penge.',
         },
         {
             scene: <Scene bg="linear-gradient(135deg,#ecfdf5,#d1fae5)" primary={<Phone size={46} color="#059669" />} accents={[{ icon: <HeartHandshake size={28} color={BLUE} />, pos: { top: 22, right: 28 } }, { icon: <img src="/logo.png" alt="" style={{ width: 30, height: 30, objectFit: 'contain' }} />, pos: { bottom: 20, left: 26 } }]} />,
             title: 'Driller noget? Så ring',
-            body: <>Vi fikser det — og mangler du en feature, laver vi den. Vores motto i Bison Company: <strong style={{ color: '#0f172a' }}>Med ærlighed kommer man længst</strong>. Derfor samarbejder vi så tæt med jer som muligt.</>,
+            body: <>Er der noget, der driller, eller har du brug for hjælp til at forstå systemet? Så ring — vi fikser det. Og mangler du en feature, laver vi den. Vores motto i Bison Company: <strong style={{ color: '#0f172a' }}>Med ærlighed kommer man længst</strong>. Derfor samarbejder vi så tæt med jer som muligt.</>,
+            footer: <a href="tel:+4540265002" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 999, background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', fontWeight: 800, fontSize: 15, textDecoration: 'none' }}><Phone size={16} /> Ring til os: 40 26 50 02</a>,
         },
         {
             scene: <Scene bg="linear-gradient(135deg,#eef2ff,#e0e7ff)" primary={<HeartHandshake size={48} color={BLUE} />} accents={[{ icon: <Users size={26} color="#0f172a" />, pos: { top: 24, left: 28 } }, { icon: <Wrench size={24} color="#7c3aed" />, pos: { bottom: 22, right: 30 } }]} />,
             title: 'Du er ikke bare en bruger',
-            body: 'Du er med-udvikler af Frame — et system, der hele tiden følger med branchen, så det hjælper jer bedst muligt. Vi glæder os til at bygge videre sammen med jer. De bedste hilsener, Mads & Oliver.',
+            body: <>Du er med-udvikler af Frame — et system, der hele tiden følger med branchen, så det hjælper jer bedst muligt. Vi glæder os til at bygge videre sammen med jer.<br /><br /><strong style={{ color: '#0f172a' }}>De bedste hilsener, Mads &amp; Oliver</strong></>,
         },
     ];
 
@@ -103,6 +104,7 @@ export default function FoundersWelcome({ onDone }) {
                     {s.scene}
                     <h2 style={{ margin: '22px 0 10px', fontSize: '1.75rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#0f172a', lineHeight: 1.15 }}>{s.title}</h2>
                     <p style={{ margin: '0 auto', fontSize: 15.5, color: '#5e5e5e', lineHeight: 1.65, maxWidth: 440 }}>{s.body}</p>
+                    {s.footer && <div style={{ marginTop: 14 }}>{s.footer}</div>}
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 7, margin: '24px 0 18px' }}>
