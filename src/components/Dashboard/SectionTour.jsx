@@ -8,14 +8,19 @@
 // Brug:  {shouldShowCoach('cases_tour') && <SectionTour tourKey="cases_tour" steps={STEPS} onDone={...} />}
 //   steps: [{ sel, placement, eyebrow, title, body, last? }]
 // ============================================================================
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import Coachmark from './Coachmark';
 import { markCoachSeen } from './coachmarks';
 
-export default function SectionTour({ steps = [], tourKey, onDone, zBase = 100040 }) {
+export default function SectionTour({ steps = [], tourKey, onDone, onStepChange, zBase = 100040 }) {
     const [idx, setIdx] = useState(0);
     const anchorRef = useRef(null);
     const [ready, setReady] = useState(false);
+
+    // Lad forælderen reagere på trin-skift (fx åbne/lukke en eksempel-sag),
+    // så det rigtige mål er i DOM'en før vi forsøger at finde det.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { onStepChange && onStepChange(idx); }, [idx]);
 
     const finish = (skipped = false) => { if (tourKey) markCoachSeen(tourKey); onDone && onDone(skipped); };
 

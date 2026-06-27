@@ -561,14 +561,55 @@ const isConfirmedCase = (lead) => {
     return false;
 };
 
-// Rundtur for Sager & Ordrestyring (Bølge 2). Lyser hele afsnit op + en
-// eksempel-sag (mockup, ikke en rigtig DB-sag) så nye brugere uden sager
-// stadig kan se hvordan en sag ser ud. Kun desktop, første gang.
+// Rundtur for Sager & Ordrestyring (Bølge 2). Lyser hele afsnit op, åbner en
+// eksempel-sag (mockup, IKKE en rigtig DB-sag) og går gennem ordrestyringen,
+// så nye brugere uden sager kan opleve hele flowet. Kun desktop, første gang.
+const CASES_DEMO_ID = '__bison_tour_demo_case__';
+const CASES_DEMO_CASE = {
+    id: CASES_DEMO_ID,
+    case_number: '1042',
+    status: 'Bekræftet opgave',
+    created_at: new Date().toISOString(),
+    customer_name: 'Bruns Byg ApS',
+    customer_address: 'Byggevej 12, 8000 Aarhus C',
+    project_category: 'Gulvarbejde',
+    raw_data: {
+        project_title: 'Nyt trægulv i stue',
+        customerDetails: { customerType: 'erhverv', cvr: '12345678', fullName: 'Mads Bruns' },
+        checklist: [
+            { id: 'demo-todo-1', text: 'Opmåling og klargøring', done: true, subTasks: [] },
+            { id: 'demo-todo-2', text: 'Levering af materialer', done: true, subTasks: [] },
+            { id: 'demo-todo-3', text: 'Montering af gulv', done: false, subTasks: [] },
+            { id: 'demo-todo-4', text: 'Slibning og oliebehandling', done: false, subTasks: [] },
+            { id: 'demo-todo-5', text: 'Oprydning og aflevering', done: false, subTasks: [] },
+        ],
+        time_entries: [
+            { id: 'demo-time-1', employeeId: 'demo-worker', hours: 16, date: new Date().toISOString().slice(0, 10), notes: 'Opmåling + klargøring' },
+            { id: 'demo-time-2', employeeId: 'demo-worker', hours: 8, date: new Date().toISOString().slice(0, 10), notes: 'Levering' },
+        ],
+        assigned_pm: [],
+        assigned_workers: [],
+        assigned_subcontractors: [],
+        calc_data: { laborHours: 40 },
+        is_manual_quote: false,
+        confirmed_at: new Date().toISOString(),
+        logs: [],
+        case_messages: [],
+        details: { phases: [] },
+    },
+};
+
+// Trin 0-3 er på listen; trin 4+ kræver at eksempel-sagen er åben (interiøret).
+const CASES_TOUR_DETAIL_FROM = 4;
 const CASES_TOUR_STEPS = [
     { sel: '[data-tour="cases-header"]', placement: 'bottom', eyebrow: 'Sager & Ordrestyring', title: 'Her bor dine opgaver', body: 'Når en kunde accepterer et tilbud, bliver det automatisk til en sag her — klar til at blive styret fra start til faktura.' },
     { sel: '[data-tour="cases-tabs"]', placement: 'bottom', eyebrow: 'Overblik', title: 'Mine sager vs. alle sager', body: '"Mine sager" er dem, du selv er sat på. "Alle sager" viser hele firmaets — så du altid kan finde en sag og hjælpe til.' },
     { sel: '[data-tour="cases-search"]', placement: 'bottom', eyebrow: 'Find hurtigt', title: 'Søg på tværs', body: 'Søg på sagsnummer, kunde, adresse eller telefon — også når listen vokser.' },
-    { sel: '[data-tour="cases-demo-card"]', placement: 'right', eyebrow: 'Sådan ser en sag ud', title: 'Alt om opgaven ét sted', body: 'Status, fremdrift på to-do-listen, registrerede timer mod estimat, og hvem på holdet der er sat på. Klik en sag for at åbne den og styre det hele.' },
+    { sel: '[data-tour="cases-demo-card"]', placement: 'right', eyebrow: 'Sådan ser en sag ud', title: 'Et hurtigt overblik', body: 'Status, fremdrift, timer mod estimat og hvem der er på holdet. Tryk Næste, så åbner vi sagen og kigger indenfor.' },
+    { sel: '[data-tour="case-detail-header"]', placement: 'bottom', eyebrow: 'Inde i sagen', title: 'Du er nu inde i ordrestyringen', body: 'Her samler du alt om opgaven — kunde, adresse, status og hele forløbet ét sted.' },
+    { sel: '[data-tour="case-tabs-nav"]', placement: 'bottom', eyebrow: 'Værktøjerne', title: 'Styr det hele fra fanerne', body: 'To-do & KS, materialer, timer, bilag, aftalesedler og tegninger — alt på den enkelte sag.' },
+    { sel: '[data-tour="case-tab-content"]', placement: 'top', eyebrow: 'To-do & KS', title: 'Følg arbejdet trin for trin', body: 'Kryds opgaver af efterhånden — så stiger fremdriften, og du har styr på kvalitetssikringen.' },
+    { sel: '[data-tour="case-detail-header"]', placement: 'bottom', eyebrow: 'Det var rundvisningen', title: 'Denne sag er kun et eksempel', body: 'Prøvesagen forsvinder nu af sig selv — herfra ser du kun dine egne, rigtige sager. God arbejdslyst!', last: true },
 ];
 
 export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile }) {
@@ -578,7 +619,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [caseViewTab, setCaseViewTab] = useState('mine'); // 'mine' = mine sager (standard), 'all' = alle firmaets bekræftede sager
     const [caseSearch, setCaseSearch] = useState('');
     const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
-    const selectedCase = activeCases.find(c => c.id === selectedCaseIdState) || null;
+    // Under rundvisningen kan eksempel-sagen "åbnes" uden at den findes i DB/listen.
+    const selectedCase = activeCases.find(c => c.id === selectedCaseIdState)
+        || (casesTourActive && selectedCaseIdState === CASES_DEMO_ID ? CASES_DEMO_CASE : null);
     const [stepToDelete, setStepToDelete] = useState(null);
 
     const [activeSubTab, setActiveSubTab] = useState(['worker', 'apprentice', 'sales'].includes(profile?.role) ? 'timesheet' : 'todo'); // 'todo', 'materials', 'logs', 'timesheet', 'finance'
@@ -2224,14 +2267,6 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             </>
                         )}
                     </div>
-
-                    {casesTourActive && (
-                        <SectionTour
-                            tourKey="cases_tour"
-                            steps={CASES_TOUR_STEPS}
-                            onDone={() => setCasesTourActive(false)}
-                        />
-                    )}
                 </div>
             ) : (
                 /* MOBIL & DESKTOP WRAPPER */
@@ -2723,10 +2758,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             </div>
                         </div>
                     )}
-                    <div style={{ padding: '24px', backgroundColor: selectedCase.status === 'Afbrudt Sag' ? '#fef2f2' : '#ffffff', borderRadius: '16px', border: selectedCase.status === 'Afbrudt Sag' ? '1px solid #fca5a5' : '1px solid #e8e6e1', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                    <div data-tour="case-detail-header" style={{ padding: '24px', backgroundColor: selectedCase.status === 'Afbrudt Sag' ? '#fef2f2' : '#ffffff', borderRadius: '16px', border: selectedCase.status === 'Afbrudt Sag' ? '1px solid #fca5a5' : '1px solid #e8e6e1', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                         <div>
-                            <button 
-                                onClick={() => !isModalView && setSelectedCaseIdState(null)} 
+                            <button
+                                onClick={() => !isModalView && setSelectedCaseIdState(null)}
                                 style={{ 
                                     display: isModalView ? 'none' : 'flex', 
                                     alignItems: 'center', 
@@ -3523,7 +3558,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         ].filter(tab => tab.show);
 
                         const tabContent = (
-                            <div className="case-workspace-tabs modern-tab-scroll case-bottom-nav" style={{ 
+                            <div data-tour="case-tabs-nav" className="case-workspace-tabs modern-tab-scroll case-bottom-nav" style={{
                                 display: 'flex', 
                                 gap: isMobile ? '4px' : '10px', 
                                 flexWrap: isMobile ? 'nowrap' : 'wrap', 
@@ -3664,7 +3699,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     })()}
 
                     {/* CASE WORKSPACE TABS INDHOLD */}
-                    <div ref={tabContentRef} style={{ padding: '8px 0' }}>
+                    <div ref={tabContentRef} data-tour="case-tab-content" style={{ padding: '8px 0' }}>
                         
                         {/* TAB 1: TO-DO / CHECKLIST */}
                         {activeSubTab === 'todo' && (
@@ -4637,6 +4672,24 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     </div>
                 </div>,
                 document.body
+            )}
+
+            {/* Rundtur for Sager & Ordrestyring — lever UDEN FOR liste/detalje-grenen,
+                så den overlever når eksempel-sagen åbnes (skift mellem liste og interiør). */}
+            {casesTourActive && !isModalView && (
+                <SectionTour
+                    tourKey="cases_tour"
+                    steps={CASES_TOUR_STEPS}
+                    onStepChange={(i) => {
+                        // Trin 4+ foregår inde i sagen: åbn/luk eksempel-sagen automatisk.
+                        if (i >= CASES_TOUR_DETAIL_FROM) {
+                            if (selectedCaseIdState !== CASES_DEMO_ID) setSelectedCaseIdState(CASES_DEMO_ID);
+                        } else if (selectedCaseIdState === CASES_DEMO_ID) {
+                            setSelectedCaseIdState(null);
+                        }
+                    }}
+                    onDone={() => { setCasesTourActive(false); if (selectedCaseIdState === CASES_DEMO_ID) setSelectedCaseIdState(null); }}
+                />
             )}
         </div>
     );

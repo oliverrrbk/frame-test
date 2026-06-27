@@ -186,6 +186,24 @@ const Register = ({ setSession }) => {
     const teamPrice = computePrice(team);
     const stepTeam = (key, d, min) => setTeam(t => ({ ...t, [key]: Math.max(min, Math.min(299, (t[key] || 0) + d)) }));
     const [showTeamHelp, setShowTeamHelp] = useState(false);   // forklarings-popup til "Byg dit hold"
+
+    // Åbn hjælpe-popup'en automatisk FØRSTE gang — men kun hvis brugeren IKKE kom fra
+    // prissiden (hvor strukturen allerede er forklaret). 'bison_from_pricing' sættes der.
+    // Vises én gang pr. browser-session, så et reload eller skift mellem felter ikke gentager den.
+    useEffect(() => {
+        let fromPricing = false, seen = false;
+        try {
+            fromPricing = sessionStorage.getItem('bison_from_pricing') === '1';
+            seen = sessionStorage.getItem('bison_team_help_seen') === '1';
+            sessionStorage.removeItem('bison_from_pricing'); // engangs-signal — ryd efter brug
+        } catch { /* ignore */ }
+        if (fromPricing || seen) return;
+        const t = setTimeout(() => {
+            setShowTeamHelp(true);
+            try { sessionStorage.setItem('bison_team_help_seen', '1'); } catch { /* ignore */ }
+        }, 550);
+        return () => clearTimeout(t);
+    }, []);
     
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
