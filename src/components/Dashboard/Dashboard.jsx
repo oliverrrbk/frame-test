@@ -38,7 +38,7 @@ import QuickQuoteBuilder from './QuickQuoteBuilder';
 import Coachmark from './Coachmark';
 import DashboardTour from './DashboardTour';
 import MobileInstallGuide from './MobileInstallGuide';
-import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
+import { shouldShowCoach, markCoachSeen } from './coachmarks';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { computeQuoteExpiry } from '../../utils/quoteExpiry';
 import { getRoleLabel } from '../../utils/roles';
@@ -3650,7 +3650,7 @@ const Dashboard = () => {
                                                 onPrimary={() => { markCoachSeen('hero_quote'); setHeroCoachDismissed(true); setIsCreateLeadModalOpen(true); }}
                                                 secondaryLabel="Senere"
                                                 onSecondary={() => { markCoachSeen('hero_quote'); setHeroCoachDismissed(true); }}
-                                                onSkip={() => { skipAllCoach(); setHeroCoachDismissed(true); }}
+                                                onSkip={() => { markCoachSeen('hero_quote'); setHeroCoachDismissed(true); }}
                                                 onClose={() => { markCoachSeen('hero_quote'); setHeroCoachDismissed(true); }}
                                             />
                                         )}

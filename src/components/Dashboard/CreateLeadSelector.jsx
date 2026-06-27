@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calculator, Mic, FileText, ChevronRight } from 'lucide-react';
 import Coachmark from './Coachmark';
-import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
+import { shouldShowCoach, markCoachSeen } from './coachmarks';
 
 // Kortenes design er uændret — kun rækkefølgen er ny (Hurtigt tilbud først,
 // derefter Prisberegner, så Tilbud fra bunden) + et lille "Nemmest"-mærke +
@@ -41,7 +41,9 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, is
 
     const endTour = () => setTourStep(-1);
     const nextTour = () => setTourStep((s) => (s < 2 ? s + 1 : -1));
-    const skipTour = () => { skipAllCoach(); endTour(); };
+    // Per-guide: at springe DENNE guide over markerer kun chooser_tour som set —
+    // Hurtigt tilbud-introen kommer stadig, når man går ind på den.
+    const skipTour = () => { markCoachSeen('chooser_tour'); endTour(); };
 
     // Dæmp de ikke-aktive kort under gennemgangen; lys det aktive op.
     const cardStyle = (idx) => {

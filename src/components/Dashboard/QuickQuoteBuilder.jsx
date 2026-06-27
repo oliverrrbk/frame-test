@@ -1260,12 +1260,48 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 470, background: '#fff', borderRadius: 24, padding: 28, boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
                                 <div style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8 }}>Valgfrit</div>
                                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Send fra din egen mail</div>
-                                <p style={{ margin: '0 0 14px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
-                                    Kunden kan altid svare dig direkte tilbage — uanset om du sætter det op. Sætter du din egen mail op, sendes tilbuddet fra din adresse, så det også ligger i din "Sendt", og alle svar samles hos dig.
+                                <p style={{ margin: '0 0 12px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
+                                    Send tilbuddet fra din egen adresse — så ligger det også i din "Sendt", og kundens svar lander direkte hos dig.
                                 </p>
+                                {/* Lille mailboks-illustration (ren SVG) — viser at tilbuddet havner i "Sendt". */}
+                                <div style={{ display: 'flex', justifyContent: 'center', margin: '0 0 14px' }}>
+                                    <svg viewBox="0 0 300 170" width="100%" style={{ maxWidth: 280, display: 'block', filter: 'drop-shadow(0 8px 18px rgba(15,23,42,0.10))' }} role="img" aria-label="Mailboks med Sendt-mappe">
+                                        <defs><clipPath id="qq-mailbox-clip"><rect x="8" y="10" width="284" height="150" rx="14" /></clipPath></defs>
+                                        <g clipPath="url(#qq-mailbox-clip)">
+                                            <rect x="8" y="10" width="284" height="150" fill="#ffffff" />
+                                            {/* titellinje */}
+                                            <rect x="8" y="10" width="284" height="28" fill="#f8fafc" />
+                                            <circle cx="26" cy="24" r="3.5" fill="#f87171" />
+                                            <circle cx="38" cy="24" r="3.5" fill="#fbbf24" />
+                                            <circle cx="50" cy="24" r="3.5" fill="#34d399" />
+                                            {/* sidebar med mapper */}
+                                            <rect x="8" y="38" width="88" height="122" fill="#f8fafc" />
+                                            <text x="20" y="62" fontSize="10" fontWeight="600" fill="#94a3b8" fontFamily="Inter, sans-serif">Indbakke</text>
+                                            <rect x="12" y="74" width="78" height="22" rx="7" fill="#ecfdf5" />
+                                            <text x="20" y="89" fontSize="10" fontWeight="800" fill="#059669" fontFamily="Inter, sans-serif">Sendt</text>
+                                            <circle cx="80" cy="85" r="7" fill="#10b981" />
+                                            <path d="M77 85 l2 2 l4 -4" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                                            <text x="20" y="116" fontSize="10" fontWeight="600" fill="#94a3b8" fontFamily="Inter, sans-serif">Kladder</text>
+                                            {/* mail-liste — øverst er det sendte tilbud */}
+                                            <rect x="104" y="48" width="180" height="30" rx="8" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="1" />
+                                            <circle cx="118" cy="63" r="7" fill="#10b981" />
+                                            <rect x="132" y="56" width="96" height="5" rx="2.5" fill="#0f172a" opacity="0.72" />
+                                            <rect x="132" y="66" width="64" height="4" rx="2" fill="#64748b" opacity="0.55" />
+                                            <circle cx="270" cy="63" r="7" fill="#10b981" />
+                                            <path d="M267 63 l2 2 l4 -4" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                                            <circle cx="118" cy="95" r="7" fill="#e2e8f0" />
+                                            <rect x="132" y="89" width="120" height="5" rx="2.5" fill="#cbd5e1" />
+                                            <rect x="132" y="99" width="80" height="4" rx="2" fill="#e2e8f0" />
+                                            <circle cx="118" cy="125" r="7" fill="#e2e8f0" />
+                                            <rect x="132" y="119" width="110" height="5" rx="2.5" fill="#cbd5e1" />
+                                            <rect x="132" y="129" width="70" height="4" rx="2" fill="#e2e8f0" />
+                                        </g>
+                                        <rect x="8" y="10" width="284" height="150" rx="14" fill="none" stroke="#e2e8f0" strokeWidth="1.5" />
+                                    </svg>
+                                </div>
                                 <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
                                     <div style={{ color: '#1e3a8a', fontSize: '0.88rem', lineHeight: 1.5 }}>
-                                        Du kan sætte det op selv, når du har lyst — eller helt springe det over og gøre det senere. Løber du ind i problemer, så <strong>ring til os på 40 26 50 02</strong>, så hjælper vi dig på plads.
+                                        Helt valgfrit — gør det nu, senere eller slet ikke. Brug for hjælp? <strong>Ring 40 26 50 02</strong>.
                                     </div>
                                 </div>
 
