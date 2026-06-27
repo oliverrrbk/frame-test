@@ -6735,7 +6735,7 @@ const Dashboard = () => {
                 foldes ud eller skjules, så den aldrig blokerer for arbejdet. */}
             {trialDaysLeft > 0 && !isPaywallActive && effectiveRole === 'admin' && !carpenterProfile?.payment_customer_id && !showOnboarding && !showSetPassword && !trialPillDismissed && createPortal(
                 isMobile ? (
-                    <div style={{ position: 'fixed', right: '14px', bottom: 'calc(16px + env(safe-area-inset-bottom))', zIndex: 9000 }}>
+                    <div className="bison-trial-toast" style={{ position: 'fixed', right: '14px', bottom: 'calc(16px + env(safe-area-inset-bottom))', zIndex: 9000 }}>
                         {trialPillExpanded ? (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9, y: 10 }}
@@ -6774,6 +6774,7 @@ const Dashboard = () => {
                 ) : (
                     <AnimatePresence mode="wait">
                         <motion.div
+                            className="bison-trial-toast"
                             key={`trial-toast-${activeTab}`} // Re-triggers animation on tab change
                             initial={{ opacity: 0, y: 50, x: 50, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}

@@ -74,6 +74,9 @@ export default function Coachmark({
                     }
                 } else {
                     top = place === 'bottom' ? r.bottom + 14 : r.top - bh - 14;
+                    // Hold altid boblen (og dens knapper) inde i skærmen — også når
+                    // målet er højere end viewporten (fx en lang fane-indhold).
+                    top = Math.max(12, Math.min(top, vh - bh - 12));
                     left = Math.max(12, Math.min(r.left + r.width / 2 - 46, vw - BUBBLE_W - 12));
                     const aLeft = Math.min(Math.max(r.left + r.width / 2 - left - 7, 16), BUBBLE_W - 28);
                     if (place === 'top') {
@@ -93,6 +96,14 @@ export default function Coachmark({
         return () => cancelAnimationFrame(raf);
     }, [anchorRef, placement]);
 
+    // Mens en spotlight-rundtur kører, markeres body, så fx trial-påmindelsen
+    // kan skjules — den må ikke spærre/forstyrre rundvisningen.
+    useEffect(() => {
+        if (!spotlight) return;
+        document.body.classList.add('bison-coach-active');
+        return () => document.body.classList.remove('bison-coach-active');
+    }, [spotlight]);
+
     const dismiss = () => { onClose && onClose(); };
     const handlePrimary = () => { onPrimary ? onPrimary() : dismiss(); };
 
@@ -100,6 +111,8 @@ export default function Coachmark({
         <>
             {spotlight && (
                 <>
+                    {/* Skjul trial-påmindelsen mens rundturen kører (sat via body-klassen). */}
+                    <style>{`body.bison-coach-active .bison-trial-toast{display:none !important;}`}</style>
                     {/* Gennemsigtigt lag der blokerer baggrundsklik under rundturen */}
                     <div style={{ position: 'fixed', inset: 0, zIndex: zBase - 1 }} />
                     {/* Spotlight-hul: dæmper alt udenom målet */}
