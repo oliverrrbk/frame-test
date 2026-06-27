@@ -8,8 +8,19 @@ import DrawingBoard from './DrawingBoard';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { renderElementsToCanvas } from './renderUtils';
+import SectionTour from '../Dashboard/SectionTour';
+import { shouldShowCoach } from '../Dashboard/coachmarks';
+
+// Rundtur for Skitser & Tegninger — let men grundig. Kun desktop, første gang,
+// og kun på hoved-biblioteket (ikke når galleriet er indlejret i en sagsmappe).
+const DRAWINGS_TOUR_STEPS = [
+    { sel: '[data-tour="drawings-new"]', placement: 'bottom', eyebrow: 'Skitser & Tegninger', title: 'Tegn direkte i Frame', body: 'Lav en plantegning, opmåling eller en hurtig idé til kunden — på computer eller tablet. Ingen ekstra programmer.' },
+    { sel: '[data-tour="drawings-demo"]', placement: 'right', eyebrow: 'Dit bibliotek', title: 'Sådan ser en skitse ud', body: 'Dine tegninger samles her. Åbn for at redigere, hent som PDF til kunden, eller knyt skitsen til en sag — så ligger den i sagens mappe.' },
+];
 
 const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
+    // Rundtur kun på hoved-biblioteket (ikke sagsmappe-varianten med leadId).
+    const [drawingsTourActive, setDrawingsTourActive] = useState(() => !leadId && shouldShowCoach('drawings_tour'));
     const [drawings, setDrawings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeDrawingId, setActiveDrawingId] = useState(null);
@@ -587,7 +598,8 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
                     </p>
                 </div>
                 
-                <button 
+                <button
+                    data-tour="drawings-new"
                     onClick={handleNewDrawing}
                     style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
@@ -610,6 +622,38 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
                     Opret Ny Skitse
                 </button>
             </div>
+
+            {/* Demo-skitse — vises kun under rundvisningen, så man ser hvordan en tegning ser ud. */}
+            {drawingsTourActive && (
+                <div style={{ position: 'relative', maxWidth: '300px', marginBottom: '32px' }}>
+                    <span style={{ position: 'absolute', top: -9, left: 16, zIndex: 1, background: '#0f172a', color: '#fff', fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: '20px' }}>Eksempel</span>
+                    <div data-tour="drawings-demo" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+                        <div style={{ height: '150px', background: '#f8fafc', borderBottom: '1px solid #eef2f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="200" height="120" viewBox="0 0 200 120" role="img" aria-label="Plantegning">
+                                <rect x="20" y="18" width="160" height="84" fill="#fff" stroke="#94a3b8" strokeWidth="2.5" />
+                                <line x1="110" y1="18" x2="110" y2="102" stroke="#94a3b8" strokeWidth="2.5" />
+                                <line x1="110" y1="60" x2="110" y2="78" stroke="#fff" strokeWidth="3" />
+                                <path d="M110 78 A18 18 0 0 1 128 60" fill="none" stroke="#cbd5e1" strokeWidth="1.5" />
+                                <line x1="20" y1="110" x2="180" y2="110" stroke="#3b82f6" strokeWidth="1.5" />
+                                <line x1="20" y1="106" x2="20" y2="114" stroke="#3b82f6" strokeWidth="1.5" />
+                                <line x1="180" y1="106" x2="180" y2="114" stroke="#3b82f6" strokeWidth="1.5" />
+                                <text x="100" y="44" textAnchor="middle" fontSize="9" fill="#94a3b8" fontFamily="Inter, sans-serif">Stue</text>
+                                <text x="145" y="44" textAnchor="middle" fontSize="9" fill="#94a3b8" fontFamily="Inter, sans-serif">Køkken</text>
+                                <text x="100" y="120" textAnchor="middle" fontSize="8" fill="#3b82f6" fontFamily="Inter, sans-serif">8,40 m</text>
+                            </svg>
+                        </div>
+                        <div style={{ padding: '16px' }}>
+                            <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>Plantegning – stue</h4>
+                            <p style={{ margin: '4px 0 14px', fontSize: '0.85rem', color: '#64748b' }}>Knyttet til Sag 1042 · i dag</p>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                {[[PenTool, 'Åbn'], [FileDown, 'PDF'], [FolderOutput, 'Tilknyt sag']].map(([Ic, lbl]) => (
+                                    <span key={lbl} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 10px', borderRadius: '8px', background: '#f1f5f9', color: '#475569', fontSize: '0.78rem', fontWeight: 700 }}><Ic size={13} /> {lbl}</span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {isLoading ? (
                 <div style={{ textAlign: 'center', padding: '100px', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
@@ -808,6 +852,10 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
                     `}</style>
                 </div>,
                 document.body
+            )}
+
+            {drawingsTourActive && (
+                <SectionTour tourKey="drawings_tour" steps={DRAWINGS_TOUR_STEPS} onDone={() => setDrawingsTourActive(false)} />
             )}
         </div>
     );
