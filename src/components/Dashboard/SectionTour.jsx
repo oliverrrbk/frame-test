@@ -17,7 +17,7 @@ export default function SectionTour({ steps = [], tourKey, onDone, zBase = 10004
     const anchorRef = useRef(null);
     const [ready, setReady] = useState(false);
 
-    const finish = () => { if (tourKey) markCoachSeen(tourKey); onDone && onDone(); };
+    const finish = (skipped = false) => { if (tourKey) markCoachSeen(tourKey); onDone && onDone(skipped); };
 
     useLayoutEffect(() => {
         if (!steps.length) return;
@@ -50,7 +50,7 @@ export default function SectionTour({ steps = [], tourKey, onDone, zBase = 10004
     const s = steps[idx];
     const total = steps.filter(x => !x.last).length;
     const next = () => { if (idx < steps.length - 1) setIdx(i => i + 1); else finish(); };
-    const skip = () => { skipAllCoach(); finish(); };
+    const skip = () => { skipAllCoach(); finish(true); };
 
     return (
         <Coachmark
