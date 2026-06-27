@@ -39,6 +39,7 @@ import Coachmark from './Coachmark';
 import DashboardTour from './DashboardTour';
 import SectionTour from './SectionTour';
 import MobileInstallGuide from './MobileInstallGuide';
+import CalculatorGuide from './CalculatorGuide';
 import { shouldShowCoach, markCoachSeen } from './coachmarks';
 
 // Rundtur for Kunder & Forespørgsler (Bølge 3). Forklarer salgs-pipelinen.
@@ -899,6 +900,7 @@ const Dashboard = () => {
     const [mobileGuideDone, setMobileGuideDone] = useState(false);
     const [leadsTourDone, setLeadsTourDone] = useState(false);
     const [integrationsTourDone, setIntegrationsTourDone] = useState(false);
+    const [calcGuideDone, setCalcGuideDone] = useState(false);
     // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
     // så man lander præcis hvor man tilføjer kort — ikke i toppen ved firmaoplysninger.
     const goToBilling = () => {
@@ -6571,10 +6573,14 @@ const Dashboard = () => {
                                 />
                             )}
                             
+                            {createLeadMode === 'classic' && !isMobile && !calcGuideDone && shouldShowCoach('calculator_guide') && (
+                                <CalculatorGuide onDone={() => setCalcGuideDone(true)} />
+                            )}
+
                             {createLeadMode === 'classic' && (
-                                <Wizard 
-                                    carpenter={carpenterProfile} 
-                                    isManualCreation={true} 
+                                <Wizard
+                                    carpenter={carpenterProfile}
+                                    isManualCreation={true}
                                     onComplete={async (newLead) => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
