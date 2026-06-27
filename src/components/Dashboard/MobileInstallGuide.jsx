@@ -38,8 +38,8 @@ export default function MobileInstallGuide({ onDone }) {
     // ---- Mockups pr. trin ----
     // Ægte app-ikon: bison-logoet på mørk baggrund (som det ser ud på hjemmeskærmen).
     const appIcon = (
-        <div style={{ width: 56, height: 56, borderRadius: 14, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(15,23,42,0.35)', overflow: 'hidden' }}>
-            <img src="/logo.png" alt="Bison Frame" style={{ width: 42, height: 42, objectFit: 'contain' }} />
+        <div style={{ width: 58, height: 58, borderRadius: 14, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(15,23,42,0.35)', overflow: 'hidden' }}>
+            <img src="/logo.png" alt="Bison Frame" style={{ width: 58, height: 58, objectFit: 'contain', transform: 'scale(1.5)' }} />
         </div>
     );
 
@@ -56,7 +56,7 @@ export default function MobileInstallGuide({ onDone }) {
             <Phone label="Mobilens browser">
                 <div style={{ padding: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: `2px solid ${BLUE}`, borderRadius: 999, padding: '8px 12px', boxShadow: `0 0 0 4px ${BLUE}22` }}>
-                        <img src="/logo.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                        <span style={{ width: 20, height: 20, borderRadius: 6, background: '#0f172a', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}><img src="/logo.png" alt="" style={{ width: 20, height: 20, objectFit: 'contain', transform: 'scale(1.5)' }} /></span>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>bisonframe.dk</span>
                     </div>
                 </div>
@@ -96,8 +96,8 @@ export default function MobileInstallGuide({ onDone }) {
                         <Pulse><span style={{ background: '#0a84ff', color: '#fff', borderRadius: 999, padding: '4px 11px', fontSize: 11.5, fontWeight: 700 }}>Tilføj</span></Pulse>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#2c2c2e', borderRadius: 10, padding: 8 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 9, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                            <img src="/logo.png" alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                        <div style={{ width: 40, height: 40, borderRadius: 9, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                            <img src="/logo.png" alt="" style={{ width: 40, height: 40, objectFit: 'contain', transform: 'scale(1.5)' }} />
                         </div>
                         <div style={{ minWidth: 0 }}>
                             <div style={{ fontSize: 12, fontWeight: 700 }}>Bison Frame</div>
