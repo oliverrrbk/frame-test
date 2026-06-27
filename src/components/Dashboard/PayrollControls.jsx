@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Lock, Unlock, X, Loader2, CalendarClock, ShieldCheck, AlertTriangle } from 'lucide-react';
@@ -13,7 +13,7 @@ import {
  * lønperioden, samt genåbn. Kun Mester (admin) og Bogholder (accountant).
  * Selve låsen håndhæves i timesheet-komponenterne via isDateLocked().
  */
-export default function PayrollControls({ companyId, role, actorId, actorName, settings, onUpdated, actorLonnummer = '', existingLonnumre = [], onSaveActorLonnummer }) {
+export default function PayrollControls({ companyId, role, actorId, actorName, settings, onUpdated, actorLonnummer = '', existingLonnumre = [], onSaveActorLonnummer, tourOpen = false }) {
     const [showSettings, setShowSettings] = useState(false);
     const [showLock, setShowLock] = useState(false);
     const [showReopen, setShowReopen] = useState(false);
@@ -21,6 +21,14 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
     const [form, setForm] = useState(null);
     const [lockDate, setLockDate] = useState('');
     const [reopenDate, setReopenDate] = useState('');
+
+    // Rundvisningen kan åbne/lukke indstillings-modalen, så den kan spotlightes.
+    useEffect(() => {
+        if (!canManagePayroll(role)) return;
+        if (tourOpen) openSettings();
+        else setShowSettings(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tourOpen]);
 
     if (!canManagePayroll(role)) return null;
 
@@ -130,7 +138,7 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
             )}
 
             {/* Tandhjul: Løn-indstillinger */}
-            <button onClick={openSettings} title="Løn-indstillinger"
+            <button data-tour="payroll-settings-btn" onClick={openSettings} title="Løn-indstillinger"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '46px', height: '46px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = '#0f172a'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(-2px) rotate(45deg)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.06)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; }}>
@@ -152,6 +160,7 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
                 {form && <>
                         <ModalHeader icon={<CalendarClock size={22} />} title="Løn-indstillinger" subtitle="Lønperiode, fravær og lønart-koder" onClose={() => setShowSettings(false)} />
                         <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div data-tour="payroll-cycle">
                             <Section title="Lønperiode">
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                     <CycleCard active={form.cycle === 'monthly'} onClick={() => setForm(f => ({ ...f, cycle: 'monthly' }))} title="Månedligt" desc="Løn én gang om måneden" />
@@ -171,11 +180,13 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
                                     Nuværende åbne periode: <strong>{formatDa(currentPeriod(form.cycle, form.anchor).start)} – {formatDa(currentPeriod(form.cycle, form.anchor).end)}</strong>
                                 </div>
                             </Section>
+                            </div>
 
                             <Section title="Mit eget lønnummer" hint="Dit nummer i lønsystemet — bruges når du selv får løn.">
                                 <input value={form.lonnummer} inputMode="numeric" onChange={(e) => setForm(f => ({ ...f, lonnummer: e.target.value }))} placeholder="f.eks. 1001" style={fieldStyle} />
                             </Section>
 
+                            <div data-tour="payroll-lock">
                             <Section title="Automatisk lås">
                                 <Toggle checked={form.config.auto_lock} onChange={(v) => setCfg({ auto_lock: v })}
                                     label="Lås perioder automatisk" desc="Hver afsluttet periode låses af sig selv — ingen manuel handling." />
@@ -188,7 +199,9 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
                                     )}
                                 </AnimatePresence>
                             </Section>
+                            </div>
 
+                            <div data-tour="payroll-absence">
                             <Section title="Fravær & arbejdsdag">
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                     <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>Standard arbejdsdag (timer)</span>
@@ -197,7 +210,7 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
 
                                 <div style={{ marginTop: '12px' }}>
                                     <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>Automatisk frokostpause</span>
-                                    <span style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginBottom: '8px' }}>Trækkes automatisk fra ved stempling — og bruges som standard i timeregistreringen — når arbejdsdagen er over grænsen.</span>
+                                    <span style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginBottom: '8px' }}>Bruges som standard i timeregistreringen — trækkes automatisk fra, når arbejdsdagen er over grænsen.</span>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                         <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>Pause (minutter)</span>
@@ -219,7 +232,9 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
                                     </div>
                                 </div>
                             </Section>
+                            </div>
 
+                            <div data-tour="payroll-codes">
                             <Section title="Lønart-koder" hint="Indtast jeres egne numre fra lønsystemet — hver type skal have sit eget nummer.">
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                     <LonartField label="Normaltimer" placeholder="f.eks. 1000" value={form.config.lonart.normal} onChange={(v) => setLonart({ normal: v })} />
@@ -239,6 +254,7 @@ export default function PayrollControls({ companyId, role, actorId, actorName, s
                                     ) : null;
                                 })()}
                             </Section>
+                            </div>
 
                             <ModalActions onCancel={() => setShowSettings(false)} onConfirm={saveSettings} saving={saving} confirmLabel="Gem indstillinger" confirmIcon={<CalendarClock size={18} />} />
                         </div>

@@ -16,6 +16,19 @@ import UserAvatar from '../ui/UserAvatar';
 import { Lock, FileSpreadsheet, RotateCcw, IdCard, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isValidLonnummer, nextLonnummer } from '../../utils/payroll';
+import SectionTour from './SectionTour';
+import { shouldShowCoach } from './coachmarks';
+
+// Rundtur for Løn & Timer — spotlight på den RIGTIGE UI: åbner de ægte
+// Løn-indstillinger og går sektionerne igennem. Kun desktop, admin/bogholder.
+const PAYROLL_TOUR_SETTINGS_FROM = 1; // trin 1+ kræver at indstillings-modalen er åben
+const PAYROLL_TOUR_STEPS = [
+    { sel: '[data-tour="payroll-settings-btn"]', placement: 'top', eyebrow: 'Løn & Timer', title: 'Alt styres herfra', body: 'Lønperiode, lås, arbejdsdag og lønart-koder bor under tandhjulet. Lad os åbne det og gå det igennem.' },
+    { sel: '[data-tour="payroll-cycle"]', placement: 'right', eyebrow: 'Lønperiode', title: 'Måned eller hver 14. dag', body: 'Vælg rytmen, der passer jer — Frame regner perioderne ud automatisk.' },
+    { sel: '[data-tour="payroll-lock"]', placement: 'right', eyebrow: 'Lås', title: 'Automatisk lås', body: 'Når en periode er kørt, låses den automatisk efter din frist — så tallene ikke ændrer sig bagefter. Genåbn hvis noget skal rettes.' },
+    { sel: '[data-tour="payroll-absence"]', placement: 'right', eyebrow: 'Arbejdsdag', title: 'Arbejdsdag, frokost & ferie', body: 'Sæt standard arbejdsdag og automatisk frokostpause — og om ferie/fravær eksporteres i dage eller timer.' },
+    { sel: '[data-tour="payroll-codes"]', placement: 'right', eyebrow: 'Lønart-koder', title: 'Jeres egne numre', body: 'Indtast lønart-numrene fra jeres lønsystem (normaltimer, ferie, sygdom, kørsel …), så eksport-filen passer 1:1.' },
+];
 
 const CustomSelect = ({ value, onChange, options, placeholder, style = {} }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -142,7 +155,10 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
     // Let SPA-opdatering i stedet for fuld sidegenindlæsning.
     const refresh = () => { if (onDataChange) onDataChange(); else window.location.reload(); };
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
-    
+    // Rundtur: spotlight på den rigtige UI + åbn de ægte Løn-indstillinger.
+    const [payrollTourActive, setPayrollTourActive] = useState(() => !isMobile && ['admin', 'accountant'].includes(profile?.role) && shouldShowCoach('payroll_tour'));
+    const [payrollStep, setPayrollStep] = useState(0);
+
     useEffect(() => {
         if (typeof window === 'undefined') return;
         const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -1333,10 +1349,21 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                             actorLonnummer={teamMembers.find(m => m.id === profile?.id)?.raw_data?.lonnummer || ''}
                             existingLonnumre={teamMembers.filter(m => m.id !== profile?.id).map(m => m.raw_data?.lonnummer).filter(Boolean)}
                             onSaveActorLonnummer={saveActorLonnummer}
+                            tourOpen={payrollTourActive && payrollStep >= PAYROLL_TOUR_SETTINGS_FROM}
                         />
                     </div>
                 )}
             </div>
+
+            {payrollTourActive && (
+                <SectionTour
+                    tourKey="payroll_tour"
+                    steps={PAYROLL_TOUR_STEPS}
+                    zBase={100130}
+                    onStepChange={setPayrollStep}
+                    onDone={() => setPayrollTourActive(false)}
+                />
+            )}
 
             {/* PAYROLL REMINDER WIDGET */}
             {payrollReminder && (

@@ -40,7 +40,6 @@ import DashboardTour from './DashboardTour';
 import SectionTour from './SectionTour';
 import MobileInstallGuide from './MobileInstallGuide';
 import CalculatorGuide from './CalculatorGuide';
-import PayrollGuide from './PayrollGuide';
 import { shouldShowCoach, markCoachSeen } from './coachmarks';
 
 // Rundtur for Kunder & Forespørgsler (Bølge 3). Forklarer salgs-pipelinen.
@@ -903,7 +902,6 @@ const Dashboard = () => {
     const [integrationsTourDone, setIntegrationsTourDone] = useState(false);
     const [calcGuideDone, setCalcGuideDone] = useState(false);
     const [showCalcCategories, setShowCalcCategories] = useState(false);
-    const [payrollGuideDone, setPayrollGuideDone] = useState(false);
     // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
     // så man lander præcis hvor man tilføjer kort — ikke i toppen ved firmaoplysninger.
     const goToBilling = () => {
@@ -3523,9 +3521,6 @@ const Dashboard = () => {
                     )}
                     {activeTab === 'admin_timesheet' && (
                         <div className="tab-pane active " style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
-                            {['admin', 'accountant'].includes(effectiveRole) && !isMobile && !showOnboarding && !showSetPassword && !payrollGuideDone && shouldShowCoach('payroll_guide') && (
-                                <PayrollGuide onDone={() => setPayrollGuideDone(true)} />
-                            )}
                             <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
                             <AdminTimesheet
                                 leadsData={leadsData}
