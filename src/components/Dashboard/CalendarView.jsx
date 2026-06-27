@@ -46,7 +46,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             const m = main.getBoundingClientRect();
             const targetX = m.left + m.width * 0.42;
             const targetY = m.top + m.height * 0.48;
-            setFlyVars({ left: Math.round(c.left), top: Math.round(c.top), width: Math.round(c.width), dx: Math.round(targetX - c.left), dy: Math.round(targetY - c.top) });
+            setFlyVars({ left: Math.round(c.left), top: Math.round(c.top), width: Math.round(c.width), dx: Math.round(targetX - c.left), dy: Math.round(targetY - c.top), tx: Math.round(targetX), ty: Math.round(targetY) });
         };
         const id = requestAnimationFrame(compute);
         window.addEventListener('resize', compute);
@@ -2502,14 +2502,27 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             {/* Spøgelses-kopi der "flyver" fra eksempel-sagen ind i kalenderen (sidste trin).
                 Lagt over spotlight-dæmpningen (z over hullet, under boblen), så den ses. */}
             {flyVars && createPortal(
-                <div style={{ position: 'fixed', left: flyVars.left, top: flyVars.top, width: flyVars.width, zIndex: 100045, pointerEvents: 'none', ['--fly-dx']: `${flyVars.dx}px`, ['--fly-dy']: `${flyVars.dy}px`, animation: 'calFly 2.8s ease-in-out infinite' }}>
-                    <style>{`@keyframes calFly{0%{transform:translate(0,0) scale(1) rotate(0);opacity:0;}10%{opacity:1;}16%{transform:translate(-6px,-8px) scale(1.03) rotate(-2deg);}66%{transform:translate(var(--fly-dx),var(--fly-dy)) scale(.82) rotate(-3deg);opacity:1;}82%{transform:translate(var(--fly-dx),var(--fly-dy)) scale(.66) rotate(0);opacity:0;}100%{transform:translate(var(--fly-dx),var(--fly-dy)) scale(.66);opacity:0;}}`}</style>
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '14px', boxShadow: '0 24px 48px rgba(15,23,42,0.30)' }}>
-                        <span style={{ display: 'inline-block', fontSize: '0.78rem', fontWeight: 800, color: '#64748b', background: '#f1f5f9', padding: '3px 8px', borderRadius: '8px' }}>Sag 1043</span>
-                        <h4 style={{ margin: '8px 0 2px', fontSize: '0.95rem', fontWeight: 700 }}>Nyt trægulv i stue</h4>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Bruns Byg ApS</p>
+                <>
+                    <style>{`
+                        @keyframes calFly{0%{transform:translate(0,0) scale(1) rotate(0);opacity:0;}10%{opacity:1;}16%{transform:translate(-6px,-8px) scale(1.03) rotate(-2deg);}66%{transform:translate(var(--fly-dx),var(--fly-dy)) scale(.82) rotate(-3deg);opacity:1;}80%{transform:translate(var(--fly-dx),var(--fly-dy)) scale(.66) rotate(0);opacity:0;}100%{transform:translate(var(--fly-dx),var(--fly-dy)) scale(.66);opacity:0;}}
+                        @keyframes calLand{0%,62%{opacity:0;transform:scale(.6) translateY(-6px);}70%{opacity:1;transform:scale(1.08) translateY(0);}77%{transform:scale(1);}90%{opacity:1;}100%{opacity:0;transform:scale(1);}}
+                    `}</style>
+                    {/* spøgelses-kortet der flyver */}
+                    <div style={{ position: 'fixed', left: flyVars.left, top: flyVars.top, width: flyVars.width, transformOrigin: 'top left', zIndex: 100045, pointerEvents: 'none', ['--fly-dx']: `${flyVars.dx}px`, ['--fly-dy']: `${flyVars.dy}px`, animation: 'calFly 2.8s ease-in-out infinite' }}>
+                        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '14px', boxShadow: '0 24px 48px rgba(15,23,42,0.30)' }}>
+                            <span style={{ display: 'inline-block', fontSize: '0.78rem', fontWeight: 800, color: '#64748b', background: '#f1f5f9', padding: '3px 8px', borderRadius: '8px' }}>Sag 1043</span>
+                            <h4 style={{ margin: '8px 0 2px', fontSize: '0.95rem', fontWeight: 700 }}>Nyt trægulv i stue</h4>
+                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Bruns Byg ApS</p>
+                        </div>
                     </div>
-                </div>,
+                    {/* den landede aftale — popper op i kalenderen, lige når kortet "slippes" */}
+                    <div style={{ position: 'fixed', left: flyVars.tx, top: flyVars.ty, zIndex: 100045, pointerEvents: 'none', transformOrigin: 'top left', animation: 'calLand 2.8s ease-in-out infinite' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', border: '1px solid #6ee7b7', borderLeft: '3px solid #10b981', borderRadius: '8px', padding: '6px 10px', boxShadow: '0 10px 24px rgba(16,185,129,0.28)', maxWidth: '170px' }}>
+                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#047857', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Nyt trægulv i stue</span>
+                        </div>
+                    </div>
+                </>,
                 document.body
             )}
         </>
