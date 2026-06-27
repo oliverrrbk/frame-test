@@ -21,13 +21,22 @@ import { shouldShowCoach } from './coachmarks';
 
 // Rundtur for Løn & Timer — spotlight på den RIGTIGE UI: åbner de ægte
 // Løn-indstillinger og går sektionerne igennem. Kun desktop, admin/bogholder.
-const PAYROLL_TOUR_SETTINGS_FROM = 1; // trin 1+ kræver at indstillings-modalen er åben
+// Trin 1-4 foregår inde i den åbne indstillings-modal; trin 5+ er ude på selve siden.
+const PAYROLL_TOUR_SETTINGS_FROM = 1;
+const PAYROLL_TOUR_SETTINGS_TO = 4;
 const PAYROLL_TOUR_STEPS = [
     { sel: '[data-tour="payroll-settings-btn"]', placement: 'top', eyebrow: 'Løn & Timer', title: 'Alt styres herfra', body: 'Lønperiode, lås, arbejdsdag og lønart-koder bor under tandhjulet. Lad os åbne det og gå det igennem.' },
     { sel: '[data-tour="payroll-cycle"]', placement: 'right', eyebrow: 'Lønperiode', title: 'Måned eller hver 14. dag', body: 'Vælg rytmen, der passer jer — Frame regner perioderne ud automatisk.' },
     { sel: '[data-tour="payroll-lock"]', placement: 'right', eyebrow: 'Lås', title: 'Automatisk lås', body: 'Når en periode er kørt, låses den automatisk efter din frist — så tallene ikke ændrer sig bagefter. Genåbn hvis noget skal rettes.' },
     { sel: '[data-tour="payroll-absence"]', placement: 'right', eyebrow: 'Arbejdsdag', title: 'Arbejdsdag, frokost & ferie', body: 'Sæt standard arbejdsdag og automatisk frokostpause — og om ferie/fravær eksporteres i dage eller timer.' },
     { sel: '[data-tour="payroll-codes"]', placement: 'right', eyebrow: 'Lønart-koder', title: 'Jeres egne numre', body: 'Indtast lønart-numrene fra jeres lønsystem (normaltimer, ferie, sygdom, kørsel …), så eksport-filen passer 1:1.' },
+    { sel: '[data-tour="ts-employee"]', placement: 'bottom', eyebrow: 'Filtre', title: 'Vælg medarbejder', body: 'Se én medarbejder ad gangen — eller hele holdet samlet.' },
+    { sel: '[data-tour="ts-period"]', placement: 'bottom', eyebrow: 'Filtre', title: 'Vælg periode', body: 'Uge, måned eller år — tallene og eksporten følger den valgte periode.' },
+    { sel: '[data-tour="ts-kpi"]', placement: 'bottom', eyebrow: 'Overblik', title: 'Periodens nøgletal', body: 'Arbejdstimer, kørte kilometer, fravær og gennemsnitlig feriesaldo — på ét blik.' },
+    { sel: '[data-tour="ts-create"]', placement: 'bottom', eyebrow: 'Tilføj', title: 'Opret registrering', body: 'Mangler der timer, kørsel eller fravær? Tilføj det manuelt for en medarbejder her.' },
+    { sel: '[data-tour="ts-stamdata"]', placement: 'bottom', eyebrow: 'Medarbejdere', title: 'Stamdata & Ferie', body: 'Medarbejdernes oplysninger og feriesaldo — og hvor du registrerer kollektiv ferie.' },
+    { sel: '[data-tour="ts-payexport"]', placement: 'bottom', eyebrow: 'Eksport', title: 'Løneksport', body: 'Hent den færdige lønfil til dit lønsystem. "Eksporter visning" ved siden af giver en CSV af den aktuelle tabel.' },
+    { sel: '[data-tour="ts-demo-row"]', placement: 'top', eyebrow: 'Sådan ser det ud', title: 'En registrering', body: 'Hver linje viser medarbejder, dato, sag, tidsrum og timer. Klik en linje for at rette den. Det er det — så er du klar.' },
 ];
 
 const CustomSelect = ({ value, onChange, options, placeholder, style = {} }) => {
@@ -1232,7 +1241,8 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                     </div>
                 ) : (
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <CustomSelect 
+                        <div data-tour="ts-employee" style={{ display: 'inline-flex' }}>
+                        <CustomSelect
                             value={selectedUser}
                             onChange={setSelectedUser}
                             options={[
@@ -1240,8 +1250,10 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                                 ...teamMembers.map(m => ({ value: m.id, label: `${m.owner_name || m.company_name} (${getRoleLabel(m.role)})` }))
                             ]}
                         />
-                        
-                        <CustomSelect 
+                        </div>
+
+                        <div data-tour="ts-period" style={{ display: 'inline-flex' }}>
+                        <CustomSelect
                             value={selectedPeriod}
                             onChange={setSelectedPeriod}
                             options={[
@@ -1252,9 +1264,11 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                                 { value: 'this_year', label: 'Dette År' }
                             ]}
                         />
+                        </div>
 
                         {USE_UNIFIED_PAYROLL_MODAL && (
-                            <button 
+                            <button
+                                data-tour="ts-exportview"
                                 onClick={handleExportCSV}
                                 title="Eksporter den aktuelle tabelvisning til CSV"
                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff', color: '#475569', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
@@ -1268,7 +1282,8 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                             </button>
                         )}
 
-                        <button 
+                        <button
+                            data-tour="ts-create"
                             onClick={openAdd}
                             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff', color: '#1a1a1a', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
                             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.06)'; }}
@@ -1277,7 +1292,8 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                             <Plus size={18} /> Opret registrering
                         </button>
 
-                        <button 
+                        <button
+                            data-tour="ts-stamdata"
                             onClick={() => setIsStamdataModalOpen(true)}
                             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(10px)', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
                             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }}
@@ -1289,7 +1305,8 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                         </button>
 
                         {USE_UNIFIED_PAYROLL_MODAL ? (
-                            <button 
+                            <button
+                                data-tour="ts-payexport"
                                 onClick={() => setIsExportModalOpen(true)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: 'none', backgroundColor: '#000', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
                                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }}
@@ -1349,7 +1366,7 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                             actorLonnummer={teamMembers.find(m => m.id === profile?.id)?.raw_data?.lonnummer || ''}
                             existingLonnumre={teamMembers.filter(m => m.id !== profile?.id).map(m => m.raw_data?.lonnummer).filter(Boolean)}
                             onSaveActorLonnummer={saveActorLonnummer}
-                            tourOpen={payrollTourActive && payrollStep >= PAYROLL_TOUR_SETTINGS_FROM}
+                            tourOpen={payrollTourActive && payrollStep >= PAYROLL_TOUR_SETTINGS_FROM && payrollStep <= PAYROLL_TOUR_SETTINGS_TO}
                         />
                     </div>
                 )}
@@ -1399,7 +1416,7 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
             )}
 
             {/* STAT BOXES */}
-            <div className="timesheet-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+            <div data-tour="ts-kpi" className="timesheet-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                 <div className="glass-panel"
                     style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default' }}
                     onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)'; }}
@@ -1480,7 +1497,21 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
 
             {/* TABEL */}
             <div className="glass-panel" style={{ overflow: 'hidden', padding: 0 }}>
-                {groupedTableEntries.length === 0 ? (
+                {/* Demo-registrering — vises kun under rundvisningen, så man ser hvordan en linje ser ud. */}
+                {payrollTourActive && (
+                    <div data-tour="ts-demo-row" style={{ position: 'relative', padding: '18px 24px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                        <span style={{ position: 'absolute', top: -9, left: 20, background: '#0f172a', color: '#fff', fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: '20px' }}>Eksempel</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <UserAvatar name="Niklas Hansen" size={34} ring={false} />
+                            <div>
+                                <div style={{ fontWeight: 700, color: '#0f172a' }}>Niklas Hansen <span style={{ color: '#94a3b8', fontWeight: 500 }}>· Man. 16. jun</span></div>
+                                <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>Sag 1042 – Tagarbejde · 07:00–15:00 (30 min pause)</div>
+                            </div>
+                        </div>
+                        <div style={{ fontWeight: 900, fontSize: '1.15rem', color: '#0f172a' }}>7,5 t</div>
+                    </div>
+                )}
+                {groupedTableEntries.length === 0 && !payrollTourActive ? (
                     <div style={{ padding: '64px', textAlign: 'center', color: '#94a3b8' }}>
                         <Calendar size={64} style={{ opacity: 0.2, margin: '0 auto 16px auto' }} />
                         <h4 style={{ margin: '0 0 8px 0', color: '#475569', fontSize: '1.2rem' }}>Ingen registreringer fundet</h4>
@@ -2207,15 +2238,23 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                                             />
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Pause (min.)</label>
-                                            <input 
-                                                type="number" 
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Pause (min.)</label>
+                                                <button type="button"
+                                                    onClick={() => setFormData({ ...formData, pauseMinutes: '0', hours: computeHours(formData.startTime, formData.endTime, '0') })}
+                                                    style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, padding: 0 }}>
+                                                    Ingen pause
+                                                </button>
+                                            </div>
+                                            <input
+                                                type="number"
                                                 min="0"
                                                 placeholder="F.eks. 30"
                                                 value={formData.pauseMinutes}
                                                 onChange={(e) => setFormData({...formData, pauseMinutes: e.target.value, hours: computeHours(formData.startTime, formData.endTime, e.target.value)})}
                                                 style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.95rem', color: '#1e293b' }}
                                             />
+                                            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Blev pausen ikke holdt den dag? Tryk "Ingen pause", så lægges den ikke fra.</span>
                                         </div>
                                     </div>
 
