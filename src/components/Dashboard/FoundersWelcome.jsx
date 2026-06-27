@@ -93,6 +93,7 @@ export default function FoundersWelcome({ onDone }) {
     return createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 100150, background: 'rgba(15,23,42,0.80)', backdropFilter: 'blur(9px)', WebkitBackdropFilter: 'blur(9px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <div style={{ width: '100%', maxWidth: 580, maxHeight: '94vh', overflowY: 'auto', background: '#fff', borderRadius: 30, boxShadow: '0 40px 100px rgba(0,0,0,0.5)', padding: '34px 36px 26px', position: 'relative', animation: 'fwPop .38s cubic-bezier(.34,1.4,.64,1) both' }}>
+                <img src="/logo.png" alt="Bison Company" style={{ position: 'absolute', top: 18, left: 20, width: 30, height: 30, objectFit: 'contain' }} />
                 <button onClick={finish} title="Luk" style={{ position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}><X size={18} /></button>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 800, color: BLUE, marginBottom: 20 }}>
@@ -125,6 +126,12 @@ export default function FoundersWelcome({ onDone }) {
 
                 <div style={{ textAlign: 'center', marginTop: 12 }}>
                     <button onClick={finish} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 12.5, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>Spring over</button>
+                </div>
+
+                {/* Legitimitet: rigtig virksomhed man kan slå op. */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 14, paddingTop: 12, borderTop: '1px solid #f1f5f9', color: '#94a3b8', fontSize: 11.5, fontWeight: 600 }}>
+                    <img src="/logo.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', opacity: 0.8 }} />
+                    Bison Company · CVR 45899713
                 </div>
 
                 <style>{`
