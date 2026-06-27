@@ -620,11 +620,11 @@ const CASES_TOUR_STEPS = [
     { sel: '[data-tour="cases-tabs"]', placement: 'bottom', eyebrow: 'Overblik', title: 'Mine sager vs. alle sager', body: '"Mine sager" er dem, du selv er sat på. "Alle sager" viser hele firmaets — så du altid kan finde en sag og hjælpe til.' },
     { sel: '[data-tour="cases-search"]', placement: 'bottom', eyebrow: 'Find hurtigt', title: 'Søg på tværs', body: 'Søg på sagsnummer, kunde, adresse eller telefon — også når listen vokser.' },
     { sel: '[data-tour="cases-demo-card"]', placement: 'right', eyebrow: 'Sådan ser en sag ud', title: 'Et hurtigt overblik', body: 'Status, fremdrift, timer mod estimat og hvem der er på holdet. Tryk Næste, så åbner vi sagen og kigger indenfor.' },
-    { sel: '[data-tour="case-detail-header"]', placement: 'bottom', subTab: 'todo', eyebrow: 'Inde i sagen', title: 'Du er nu inde i ordrestyringen', body: 'Alt om opgaven samlet her — kunde, status og hele forløbet. Brug fanerne foroven til at styre det hele.' },
-    { sel: '[data-tour="case-tab-content"]', placement: 'top', subTab: 'todo', eyebrow: 'Bygge To-Do (KS)', title: 'Følg arbejdet trin for trin', body: 'Kryds bygge-trin af efterhånden — fremdrift og kvalitetssikring følger automatisk med.' },
-    { sel: '[data-tour="case-tab-content"]', placement: 'top', subTab: 'logs', eyebrow: 'Byggeproces', title: 'Hele forløbet dokumenteret', body: 'Tidslinje med log og ekstraarbejde — så I altid kan dokumentere, hvad der er sket på pladsen.' },
-    { sel: '[data-tour="case-tab-content"]', placement: 'top', subTab: 'materials', eyebrow: 'Materialer & Indkøb', title: 'Materialer direkte på sagen', body: 'Hold styr på materialelisten og send bestillinger — alt knyttet til den enkelte opgave.' },
-    { sel: '[data-tour="case-tab-content"]', placement: 'top', subTab: 'timesheet', eyebrow: 'Timeregistrering', title: 'Timer der hænger sammen', body: 'Registrér timer på sagen — klar til løn og fakturering. Bilag, aftalesedler og tegninger ligger også her på fanerne.' },
+    { sel: '[data-tour="case-detail-header"]', placement: 'bottom', subTab: 'todo', eyebrow: 'Inde i sagen', title: 'Du er nu inde i ordrestyringen', body: 'Alt om opgaven samlet her — kunde, status og hele forløbet. Vi kigger lige fanerne igennem.' },
+    { sel: '[data-tour="case-tab-todo"]', placement: 'bottom', subTab: 'todo', eyebrow: 'Fane 1', title: 'Bygge To-Do (KS)', body: 'Kryds bygge-trin af efterhånden — fremdrift og kvalitetssikring følger automatisk med.' },
+    { sel: '[data-tour="case-tab-materials"]', placement: 'bottom', subTab: 'materials', eyebrow: 'Fane 2', title: 'Materialer & Indkøb', body: 'Hold styr på materialelisten og send bestillinger — alt knyttet til den enkelte opgave.' },
+    { sel: '[data-tour="case-tab-logs"]', placement: 'bottom', subTab: 'logs', eyebrow: 'Fane 3', title: 'Byggeproces', body: 'Tidslinje med log og ekstraarbejde — så I altid kan dokumentere, hvad der er sket på pladsen.' },
+    { sel: '[data-tour="case-tab-timesheet"]', placement: 'bottom', subTab: 'timesheet', eyebrow: 'Fane 4', title: 'Timeregistrering', body: 'Registrér timer på sagen — klar til løn og fakturering. Bilag, aftalesedler og tegninger ligger også her ved siden af.' },
 ];
 
 export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile, onCreateQuote }) {
@@ -3617,6 +3617,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     return (
                                         <button
                                             key={tab.id}
+                                            data-tour={`case-tab-${tab.id}`}
                                             onClick={() => handleSubTabChange(tab.id)}
                                             aria-label={tab.label}
                                             aria-current={isActive ? 'page' : undefined}
@@ -4721,8 +4722,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                 <div onClick={() => setShowCasesTourEnd(false)} style={{ position: 'fixed', inset: 0, zIndex: 100100, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
                     <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 470, background: '#fff', borderRadius: 24, padding: 28, boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
                         <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Det var ordrestyringen</div>
+                        <p style={{ margin: '0 0 14px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
+                            Eksempel-sagen forsvinder nu — herfra ser du kun dine egne, rigtige sager.
+                        </p>
                         <p style={{ margin: '0 0 20px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
-                            Herfra ser du kun dine egne sager. Så snart en kunde <strong>bekræfter et tilbud</strong>, dukker sagen automatisk op her — klar til at blive styret fra start til faktura.
+                            Sådan får du din <strong>første sag</strong>: send et tilbud. Når kunden godkender det, bliver det helt automatisk til en sag her i ordrestyringen — klar til at blive styret fra start til faktura.
                         </p>
                         {onCreateQuote && (
                             <button onClick={() => { setShowCasesTourEnd(false); onCreateQuote(); }}
