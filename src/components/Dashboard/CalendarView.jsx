@@ -99,8 +99,13 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             const c = card.getBoundingClientRect();
             const y = currentDate.getFullYear(), mo = currentDate.getMonth();
             const dim = new Date(y, mo + 1, 0).getDate();
-            const todayInMonth = (new Date().getMonth() === mo && new Date().getFullYear() === y) ? new Date().getDate() : 15;
-            const base = Math.max(1, Math.min(todayInMonth, dim - 2));
+            // Land på 3 hverdage (tirs→tors), aldrig i weekenden — det ser forkert ud
+            // for en tømrer at "arbejde" lør/søn. Find en tirsdag (getDay()===2).
+            const isTue = (d) => new Date(y, mo, d).getDay() === 2;
+            let base = 0;
+            for (let d = 9; d <= dim - 2; d++) { if (isTue(d)) { base = d; break; } }
+            if (!base) for (let d = 1; d <= dim - 2; d++) { if (isTue(d)) { base = d; break; } }
+            if (!base) base = Math.max(1, Math.min(15, dim - 2));
             const pad = (n) => String(n).padStart(2, '0');
             const cells = [base, base + 1, base + 2]
                 .map(d => document.querySelector(`[data-cal-day="${y}-${pad(mo + 1)}-${pad(d)}"]`))
