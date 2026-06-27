@@ -1813,7 +1813,27 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
-                        {pending.length === 0 ? (
+                        {/* Under rundvisningen: en eksempel-sag (mockup) der viser, at man kan
+                            trække den ind i kalenderen. Forsvinder når turen slutter. */}
+                        {calendarTourActive ? (
+                            <>
+                                <style>{`@keyframes calDragHint{0%,100%{transform:translate(0,0) rotate(0);box-shadow:0 2px 8px rgba(0,0,0,.06);}50%{transform:translate(-14px,-4px) rotate(-2deg);box-shadow:0 16px 34px rgba(15,23,42,.20);}}`}</style>
+                                <div style={{ position: 'relative' }}>
+                                    <span style={{ position: 'absolute', top: -9, left: 14, zIndex: 1, background: '#0f172a', color: '#fff', fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: '20px' }}>Eksempel</span>
+                                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'grab', animation: 'calDragHint 1.9s ease-in-out infinite' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#64748b', background: '#f1f5f9', padding: '4px 8px', borderRadius: '8px', alignSelf: 'flex-start' }}>Sag 1043</span>
+                                            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '700' }}>Nyt trægulv i stue</h4>
+                                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Bruns Byg ApS</p>
+                                        </div>
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '9px', borderRadius: '10px', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>
+                                            <CalendarIcon size={15} /> Planlæg
+                                        </div>
+                                    </div>
+                                </div>
+                                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem', margin: '4px 0 0' }}>← Træk ind i kalenderen, eller tryk Planlæg</p>
+                            </>
+                        ) : pending.length === 0 ? (
                             <p style={{ textAlign: 'center', color: '#94a3b8' }}>Ingen sager venter.</p>
                         ) : (
                             pending.map(lead => {
