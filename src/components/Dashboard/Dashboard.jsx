@@ -37,6 +37,7 @@ import { getFeatures } from '../../utils/features';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import Coachmark from './Coachmark';
 import DashboardTour from './DashboardTour';
+import MobileInstallGuide from './MobileInstallGuide';
 import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { computeQuoteExpiry } from '../../utils/quoteExpiry';
@@ -880,6 +881,7 @@ const Dashboard = () => {
     const createLeadBtnRef = useRef(null);
     const [heroCoachDismissed, setHeroCoachDismissed] = useState(false);
     const [dashboardTourDone, setDashboardTourDone] = useState(false);
+    const [mobileGuideDone, setMobileGuideDone] = useState(false);
     // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
     // så man lander præcis hvor man tilføjer kort — ikke i toppen ved firmaoplysninger.
     const goToBilling = () => {
@@ -6911,6 +6913,10 @@ const Dashboard = () => {
             {/* Velkomstrundtur — efter onboarding, kun desktop, kun første gang. Peger på menuen + den blå knap. */}
             {effectiveRole === 'admin' && activeTab === 'overview' && !showOnboarding && !showSetPassword && !dashboardTourDone && shouldShowCoach('dashboard_tour') && (
                 <DashboardTour onDone={() => setDashboardTourDone(true)} />
+            )}
+            {/* "Få Frame på mobilen"-guiden kommer EFTER Oversigts-touren (desktop, første gang, spring-bar). */}
+            {effectiveRole === 'admin' && activeTab === 'overview' && !showOnboarding && !showSetPassword && !mobileGuideDone && (dashboardTourDone || !shouldShowCoach('dashboard_tour')) && shouldShowCoach('mobile_install_guide') && (
+                <MobileInstallGuide onDone={() => setMobileGuideDone(true)} />
             )}
             <PushNotificationPrompt />
         </div>
