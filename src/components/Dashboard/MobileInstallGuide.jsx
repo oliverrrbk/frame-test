@@ -6,7 +6,7 @@
 // ============================================================================
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Smartphone, Share, MoreVertical, PlusSquare, Check, ChevronRight, ChevronLeft, X, Globe, ArrowDown } from 'lucide-react';
+import { Smartphone, Share, MoreVertical, MoreHorizontal, PlusSquare, Check, ChevronRight, ChevronLeft, X, Globe } from 'lucide-react';
 import { markCoachSeen } from './coachmarks';
 
 const BLUE = '#2563eb';
@@ -66,12 +66,12 @@ export default function MobileInstallGuide({ onDone }) {
         tapIOS: (
             <Phone label="Safari">
                 <div style={{ flex: 1 }} />
-                {/* Safari bund-bjælke med Del-ikon fremhævet */}
+                {/* Safari bund-bjælke: på nyere iPhones trykker man de tre prikker (•••) først */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '12px 8px', borderTop: '1px solid #e2e8f0', background: '#fff' }}>
                     <ChevronLeft size={18} color="#cbd5e1" />
                     <ChevronRight size={18} color="#cbd5e1" />
-                    <Pulse><span style={{ display: 'inline-flex', padding: 6, borderRadius: 10, background: '#eff6ff' }}><Share size={20} color={BLUE} /></span></Pulse>
-                    <PlusSquare size={18} color="#cbd5e1" />
+                    <Share size={18} color="#cbd5e1" />
+                    <Pulse><span style={{ display: 'inline-flex', padding: 6, borderRadius: 10, background: '#eff6ff' }}><MoreHorizontal size={20} color={BLUE} /></span></Pulse>
                 </div>
             </Phone>
         ),
@@ -103,10 +103,6 @@ export default function MobileInstallGuide({ onDone }) {
                             <div style={{ fontSize: 12, fontWeight: 700 }}>Bison Frame</div>
                             <div style={{ fontSize: 10, color: '#8e8e93', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>bisonframe.dk</div>
                         </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#2c2c2e', borderRadius: 10, padding: '8px 10px' }}>
-                        <span style={{ fontSize: 11 }}>Åbn som webapp</span>
-                        <span style={{ width: 30, height: 18, borderRadius: 999, background: '#34c759', position: 'relative' }}><span style={{ position: 'absolute', top: 2, right: 2, width: 14, height: 14, borderRadius: '50%', background: '#fff' }} /></span>
                     </div>
                 </div>
             </Phone>
@@ -173,7 +169,7 @@ export default function MobileInstallGuide({ onDone }) {
                 <h2 style={ttl}>{isIOS ? 'Tryk på Del' : 'Tryk på menuen'}</h2>
                 <p style={txt}>
                     {isIOS
-                        ? <>På nyere iPhones skal du først trykke på <strong>linjen i bunden</strong> af Safari, så knapperne kommer frem — tryk derefter på <strong>Del</strong>-ikonet (firkant med pil op).</>
+                        ? <>På nyere iPhones skal du først trykke på <strong>de tre prikker (•••)</strong> nederst i Safari — og derefter vælge <strong>Del</strong> (firkant med pil op).</>
                         : <>Tryk på <strong>de tre prikker</strong> øverst til højre i Chrome.</>}
                 </p>
             </>
@@ -182,7 +178,7 @@ export default function MobileInstallGuide({ onDone }) {
             <>
                 {screens.add}
                 <h2 style={ttl}>Føj til hjemmeskærm</h2>
-                <p style={txt}>{isIOS ? <>Rul ned i Del-menuen og vælg <strong>“Føj til hjemmeskærm”</strong> — tryk så <strong>“Tilføj”</strong> øverst. (Lad gerne “Åbn som webapp” være slået til.)</> : <>Vælg <strong>“Installér app”</strong> eller <strong>“Føj til startskærm”</strong>.</>}</p>
+                <p style={txt}>{isIOS ? <>Rul ned i Del-menuen og vælg <strong>“Føj til hjemmeskærm”</strong> — tryk så <strong>“Tilføj”</strong> øverst.</> : <>Vælg <strong>“Installér app”</strong> eller <strong>“Føj til startskærm”</strong>.</>}</p>
             </>
         );
         return (
