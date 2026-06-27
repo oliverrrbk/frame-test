@@ -36,6 +36,34 @@ const buttonStyle = `
     box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
 `;
 
+// ---------------------------------------------------------------------------
+// Personlig afsender-signatur (Mads) til interne Bison-mails.
+// TEAM_PHOTO_URL: indsæt en ABSOLUT URL til det professionelle portrætfoto, når
+// det er klart (fx 'https://bisonframe.dk/mads.jpg'). Mail kan ikke vise lokale
+// filer. Så længe den er tom, viser signaturen automatisk en cirkel med
+// initialer i stedet — så mailen aldrig viser et brækket billede.
+const TEAM_PHOTO_URL = '';
+
+// Bygger en signatur-blok: rundt foto (eller initial-cirkel) til venstre,
+// navn/titel til højre. Bordbaseret layout for at virke i alle mailklienter.
+const getSignatureBlock = (name, title, photoUrl = TEAM_PHOTO_URL) => {
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
+    const avatar = photoUrl
+        ? `<img src="${photoUrl}" alt="${name}" width="64" height="64" style="display: block; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;" />`
+        : `<div style="width: 64px; height: 64px; border-radius: 50%; background-color: #0f172a; color: #ffffff; font-size: 22px; font-weight: 700; line-height: 64px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">${initials}</div>`;
+    return `
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top: 16px;">
+            <tr>
+                <td style="vertical-align: middle; padding-right: 16px;">${avatar}</td>
+                <td style="vertical-align: middle;">
+                    <p style="color: #0f172a; font-weight: 600; margin: 0; font-size: 15px;">${name}</p>
+                    <p style="color: #64748b; font-size: 13px; margin: 2px 0 0 0;">${title}</p>
+                </td>
+            </tr>
+        </table>
+    `;
+};
+
 export const getCarpenterSenderName = (carpenter) => {
     const companyName = carpenter?.company_name || 'Tømreren';
     const fullName = carpenter?.owner_name || carpenter?.contact_person || '';
@@ -328,8 +356,7 @@ export const getCarpenterWelcomeTemplate = (companyName, loginUrl) => {
                 Systemet er bygget til at gøre din hverdag nemmere. Hvis du oplever problemer, er det mindste i tvivl, eller har forslag til forbedringer, så ring direkte til mig på <strong>40 26 50 02</strong> – uanset hvilken dag på ugen det er. Jeg tager telefonen, og vi tager hånd om det med det samme.
             </p>
             <p style="color: #334155; margin-bottom: 0; font-size: 15px;">Med venlig hilsen,</p>
-            <p style="color: #0f172a; font-weight: 600; margin-top: 4px; font-size: 15px;">Mads Brunsbjerg Christensen</p>
-            <p style="color: #64748b; font-size: 13px; margin-top: 2px;">Ejer & Udvikler, Bison Frame</p>
+            ${getSignatureBlock('Mads Brunsbjerg Christensen', 'Medejer &amp; Udvikler, Bison Frame')}
         </div>
     `;
     return getBaseTemplate("Velkommen til Bison Frame!", content);
