@@ -144,7 +144,7 @@ export default function CalculatorGuide({ onDone, slug }) {
         { mockup: screens.questions, title: 'Svar på et par spørgsmål', body: 'Beregneren spørger ind til mål og materialer — næsten som hvis du var kunden. Det tager under et minut.' },
         { mockup: screens.price, title: 'Få prisen med det samme', body: 'Du får et prisoverslag bygget på Frames standardpriser — så du altid rammer rigtigt.' },
         { mockup: screens.quote, title: 'Bliv til tilbud + materialeliste', body: 'Prisen bliver automatisk til både et færdigt tilbud og en materialeliste — ret til hvis du vil, og send direkte til kunden. Det hænger sammen hele vejen.' },
-        { mockup: screens.share, title: 'Lad kunden regne selv', body: <>Du har dit eget link — <strong>{linkText}</strong>. Send det på SMS/mail eller læg det på din hjemmeside, så kunden selv regner prisen og sender dig en færdig forespørgsel. Vi hjælper gerne de første med at få det på hjemmesiden.</> },
+        { mockup: screens.share, title: 'Lad kunden regne selv', body: <>Du har dit eget link — <strong>{linkText}</strong>. Send det på SMS/mail eller læg det på din hjemmeside, så kunden selv regner prisen og sender dig en færdig forespørgsel. Er der problemer, så ring <strong>40 26 50 02</strong> — så rådgiver vi dig.</> },
     ];
 
     const totalSteps = STEPS.length;
