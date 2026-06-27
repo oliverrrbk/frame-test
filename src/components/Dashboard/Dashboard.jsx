@@ -47,6 +47,13 @@ const LEADS_TOUR_STEPS = [
     { sel: '[data-tour="leads-create"]', placement: 'bottom', eyebrow: 'Tilføj', title: 'Opret en kunde', body: 'Mangler en kunde i systemet? Opret en forespørgsel eller et tilbud manuelt her.' },
     { sel: '[data-tour="leads-search"]', placement: 'bottom', eyebrow: 'Find hurtigt', title: 'Søg på tværs', body: 'Søg på kundenavn, adresse, mail, telefon eller opgavetype — også når listen vokser.' },
 ];
+
+// Rundtur for Integrationer (Bølge 3). Kun de aktive integrationer, i skærm-rækkefølge.
+const INTEGRATIONS_TOUR_STEPS = [
+    { sel: '[data-tour="integ-dinero"]', placement: 'bottom', eyebrow: 'Integrationer', title: 'Forbind dit regnskab', body: 'Bruger du Dinero? Når en opgave er bekræftet, overfører du kunde og opgave som fakturakladde med ét klik — ingen dobbelt-tastning.' },
+    { sel: '[data-tour="integ-economic"]', placement: 'bottom', eyebrow: 'Regnskab', title: 'Eller e-conomic', body: 'Samme med e-conomic — forbind det her, så fakturaerne lander direkte i dit regnskab.' },
+    { sel: '[data-tour="integ-smtp"]', placement: 'top', eyebrow: 'Mail', title: 'Send fra din egen mail', body: 'Forbind din mail, så tilbud sendes fra din egen adresse — og alt ligger i din "Sendt". Helt valgfrit.' },
+];
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { computeQuoteExpiry } from '../../utils/quoteExpiry';
 import { getRoleLabel } from '../../utils/roles';
@@ -891,6 +898,7 @@ const Dashboard = () => {
     const [dashboardTourDone, setDashboardTourDone] = useState(false);
     const [mobileGuideDone, setMobileGuideDone] = useState(false);
     const [leadsTourDone, setLeadsTourDone] = useState(false);
+    const [integrationsTourDone, setIntegrationsTourDone] = useState(false);
     // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
     // så man lander præcis hvor man tilføjer kort — ikke i toppen ved firmaoplysninger.
     const goToBilling = () => {
@@ -6306,11 +6314,14 @@ const Dashboard = () => {
                     {/* INTEGRATIONER */}
                     {activeTab === 'integrations' && (
                         <div className="dashboard-workspace integrations-overview space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                            {effectiveRole === 'admin' && !isMobile && !showOnboarding && !showSetPassword && !integrationsTourDone && shouldShowCoach('integrations_tour') && (
+                                <SectionTour tourKey="integrations_tour" steps={INTEGRATIONS_TOUR_STEPS} onDone={() => setIntegrationsTourDone(true)} />
+                            )}
                             <div className="settings-card">
                                 
                                 <div className="card-body">
                                     <div className="settings-grid">
-                                <div className="glass-panel">
+                                <div className="glass-panel" data-tour="integ-dinero">
                                     <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => setExpandedIntegration(prev => prev === 'dinero' ? null : 'dinero')}>
                                         <div style={{ width: '40px', height: '40px', background: '#e0f2fe', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#0ea5e9' }}>
                                             <Link size={24} />
@@ -6374,7 +6385,7 @@ const Dashboard = () => {
                                     )}
                                 </div>
 
-                                <div className="glass-panel">
+                                <div className="glass-panel" data-tour="integ-economic">
                                     <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => setExpandedIntegration(prev => prev === 'economic' ? null : 'economic')}>
                                         <div style={{ width: '40px', height: '40px', background: '#dcfce7', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#22c55e' }}>
                                             <Link size={24} />
@@ -6436,11 +6447,13 @@ const Dashboard = () => {
                                     )}
                                 </div>
 
+                                    <div data-tour="integ-smtp">
                                     <SmtpIntegration
-                                        carpenterProfile={carpenterProfile} 
-                                        expandedIntegration={expandedIntegration} 
-                                        setExpandedIntegration={setExpandedIntegration} 
+                                        carpenterProfile={carpenterProfile}
+                                        expandedIntegration={expandedIntegration}
+                                        setExpandedIntegration={setExpandedIntegration}
                                     />
+                                    </div>
                                     </div>
                                 </div> {/* Close card-body */}
                             </div> {/* Close settings-card */}
