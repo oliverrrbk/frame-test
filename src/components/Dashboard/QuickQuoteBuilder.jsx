@@ -15,14 +15,9 @@ import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
 
 // Første-gangs walkthrough af Hurtigt tilbud (kun desktop, kun én gang, altid spring-bar).
 const QUICKQUOTE_TOUR_STEPS = [
-    { sel: '[data-tour="qq-customer"]', placement: 'right', eyebrow: 'Hurtigt tilbud', title: 'Start med kunden', body: 'Skriv kundens navn ind (telefon/mail kan du tilføje nu eller senere).' },
-    { sel: '[data-tour="qq-title"]', placement: 'right', eyebrow: 'Trin 2', title: 'Opgavetitel', body: 'Giv opgaven en kort titel — fx "Nyt tag på Nørrevænget 1".' },
-    { sel: '[data-tour="qq-validity"]', placement: 'right', eyebrow: 'Trin 3', title: 'Gyldighed', body: 'Vælg hvor mange dage tilbuddet gælder. Det vises på tilbuddet og i mailen.' },
-    { sel: '[data-tour="qq-materials"]', placement: 'right', eyebrow: 'Trin 4', title: 'Materialer', body: 'Skriv din materialepris og avance — du styrer tallene helt selv.' },
-    { sel: '[data-tour="qq-labor"]', placement: 'right', eyebrow: 'Trin 5', title: 'Arbejde', body: 'Vælg fast pris eller timepris for selve arbejdet.' },
-    { sel: '[data-tour="qq-workdesc"]', placement: 'right', eyebrow: 'Trin 6', title: 'Arbejdsbeskrivelse', body: 'Beskriv hvad der skal laves — det kommer med på tilbuddet til kunden.' },
-    { sel: '[data-tour="qq-pdf"]', placement: 'bottom', eyebrow: 'Live', title: 'Dit tilbud — i real-time', body: 'Læg mærke til at PDF-tilbuddet opdaterer sig med det samme, mens du udfylder felterne til venstre.' },
-    { sel: '[data-tour="qq-mail"]', placement: 'bottom', eyebrow: 'Mailen', title: 'Sådan ser kunden det', body: 'Og her er mailen kunden modtager — med "Bekræft tilbud"-knappen, der fører til en sikker portal.', last: true },
+    { sel: '[data-tour="qq-edit"]', placement: 'right', eyebrow: 'Hurtigt tilbud', title: 'Her bygger du tilbuddet', body: 'Skriv kunden, en kort beskrivelse og dine priser — materialer og arbejde. Alt det kunden skal se, taster du ind her.' },
+    { sel: '[data-tour="qq-pdf-col"]', placement: 'left', eyebrow: 'Live', title: 'Dit tilbud — i real-time', body: 'Mens du udfylder til venstre, opdaterer PDF-tilbuddet sig med det samme. Det er præcis sådan kunden ser det.' },
+    { sel: '[data-tour="qq-mail-col"]', placement: 'left', eyebrow: 'Mailen', title: 'Mailen kunden får', body: 'Og her er selve mailen — med "Bekræft tilbud"-knappen, der fører kunden til en sikker portal.' },
 ];
 
 // Stabil reference (react-google-maps kræver at libraries-arrayet ikke gendannes pr. render).
@@ -1030,7 +1025,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         const editH = { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', margin: '0 0 12px' };
 
         const leftCol = (
-            <div className="qqb-col" style={leftStyle}>
+            <div className="qqb-col" style={leftStyle} data-tour="qq-edit">
                 {zoneHead(<Pencil size={16} color="#3b82f6" />, 'Rediger tilbuddet', '#ffffff')}
                 <div style={editSection} data-tour="qq-customer">
                     <h3 style={editH}><User size={18} color="#0f172a" /> Kunde</h3>
@@ -1089,7 +1084,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         );
 
         const midCol = (
-            <div style={pdfFocus ? { ...midStyle, flex: '1 1 auto' } : midStyle}>
+            <div data-tour="qq-pdf-col" style={pdfFocus ? { ...midStyle, flex: '1 1 auto' } : midStyle}>
                 {zoneHead(<FileText size={16} color="#3b82f6" />, "Sådan ser PDF'en ud", '#f8fafc', maxBtn, 'qq-pdf')}
                 <div style={{ flex: 1, minHeight: 0, padding: pdfFocus ? '22px clamp(16px, 4vw, 64px)' : '16px', display: 'flex', flexDirection: 'column', alignItems: pdfFocus ? 'center' : 'stretch', position: 'relative', background: pdfFocus ? '#1e293b' : 'transparent' }}>
                     {regenerating && (
@@ -1113,7 +1108,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         );
 
         const rightCol = (
-            <div className="qqb-col" style={rightStyle}>
+            <div className="qqb-col" style={rightStyle} data-tour="qq-mail-col">
                 {zoneHead(<Mail size={16} color="#8b5cf6" />, 'Mailen til kunden', '#ffffff', null, 'qq-mail')}
                 <div style={{ flex: 1, minHeight: 0, padding: '18px', display: 'flex', flexDirection: 'column' }}>
                     <label style={label}>Personlig besked i mailen</label>

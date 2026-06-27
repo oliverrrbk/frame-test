@@ -7,7 +7,7 @@
 // til ankerets aktuelle position, så boblen altid sidder limet til målet —
 // også under page-transitions, scroll og indre scroll-containere. Ingen lag.
 //
-// placement: 'bottom' | 'top' | 'right'
+// placement: 'bottom' | 'top' | 'right' | 'left'
 // spotlight:  dæmp resten af skærmen og lys målet op (til rundtur). Blokerer
 //             baggrundsklik via et gennemsigtigt lag, så man kun bruger boblen.
 // ============================================================================
@@ -59,13 +59,19 @@ export default function Coachmark({
                 if (place === 'bottom' && r.bottom + bh + 22 > vh) place = 'top';
                 if (place === 'top' && r.top - bh - 22 < 0) place = 'bottom';
                 if (place === 'right' && r.right + BUBBLE_W + 26 > vw) place = 'bottom';
+                if (place === 'left' && r.left - BUBBLE_W - 26 < 0) place = 'bottom';
 
                 let top, left, arrowCss;
-                if (place === 'right') {
+                if (place === 'right' || place === 'left') {
                     top = Math.max(12, Math.min(r.top + r.height / 2 - bh / 2, vh - bh - 12));
-                    left = r.right + 16;
                     const aTop = Math.min(Math.max(r.top + r.height / 2 - top - 7, 14), bh - 28);
-                    arrowCss = `position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:-7px;top:${aTop}px;border-left:1px solid rgba(0,0,0,.07);border-bottom:1px solid rgba(0,0,0,.07)`;
+                    if (place === 'right') {
+                        left = r.right + 16;
+                        arrowCss = `position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:-7px;top:${aTop}px;border-left:1px solid rgba(0,0,0,.07);border-bottom:1px solid rgba(0,0,0,.07)`;
+                    } else {
+                        left = r.left - BUBBLE_W - 16;
+                        arrowCss = `position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);right:-7px;top:${aTop}px;border-right:1px solid rgba(0,0,0,.07);border-top:1px solid rgba(0,0,0,.07)`;
+                    }
                 } else {
                     top = place === 'bottom' ? r.bottom + 14 : r.top - bh - 14;
                     left = Math.max(12, Math.min(r.left + r.width / 2 - 46, vw - BUBBLE_W - 12));

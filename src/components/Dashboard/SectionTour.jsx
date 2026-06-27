@@ -49,6 +49,7 @@ export default function SectionTour({ steps = [], tourKey, onDone, zBase = 10004
 
     if (!ready || !steps.length) return null;
     const s = steps[idx];
+    const isLast = idx === steps.length - 1;
     const total = steps.filter(x => !x.last).length;
     const next = () => { if (idx < steps.length - 1) setIdx(i => i + 1); else finish(); };
     // Per-guide: "Spring denne guide over" markerer KUN denne guide som set —
@@ -66,9 +67,9 @@ export default function SectionTour({ steps = [], tourKey, onDone, zBase = 10004
             eyebrow={s.eyebrow}
             title={s.title}
             body={s.body}
-            primaryLabel={s.last ? 'Kom i gang' : 'Næste'}
+            primaryLabel={isLast ? 'Kom i gang' : 'Næste'}
             onPrimary={next}
-            onSkip={s.last ? null : skip}
+            onSkip={isLast ? null : skip}
             onClose={finish}
         />
     );
