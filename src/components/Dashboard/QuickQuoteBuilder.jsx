@@ -15,10 +15,13 @@ import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
 // Første-gangs walkthrough af Hurtigt tilbud (kun desktop, kun én gang, altid spring-bar).
 const QUICKQUOTE_TOUR_STEPS = [
     { sel: '[data-tour="qq-customer"]', placement: 'right', eyebrow: 'Hurtigt tilbud', title: 'Start med kunden', body: 'Skriv kundens navn ind (telefon/mail kan du tilføje nu eller senere).' },
-    { sel: '[data-tour="qq-title"]', placement: 'right', eyebrow: 'Trin 2', title: 'Titel & gyldighed', body: 'Giv opgaven en titel, og vælg hvor mange dage tilbuddet er gyldigt.' },
-    { sel: '[data-tour="qq-pdf"]', placement: 'bottom', eyebrow: 'Live', title: 'Dit tilbud — live', body: 'Her ser du PDF-tilbuddet opdatere sig med det samme, mens du udfylder felterne.' },
-    { sel: '[data-tour="qq-mail"]', placement: 'bottom', eyebrow: 'Mailen', title: 'Mailen kunden får', body: 'Tjek mailteksten og knappen kunden trykker på for at bekræfte tilbuddet.' },
-    { sel: '[data-tour="qq-send"]', placement: 'top', eyebrow: 'Klar', title: 'Send tilbuddet', body: 'Send når du er klar. Har du koblet din egen mail på under Integrationer, sendes det fra din mail — så det også ligger i din indbakke.', last: true },
+    { sel: '[data-tour="qq-title"]', placement: 'right', eyebrow: 'Trin 2', title: 'Opgavetitel', body: 'Giv opgaven en kort titel — fx "Nyt tag på Nørrevænget 1".' },
+    { sel: '[data-tour="qq-validity"]', placement: 'right', eyebrow: 'Trin 3', title: 'Gyldighed', body: 'Vælg hvor mange dage tilbuddet gælder. Det vises på tilbuddet og i mailen.' },
+    { sel: '[data-tour="qq-materials"]', placement: 'right', eyebrow: 'Trin 4', title: 'Materialer', body: 'Skriv din materialepris og avance — du styrer tallene helt selv.' },
+    { sel: '[data-tour="qq-labor"]', placement: 'right', eyebrow: 'Trin 5', title: 'Arbejde', body: 'Vælg fast pris eller timepris for selve arbejdet.' },
+    { sel: '[data-tour="qq-workdesc"]', placement: 'right', eyebrow: 'Trin 6', title: 'Arbejdsbeskrivelse', body: 'Beskriv hvad der skal laves — det kommer med på tilbuddet til kunden.' },
+    { sel: '[data-tour="qq-pdf"]', placement: 'bottom', eyebrow: 'Live', title: 'Dit tilbud — i real-time', body: 'Læg mærke til at PDF-tilbuddet opdaterer sig med det samme, mens du udfylder felterne til venstre.' },
+    { sel: '[data-tour="qq-mail"]', placement: 'bottom', eyebrow: 'Mailen', title: 'Sådan ser kunden det', body: 'Og her er mailen kunden modtager — med "Bekræft tilbud"-knappen, der fører til en sikker portal.', last: true },
 ];
 
 // Stabil reference (react-google-maps kræver at libraries-arrayet ikke gendannes pr. render).
@@ -998,8 +1001,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             <div className="qqb-divider" onPointerDown={(e) => startResize(type, e)}><div className="qqb-grip" /></div>
         );
 
-        const zoneHead = (icon, text, bg, action) => (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 18px', borderBottom: '1px solid #eef2f6', position: 'sticky', top: 0, background: bg, zIndex: 2, flexShrink: 0 }}>
+        const zoneHead = (icon, text, bg, action, tourId) => (
+            <div data-tour={tourId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 18px', borderBottom: '1px solid #eef2f6', position: 'sticky', top: 0, background: bg, zIndex: 2, flexShrink: 0 }}>
                 {icon}
                 <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#64748b' }}>{text}</span>
                 {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
@@ -1020,7 +1023,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     <label style={label}>Opgavetitel</label>
                     {renderTitleInput()}
                 </div>
-                <div style={editSection}>
+                <div style={editSection} data-tour="qq-validity">
                     <label style={label}>Tilbuddet er gyldigt i (dage)</label>
                     <input
                         className="qqb-input"
@@ -1037,16 +1040,16 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     <label style={label}>Besked på tilbuddet</label>
                     {renderRichEditor(pdfNoteRef, (h) => { pdfNoteTouched.current = true; setPdfNote(h); }, 'Skriv en kort intro til kunden — fx "Hermed fremsendes tilbud på følgende arbejde:"', '80px')}
                 </div>
-                <div style={editSection}>
+                <div style={editSection} data-tour="qq-materials">
                     <h3 style={editH}><Package size={18} color="#3b82f6" /> Materialer</h3>
                     {renderMaterialInputs()}
                     {renderUploadField()}
                 </div>
-                <div style={editSection}>
+                <div style={editSection} data-tour="qq-labor">
                     <h3 style={editH}><Hammer size={18} color="#f59e0b" /> Arbejde</h3>
                     {renderLaborInputs()}
                 </div>
-                <div style={editSection}>
+                <div style={editSection} data-tour="qq-workdesc">
                     <h3 style={editH}><CheckCircle2 size={18} color="#10b981" /> Arbejdsbeskrivelse</h3>
                     {renderRichEditor(workEditorRef, setWorkDescHtml, 'Skriv arbejdsbeskrivelsen frit — markér tekst og gør den fed, lav punkter, eller indsæt direkte fra Word.', '96px', workDictation)}
                 </div>
@@ -1069,8 +1072,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         );
 
         const midCol = (
-            <div style={pdfFocus ? { ...midStyle, flex: '1 1 auto' } : midStyle} data-tour="qq-pdf">
-                {zoneHead(<FileText size={16} color="#3b82f6" />, "Sådan ser PDF'en ud", '#f8fafc', maxBtn)}
+            <div style={pdfFocus ? { ...midStyle, flex: '1 1 auto' } : midStyle}>
+                {zoneHead(<FileText size={16} color="#3b82f6" />, "Sådan ser PDF'en ud", '#f8fafc', maxBtn, 'qq-pdf')}
                 <div style={{ flex: 1, minHeight: 0, padding: pdfFocus ? '22px clamp(16px, 4vw, 64px)' : '16px', display: 'flex', flexDirection: 'column', alignItems: pdfFocus ? 'center' : 'stretch', position: 'relative', background: pdfFocus ? '#1e293b' : 'transparent' }}>
                     {regenerating && (
                         <div style={{ position: 'absolute', top: '26px', right: '26px', zIndex: 3, background: 'rgba(15,23,42,0.82)', color: '#fff', padding: '6px 12px', borderRadius: '999px', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '7px', backdropFilter: 'blur(4px)' }}>
@@ -1093,8 +1096,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         );
 
         const rightCol = (
-            <div className="qqb-col" style={rightStyle} data-tour="qq-mail">
-                {zoneHead(<Mail size={16} color="#8b5cf6" />, 'Mailen til kunden', '#ffffff')}
+            <div className="qqb-col" style={rightStyle}>
+                {zoneHead(<Mail size={16} color="#8b5cf6" />, 'Mailen til kunden', '#ffffff', null, 'qq-mail')}
                 <div style={{ flex: 1, minHeight: 0, padding: '18px', display: 'flex', flexDirection: 'column' }}>
                     <label style={label}>Personlig besked i mailen</label>
                     {/* På mobil er skrivefeltet større, så man kan se hele beskeden mens man retter den. */}
@@ -1223,7 +1226,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     {/* Kom-i-gang: 2 hints (kun desktop, første gang) */}
                     {/* Første-gangs walkthrough: kunde → titel/gyldighed → live PDF → mail → send */}
                     {!isMobile && shouldShowCoach('quickquote_tour') && (
-                        <SectionTour tourKey="quickquote_tour" steps={QUICKQUOTE_TOUR_STEPS} />
+                        <SectionTour tourKey="quickquote_tour" steps={QUICKQUOTE_TOUR_STEPS} zBase={100100} />
                     )}
                 </div>
 

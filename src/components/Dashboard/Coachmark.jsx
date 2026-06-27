@@ -30,6 +30,7 @@ export default function Coachmark({
     onSkip,
     onClose,
     spotlight = false,
+    zBase = 100040,   // hæves når touren kører oven på en modal (fx Hurtigt tilbud = z 100050+)
 }) {
     const bubbleRef = useRef(null);
     const arrowRef = useRef(null);
@@ -94,9 +95,9 @@ export default function Coachmark({
             {spotlight && (
                 <>
                     {/* Gennemsigtigt lag der blokerer baggrundsklik under rundturen */}
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 100039 }} />
+                    <div style={{ position: 'fixed', inset: 0, zIndex: zBase - 1 }} />
                     {/* Spotlight-hul: dæmper alt udenom målet */}
-                    <div ref={holeRef} style={{ position: 'fixed', top: -9999, left: -9999, borderRadius: 14, zIndex: 100040, pointerEvents: 'none', boxShadow: '0 0 0 9999px rgba(15,23,42,0.48)', transition: 'all .18s ease' }} />
+                    <div ref={holeRef} style={{ position: 'fixed', top: -9999, left: -9999, borderRadius: 14, zIndex: zBase, pointerEvents: 'none', boxShadow: '0 0 0 9999px rgba(15,23,42,0.48)', transition: 'all .18s ease' }} />
                 </>
             )}
             <div
@@ -106,7 +107,7 @@ export default function Coachmark({
                     position: 'fixed', top: -9999, left: -9999, opacity: 0,
                     width: BUBBLE_W, maxWidth: 'calc(100vw - 24px)',
                     background: '#fff', border: '1px solid rgba(0,0,0,.07)', borderRadius: 20,
-                    padding: '18px 18px 15px', zIndex: 100050,
+                    padding: '18px 18px 15px', zIndex: zBase + 10,
                     boxShadow: '0 24px 64px rgba(0,0,0,.18)',
                     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
                     transition: 'opacity .2s ease',

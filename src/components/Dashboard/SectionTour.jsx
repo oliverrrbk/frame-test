@@ -12,7 +12,7 @@ import React, { useState, useRef, useLayoutEffect } from 'react';
 import Coachmark from './Coachmark';
 import { markCoachSeen, skipAllCoach } from './coachmarks';
 
-export default function SectionTour({ steps = [], tourKey, onDone }) {
+export default function SectionTour({ steps = [], tourKey, onDone, zBase = 100040 }) {
     const [idx, setIdx] = useState(0);
     const anchorRef = useRef(null);
     const [ready, setReady] = useState(false);
@@ -25,7 +25,13 @@ export default function SectionTour({ steps = [], tourKey, onDone }) {
         let raf;
         const resolve = () => {
             const el = document.querySelector(steps[idx].sel);
-            if (el) { anchorRef.current = el; setReady(true); return; }
+            if (el) {
+                anchorRef.current = el;
+                // Sørg for at det fremhævede element er i syne (fx i en scrollende kolonne).
+                try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch { /* ignore */ }
+                setReady(true);
+                return;
+            }
             // Målet findes ikke (endnu) — prøv kort, ellers spring stoppet over.
             if (++tries > 10) {
                 if (idx < steps.length - 1) setIdx(i => i + 1);
@@ -52,6 +58,7 @@ export default function SectionTour({ steps = [], tourKey, onDone }) {
             anchorRef={anchorRef}
             placement={s.placement || 'bottom'}
             spotlight
+            zBase={zBase}
             step={s.last ? null : `${idx + 1} / ${total}`}
             eyebrow={s.eyebrow}
             title={s.title}
