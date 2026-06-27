@@ -22,15 +22,36 @@ export const BUSINESS_TYPES = [
 // Fag der har den fulde beregner/materiale-pakke. Pt. kun tømrer.
 const CALCULATOR_TRADES = ['tomrer'];
 
-// ---------------------------------------------------------------------------
-// FAG-VÆLGER VED SELV-OPRETTELSE.
-// false = Frame markedsføres som rent TØMRER-system: fag-dropdownen skjules,
-//         nye selv-oprettelser sættes automatisk til 'tomrer', og ikke-tømrere
-//         henvises til "kontakt os". Multi-fag-motoren nedenfor er uændret —
-//         det er KUN den offentlige selv-oprettelse der er låst.
-// true  = "dial tilbage": fag-dropdownen vises igen, og alle fag kan selv-oprette.
-// ---------------------------------------------------------------------------
-export const TRADE_PICKER_ENABLED = false;
+// ═══════════════════════════════════════════════════════════════════════════
+// SÅDAN ÅBNER DU FOR EN NY FAGGRUPPE  (ét fag ad gangen)
+// ───────────────────────────────────────────────────────────────────────────
+// Frame markedsføres som et TØMRER-system. Når et nyt fag er klar til at komme
+// med, åbner du det her — og kun her:
+//
+//   TRIN 1 — Tilføj fagets `value` (fra BUSINESS_TYPES ovenfor) til
+//            ENABLED_SIGNUP_TRADES nedenfor.
+//            → Faget kan nu selv-oprette. Fag-vælgeren på opret-siden dukker
+//              AUTOMATISK op, så snart der er mere end ét fag på listen
+//              (er der kun ét, vises i stedet "kontakt os"-boksen).
+//
+//   TRIN 2 — (valgfrit) Skal faget have sin EGEN prisberegner + materialer +
+//            offentlig /:slug-portal, så tilføj det også til CALCULATOR_TRADES
+//            ovenfor. Ellers får de hele appen UNDTAGEN beregneren (de laver
+//            "Hurtigt tilbud" manuelt). Al gating følger automatisk med.
+//
+//   Eksempel — åbn for VVS MED deres egen beregner:
+//      const CALCULATOR_TRADES   = ['tomrer', 'vvs'];
+//      export const ENABLED_SIGNUP_TRADES = ['tomrer', 'vvs'];
+//
+//   Luk ned til kun tømrer igen: sæt listen til ['tomrer'].
+//   Eksisterende konti påvirkes ALDRIG — de beholder deres business_type.
+// ═══════════════════════════════════════════════════════════════════════════
+export const ENABLED_SIGNUP_TRADES = ['tomrer'];
+
+// De fag der er åbne for offentlig selv-oprettelse (som BUSINESS_TYPES-objekter).
+// Bruges af opret-siden: 1 fag → ingen vælger (+ "kontakt os"); flere → vælger.
+export const signupTradeOptions = () =>
+    BUSINESS_TYPES.filter(b => ENABLED_SIGNUP_TRADES.includes(b.value));
 
 export function getBusinessLabel(type) {
     return BUSINESS_TYPES.find(b => b.value === type)?.label || 'Håndværker';

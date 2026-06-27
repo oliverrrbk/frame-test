@@ -5,10 +5,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { computePrice, formatKr } from '../../utils/pricing';
-import { BUSINESS_TYPES, TRADE_PICKER_ENABLED } from '../../utils/features';
+import { BUSINESS_TYPES, ENABLED_SIGNUP_TRADES, signupTradeOptions } from '../../utils/features';
 
 // Lækker Bison Frame-dropdown til branchevalg (erstatter den grimme native select).
-const BusinessTypeSelect = ({ value, onChange }) => {
+const BusinessTypeSelect = ({ value, onChange, options = BUSINESS_TYPES }) => {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
     useEffect(() => {
@@ -16,7 +16,7 @@ const BusinessTypeSelect = ({ value, onChange }) => {
         document.addEventListener('mousedown', onDoc);
         return () => document.removeEventListener('mousedown', onDoc);
     }, []);
-    const selected = BUSINESS_TYPES.find(b => b.value === value);
+    const selected = options.find(b => b.value === value);
     return (
         <div className="relative" ref={ref}>
             <button
@@ -33,7 +33,7 @@ const BusinessTypeSelect = ({ value, onChange }) => {
                     className="absolute z-30 mt-2 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-2xl shadow-slate-900/15 overflow-hidden p-1.5"
                     style={{ animation: 'bizDrop .18s cubic-bezier(0.16,1,0.3,1)' }}
                 >
-                    {BUSINESS_TYPES.map(b => {
+                    {options.map(b => {
                         const active = b.value === value;
                         return (
                             <button
@@ -76,7 +76,7 @@ const Register = ({ setSession }) => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [acceptedTerms, setAcceptedTerms] = useState(false);
-    const [businessType, setBusinessType] = useState('tomrer');   // branche — styrer beregner/materialer-adgang
+    const [businessType, setBusinessType] = useState(ENABLED_SIGNUP_TRADES[0] || 'tomrer');   // branche — styrer beregner/materialer-adgang
     // Rollebaseret hold — starter ALTID på 1 mester (249 kr). Man tilføjer selv resten.
     const [team, setTeam] = useState({ mester: 1, pl: 0, bog: 0, svend: 0, laer: 0 });
     const teamPrice = computePrice(team);
@@ -373,13 +373,13 @@ const Register = ({ setSession }) => {
                                 </div>
                             )}
 
-                            {/* Branche — kun synlig når fag-vælgeren er slået til (TRADE_PICKER_ENABLED).
-                                Ellers er Frame et rent tømrer-system: business_type = 'tomrer', og ikke-tømrere
-                                henvises til "kontakt os" i stedet for at oprette med det samme. */}
-                            {TRADE_PICKER_ENABLED ? (
+                            {/* Branche — vises kun når der er ÅBNET for mere end ét fag (ENABLED_SIGNUP_TRADES).
+                                Med kun ét åbent fag er Frame et rent tømrer-system: business_type = 'tomrer',
+                                og ikke-tømrere henvises til "kontakt os". Se utils/features.js for at åbne fag. */}
+                            {signupTradeOptions().length > 1 ? (
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ml-1">Hvilken slags håndværker er du? *</label>
-                                    <BusinessTypeSelect value={businessType} onChange={setBusinessType} />
+                                    <BusinessTypeSelect value={businessType} onChange={setBusinessType} options={signupTradeOptions()} />
                                     <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">Tømrere får prisberegner + materialer. Andre fag laver hurtige tilbud — alt det øvrige er ens.</span>
                                 </div>
                             ) : (
