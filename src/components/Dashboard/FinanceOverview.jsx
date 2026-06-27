@@ -12,7 +12,7 @@ import { shouldShowCoach } from './coachmarks';
 // Rundtur for Økonomi & Faktura (kun desktop, første gang).
 const FINANCE_TOUR_STEPS = [
     { sel: '[data-tour="finance-kpi"]', placement: 'bottom', eyebrow: 'Økonomi & Faktura', title: 'Dit cashflow på ét sted', body: 'Samlet værdi, hvad der er faktureret, hvad der mangler — og hvad der faktisk er bogført i regnskabet.' },
-    { sel: '[data-tour="finance-pending"]', placement: 'bottom', eyebrow: 'Fakturering', title: 'Sager der mangler en faktura', body: 'Bekræftede sager med et restbeløb lander her — fakturér dem for at få pengene i kassen.' },
+    { sel: '[data-tour="finance-pending"]', placement: 'bottom', eyebrow: 'Fakturering', title: 'Dine sager samles her', body: 'Her står dine sager. Fakturér dem for at få pengene i kassen — og når fakturaen er registreret og betalt i regnskabet, får sagen automatisk et flueben. De forsvinder ikke, så du beholder overblikket.' },
     { sel: '[data-tour="finance-demo-invoice"]', placement: 'top', eyebrow: 'Ét klik', title: 'Opret faktura', body: 'Tryk Opret Faktura, så bygger Frame fakturaen for dig — og sender den direkte til dit regnskab (e-conomic/Dinero).' },
 ];
 
@@ -348,8 +348,12 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                                 <p style={{ margin: '0 0 12px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
                                     Når en kunde <strong>bekræfter et tilbud</strong>, ryger sagen i ordrestyringen — og dukker automatisk op her, klar til faktura.
                                 </p>
-                                <p style={{ margin: '0 0 16px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
+                                <p style={{ margin: '0 0 12px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
                                     Tryk <strong>Opret Faktura</strong>, så samler Frame det hele: sagens linjer + de bilag og aftalesedler, du har lagt på sagen.
+                                </p>
+                                <p style={{ margin: '0 0 16px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                    <CheckCircle2 size={18} color="#10b981" style={{ flexShrink: 0, marginTop: 1 }} />
+                                    <span>Sagerne <strong>bliver liggende</strong> — når fakturaen er registreret og betalt i dit regnskab, får sagen automatisk et grønt flueben. Så har du altid det fulde overblik.</span>
                                 </p>
                                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
                                     <div style={{ color: '#475569', fontSize: '0.88rem', lineHeight: 1.5 }}>
