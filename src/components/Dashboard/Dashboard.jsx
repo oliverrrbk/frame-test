@@ -3435,7 +3435,8 @@ const Dashboard = () => {
                                     setChatTargetLeadId(caseId);
                                     setActiveTab('chat');
                                 }}
-                                onUpdateLead={(updated) => applyLocalLeadUpdate(updated)} 
+                                onUpdateLead={(updated) => applyLocalLeadUpdate(updated)}
+                                onCreateQuote={() => setIsCreateLeadModalOpen(true)}
                             />
                         </div>
                     )}

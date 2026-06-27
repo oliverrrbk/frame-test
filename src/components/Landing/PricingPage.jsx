@@ -128,13 +128,8 @@ export default function PricingPage({ setSession }) {
     const navigate = useNavigate();
 
     // Gem holdet og send med til register, så onboarding starter med samme hold.
-    // 'bison_from_pricing' fortæller register, at brugeren ALLEREDE har set prisstrukturen
-    // her — så hjælpe-popup'en om holdet ikke popper op igen ovre i oprettelsen.
     const startTrial = (team) => {
-        try {
-            if (team) sessionStorage.setItem('bison_signup_team', JSON.stringify(team));
-            sessionStorage.setItem('bison_from_pricing', '1');
-        } catch { /* ignore */ }
+        try { if (team) sessionStorage.setItem('bison_signup_team', JSON.stringify(team)); } catch { /* ignore */ }
         navigate('/register');
     };
 

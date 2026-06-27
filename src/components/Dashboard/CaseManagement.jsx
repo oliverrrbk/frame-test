@@ -585,7 +585,21 @@ const CASES_DEMO_CASE = {
         ],
         time_entries: [
             { id: 'demo-time-1', employeeId: 'demo-worker', hours: 16, date: new Date().toISOString().slice(0, 10), notes: 'Opmåling + klargøring' },
-            { id: 'demo-time-2', employeeId: 'demo-worker', hours: 8, date: new Date().toISOString().slice(0, 10), notes: 'Levering' },
+            { id: 'demo-time-2', employeeId: 'demo-worker', hours: 8, date: new Date().toISOString().slice(0, 10), notes: 'Levering af materialer' },
+        ],
+        // Eksempel-materialeliste, så Materialer-fanen viser rigtigt indhold under rundvisningen.
+        material_list: [
+            { listId: 'default', item: 'Egeplanke 14 mm', qty: 45, unit: 'm²', section: 'Hovedmaterialer' },
+            { listId: 'default', item: 'Undergulv / trinlydsplade', qty: 45, unit: 'm²', section: 'Hovedmaterialer' },
+            { listId: 'default', item: 'Gulvlim', qty: 6, unit: 'spand', section: 'Hovedmaterialer' },
+            { listId: 'default', item: 'Hærdende gulvolie', qty: 3, unit: 'L', section: 'Tilbehør' },
+            { listId: 'default', item: 'Fodliste eg', qty: 28, unit: 'm', section: 'Tilbehør' },
+        ],
+        material_lists_meta: [{ id: 'default', name: 'Materialeliste til Opgaven', price: '' }],
+        // Et par log-linjer, så Byggeproces-fanen har indhold.
+        logs: [
+            { id: 'demo-log-1', status: 'green', text: 'Sag oprettet og overdraget til byggepladsen.', author: 'Systemet', date: new Date().toISOString() },
+            { id: 'demo-log-2', status: 'green', text: 'Opmåling udført — gulvet er klar til montering.', author: 'Niklas', date: new Date().toISOString() },
         ],
         assigned_pm: [],
         assigned_workers: [],
@@ -593,7 +607,6 @@ const CASES_DEMO_CASE = {
         calc_data: { laborHours: 40 },
         is_manual_quote: false,
         confirmed_at: new Date().toISOString(),
-        logs: [],
         case_messages: [],
         details: { phases: [] },
     },
@@ -601,21 +614,25 @@ const CASES_DEMO_CASE = {
 
 // Trin 0-3 er på listen; trin 4+ kræver at eksempel-sagen er åben (interiøret).
 const CASES_TOUR_DETAIL_FROM = 4;
+// Hvert interiør-trin kan skifte til en bestemt fane, så indholdet åbner ("bang").
 const CASES_TOUR_STEPS = [
     { sel: '[data-tour="cases-header"]', placement: 'bottom', eyebrow: 'Sager & Ordrestyring', title: 'Her bor dine opgaver', body: 'Når en kunde accepterer et tilbud, bliver det automatisk til en sag her — klar til at blive styret fra start til faktura.' },
     { sel: '[data-tour="cases-tabs"]', placement: 'bottom', eyebrow: 'Overblik', title: 'Mine sager vs. alle sager', body: '"Mine sager" er dem, du selv er sat på. "Alle sager" viser hele firmaets — så du altid kan finde en sag og hjælpe til.' },
     { sel: '[data-tour="cases-search"]', placement: 'bottom', eyebrow: 'Find hurtigt', title: 'Søg på tværs', body: 'Søg på sagsnummer, kunde, adresse eller telefon — også når listen vokser.' },
     { sel: '[data-tour="cases-demo-card"]', placement: 'right', eyebrow: 'Sådan ser en sag ud', title: 'Et hurtigt overblik', body: 'Status, fremdrift, timer mod estimat og hvem der er på holdet. Tryk Næste, så åbner vi sagen og kigger indenfor.' },
-    { sel: '[data-tour="case-detail-header"]', placement: 'bottom', eyebrow: 'Inde i sagen', title: 'Du er nu inde i ordrestyringen', body: 'Her samler du alt om opgaven — kunde, adresse, status og hele forløbet ét sted.' },
-    { sel: '[data-tour="case-tabs-nav"]', placement: 'bottom', eyebrow: 'Værktøjerne', title: 'Styr det hele fra fanerne', body: 'To-do & KS, materialer, timer, bilag, aftalesedler og tegninger — alt på den enkelte sag.' },
-    { sel: '[data-tour="case-tab-content"]', placement: 'top', eyebrow: 'To-do & KS', title: 'Følg arbejdet trin for trin', body: 'Kryds opgaver af efterhånden — så stiger fremdriften, og du har styr på kvalitetssikringen.' },
-    { sel: '[data-tour="case-detail-header"]', placement: 'bottom', eyebrow: 'Det var rundvisningen', title: 'Denne sag er kun et eksempel', body: 'Prøvesagen forsvinder nu af sig selv — herfra ser du kun dine egne, rigtige sager. God arbejdslyst!', last: true },
+    { sel: '[data-tour="case-detail-header"]', placement: 'bottom', subTab: 'todo', eyebrow: 'Inde i sagen', title: 'Du er nu inde i ordrestyringen', body: 'Alt om opgaven samlet her — kunde, status og hele forløbet. Brug fanerne foroven til at styre det hele.' },
+    { sel: '[data-tour="case-tab-content"]', placement: 'top', subTab: 'todo', eyebrow: 'Bygge To-Do (KS)', title: 'Følg arbejdet trin for trin', body: 'Kryds bygge-trin af efterhånden — fremdrift og kvalitetssikring følger automatisk med.' },
+    { sel: '[data-tour="case-tab-content"]', placement: 'top', subTab: 'logs', eyebrow: 'Byggeproces', title: 'Hele forløbet dokumenteret', body: 'Tidslinje med log og ekstraarbejde — så I altid kan dokumentere, hvad der er sket på pladsen.' },
+    { sel: '[data-tour="case-tab-content"]', placement: 'top', subTab: 'materials', eyebrow: 'Materialer & Indkøb', title: 'Materialer direkte på sagen', body: 'Hold styr på materialelisten og send bestillinger — alt knyttet til den enkelte opgave.' },
+    { sel: '[data-tour="case-tab-content"]', placement: 'top', subTab: 'timesheet', eyebrow: 'Timeregistrering', title: 'Timer der hænger sammen', body: 'Registrér timer på sagen — klar til løn og fakturering. Bilag, aftalesedler og tegninger ligger også her på fanerne.' },
 ];
 
-export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile }) {
+export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile, onCreateQuote }) {
     const [activeCases, setActiveCases] = useState([]);
     // Rundtur: aktiv ved første besøg (desktop, ikke i modal-visning).
     const [casesTourActive, setCasesTourActive] = useState(() => !isModalView && shouldShowCoach('cases_tour'));
+    // Afslutnings-boks efter rundturen (CTA: lav et tilbud).
+    const [showCasesTourEnd, setShowCasesTourEnd] = useState(false);
     const [caseViewTab, setCaseViewTab] = useState('mine'); // 'mine' = mine sager (standard), 'all' = alle firmaets bekræftede sager
     const [caseSearch, setCaseSearch] = useState('');
     const [selectedCaseIdState, setSelectedCaseIdState] = useState(null);
@@ -4681,15 +4698,45 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     tourKey="cases_tour"
                     steps={CASES_TOUR_STEPS}
                     onStepChange={(i) => {
-                        // Trin 4+ foregår inde i sagen: åbn/luk eksempel-sagen automatisk.
+                        // Trin 4+ foregår inde i sagen: åbn eksempel-sagen + skift til den
+                        // fane trinnet handler om, så indholdet åbner ("bang").
                         if (i >= CASES_TOUR_DETAIL_FROM) {
                             if (selectedCaseIdState !== CASES_DEMO_ID) setSelectedCaseIdState(CASES_DEMO_ID);
+                            const tab = CASES_TOUR_STEPS[i]?.subTab;
+                            if (tab) setActiveSubTab(tab);
                         } else if (selectedCaseIdState === CASES_DEMO_ID) {
                             setSelectedCaseIdState(null);
                         }
                     }}
-                    onDone={() => { setCasesTourActive(false); if (selectedCaseIdState === CASES_DEMO_ID) setSelectedCaseIdState(null); }}
+                    onDone={(skipped) => {
+                        setCasesTourActive(false);
+                        if (selectedCaseIdState === CASES_DEMO_ID) setSelectedCaseIdState(null);
+                        if (!skipped) setShowCasesTourEnd(true);
+                    }}
                 />
+            )}
+
+            {/* Afslutning på Sager-rundturen — centreret boks med CTA. */}
+            {showCasesTourEnd && createPortal(
+                <div onClick={() => setShowCasesTourEnd(false)} style={{ position: 'fixed', inset: 0, zIndex: 100100, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                    <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 470, background: '#fff', borderRadius: 24, padding: 28, boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Det var ordrestyringen</div>
+                        <p style={{ margin: '0 0 20px', color: '#475569', lineHeight: 1.55, fontSize: '0.94rem' }}>
+                            Herfra ser du kun dine egne sager. Så snart en kunde <strong>bekræfter et tilbud</strong>, dukker sagen automatisk op her — klar til at blive styret fra start til faktura.
+                        </p>
+                        {onCreateQuote && (
+                            <button onClick={() => { setShowCasesTourEnd(false); onCreateQuote(); }}
+                                style={{ width: '100%', padding: '14px', cursor: 'pointer', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', borderRadius: 14, fontWeight: 800, fontSize: '0.98rem', boxShadow: '0 8px 20px rgba(16,185,129,0.3)', marginBottom: 8 }}>
+                                Lav et tilbud
+                            </button>
+                        )}
+                        <button onClick={() => setShowCasesTourEnd(false)}
+                            style={{ width: '100%', padding: 12, background: 'none', border: 'none', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>
+                            Luk
+                        </button>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );

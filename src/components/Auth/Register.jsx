@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
 import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus, ChevronDown, HelpCircle, X, Briefcase, HardHat, Gift } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { computePrice, formatKr, PRICES, VOLUME_FROM } from '../../utils/pricing';
+import { computePrice, formatKr, normalizeTeam, PRICES, VOLUME_FROM } from '../../utils/pricing';
 import { BUSINESS_TYPES, ENABLED_SIGNUP_TRADES, signupTradeOptions } from '../../utils/features';
 
 // Lækker Bison Frame-dropdown til branchevalg (erstatter den grimme native select).
@@ -181,29 +181,21 @@ const Register = ({ setSession }) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [businessType, setBusinessType] = useState(ENABLED_SIGNUP_TRADES[0] || 'tomrer');   // branche — styrer beregner/materialer-adgang
-    // Rollebaseret hold — starter ALTID på 1 mester (249 kr). Man tilføjer selv resten.
-    const [team, setTeam] = useState({ mester: 1, pl: 0, bog: 0, svend: 0, laer: 0 });
+    // Rollebaseret hold — forudfyldes med holdet fra prissiden, hvis brugeren byggede et
+    // der (gemt i 'bison_signup_team'). Ellers startes på 1 mester (249 kr). normalizeTeam
+    // sikrer rene tal + mindst 1 mester, så et manipuleret/forældet payload aldrig vælter UI'et.
+    const [team, setTeam] = useState(() => {
+        try {
+            const saved = sessionStorage.getItem('bison_signup_team');
+            if (saved) return normalizeTeam(JSON.parse(saved));
+        } catch { /* ignore — falder tilbage til standard-holdet */ }
+        return { mester: 1, pl: 0, bog: 0, svend: 0, laer: 0 };
+    });
     const teamPrice = computePrice(team);
     const stepTeam = (key, d, min) => setTeam(t => ({ ...t, [key]: Math.max(min, Math.min(299, (t[key] || 0) + d)) }));
-    const [showTeamHelp, setShowTeamHelp] = useState(false);   // forklarings-popup til "Byg dit hold"
-
-    // Åbn hjælpe-popup'en automatisk FØRSTE gang — men kun hvis brugeren IKKE kom fra
-    // prissiden (hvor strukturen allerede er forklaret). 'bison_from_pricing' sættes der.
-    // Vises én gang pr. browser-session, så et reload eller skift mellem felter ikke gentager den.
-    useEffect(() => {
-        let fromPricing = false, seen = false;
-        try {
-            fromPricing = sessionStorage.getItem('bison_from_pricing') === '1';
-            seen = sessionStorage.getItem('bison_team_help_seen') === '1';
-            sessionStorage.removeItem('bison_from_pricing'); // engangs-signal — ryd efter brug
-        } catch { /* ignore */ }
-        if (fromPricing || seen) return;
-        const t = setTimeout(() => {
-            setShowTeamHelp(true);
-            try { sessionStorage.setItem('bison_team_help_seen', '1'); } catch { /* ignore */ }
-        }, 550);
-        return () => clearTimeout(t);
-    }, []);
+    // Forklarings-popup til "Byg dit hold" — åbnes KUN når brugeren selv trykker på "?"-ikonet
+    // (vises bevidst ikke automatisk; det forstyrrer midt i oprettelsen).
+    const [showTeamHelp, setShowTeamHelp] = useState(false);
     
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
