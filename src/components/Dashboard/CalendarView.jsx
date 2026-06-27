@@ -34,36 +34,6 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const sidebarDemoRef = useRef(null); // eksempel-sagskortet i sidebaren (start)
     const [flyVars, setFlyVars] = useState(null);
 
-    // På sidste rundtur-trin: mål kortet + kalenderen og lad en spøgelses-kopi
-    // "flyve" fra sidebaren ind i kalenderen, så man ser man kan trække sagen ind.
-    useEffect(() => {
-        const onLast = calendarTourActive && calendarStep === CALENDAR_TOUR_STEPS.length - 1;
-        if (!onLast) { setFlyVars(null); return; }
-        const compute = () => {
-            const card = sidebarDemoRef.current;
-            if (!card) return;
-            const c = card.getBoundingClientRect();
-            // Vælg 3 på hinanden følgende dage i den viste måned (undgå måneds-kanten),
-            // så eksempel-sagen "lander" på rigtige dage i kalenderen.
-            const y = currentDate.getFullYear(), mo = currentDate.getMonth();
-            const dim = new Date(y, mo + 1, 0).getDate();
-            const todayInMonth = (new Date().getMonth() === mo && new Date().getFullYear() === y) ? new Date().getDate() : 15;
-            const base = Math.max(1, Math.min(todayInMonth, dim - 2));
-            const pad = (n) => String(n).padStart(2, '0');
-            const cells = [base, base + 1, base + 2]
-                .map(d => document.querySelector(`[data-cal-day="${y}-${pad(mo + 1)}-${pad(d)}"]`))
-                .filter(Boolean)
-                .map(el => { const r = el.getBoundingClientRect(); return { left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width) }; });
-            if (!cells.length) { setFlyVars(null); return; }
-            const first = cells[0];
-            const targetX = first.left + 8, targetY = first.top + 38;
-            setFlyVars({ left: Math.round(c.left), top: Math.round(c.top), width: Math.round(c.width), dx: Math.round(targetX - c.left), dy: Math.round(targetY - c.top), cells });
-        };
-        const id = requestAnimationFrame(compute);
-        window.addEventListener('resize', compute);
-        return () => { cancelAnimationFrame(id); window.removeEventListener('resize', compute); };
-    }, [calendarTourActive, calendarStep, currentDate]);
-
     // Åben firmakalender: alle roller må se folk-/tidslinje-visningen.
     const canViewTimeline = ['admin', 'boss', 'accountant', 'sales', 'worker', 'apprentice'].includes(effectiveRole);
     const canEditLead = (lead) => isManager || (lead?.raw_data?.assigned_pm || []).includes(userId);
@@ -116,6 +86,35 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         return () => window.removeEventListener('resize', handleResize);
     }, []); // 'month', 'week', 'year'
     const [currentDate, setCurrentDate] = useState(new Date());
+
+    // På sidste rundtur-trin: mål eksempel-kortet + dato-cellerne og lad en
+    // spøgelses-kopi "flyve" fra sidebaren ind på rigtige dage i kalenderen.
+    // (Placeret EFTER currentDate så vi ikke rammer TDZ i dependency-arrayet.)
+    useEffect(() => {
+        const onLast = calendarTourActive && calendarStep === CALENDAR_TOUR_STEPS.length - 1;
+        if (!onLast) { setFlyVars(null); return; }
+        const compute = () => {
+            const card = sidebarDemoRef.current;
+            if (!card) return;
+            const c = card.getBoundingClientRect();
+            const y = currentDate.getFullYear(), mo = currentDate.getMonth();
+            const dim = new Date(y, mo + 1, 0).getDate();
+            const todayInMonth = (new Date().getMonth() === mo && new Date().getFullYear() === y) ? new Date().getDate() : 15;
+            const base = Math.max(1, Math.min(todayInMonth, dim - 2));
+            const pad = (n) => String(n).padStart(2, '0');
+            const cells = [base, base + 1, base + 2]
+                .map(d => document.querySelector(`[data-cal-day="${y}-${pad(mo + 1)}-${pad(d)}"]`))
+                .filter(Boolean)
+                .map(el => { const r = el.getBoundingClientRect(); return { left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width) }; });
+            if (!cells.length) { setFlyVars(null); return; }
+            const first = cells[0];
+            const targetX = first.left + 8, targetY = first.top + 38;
+            setFlyVars({ left: Math.round(c.left), top: Math.round(c.top), width: Math.round(c.width), dx: Math.round(targetX - c.left), dy: Math.round(targetY - c.top), cells });
+        };
+        const id = requestAnimationFrame(compute);
+        window.addEventListener('resize', compute);
+        return () => { cancelAnimationFrame(id); window.removeEventListener('resize', compute); };
+    }, [calendarTourActive, calendarStep, currentDate]);
     const [selectedEmployeeIds, setSelectedEmployeeIds] = useState(userId ? [String(userId)] : ['all']);
 
 
