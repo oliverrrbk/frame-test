@@ -152,7 +152,7 @@ export default function CalculatorGuide({ onDone, slug }) {
             </Screen>
         ),
         customize: (
-            <Screen label="Tilpas din beregner">
+            <Screen label="Vælg dine opgaver">
                 {[['Tag', true], ['Gulv', true], ['Vinduer', false], ['Køkken', true]].map(([lbl, on]) => (
                     <div key={lbl} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 4px', borderBottom: '1px solid #f1f5f9' }}>
                         <span style={{ fontSize: 11.5, fontWeight: 700, color: on ? '#0f172a' : '#94a3b8' }}>{lbl}</span>
@@ -161,6 +161,24 @@ export default function CalculatorGuide({ onDone, slug }) {
                         </span>
                     </div>
                 ))}
+            </Screen>
+        ),
+        tune: (
+            <Screen label="Finjustér i Prisberegning">
+                {[['Materialepris', '+0%', 0.32], ['Avance', '35%', 0.6], ['Buffer', '10%', 0.42]].map(([lbl, val, fill]) => (
+                    <div key={lbl} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <span style={{ fontSize: 10.5, fontWeight: 700, color: '#475569', width: 78, flexShrink: 0 }}>{lbl}</span>
+                        <span style={{ position: 'relative', flex: 1, height: 6, borderRadius: 999, background: '#e2e8f0' }}>
+                            <span style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${fill * 100}%`, borderRadius: 999, background: BLUE }} />
+                            <span style={{ position: 'absolute', top: '50%', left: `${fill * 100}%`, transform: 'translate(-50%,-50%)', width: 14, height: 14, borderRadius: '50%', background: '#fff', border: `2px solid ${BLUE}`, boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }} />
+                        </span>
+                        <span style={{ fontSize: 10.5, fontWeight: 800, color: '#0f172a', width: 36, textAlign: 'right', flexShrink: 0 }}>{val}</span>
+                    </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, padding: '10px 12px', borderRadius: 10, background: '#ecfdf5', border: '1px solid #a7f3d0' }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#047857' }}>Pris opdateres</span>
+                    <span style={{ fontSize: 13, fontWeight: 900, color: '#047857' }}>27.250 kr</span>
+                </div>
             </Screen>
         ),
     };
@@ -173,7 +191,8 @@ export default function CalculatorGuide({ onDone, slug }) {
         { mockup: screens.quote, title: 'Tilbud + materialeliste', body: 'Prisen bliver automatisk til både tilbud og materialeliste.' },
         { mockup: screens.share, title: 'Lad kunden regne selv', body: <>Dit eget link — <strong>{linkText}</strong>. Læg det på hjemmesiden eller send på SMS/mail, så kunden regner selv.</> },
         { mockup: screens.complex, title: 'Komplekse opgaver', body: 'Er en opgave for kompleks til en fast pris? Så beskriver kunden den og sender en forespørgsel — og I aftaler en besigtigelse.' },
-        { mockup: screens.customize, title: 'Tilpas din beregner', body: 'Slå de opgaver fra, du ikke laver — så viser beregneren kun det relevante.' },
+        { mockup: screens.customize, title: 'Vælg dine opgaver', body: 'Slå de opgaver fra, du ikke laver — så viser beregneren kun det relevante.' },
+        { mockup: screens.tune, title: 'Finjustér priserne', body: 'Under Prisberegning kan du simulere scenarier og justere materialepriser, avance og buffer — så beregneren rammer præcis dine priser.' },
     ];
 
     const totalSteps = STEPS.length;
