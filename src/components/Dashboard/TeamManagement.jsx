@@ -5,6 +5,15 @@ import { UserPlus, Users, Trash2, Mail, Briefcase, Phone, Loader2, TrendingUp, T
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { SubcontractorManager, BeautifulPhoneInput } from './Subcontractors';
+import SectionTour from './SectionTour';
+import { shouldShowCoach } from './coachmarks';
+
+// Rundtur for Team & Medarbejdere — let men grundig. Kun desktop, admin, første gang.
+const TEAM_TOUR_STEPS = [
+    { sel: '[data-tour="team-invite"]', placement: 'right', eyebrow: 'Team & Medarbejdere', title: 'Sådan tilføjer du en medarbejder', body: 'Skriv navn, vælg rolle (Svend, Lærling, Projektleder eller Mester) og send invitationen — så får de deres eget login. Du ser med det samme, hvad det koster pr. måned.' },
+    { sel: '[data-tour="team-members"]', placement: 'left', eyebrow: 'Holdet', title: 'Overblik over hele holdet', body: 'Her er alle med deres roller. Hver medarbejder ser kun de sager, de er sat på — og registrerer timer der.' },
+    { sel: '[data-tour="team-subs"]', placement: 'top', eyebrow: 'Eksterne', title: 'Underleverandører & gæste-login', body: 'Tilføj eksterne partnere. Send dem et gæste-login, så de kun kan registrere timer på den sag, de er på — eller opret dem som ren kontakt (telefon + kontaktperson), så alle på holdet kan få fat i dem.' },
+];
 import { isValidLonnummer } from '../../utils/payroll';
 import UserAvatar from '../ui/UserAvatar';
 import { priceForAddingRole, formatKr, computePrice } from '../../utils/pricing';
@@ -31,6 +40,7 @@ const getRoleLabel = (role) => {
 };
 
 const TeamManagement = ({ profile, leadsData = [] }) => {
+    const [teamTourActive, setTeamTourActive] = useState(() => profile?.role === 'admin' && shouldShowCoach('team_tour'));
     const [expandedEmployee, setExpandedEmployee] = useState(null);
     const [team, setTeam] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -406,6 +416,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                 {(() => {
                     const card = (
                     <div
+                        data-tour="team-invite"
                         className="settings-card sticky top-6"
                         onClick={isMobile ? (e) => e.stopPropagation() : undefined}
                         style={isMobile
@@ -640,7 +651,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             })()}
 
                 {/* Team Liste */}
-                <div className="team-list-column lg:col-span-2">
+                <div data-tour="team-members" className="team-list-column lg:col-span-2">
                     <div className="settings-card" style={{ overflow: 'visible' }}>
                         <div className="card-header">
                             <div className="icon-wrapper">
@@ -1006,7 +1017,13 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
             </div>
 
             {/* Underleverandører (eksterne partnere uden login) */}
+            <div data-tour="team-subs">
             <SubcontractorManager profile={profile} isMobile={isMobile} leadsData={leadsData} />
+            </div>
+
+            {teamTourActive && !isMobile && (
+                <SectionTour tourKey="team_tour" steps={TEAM_TOUR_STEPS} onDone={() => setTeamTourActive(false)} />
+            )}
 
             {/* ---- BEKRÆFT ADMIN-FORFREMMELSE ---- */}
             {pendingPromo && createPortal(

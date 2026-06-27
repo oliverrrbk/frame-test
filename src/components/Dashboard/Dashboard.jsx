@@ -6843,7 +6843,10 @@ const Dashboard = () => {
             {/* Trial-påmindelse — vises ALDRIG mens onboarding/password-modal er åben (ellers spærrer den
                 for at trykke videre, særligt på mobil). På mobil er den en lille, diskret pille der kan
                 foldes ud eller skjules, så den aldrig blokerer for arbejdet. */}
-            {trialDaysLeft > 0 && !isPaywallActive && effectiveRole === 'admin' && !carpenterProfile?.payment_customer_id && !showOnboarding && !showSetPassword && !trialPillDismissed && (!isMobile || activeTab === 'overview') && createPortal(
+            {/* Prøveperiode-påmindelsen vises KUN til mester(e) — det er dem der betaler. Svende,
+                lærlinge, bogholdere og projektledere (worker/apprentice/accountant/sales) skal aldrig
+                pines med eller mindes om abonnementet. 'admin' = ejer, 'boss' = ekstra mester. */}
+            {trialDaysLeft > 0 && !isPaywallActive && ['admin', 'boss'].includes(effectiveRole) && !carpenterProfile?.payment_customer_id && !showOnboarding && !showSetPassword && !trialPillDismissed && (!isMobile || activeTab === 'overview') && createPortal(
                 isMobile ? (
                     /* På mobil sidder pillen tæt OVEN PÅ den sorte del-knap (MobileQuickShare),
                        der står i bunden ved bottom:24px/60px høj. Vi bruger SAMME koordinatsystem
