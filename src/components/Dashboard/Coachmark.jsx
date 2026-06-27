@@ -135,7 +135,7 @@ export default function Coachmark({
                             marginLeft: 'auto', background: 'none', border: 'none', color: '#8a8a8a',
                             fontSize: 11.5, cursor: 'pointer', textDecoration: 'underline',
                             textUnderlineOffset: 2, fontFamily: 'inherit',
-                        }}>Spring guiden over</button>
+                        }}>Spring denne guide over</button>
                     )}
                 </div>
             </div>

@@ -6,7 +6,7 @@
 // ============================================================================
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import Coachmark from './Coachmark';
-import { markCoachSeen, skipAllCoach } from './coachmarks';
+import { markCoachSeen } from './coachmarks';
 
 const STEPS = [
     { sel: '[data-tour="overview-kpi"]', placement: 'bottom', eyebrow: 'Velkommen til Frame', title: 'Det her er dit overblik', body: 'Omsætning, aktive sager og nye forespørgsler — ét sted, opdateret live.' },
@@ -48,7 +48,7 @@ export default function DashboardTour({ onDone }) {
 
     const finish = () => { markCoachSeen('dashboard_tour'); onDone && onDone(); };
     const next = () => { if (idx < STEPS.length - 1) setIdx(i => i + 1); else finish(); };
-    const skip = () => { skipAllCoach(); finish(); };
+    const skip = () => finish();   // per-guide: markér kun denne (overblik) som set
 
     if (!ready) return null;
     const s = STEPS[idx];

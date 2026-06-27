@@ -10,7 +10,7 @@
 // ============================================================================
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import Coachmark from './Coachmark';
-import { markCoachSeen, skipAllCoach } from './coachmarks';
+import { markCoachSeen } from './coachmarks';
 
 export default function SectionTour({ steps = [], tourKey, onDone, zBase = 100040 }) {
     const [idx, setIdx] = useState(0);
@@ -50,7 +50,9 @@ export default function SectionTour({ steps = [], tourKey, onDone, zBase = 10004
     const s = steps[idx];
     const total = steps.filter(x => !x.last).length;
     const next = () => { if (idx < steps.length - 1) setIdx(i => i + 1); else finish(); };
-    const skip = () => { skipAllCoach(); finish(true); };
+    // Per-guide: "Spring denne guide over" markerer KUN denne guide som set —
+    // alle andre guides dukker stadig op på deres steder.
+    const skip = () => finish(true);
 
     return (
         <Coachmark
