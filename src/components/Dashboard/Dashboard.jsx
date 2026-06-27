@@ -901,6 +901,7 @@ const Dashboard = () => {
     const [leadsTourDone, setLeadsTourDone] = useState(false);
     const [integrationsTourDone, setIntegrationsTourDone] = useState(false);
     const [calcGuideDone, setCalcGuideDone] = useState(false);
+    const [showCalcCategories, setShowCalcCategories] = useState(false);
     // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
     // så man lander præcis hvor man tilføjer kort — ikke i toppen ved firmaoplysninger.
     const goToBilling = () => {
@@ -6522,6 +6523,40 @@ const Dashboard = () => {
             )}
 
             
+            {/* Tilpas Prisberegner — opgavetyper til/fra (Bison glas-stil) */}
+            {showCalcCategories && createPortal(
+                <div onClick={() => setShowCalcCategories(false)} style={{ position: 'fixed', inset: 0, zIndex: 100130, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                    <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, maxHeight: '88vh', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: 26, border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 30px 80px rgba(0,0,0,0.4)', overflow: 'hidden', animation: 'fadeIn 0.25s ease-out' }}>
+                        <div style={{ padding: '24px 26px 16px', position: 'relative' }}>
+                            <button onClick={() => setShowCalcCategories(false)} style={{ position: 'absolute', top: 18, right: 18, width: 34, height: 34, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 46, height: 46, borderRadius: 14, background: '#eff6ff', marginBottom: 12 }}><Calculator size={24} color="#2563eb" /></div>
+                            <h3 style={{ margin: '0 0 6px', fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>Tilpas din prisberegner</h3>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.92rem', lineHeight: 1.5 }}>Slå de opgaver fra, du ikke laver — så viser beregneren kun det, der er relevant for dig og dine kunder.</p>
+                        </div>
+                        <div style={{ overflowY: 'auto', padding: '4px 18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {initialCategories.map(cat => {
+                                const isActive = !disabledCategories.includes(cat.id);
+                                return (
+                                    <button key={cat.id} onClick={() => toggleCategoryActive(cat.id)} disabled={isSaving}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', borderRadius: 16, border: '1px solid ' + (isActive ? '#bbf7d0' : '#e2e8f0'), background: isActive ? 'rgba(236,253,245,0.7)' : 'rgba(248,250,252,0.7)', cursor: isSaving ? 'wait' : 'pointer', textAlign: 'left', transition: 'all 0.18s', width: '100%' }}
+                                        onMouseEnter={(e) => { if (!isSaving) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(15,23,42,0.06)'; } }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
+                                        <span style={{ fontSize: '0.98rem', fontWeight: 700, color: isActive ? '#0f172a' : '#94a3b8' }}>{cat.label}</span>
+                                        <span style={{ position: 'relative', width: 46, height: 26, borderRadius: 999, background: isActive ? 'linear-gradient(145deg,#10b981,#059669)' : '#cbd5e1', transition: 'background 0.2s', flexShrink: 0, boxShadow: isActive ? '0 4px 10px rgba(16,185,129,0.35)' : 'none' }}>
+                                            <span style={{ position: 'absolute', top: 3, left: isActive ? 23 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.2s cubic-bezier(.34,1.4,.64,1)', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }} />
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div style={{ padding: '14px 26px 20px', borderTop: '1px solid rgba(226,232,240,0.7)' }}>
+                            <button onClick={() => setShowCalcCategories(false)} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 800, fontSize: '0.98rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(15,23,42,0.25)' }}>Færdig</button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {/* Create Lead Cancel Confirm Modal */}
             {showCreateLeadCancelConfirm && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100001, padding: '20px', animation: 'fadeIn 0.2s ease-out' }} onClick={() => setShowCreateLeadCancelConfirm(false)}>
@@ -6570,11 +6605,12 @@ const Dashboard = () => {
                                     onSelectClassic={() => setCreateLeadMode('classic')}
                                     onSelectCustom={() => setCreateLeadMode('custom')}
                                     onSelectQuick={() => setCreateLeadMode('quick')}
+                                    onCustomizeCalculator={effectiveRole === 'admin' ? () => setShowCalcCategories(true) : undefined}
                                 />
                             )}
                             
                             {createLeadMode === 'classic' && !isMobile && !calcGuideDone && shouldShowCoach('calculator_guide') && (
-                                <CalculatorGuide onDone={() => setCalcGuideDone(true)} />
+                                <CalculatorGuide slug={carpenterProfile?.slug} onDone={() => setCalcGuideDone(true)} />
                             )}
 
                             {createLeadMode === 'classic' && (

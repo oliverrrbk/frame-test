@@ -6,7 +6,7 @@
 // ============================================================================
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Calculator, ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { Calculator, ChevronRight, ChevronLeft, X, Globe, Copy } from 'lucide-react';
 import { markCoachSeen } from './coachmarks';
 
 const BLUE = '#2563eb';
@@ -35,8 +35,9 @@ const miniCard = (label, color, bg, active) => (
     </div>
 );
 
-export default function CalculatorGuide({ onDone }) {
-    const [step, setStep] = useState(0); // 0 intro · 1 vælg · 2 spørgsmål · 3 pris · 4 tilbud
+export default function CalculatorGuide({ onDone, slug }) {
+    const [step, setStep] = useState(0); // 0 intro · 1 vælg · 2 spørgsmål · 3 pris · 4 tilbud · 5 del
+    const linkText = `bisonframe.dk/${slug || 'dit-firma'}`;
 
     const finish = () => { markCoachSeen('calculator_guide'); onDone && onDone(); };
 
@@ -90,16 +91,48 @@ export default function CalculatorGuide({ onDone }) {
             </Screen>
         ),
         quote: (
-            <Screen label="Bliv til et tilbud">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, height: 90 }}>
-                    <div style={{ width: 56, height: 70, borderRadius: 10, border: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 5, padding: 8 }}>
-                        <div style={{ height: 6, width: '70%', borderRadius: 3, background: '#cbd5e1' }} />
-                        <div style={{ height: 5, width: '100%', borderRadius: 3, background: '#e2e8f0' }} />
-                        <div style={{ height: 5, width: '90%', borderRadius: 3, background: '#e2e8f0' }} />
-                        <div style={{ marginTop: 'auto', height: 7, width: '55%', borderRadius: 3, background: '#10b981' }} />
+            <Screen label="Bliv til tilbud + materialeliste">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, height: 110 }}>
+                    {/* prisen */}
+                    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '10px 12px', borderRadius: 10, background: '#ecfdf5', border: '1px solid #a7f3d0' }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '.05em' }}>Pris</span>
+                        <span style={{ fontSize: 13, fontWeight: 900, color: '#047857' }}>27.250</span>
                     </div>
-                    <ChevronRight size={22} color="#94a3b8" />
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 14px', borderRadius: 12, background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: 12, boxShadow: '0 8px 18px rgba(16,185,129,0.3)' }}>Send tilbud</div>
+                    <ChevronRight size={18} color="#94a3b8" />
+                    {/* to dokumenter: tilbud + materialeliste */}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        {[['Tilbud', '#10b981'], ['Materialer', '#3b82f6']].map(([lbl, col]) => (
+                            <div key={lbl} style={{ width: 52, height: 66, borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', display: 'flex', flexDirection: 'column', gap: 4, padding: 7, boxShadow: '0 6px 14px rgba(15,23,42,0.06)' }}>
+                                <div style={{ height: 5, width: '75%', borderRadius: 3, background: '#cbd5e1' }} />
+                                <div style={{ height: 4, width: '100%', borderRadius: 2, background: '#eef2f6' }} />
+                                <div style={{ height: 4, width: '90%', borderRadius: 2, background: '#eef2f6' }} />
+                                <div style={{ marginTop: 'auto', height: 6, width: '60%', borderRadius: 3, background: col }} />
+                                <span style={{ fontSize: 8, fontWeight: 800, color: '#94a3b8', textAlign: 'center' }}>{lbl}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </Screen>
+        ),
+        share: (
+            <Screen label="Dit personlige link">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: `1.5px solid ${BLUE}`, borderRadius: 12, padding: '9px 10px', boxShadow: `0 0 0 4px ${BLUE}1f`, marginBottom: 14 }}>
+                    <Globe size={15} color={BLUE} style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{linkText}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 9px', borderRadius: 8, background: '#0f172a', color: '#fff', fontSize: 10, fontWeight: 800, flexShrink: 0 }}><Copy size={11} /> Kopiér</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <div style={{ width: 130, borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', gap: 4, padding: '6px 8px', background: '#f8fafc', borderBottom: '1px solid #eef2f6' }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#cbd5e1' }} />
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#cbd5e1' }} />
+                        </div>
+                        <div style={{ padding: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
+                            <span style={{ fontSize: 9, fontWeight: 800, color: '#64748b' }}>Din hjemmeside</span>
+                            <div style={{ height: 5, width: '80%', borderRadius: 3, background: '#eef2f6' }} />
+                            <div style={{ padding: '6px 12px', borderRadius: 8, background: 'linear-gradient(145deg,#2563eb,#1d4ed8)', color: '#fff', fontSize: 9, fontWeight: 800 }}>Beregn pris</div>
+                        </div>
+                    </div>
                 </div>
             </Screen>
         ),
@@ -110,7 +143,8 @@ export default function CalculatorGuide({ onDone }) {
         { mockup: screens.choose, title: 'Vælg opgaven', body: 'Start med at vælge hvad opgaven handler om — fx tag, gulv eller vinduer.' },
         { mockup: screens.questions, title: 'Svar på et par spørgsmål', body: 'Beregneren spørger ind til mål og materialer — næsten som hvis du var kunden. Det tager under et minut.' },
         { mockup: screens.price, title: 'Få prisen med det samme', body: 'Du får et prisoverslag bygget på Frames standardpriser — så du altid rammer rigtigt.' },
-        { mockup: screens.quote, title: 'Lav tilbuddet', body: 'Ret prisen til hvis du vil, og send tilbuddet direkte til kunden. Så er du i gang.' },
+        { mockup: screens.quote, title: 'Bliv til tilbud + materialeliste', body: 'Prisen bliver automatisk til både et færdigt tilbud og en materialeliste — ret til hvis du vil, og send direkte til kunden. Det hænger sammen hele vejen.' },
+        { mockup: screens.share, title: 'Lad kunden regne selv', body: <>Du har dit eget link — <strong>{linkText}</strong>. Send det på SMS/mail eller læg det på din hjemmeside, så kunden selv regner prisen og sender dig en færdig forespørgsel. Vi hjælper gerne de første med at få det på hjemmesiden.</> },
     ];
 
     const totalSteps = STEPS.length;

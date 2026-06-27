@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calculator, Mic, FileText, ChevronRight } from 'lucide-react';
+import { Calculator, Mic, FileText, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import Coachmark from './Coachmark';
 import { shouldShowCoach, markCoachSeen } from './coachmarks';
 
@@ -28,7 +28,7 @@ const TOUR = [
     { eyebrow: 'Sådan laver du tilbud', title: 'Tilbud fra bunden (avanceret)', body: 'Byg tilbuddet op trin for trin, og lad AI hjælpe undervejs. Prøv den når du er varm i systemet.' },
 ];
 
-const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, isMobile = false, allowCalculator = true }) => {
+const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, onCustomizeCalculator, isMobile = false, allowCalculator = true }) => {
     const cardRefs = [useRef(null), useRef(null), useRef(null)];
     // Guidet gennemgang kun på computer + første gang — og kun når der er flere kort
     // (ikke-tømrere ser kun Hurtigt tilbud, så ingen gennemgang).
@@ -135,6 +135,20 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, is
                 </div>
                 </>)}
             </div>
+
+            {/* Tilpas hvilke opgaver beregneren viser — lige ved Prisberegneren (ikke gemt i Indstillinger) */}
+            {allowCalculator && onCustomizeCalculator && !guiding && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: isMobile ? '20px' : '28px' }}>
+                    <button
+                        onClick={onCustomizeCalculator}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '999px', border: '1px solid #e2e8f0', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', color: '#475569', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.color = '#1d4ed8'; e.currentTarget.style.boxShadow = '0 10px 24px rgba(59,130,246,0.15)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.05)'; }}
+                    >
+                        <SlidersHorizontal size={16} /> Tilpas hvilke opgaver beregneren viser
+                    </button>
+                </div>
+            )}
 
             {/* Guidet gennemgang — boble peger på det aktive kort */}
             {guiding && (
