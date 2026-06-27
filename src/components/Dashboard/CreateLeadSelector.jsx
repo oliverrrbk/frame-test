@@ -116,18 +116,9 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, on
                 </>)}
             </div>
 
-            {/* Avanceret: tilbud fra bunden (AI / fler-etape) — demoteret fra primært kort,
-                men stadig tilgængelig her (og bruges af medarbejder-kladder). */}
-            {onSelectCustom && !guiding && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: isMobile ? '16px' : '20px' }}>
-                    <button onClick={onSelectCustom}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#94a3b8', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '3px', padding: '6px 10px' }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = '#475569'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
-                        Avanceret: byg tilbud fra bunden (fler-etape)
-                    </button>
-                </div>
-            )}
+            {/* "Tilbud fra bunden" er helt taget ud af oprettelses-vælgeren (kan ikke vælges
+                af nogen). Komponenten (CustomProjectCreator) er bevaret i koden, men har
+                ingen indgang længere — let at genaktivere senere hvis ønsket. */}
 
             {/* Tilpas hvilke opgaver beregneren viser — lige ved Prisberegneren (ikke gemt i Indstillinger) */}
             {allowCalculator && onCustomizeCalculator && !guiding && (
