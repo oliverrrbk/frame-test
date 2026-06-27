@@ -65,6 +65,12 @@ const PRICING_TOUR_STEPS = [
     { sel: '[data-tour="settings-test"]', placement: 'top', eyebrow: 'Prøv det', title: 'Test din beregner', body: 'Har du justeret dine priser? Åbn simulatoren og tjek, at alt regner som det skal — test-beregninger gemmes ikke som opgaver.' },
 ];
 
+// Rundtur for Kortvisning (let). Kun desktop, første gang.
+const MAP_TOUR_STEPS = [
+    { sel: '[data-tour="map-filter"]', placement: 'bottom', eyebrow: 'Kortvisning', title: 'Filtrér visningen', body: 'Vælg hvad du vil se på kortet — nye forespørgsler, sendte tilbud, bekræftede opgaver og sager sat i bero.' },
+    { sel: '[data-tour="map-canvas"]', placement: 'top', eyebrow: 'Overblik', title: 'Alle sager på kortet', body: 'Her ligger dine sager geografisk på Danmarkskortet. Klik en nål for at åbne sagen direkte — så du nemt planlægger ruter og ser hvad der er i nærheden.' },
+];
+
 // Rundtur for Materialer (let). Kun desktop, første gang.
 const MATERIALS_TOUR_STEPS = [
     { sel: '[data-tour="materials-grid"]', placement: 'top', eyebrow: 'Materialer', title: 'Dine indkøbspriser', body: 'Her er dine materialer samlet i kategorier — tag, gulv, vinduer og flere. Priserne er dine indkøbspriser ekskl. moms.' },
@@ -918,6 +924,7 @@ const Dashboard = () => {
     const [integrationsTourDone, setIntegrationsTourDone] = useState(false);
     const [materialsTourDone, setMaterialsTourDone] = useState(false);
     const [pricingTourDone, setPricingTourDone] = useState(false);
+    const [mapTourDone, setMapTourDone] = useState(false);
     const [calcGuideDone, setCalcGuideDone] = useState(false);
     const [showCalcCategories, setShowCalcCategories] = useState(false);
     // Gå til kontoindstillinger OG scroll ned til "Frame Aftale" (kort/abonnement),
@@ -5907,6 +5914,9 @@ const Dashboard = () => {
                     
                     {activeTab === 'map' && (
                         <div className="dashboard-workspace map-overview space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+                            {['admin', 'sales'].includes(effectiveRole) && !isMobile && !showOnboarding && !showSetPassword && !mapTourDone && shouldShowCoach('map_tour') && (
+                                <SectionTour tourKey="map_tour" steps={MAP_TOUR_STEPS} onDone={() => setMapTourDone(true)} />
+                            )}
                             <div className="map-mobile-header glass-panel" style={{ padding: '24px', display: 'none', flexDirection: 'column', gap: '8px' }}>
                                 <h2 style={{ margin: 0, color: '#1a1a1a', fontSize: '1.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <MapPin size={28} color="#000" />
@@ -5919,7 +5929,7 @@ const Dashboard = () => {
                             <div className="settings-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 
                                 <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                    <div className="map-filter-panel glass-panel" style={{ padding: '20px', marginBottom: '20px' }}>
+                                    <div data-tour="map-filter" className="map-filter-panel glass-panel" style={{ padding: '20px', marginBottom: '20px' }}>
                                     {['admin', 'sales'].includes(effectiveRole) ? (
                                         <>
                                             <h4 style={{ margin: '0 0 16px', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>Filtrér visningen på kortet</h4>
@@ -5987,7 +5997,7 @@ const Dashboard = () => {
                                     )}
                                 </div>
                             
-                            <div className="map-canvas-panel" style={{ flex: 1, border: '1px solid #e8e6e1', borderRadius: '14px', overflow: 'hidden', marginTop: '16px', position: 'relative', zIndex: 0 }}>
+                            <div data-tour="map-canvas" className="map-canvas-panel" style={{ flex: 1, border: '1px solid #e8e6e1', borderRadius: '14px', overflow: 'hidden', marginTop: '16px', position: 'relative', zIndex: 0 }}>
                                 {!isLoaded ? (
                                     <div style={{ padding: '40px', textAlign: 'center' }}>Henter Google Maps HD miljøet...</div>
                                 ) : loadError ? (
