@@ -11,7 +11,7 @@ import { shouldShowCoach } from './coachmarks';
 // Rundtur for Team & Medarbejdere — let men grundig. Kun desktop, admin, første gang.
 const TEAM_TOUR_STEPS = [
     { sel: '[data-tour="team-invite"]', placement: 'right', eyebrow: 'Team & Medarbejdere', title: 'Sådan tilføjer du en medarbejder', body: 'Skriv navn, vælg rolle (Svend, Lærling, Projektleder eller Mester) og send invitationen — så får de deres eget login. Du ser med det samme, hvad det koster pr. måned.' },
-    { sel: '[data-tour="team-members"]', placement: 'left', eyebrow: 'Holdet', title: 'Overblik over hele holdet', body: 'Her er alle med deres roller. Hver medarbejder ser kun de sager, de er sat på — og registrerer timer der.' },
+    { sel: '[data-tour="team-demo-member"]', placement: 'left', eyebrow: 'Medarbejderen', title: 'Sådan ser en medarbejder ud', body: 'Når en medarbejder er oprettet, kan du se og ændre deres lønnummer, rolle og hvilke sager de er på — alt samlet på ét kort. De ser kun de sager, de selv er sat på.' },
     { sel: '[data-tour="team-subs"]', placement: 'top', eyebrow: 'Eksterne', title: 'Underleverandører & gæste-login', body: 'Tilføj eksterne partnere. Send dem et gæste-login, så de kun kan registrere timer på den sag, de er på — eller opret dem som ren kontakt (telefon + kontaktperson), så alle på holdet kan få fat i dem.' },
 ];
 import { isValidLonnummer } from '../../utils/payroll';
@@ -661,11 +661,39 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                         </div>
                         
                         <div className="card-body" style={{ padding: '0' }}>
+                            {/* Demo-medarbejder — vises kun under rundvisningen, så man ser hvordan
+                                en medarbejder ser ud (lønnummer, rolle, sager). Ikke en rigtig bruger. */}
+                            {teamTourActive && (
+                                <div data-tour="team-demo-member" style={{ position: 'relative', margin: '20px 16px', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                    <span style={{ position: 'absolute', top: -9, left: 16, zIndex: 1, background: '#0f172a', color: '#fff', fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: '20px' }}>Eksempel</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 18px', borderBottom: '1px solid #f1f5f9' }}>
+                                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#0f172a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.95rem', flexShrink: 0 }}>KH</div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '1.05rem' }}>Kasper Hansen</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>kasper@firma.dk</div>
+                                        </div>
+                                        <span style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '4px 10px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>Svend</span>
+                                    </div>
+                                    <div style={{ padding: '16px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                                        <div>
+                                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>Lønnummer</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 800, color: '#0f172a' }}>1002</span>
+                                                <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>kan ændres her</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>På sager</div>
+                                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.92rem' }}>2 aktive · Sag 1042, 1043</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             {isLoading ? (
                                 <div style={{ padding: '48px', display: 'flex', justifyContent: 'center', color: 'var(--text-muted)' }}>
                                     <Loader2 className="animate-spin" size={32} />
                                 </div>
-                            ) : team.length === 0 ? (
+                            ) : team.length === 0 && !teamTourActive ? (
                                 <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
                                     <HardHat size={48} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
                                     <p>Du har ikke oprettet nogen medarbejdere endnu.</p>

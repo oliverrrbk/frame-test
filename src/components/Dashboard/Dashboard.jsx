@@ -37,6 +37,7 @@ import { getFeatures } from '../../utils/features';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import Coachmark from './Coachmark';
 import DashboardTour from './DashboardTour';
+import FoundersWelcome from './FoundersWelcome';
 import SectionTour from './SectionTour';
 import MobileInstallGuide from './MobileInstallGuide';
 import CalculatorGuide from './CalculatorGuide';
@@ -896,6 +897,7 @@ const Dashboard = () => {
     // Kom-i-gang: helte-prik der peger på "Opret Ny Kunde" (kun desktop, første gang).
     const createLeadBtnRef = useRef(null);
     const [heroCoachDismissed, setHeroCoachDismissed] = useState(false);
+    const [foundersWelcomeDone, setFoundersWelcomeDone] = useState(false);
     const [dashboardTourDone, setDashboardTourDone] = useState(false);
     const [mobileGuideDone, setMobileGuideDone] = useState(false);
     const [leadsTourDone, setLeadsTourDone] = useState(false);
@@ -7035,8 +7037,12 @@ const Dashboard = () => {
                 />
             )}
 
-            {/* Velkomstrundtur — efter onboarding, kun desktop, kun første gang. Peger på menuen + den blå knap. */}
-            {effectiveRole === 'admin' && activeTab === 'overview' && !showOnboarding && !showSetPassword && !dashboardTourDone && shouldShowCoach('dashboard_tour') && (
+            {/* Personlig velkomst fra Oliver & Mads — ALLERFØRST (alle roller), før rundturen. */}
+            {activeTab === 'overview' && !showOnboarding && !showSetPassword && !foundersWelcomeDone && shouldShowCoach('founders_welcome') && (
+                <FoundersWelcome onDone={() => setFoundersWelcomeDone(true)} />
+            )}
+            {/* Velkomstrundtur — efter velkomsten, kun desktop, kun første gang. Peger på menuen + den blå knap. */}
+            {effectiveRole === 'admin' && activeTab === 'overview' && !showOnboarding && !showSetPassword && !dashboardTourDone && (foundersWelcomeDone || !shouldShowCoach('founders_welcome')) && shouldShowCoach('dashboard_tour') && (
                 <DashboardTour onDone={() => setDashboardTourDone(true)} />
             )}
             {/* "Få Frame på mobilen"-guiden kommer EFTER Oversigts-touren (desktop, første gang, spring-bar). */}
