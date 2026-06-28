@@ -420,7 +420,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                         className="settings-card sticky top-6"
                         onClick={isMobile ? (e) => e.stopPropagation() : undefined}
                         style={isMobile
-                            ? { overflow: 'auto', width: '100%', height: '100dvh', borderRadius: 0, margin: 0, top: 0, background: '#fff' }
+                            ? { overflow: 'auto', width: '100%', height: '100dvh', borderRadius: 0, margin: 0, top: 0, background: '#fff', paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }
                             : { overflow: 'visible' }}>
                         <div className="card-header" style={{ position: 'relative' }}>
                             <div className="icon-wrapper">
@@ -428,8 +428,8 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                             </div>
                             <h3>Tilføj Medarbejder</h3>
                             {isMobile && (
-                                <button onClick={() => setIsInviteModalOpen(false)} style={{ position: 'absolute', right: 0, top: 0, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}>
-                                    <X size={18} />
+                                <button onClick={() => setIsInviteModalOpen(false)} aria-label="Luk" style={{ position: 'fixed', right: '16px', top: 'calc(env(safe-area-inset-top) + 12px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '50%', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#334155', zIndex: 1002, boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
+                                    <X size={20} />
                                 </button>
                             )}
                         </div>
