@@ -33,6 +33,7 @@ const GuestDashboard = lazy(() => import('../Guest/GuestDashboard'));
 import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
+import CreateCaseForm from './CreateCaseForm';
 import { getFeatures } from '../../utils/features';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import MaterialListBuilder from './MaterialListBuilder';
@@ -3465,6 +3466,7 @@ const Dashboard = () => {
                                 }}
                                 onUpdateLead={(updated) => applyLocalLeadUpdate(updated)}
                                 onCreateQuote={() => setIsCreateLeadModalOpen(true)}
+                                onCreateCase={() => { setCreateLeadMode('case'); setIsCreateLeadModalOpen(true); }}
                                 onOpenMaterialBuilder={(lead, opts) => openMaterialBuilder(lead, opts)}
                             />
                         </div>
@@ -5960,6 +5962,7 @@ const Dashboard = () => {
                                     onSelectClassic={() => setCreateLeadMode('classic')}
                                     onSelectCustom={() => setCreateLeadMode('custom')}
                                     onSelectQuick={() => setCreateLeadMode('quick')}
+                                    onSelectCase={() => setCreateLeadMode('case')}
                                     onSelectMaterials={() => { setIsCreateLeadModalOpen(false); setCreateLeadMode(null); openMaterialBuilder(null); }}
                                     onCustomizeCalculator={effectiveRole === 'admin' ? () => setShowCalcCategories(true) : undefined}
                                 />
@@ -6018,6 +6021,31 @@ const Dashboard = () => {
                                             setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev.map(l => l.id === lead.id ? lead : l) : [lead, ...prev]);
                                         }
                                         await refreshLeadsData({ ensureLead: lead, selectLead: false });
+                                    }}
+                                />
+                            )}
+
+                            {createLeadMode === 'case' && (
+                                <CreateCaseForm
+                                    carpenter={carpenterProfile}
+                                    draftCreator={myProfile}
+                                    isMobile={isMobile}
+                                    onCancel={() => {
+                                        setIsCreateLeadModalOpen(false);
+                                        setCreateLeadMode(null);
+                                    }}
+                                    onComplete={async (lead) => {
+                                        setIsCreateLeadModalOpen(false);
+                                        setCreateLeadMode(null);
+                                        // Sagen er allerede aktiv → land i Sager & Ordrestyring og åbn den.
+                                        setActiveTab('cases');
+                                        setSearchQuery('');
+                                        if (lead?.id) {
+                                            rememberLocalLead(lead);
+                                            setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev : [lead, ...prev]);
+                                            setTargetCaseId(lead.id);
+                                        }
+                                        await refreshLeadsData({ ensureLead: lead });
                                     }}
                                 />
                             )}

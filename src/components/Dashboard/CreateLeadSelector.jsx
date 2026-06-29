@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calculator, FileText, ChevronRight, SlidersHorizontal, Package } from 'lucide-react';
+import { Calculator, FileText, ChevronRight, SlidersHorizontal, Package, HardHat } from 'lucide-react';
 import Coachmark from './Coachmark';
 import { shouldShowCoach, markCoachSeen } from './coachmarks';
 
@@ -27,7 +27,7 @@ const TOUR = [
     { eyebrow: 'Sådan laver du tilbud', title: 'Prisberegner', body: 'Gå igennem som var du kunden — få et hurtigt overslag på opgaven, og ret til bagefter.' },
 ];
 
-const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, onSelectMaterials, onCustomizeCalculator, isMobile = false, allowCalculator = true }) => {
+const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, onSelectCase, onSelectMaterials, onCustomizeCalculator, isMobile = false, allowCalculator = true }) => {
     const cardRefs = [useRef(null), useRef(null)];
     // Guidet gennemgang kun på computer + første gang — og kun når der er flere kort
     // (ikke-tømrere ser kun Hurtigt tilbud, så ingen gennemgang).
@@ -115,6 +115,31 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, on
 
                 </>)}
             </div>
+
+            {/* Opret sag uden tilbud — for tømreren der bare kører ud, arbejder på timepris
+                og fakturerer bagefter. Fuld bredde under kortene, så den passer uanset om
+                beregneren er slået til (2 kort) eller ej (1 kort). */}
+            {onSelectCase && !guiding && (
+                <div style={{ maxWidth: allowCalculator ? '760px' : '460px', margin: '20px auto 0' }}>
+                    <div
+                        onClick={onSelectCase}
+                        style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: isMobile ? '18px' : '20px 24px', background: '#fff', borderRadius: '16px', border: '2px solid #d1fae5', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 6px 18px rgba(16,185,129,0.06)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.boxShadow = '0 16px 32px rgba(16,185,129,0.15)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#d1fae5'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(16,185,129,0.06)'; }}
+                    >
+                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <HardHat size={28} color="#10b981" />
+                        </div>
+                        <div style={{ flex: 1, textAlign: 'left' }}>
+                            <h3 style={{ fontSize: '1.2rem', color: '#1e293b', margin: '0 0 4px' }}>Opret sag (uden tilbud)</h3>
+                            <p style={{ color: '#64748b', lineHeight: '1.45', margin: 0, fontSize: isMobile ? '0.9rem' : '0.95rem' }}>{isMobile ? 'Kører du bare ud på timepris? Opret sagen direkte.' : 'Kører du bare ud, arbejder på timepris og fakturerer bagefter? Opret sagen direkte med kundeoplysninger — uden et tilbud.'}</p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: 'bold', flexShrink: 0 }}>
+                            {!isMobile && 'Opret sag'} <ChevronRight size={18} />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Selvstændig genvej: lav en materialeliste uden et tilbud (fx send til Davidsen
                 for en pris, før du laver tilbuddet). Diskret link så de tre kort holder fokus. */}
