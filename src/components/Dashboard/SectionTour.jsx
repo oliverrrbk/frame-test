@@ -74,8 +74,8 @@ export default function SectionTour({ steps = [], tourKey, onDone, onStepChange,
             body={s.body}
             primaryLabel={isLast ? 'Kom i gang' : 'Næste'}
             onPrimary={next}
-            onSkip={isLast ? null : skip}
-            onClose={finish}
+            onSkip={skip}
+            onClose={() => finish(true)}
         />
     );
 }
