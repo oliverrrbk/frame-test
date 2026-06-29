@@ -262,13 +262,32 @@ const PREVIEW_CSS = `
   .qqb-tbtn:active{transform:translateY(1px);}
   .qqb-newtpl{transition:transform .12s ease,box-shadow .15s ease,filter .12s ease;}
   .qqb-newtpl:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(59,130,246,.28);filter:brightness(1.02);}
-  .qqb-tplcard{transition:border-color .12s ease,box-shadow .12s ease,transform .12s ease;}
-  .qqb-tplcard:hover{border-color:#bfdbfe !important;box-shadow:0 6px 18px rgba(59,130,246,.13);transform:translateY(-1px);}
-  .qqb-tpl-preview{font-size:0.82rem;color:#64748b;line-height:1.45;max-height:62px;overflow:hidden;position:relative;}
-  .qqb-tpl-preview *{margin:0 !important;font-size:0.82rem !important;line-height:1.45 !important;}
-  .qqb-tpl-preview b,.qqb-tpl-preview strong,.qqb-tpl-preview h2,.qqb-tpl-preview h3{font-weight:800 !important;color:#475569 !important;}
-  .qqb-tpl-preview ul,.qqb-tpl-preview ol{padding-left:18px;}
-  .qqb-tpl-preview::after{content:'';position:absolute;left:0;right:0;bottom:0;height:18px;background:linear-gradient(transparent,#fff);}
+  /* Skabelon-galleri (fuldskærm) */
+  .qqb-tplgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;align-items:start;}
+  .qqb-tplnew{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:300px;border-radius:16px;border:2px dashed #bfdbfe;background:linear-gradient(160deg,#f8fafc,#eff6ff);color:#1d4ed8;font-weight:800;font-size:0.92rem;cursor:pointer;transition:transform .12s ease,box-shadow .15s ease,border-color .12s ease;}
+  .qqb-tplnew:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(59,130,246,.18);border-color:#3b82f6;}
+  .qqb-tplnew-circle{width:56px;height:56px;border-radius:50%;background:#fff;border:1px solid #dbeafe;display:flex;align-items:center;justify-content:center;color:#3b82f6;box-shadow:0 6px 16px rgba(59,130,246,.18);}
+  .qqb-tplpaper{display:flex;flex-direction:column;border-radius:16px;background:#fff;border:1px solid #e2e8f0;overflow:hidden;transition:transform .12s ease,box-shadow .15s ease,border-color .12s ease;}
+  .qqb-tplpaper:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(15,23,42,.14);border-color:#cbd5e1;}
+  .qqb-paperthumb{position:relative;height:212px;background:#fff;cursor:pointer;overflow:hidden;border-bottom:1px solid #f1f5f9;}
+  .qqb-paperthumb::after{content:'';position:absolute;left:0;right:0;bottom:0;height:46px;background:linear-gradient(transparent,#fff);}
+  .qqb-paperdoc{padding:18px 20px;font-size:0.74rem;line-height:1.5;color:#475569;}
+  .qqb-paperdoc>*:first-child{margin-top:0 !important;}
+  .qqb-paperdoc h2{font-size:0.95rem;font-weight:800;color:#0f172a;margin:8px 0 4px;}
+  .qqb-paperdoc h3{font-size:0.84rem;font-weight:800;color:#0f172a;margin:7px 0 3px;}
+  .qqb-paperdoc p{margin:0 0 5px;}
+  .qqb-paperdoc b,.qqb-paperdoc strong{font-weight:800;color:#334155;}
+  .qqb-paperdoc ul,.qqb-paperdoc ol{margin:4px 0;padding-left:18px;}
+  .qqb-paperdoc li{margin:1px 0;}
+  .qqb-paperfoot{padding:13px 14px 15px;}
+  .qqb-papername{font-weight:800;font-size:0.9rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .qqb-paperedit:hover{border-color:#94a3b8 !important;background:#f8fafc !important;}
+  /* Word-agtigt dokument i editoren */
+  .qqb-docpage{padding:clamp(28px,5vw,56px) clamp(24px,6vw,64px);}
+  .qqb-docpage h2{font-size:1.5rem;font-weight:800;margin:18px 0 8px;}
+  .qqb-docpage h3{font-size:1.2rem;font-weight:700;margin:14px 0 6px;}
+  .qqb-docpage p{margin:0 0 10px;}
+  .qqb-docpage ul,.qqb-docpage ol{margin:8px 0;}
   @keyframes qqbspin{to{transform:rotate(360deg);}}
   .qqb-spin{animation:qqbspin .8s linear infinite;}
   @keyframes qqbrec{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.8);}}
@@ -372,7 +391,11 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const [tplName, setTplName] = useState('');
     const [tplSaving, setTplSaving] = useState(false);
     const [tplConfirmDelete, setTplConfirmDelete] = useState(false);
+    const [tplReplaceConfirm, setTplReplaceConfirm] = useState(null);   // skabelon der venter på bekræftet erstatning
     const tplEditorRef = useRef(null);
+    // Hvad blev sidst indsat (renset HTML) — så vi ved om beskrivelsen er "ren" skabelon
+    // eller om brugeren har skrevet egne ting (og dermed skal advares før overskrivning).
+    const lastTemplateHtmlRef = useRef('');
 
     // Hent firmaets skabeloner én gang ved mount.
     useEffect(() => {
@@ -382,24 +405,26 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Indsæt en skabelon i arbejdsbeskrivelsen — ved markøren hvis den står inde i
-    // feltet, ellers tilføjet i bunden. Bagefter kan den frit rettes.
-    const insertTemplate = (tpl) => {
-        const el = workEditorRef.current;
-        if (!el) return;
+    // Læg en skabelon ind i arbejdsbeskrivelsen — ERSTATTER altid indholdet, så man
+    // aldrig stabler to skabeloner oven på hinanden. Bagefter kan den frit rettes.
+    const applyTemplate = (tpl) => {
         const clean = sanitizeHtml(tpl.body_html || '');
         if (!clean.trim()) { toast.error('Skabelonen er tom'); return; }
-        el.focus();
-        const sel = window.getSelection();
-        const caretInside = sel && sel.rangeCount > 0 && el.contains(sel.anchorNode);
-        const cur = el.innerHTML || '';
-        if (caretInside && cur.trim()) {
-            document.execCommand('insertHTML', false, clean);
-        } else {
-            el.innerHTML = cur.trim() ? `${cur}<br>${clean}` : clean;
-        }
-        setWorkDescHtml(el.innerHTML);
+        if (workEditorRef.current) workEditorRef.current.innerHTML = clean;
+        setWorkDescHtml(clean);
+        lastTemplateHtmlRef.current = clean;
         toast.success(`Skabelon "${tpl.name}" indsat`);
+        setTplReplaceConfirm(null);
+        setTplLibraryOpen(false);
+        setTplModalOpen(false);
+    };
+    // Vælg en skabelon: erstat direkte hvis feltet er tomt eller stadig er en uændret
+    // skabelon; ellers spørg først (så man ikke kommer til at slette egen tekst).
+    const chooseTemplate = (tpl) => {
+        const cur = (workEditorRef.current?.innerHTML ?? workDescHtml ?? '').trim();
+        const isCleanSlate = !cur || cur === lastTemplateHtmlRef.current || sanitizeHtml(cur) === lastTemplateHtmlRef.current;
+        if (isCleanSlate) applyTemplate(tpl);
+        else setTplReplaceConfirm(tpl);
     };
 
     // Åbn popup'en — enten tom (ny) eller forudfyldt (rediger eksisterende).
@@ -453,6 +478,13 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         } finally {
             setTplSaving(false);
         }
+    };
+
+    // Indsæt den skabelon man har åben i editoren direkte i tilbuddet (erstatter beskrivelsen).
+    const insertFromEditor = () => {
+        const html = sanitizeHtml(tplEditorRef.current?.innerHTML || '');
+        if (!html.trim()) { toast.error('Skabelonen er tom' ); return; }
+        chooseTemplate({ name: tplName.trim() || 'Skabelon', body_html: html });
     };
 
     // Kunde — strukturerede felter (gade/postnr/by) hentes fra customerDetails hvis de findes.
@@ -1102,7 +1134,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             {content}
         </button>
     );
-    const renderRichEditor = (ref, onChange, placeholder, minHeight = '96px', dictation = null) => {
+    const renderRichEditor = (ref, onChange, placeholder, minHeight = '96px', dictation = null, docMode = false) => {
         const sync = () => { if (ref.current) onChange(ref.current.innerHTML); };
         const exec = (cmd) => { ref.current?.focus(); document.execCommand(cmd, false, null); sync(); };
         // Skift blok-type (overskrift/brødtekst). Klik på en aktiv overskrift slår den fra igen.
@@ -1121,9 +1153,12 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             sync();
         };
         const tdiv = <span style={{ width: '1px', height: '22px', background: '#e2e8f0', margin: '0 3px', flexShrink: 0 }} />;
+        const toolbarStyle = docMode
+            ? { display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 2, background: '#fff', borderBottom: '1px solid #f1f5f9', padding: '10px 14px', borderTopLeftRadius: 12, borderTopRightRadius: 12 }
+            : { display: 'flex', gap: '5px', marginBottom: '8px', alignItems: 'center', flexWrap: 'wrap' };
         return (
             <>
-                <div style={{ display: 'flex', gap: '5px', marginBottom: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={toolbarStyle}>
                     {tbtn('Overskrift', () => fmtBlock('h2'), <Heading2 size={16} />)}
                     {tbtn('Underoverskrift', () => fmtBlock('h3'), <Heading3 size={16} />)}
                     {tdiv}
@@ -1165,14 +1200,16 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 </div>
                 <div
                     ref={ref}
-                    className="qqb-input qqb-editor"
+                    className={docMode ? 'qqb-editor qqb-docpage' : 'qqb-input qqb-editor'}
                     contentEditable
                     suppressContentEditableWarning
                     data-placeholder={placeholder}
                     onInput={sync}
                     onBlur={sync}
                     onPaste={onPaste}
-                    style={{ ...input, minHeight, lineHeight: 1.5 }}
+                    style={docMode
+                        ? { minHeight, lineHeight: 1.7, fontSize: '1rem', color: '#1e293b', outline: 'none', maxHeight: 'none' }
+                        : { ...input, minHeight, lineHeight: 1.5 }}
                 />
             </>
         );
@@ -1786,138 +1823,161 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     </div>
                 )}
 
-                {/* Skabelon-bibliotek: ét vindue med alle firmaets skabeloner — vælg, rediger eller opret. */}
+                {/* Skabelon-bibliotek: fuldskærm med Word-agtige previews — kig, vælg eller rediger. */}
                 {tplLibraryOpen && (
                     <div
                         className="qqb-confirm-backdrop"
                         onClick={() => setTplLibraryOpen(false)}
-                        style={{ position: 'fixed', inset: 0, zIndex: 100085, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 'calc(24px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100085, background: 'rgba(15,23,42,0.62)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(8px, 2vw, 28px)', paddingTop: 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-top))', paddingBottom: 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-bottom))' }}
                     >
                         <div
                             onClick={(e) => e.stopPropagation()}
-                            style={{ width: 'min(680px, 100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 24, boxShadow: '0 30px 80px rgba(15,23,42,0.45)', overflow: 'hidden' }}
+                            style={{ width: 'min(1200px, 100%)', height: '94vh', display: 'flex', flexDirection: 'column', background: '#f1f5f9', borderRadius: 22, boxShadow: '0 30px 80px rgba(15,23,42,0.45)', overflow: 'hidden' }}
                         >
                             {/* Header */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '22px 24px 18px', borderBottom: '1px solid #f1f5f9' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 24px', background: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
                                 <div style={{ width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                     <Files size={20} color="#3b82f6" />
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <h2 style={{ margin: 0, fontSize: '1.22rem', fontWeight: 800, color: '#0f172a' }}>Skabeloner</h2>
-                                    <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>Klik på en skabelon for at indsætte den i arbejdsbeskrivelsen.</p>
+                                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Skabeloner</h2>
+                                    <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>Klik en skabelon for at åbne og redigere — eller tryk Indsæt for at bruge den i tilbuddet.</p>
                                 </div>
                                 <button type="button" onClick={() => setTplLibraryOpen(false)} className="qqb-close" title="Luk"
-                                    style={{ width: 36, height: 36, borderRadius: 10, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <X size={18} />
+                                    style={{ width: 38, height: 38, borderRadius: 11, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <X size={19} />
                                 </button>
                             </div>
 
-                            {/* Liste */}
-                            <div className="qqb-col" style={{ flex: 1, overflowY: 'auto', padding: '18px 24px 8px' }}>
-                                <button type="button" className="qqb-newtpl" onClick={openNewTemplate}
-                                    style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 16px', borderRadius: 14, border: '1.5px dashed #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', marginBottom: 16 }}>
-                                    <Plus size={17} /> Ny skabelon
-                                </button>
+                            {/* Galleri (papir-previews) */}
+                            <div className="qqb-col" style={{ flex: 1, overflowY: 'auto', padding: 'clamp(16px, 2.4vw, 30px)' }}>
+                                <div className="qqb-tplgrid">
+                                    {/* Ny skabelon */}
+                                    <button type="button" className="qqb-tplnew" onClick={openNewTemplate}>
+                                        <div className="qqb-tplnew-circle"><Plus size={26} /></div>
+                                        <span>Ny skabelon</span>
+                                    </button>
 
-                                {templates.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '26px 16px 34px', color: '#94a3b8' }}>
-                                        <div style={{ width: 56, height: 56, borderRadius: 16, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-                                            <Files size={26} color="#cbd5e1" />
-                                        </div>
-                                        <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#64748b' }}>Ingen skabeloner endnu</p>
-                                        <p style={{ margin: '4px 0 0', fontSize: '0.82rem' }}>Byg din første med knappen ovenfor — så ligger den klar til alle dine tilbud.</p>
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 12 }}>
-                                        {templates.map((t) => (
-                                            <div key={t.id} className="qqb-tplcard" onClick={() => { insertTemplate(t); setTplLibraryOpen(false); }}
-                                                style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 16, padding: '14px 16px', cursor: 'pointer', background: '#fff' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, paddingRight: 70 }}>
-                                                    <Files size={15} color="#3b82f6" style={{ flexShrink: 0 }} />
-                                                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
-                                                </div>
-                                                <div className="qqb-tpl-preview" dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.body_html || '') || '<span style="color:#cbd5e1">Tom skabelon</span>' }} />
-                                                <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4 }}>
-                                                    <button type="button" title="Rediger" onClick={(e) => { e.stopPropagation(); openEditTemplate(t); }}
-                                                        style={{ width: 30, height: 30, borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <Pencil size={14} />
+                                    {templates.map((t) => (
+                                        <div key={t.id} className="qqb-tplpaper">
+                                            <div className="qqb-paperthumb" onClick={() => openEditTemplate(t)} title="Åbn og rediger">
+                                                <div className="qqb-paperdoc" dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.body_html || '') || '<p style="color:#cbd5e1">Tom skabelon</p>' }} />
+                                            </div>
+                                            <div className="qqb-paperfoot">
+                                                <div className="qqb-papername" title={t.name}>{t.name}</div>
+                                                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                                                    <button type="button" onClick={() => chooseTemplate(t)}
+                                                        style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 10px', borderRadius: 10, border: 'none', background: 'linear-gradient(145deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', boxShadow: '0 6px 14px rgba(37,99,235,0.28)' }}>
+                                                        <Plus size={14} /> Indsæt
+                                                    </button>
+                                                    <button type="button" onClick={() => openEditTemplate(t)} title="Rediger" className="qqb-paperedit"
+                                                        style={{ width: 38, borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <Pencil size={15} />
                                                     </button>
                                                 </div>
-                                                <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontWeight: 800, color: '#1d4ed8' }}>
-                                                    <Plus size={14} /> Indsæt i beskrivelsen
-                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {templates.length === 0 && (
+                                    <p style={{ textAlign: 'center', margin: '8px 0 0', fontSize: '0.84rem', color: '#94a3b8' }}>
+                                        Ingen skabeloner endnu — byg din første, så ligger den klar til alle dine tilbud.
+                                    </p>
                                 )}
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Skabelon-popup: opret / rediger en genbrugelig arbejdsbeskrivelse. */}
+                {/* Skabelon-editor: stort, Word-agtigt dokument-vindue til at opbygge/rette en skabelon. */}
                 {tplModalOpen && (
                     <div
                         className="qqb-confirm-backdrop"
                         onClick={closeTemplateModal}
-                        style={{ position: 'fixed', inset: 0, zIndex: 100092, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 'calc(24px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100092, background: 'rgba(15,23,42,0.62)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(8px, 2vw, 28px)', paddingTop: 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-top))', paddingBottom: 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-bottom))' }}
                     >
                         <div
                             onClick={(e) => e.stopPropagation()}
-                            style={{ width: 'min(560px, 100%)', maxHeight: '92vh', overflowY: 'auto', background: '#fff', borderRadius: 24, padding: '26px 26px 22px', boxShadow: '0 30px 80px rgba(15,23,42,0.45)' }}
+                            style={{ width: 'min(1040px, 100%)', height: '94vh', display: 'flex', flexDirection: 'column', background: '#eef2f6', borderRadius: 22, boxShadow: '0 30px 80px rgba(15,23,42,0.45)', overflow: 'hidden' }}
                         >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-                                <div style={{ width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <Files size={20} color="#3b82f6" />
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <h2 style={{ margin: 0, fontSize: '1.18rem', fontWeight: 800, color: '#0f172a' }}>{tplEditing?.id ? 'Rediger skabelon' : 'Ny skabelon'}</h2>
-                                    <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Genbrug den på dine tilbud med ét klik.</p>
-                                </div>
-                                <button type="button" onClick={closeTemplateModal} className="qqb-close" title="Luk"
-                                    style={{ width: 36, height: 36, borderRadius: 10, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <X size={18} />
+                            {/* Top-bjælke: tilbage + navn + handlinger */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', background: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+                                <button type="button" onClick={closeTemplateModal} className="qqb-close" title="Tilbage til skabeloner"
+                                    style={{ width: 38, height: 38, borderRadius: 11, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <X size={19} />
                                 </button>
-                            </div>
-
-                            <div style={{ marginTop: 18 }}>
-                                <label style={label}>Navn på skabelonen *</label>
-                                <input className="qqb-input" style={input} value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder="F.eks. Udskiftning af tag" maxLength={80} />
-                            </div>
-
-                            <div style={{ marginTop: 16 }}>
-                                <label style={label}>Indhold</label>
-                                {renderRichEditor(tplEditorRef, () => {}, 'Skriv skabelonteksten — markér og gør fed, lav punkter, eller indsæt direkte fra Word. Formateringen bevares når du indsætter den.', '200px')}
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 22 }}>
+                                <input
+                                    value={tplName}
+                                    onChange={(e) => setTplName(e.target.value)}
+                                    placeholder="Navngiv skabelonen…"
+                                    maxLength={80}
+                                    style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: '1.12rem', fontWeight: 800, color: '#0f172a', background: 'transparent' }}
+                                />
                                 {tplEditing?.id && (
                                     tplConfirmDelete ? (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 'auto' }}>
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ef4444' }}>Sikker?</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ef4444' }}>Slet?</span>
                                             <button type="button" disabled={tplSaving} onClick={removeTemplate}
-                                                style={{ padding: '8px 12px', borderRadius: 10, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.82rem', cursor: tplSaving ? 'not-allowed' : 'pointer' }}>
+                                                style={{ padding: '8px 12px', borderRadius: 10, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}>
                                                 {tplSaving ? 'Sletter…' : 'Ja, slet'}
                                             </button>
                                             <button type="button" disabled={tplSaving} onClick={() => setTplConfirmDelete(false)}
-                                                style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+                                                style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
                                                 Nej
                                             </button>
                                         </div>
                                     ) : (
-                                        <button type="button" className="qqb-iconbtn" disabled={tplSaving} onClick={() => setTplConfirmDelete(true)} title="Slet skabelon"
-                                            style={{ marginRight: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid #fee2e2', background: '#fff', color: '#ef4444', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
-                                            <Trash2 size={15} /> Slet
+                                        <button type="button" disabled={tplSaving} onClick={() => setTplConfirmDelete(true)} title="Slet skabelon" className="qqb-paperedit"
+                                            style={{ width: 38, height: 38, borderRadius: 10, border: '1px solid #fee2e2', background: '#fff', color: '#ef4444', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <Trash2 size={16} />
                                         </button>
                                     )
                                 )}
-                                <button type="button" disabled={tplSaving} onClick={closeTemplateModal}
-                                    style={{ marginLeft: tplEditing?.id ? 0 : 'auto', padding: '12px 18px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
-                                    Fortryd
+                                <button type="button" disabled={tplSaving} onClick={insertFromEditor}
+                                    style={{ padding: '10px 16px', borderRadius: 11, border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                                    <Plus size={15} /> Indsæt i tilbud
                                 </button>
                                 <button type="button" disabled={tplSaving} onClick={saveTemplate}
-                                    style={{ padding: '12px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(145deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: tplSaving ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 8px 20px rgba(37,99,235,0.32)' }}>
-                                    <Save size={16} /> {tplSaving ? 'Gemmer…' : (tplEditing?.id ? 'Gem ændringer' : 'Gem skabelon')}
+                                    style={{ padding: '10px 18px', borderRadius: 11, border: 'none', background: 'linear-gradient(145deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', cursor: tplSaving ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, boxShadow: '0 8px 20px rgba(37,99,235,0.32)', flexShrink: 0 }}>
+                                    <Save size={16} /> {tplSaving ? 'Gemmer…' : 'Gem'}
+                                </button>
+                            </div>
+
+                            {/* Dokument-lærred: hvidt A4-agtigt "papir" med editoren */}
+                            <div className="qqb-col" style={{ flex: 1, overflowY: 'auto', padding: 'clamp(14px, 3vw, 40px) clamp(10px, 3vw, 40px)' }}>
+                                <div style={{ maxWidth: 820, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 10px 40px rgba(15,23,42,0.12)' }}>
+                                    {renderRichEditor(tplEditorRef, () => {}, 'Skriv din skabelon her — overskrifter, fed, punkter, justering. Du kan også indsætte direkte fra Word eller Google Docs, så bevares formateringen.', 'min(58vh, 760px)', null, true)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Bekræft erstatning: skabelon vælges oven på egen tekst i beskrivelsen. */}
+                {tplReplaceConfirm && (
+                    <div
+                        className="qqb-confirm-backdrop"
+                        onClick={() => setTplReplaceConfirm(null)}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100096, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+                    >
+                        <div onClick={(e) => e.stopPropagation()}
+                            style={{ width: 'min(440px, 100%)', background: '#fff', borderRadius: 24, padding: '30px 28px 24px', textAlign: 'center', boxShadow: '0 30px 80px rgba(15,23,42,0.45)' }}>
+                            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+                                <Files size={28} color="#3b82f6" />
+                            </div>
+                            <h2 style={{ margin: '0 0 10px', fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>Erstat beskrivelsen?</h2>
+                            <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.95rem', lineHeight: 1.55 }}>
+                                Du har allerede tekst i arbejdsbeskrivelsen. Skabelonen <strong style={{ color: '#0f172a' }}>"{tplReplaceConfirm.name}"</strong> erstatter det hele. Vil du fortsætte?
+                            </p>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                                <button type="button" onClick={() => setTplReplaceConfirm(null)}
+                                    style={{ flex: 1, padding: '13px', borderRadius: 13, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>
+                                    Behold min tekst
+                                </button>
+                                <button type="button" onClick={() => applyTemplate(tplReplaceConfirm)}
+                                    style={{ flex: 1, padding: '13px', borderRadius: 13, border: 'none', background: 'linear-gradient(145deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(37,99,235,0.32)' }}>
+                                    Ja, erstat
                                 </button>
                             </div>
                         </div>
