@@ -88,7 +88,8 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
         smtp_user: '',
         smtp_pass: '',
         smtp_from_email: '',
-        imap_host: ''
+        imap_host: '',
+        imap_port: ''
     });
     const [isTesting, setIsTesting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -185,7 +186,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                 .eq('carpenter_id', carpenterProfile.id);
 
             if (error) throw error;
-            setSettings({ smtp_host: '', smtp_port: '', smtp_user: '', smtp_pass: '', smtp_from_email: '', imap_host: '' });
+            setSettings({ smtp_host: '', smtp_port: '', smtp_user: '', smtp_pass: '', smtp_from_email: '', imap_host: '', imap_port: '' });
             setIsConfigured(false);
             setTestResult(null);
             setShowDisconnectModal(false);
@@ -316,20 +317,38 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                         </div>
 
                         <div className="input-group">
-                            <label style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
-                                IMAP Server (Valgfri)
-                                <Tooltip text="Bruges til at gemme tilbud automatisk i din 'Sendt Post'-mappe.<br/><br/>• DanDomain: <b>post.dandomain.dk</b><br/>• Simply: <b>imap.simply.com</b><br/>• Microsoft: <b>outlook.office365.com</b><br/>• Google: <b>imap.gmail.com</b><br/><br/>Lader du feltet stå tomt, forsøger systemet selv at gætte den ud fra din SMTP-server." />
-                            </label>
-                            <input
-                                type="text"
-                                name="imap_host"
-                                value={settings.imap_host || ''}
-                                onChange={handleChange}
-                                placeholder="fx post.dandomain.dk (kan stå tom)"
-                                style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '100%', marginTop: '6px' }}
-                            />
+                            <div style={{ display: 'flex', gap: '16px' }}>
+                                <div className="input-group" style={{ flex: 2 }}>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
+                                        IMAP Server (Valgfri)
+                                        <Tooltip text="Bruges til at gemme tilbud automatisk i din 'Sendt Post'-mappe.<br/><br/>• DanDomain: <b>post.dandomain.dk</b><br/>• Simply: <b>imap.simply.com</b><br/>• Microsoft: <b>outlook.office365.com</b><br/>• Google: <b>imap.gmail.com</b><br/><br/>Lader du feltet stå tomt, forsøger systemet selv at gætte den ud fra din SMTP-server." />
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="imap_host"
+                                        value={settings.imap_host || ''}
+                                        onChange={handleChange}
+                                        placeholder="fx post.dandomain.dk (kan stå tom)"
+                                        style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '100%', marginTop: '6px' }}
+                                    />
+                                </div>
+                                <div className="input-group" style={{ flex: 1 }}>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
+                                        IMAP Port
+                                        <Tooltip text="Porten til din 'Sendt Post'-server.<br/>Standard er <b>993</b> (sikker) hos næsten alle udbydere. Lad feltet stå tomt, hvis du er i tvivl." />
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="imap_port"
+                                        value={settings.imap_port || ''}
+                                        onChange={handleChange}
+                                        placeholder="993"
+                                        style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '100%', marginTop: '6px' }}
+                                    />
+                                </div>
+                            </div>
                             <span style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', display: 'block' }}>
-                                Sikrer at en kopi af tilbuddet havner i din "Sendt Post". Port 993 (sikker) bruges automatisk.{' '}
+                                Sikrer at en kopi af tilbuddet havner i din "Sendt Post". Lader du porten stå tom, bruges 993 (sikker) automatisk.{' '}
                                 <button
                                     type="button"
                                     onClick={() => setShowHelpModal(true)}

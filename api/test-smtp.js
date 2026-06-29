@@ -18,14 +18,16 @@ function guessImapHost(smtpHost) {
  * Blødt IMAP-tjek: forsøger at logge ind og finde en Sendt-mappe.
  * Fejler ALDRIG hele testen — returnerer kun en status-besked.
  */
-async function testImapConnection({ imap_host, smtp_host, smtp_user, smtp_pass }) {
+async function testImapConnection({ imap_host, imap_port, smtp_host, smtp_user, smtp_pass }) {
     const host = (imap_host || '').trim() || guessImapHost(smtp_host);
     if (!host) return { ok: false, message: 'Ingen IMAP-server angivet — kopi i "Sendt Post" springes over.' };
 
+    const port = parseInt(imap_port) || 993;
+
     const client = new ImapFlow({
         host,
-        port: 993,
-        secure: true,
+        port,
+        secure: port !== 143,
         auth: { user: smtp_user, pass: smtp_pass },
         logger: false,
         connectionTimeout: 8000,
@@ -71,7 +73,7 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Uautoriseret: Ugyldigt token' });
         }
 
-        const { smtp_host, smtp_port, smtp_user, smtp_pass, imap_host } = req.body;
+        const { smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port } = req.body;
 
         if (!smtp_host || !smtp_port || !smtp_user || !smtp_pass) {
             return res.status(400).json({ error: 'Manglende SMTP-indstillinger' });
@@ -97,7 +99,7 @@ export default async function handler(req, res) {
         let imapStatus = null;
         try {
             imapStatus = await Promise.race([
-                testImapConnection({ imap_host, smtp_host, smtp_user, smtp_pass }),
+                testImapConnection({ imap_host, imap_port, smtp_host, smtp_user, smtp_pass }),
                 new Promise((resolve) => setTimeout(
                     () => resolve({ ok: false, message: 'IMAP-test timede ud.' }),
                     12000

@@ -44,10 +44,13 @@ async function saveToSentFolder({ smtpSettings, rawMessage }) {
     const imapHost = (smtpSettings.imap_host || '').trim() || guessImapHost(smtpSettings.smtp_host);
     if (!imapHost) return { ok: false, reason: 'Ingen IMAP-host kunne bestemmes' };
 
+    // Port: brug brugerens egen hvis sat, ellers 993. Port 143 = STARTTLS (secure: false).
+    const imapPort = parseInt(smtpSettings.imap_port) || 993;
+
     const client = new ImapFlow({
         host: imapHost,
-        port: 993,
-        secure: true,
+        port: imapPort,
+        secure: imapPort !== 143,
         auth: {
             user: smtpSettings.smtp_user,
             pass: smtpSettings.smtp_pass,
