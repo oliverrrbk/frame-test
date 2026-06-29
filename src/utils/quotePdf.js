@@ -87,6 +87,12 @@ function renderRich(pdf, blocks, o) {
     const headingColor = o.headingColor || o.color;
     const tableBorder = [203, 213, 225];
     let y = o.y;
+    // Største skriftstørrelse i en blok (så vi kan give nok luft over store overskrifter).
+    const blockMaxSize = (b, base) => {
+        let mx = base;
+        (b.runs || []).forEach((r) => { if (r.size && r.size > mx) mx = r.size; });
+        return mx;
+    };
 
     // Bryd runs op i wrappede linjer (måler ord for ord, pr. skriftstørrelse) inden for maxW.
     // Hver linje: { segs:[{text,font,underline,size,w}], width, maxSize }.
@@ -183,11 +189,20 @@ function renderRich(pdf, blocks, o) {
         y += 2.5;
     };
 
+    // Luft over toppen, så en (evt. stor) første overskrift ikke rammer indholdet/stregen ovenfor.
+    if (blocks.length) {
+        const b0 = blocks[0];
+        const base0 = b0.type === 'heading' ? (b0.level === 2 ? 12.5 : 11) : o.size;
+        const mx0 = b0.type === 'table' ? o.size : blockMaxSize(b0, base0);
+        y += mx0 * 0.34;
+    }
+
     blocks.forEach((b, idx) => {
         if (b.type === 'heading') {
             const size = b.level === 2 ? 12.5 : 11;
-            const gap = b.level === 2 ? 6.2 : 5.6;
-            if (idx > 0) y += 2.5;
+            const realMax = blockMaxSize(b, size);
+            const gap = Math.max(b.level === 2 ? 6.2 : 5.6, realMax * 0.46);
+            if (idx > 0) y += realMax * 0.26;
             const runs = b.runs.map((r) => (r.br ? r : { ...r, bold: true }));
             drawLines(layout(runs, o.maxX - o.x, size), o.x, o.maxX, size, gap, headingColor, b.align);
             y += 1.5;

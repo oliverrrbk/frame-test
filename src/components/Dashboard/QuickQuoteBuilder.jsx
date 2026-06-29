@@ -713,6 +713,16 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Defensivt: når man vender tilbage fra "Forstør PDF" eller skifter fane, så gendan
+    // editorens indhold fra state hvis det skulle være blevet tomt (uden at forstyrre redigering).
+    useEffect(() => {
+        const el = workEditorRef.current;
+        if (el && !(el.innerHTML || '').trim() && (workDescHtml || '').trim()) {
+            el.innerHTML = workDescHtml;
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pdfMax, previewTab]);
+
     // ---- Autosave af arbejds-kladden (debounced) ----
     // Gemmer løbende et øjebliksbillede i localStorage, så et nyt tilbud kan genoptages
     // hvis vinduet lukkes uden at gemme. Springer over indtil brugeren har valgt fortsæt/forfra.
