@@ -1473,10 +1473,13 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         // Kolonne-styling: trækbare kolonner på desktop, swipe-paneler på mobil.
         const colBase = { display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 };
         const mobileCol = { flex: '0 0 100%', width: '100%', scrollSnapAlign: 'start' };
-        const leftStyle = { ...colBase, ...(isMobile ? mobileCol : { flex: `0 0 ${leftW}px` }), background: '#ffffff', overflowY: 'auto' };
+        // OBS: ved "Forstør PDF" (pdfMax) skjules venstre/højre kolonne med display:none
+        // i stedet for at fjerne dem fra DOM'en — ellers mister den ukontrollerede
+        // rich-text-editor sit indhold når den remountes.
+        const leftStyle = { ...colBase, ...(isMobile ? mobileCol : (pdfMax ? { display: 'none' } : { flex: `0 0 ${leftW}px` })), background: '#ffffff', overflowY: 'auto' };
         const midStyle = { ...colBase, ...(isMobile ? mobileCol : { flex: '1 1 auto' }), background: '#f8fafc' };
         const pdfFocus = !isMobile && pdfMax; // hele skærmen til PDF'en (kun desktop/bærbar)
-        const rightStyle = { ...colBase, ...(isMobile ? mobileCol : { flex: `0 0 ${rightW}px` }), background: '#ffffff', overflowY: 'auto' };
+        const rightStyle = { ...colBase, ...(isMobile ? mobileCol : (pdfMax ? { display: 'none' } : { flex: `0 0 ${rightW}px` })), background: '#ffffff', overflowY: 'auto' };
         const renderDivider = (type) => (
             <div className="qqb-divider" onPointerDown={(e) => startResize(type, e)}><div className="qqb-grip" /></div>
         );
@@ -1684,16 +1687,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         {midCol}
                         {rightCol}
                     </div>
-                ) : pdfMax ? (
-                    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
-                        {midCol}
-                    </div>
                 ) : (
+                    // Desktop: alle tre kolonner holdes MONTERET (skjules via display:none ved
+                    // pdfMax), så tekst-editoren aldrig mister sit indhold.
                     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
                         {leftCol}
-                        {renderDivider('left')}
+                        {!pdfMax && renderDivider('left')}
                         {midCol}
-                        {renderDivider('right')}
+                        {!pdfMax && renderDivider('right')}
                         {rightCol}
                     </div>
                 )}
