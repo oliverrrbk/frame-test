@@ -18,15 +18,10 @@ export const BOOKED_INVOICE_STATUSES = ['booked', 'paid', 'manual'];
 // Lille rundings-tolerance så 1,25-op/ned-rundinger ikke efterlader en falsk rest.
 const ROUNDING_TOLERANCE = 2;
 
-// Omvendt betalingspligt → ingen moms. Gælder KUN byggeydelser (B2B), ikke al erhverv,
-// så det er et eksplicit valg. Bagudkompatibelt falder vi tilbage til CVR for ældre
-// sager uden eksplicit valg (uændret adfærd for dem).
-export const isReverseChargeLead = (lead) => {
-    const rd = lead?.raw_data || {};
-    if (rd.reverse_charge === true) return true;
-    if (rd.reverse_charge === false) return false;
-    return !!(rd.customerDetails?.cvr);
-};
+// Omvendt betalingspligt → ingen moms. Det er ALDRIG standard — hverken for privat
+// eller erhverv. Det gælder KUN, når det aktivt er slået til (reverse_charge === true).
+// Alt andet (privat, erhverv, gamle sager) faktureres med 25% moms.
+export const isReverseChargeLead = (lead) => lead?.raw_data?.reverse_charge === true;
 
 // Basis-pris (inkl. moms) — samme prioritet som FinanceOverview brugte.
 const getBasePriceInclVat = (lead) => {

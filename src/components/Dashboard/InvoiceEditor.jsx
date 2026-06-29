@@ -27,8 +27,8 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
 
     const isB2B = !!(lead.raw_data?.customerDetails?.cvr);
-    // Default følger sagens eksplicitte moms-valg (omvendt betalingspligt = kun byggeydelser).
-    // For ældre sager uden valg falder isReverseChargeLead tilbage til CVR (uændret adfærd).
+    // Standard er ALTID med moms — også for erhverv. Omvendt betalingspligt er kun slået
+    // til, hvis det aktivt er valgt (reverse_charge === true). Man kan stadig skifte her.
     const [isReverseCharge, setIsReverseChargeState] = useState(isReverseChargeLead(lead));
     const setIsReverseCharge = (val) => {
         setIsReverseChargeState(val);
