@@ -118,6 +118,7 @@ export default async function handler(req, res) {
             const mailOptions = {
                 from: customSenderName,
                 to: to,
+                bcc: customFrom,
                 subject: subject,
                 html: html,
                 replyTo: replyTo || undefined,
