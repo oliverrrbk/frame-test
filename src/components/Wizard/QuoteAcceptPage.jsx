@@ -49,8 +49,10 @@ const QuoteAcceptPage = () => {
                     setCarpenter(carpenterData);
                 }
 
-                // Tracking: Registrer at kunden har åbnet tilbuddet
-                if (data && !data.opened_at && isUUID) {
+                // Tracking: Registrer at kunden har åbnet tilbuddet.
+                // Spring over hvis tilbuddet er trukket tilbage/slettet — linket er dødt.
+                const isRevoked = data.status === 'Slettet' || !!data.revoked_at;
+                if (data && !data.opened_at && isUUID && !isRevoked) {
                     const now = new Date().toISOString();
                     let ipAddress = 'Ukendt';
                     try {
@@ -93,7 +95,11 @@ const QuoteAcceptPage = () => {
             toast.error("Du skal acceptere betingelserne for at fortsætte.");
             return;
         }
-        
+        if (lead?.status === 'Slettet' || lead?.revoked_at) {
+            toast.error("Dette tilbud er trukket tilbage og kan ikke længere bekræftes.");
+            return;
+        }
+
         setIsAccepting(true);
         try {
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(lead_id);
@@ -210,6 +216,47 @@ const QuoteAcceptPage = () => {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f8fafc' }}>
                 <h2>Tilbuddet blev ikke fundet. Kontakt din tømrer.</h2>
+            </div>
+        );
+    }
+
+    // Tilbagekaldt/slettet tilbud: mailen kan ikke kaldes tilbage, men linket er nu dødt.
+    // Vis en pæn besked i stedet for at lade kunden bekræfte et tilbud, der ikke længere gælder.
+    if (lead.status === 'Slettet' || lead.revoked_at) {
+        const firmaNavn = carpenter?.company_name || 'din tømrer';
+        return (
+            <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' }}>
+                {carpenter?.logo_url ? (
+                    <img src={carpenter.logo_url} alt="Firma Logo" style={{ maxHeight: '64px', marginBottom: '24px', objectFit: 'contain' }} />
+                ) : null}
+                <div style={{ maxWidth: '520px', width: '100%', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)', padding: '40px 32px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2.25rem', marginBottom: '12px' }}>📄</div>
+                    <h2 style={{ margin: '0 0 12px', color: '#0f172a', fontSize: '1.5rem', fontWeight: 800 }}>Tilbuddet er ikke længere gyldigt</h2>
+                    <p style={{ margin: '0 0 8px', color: '#475569', fontSize: '1.05rem', lineHeight: 1.6 }}>
+                        Dette tilbud er trukket tilbage af {firmaNavn} og kan ikke længere bekræftes.
+                    </p>
+                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                        Har du spørgsmål, eller ønsker du et nyt tilbud, er du velkommen til at kontakte {firmaNavn} direkte.
+                    </p>
+                    {(carpenter?.phone || carpenter?.email) && (
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '28px' }}>
+                            {carpenter?.phone && (
+                                <a href={`tel:${carpenter.phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#1d4ed8', color: '#fff', borderRadius: '10px', textDecoration: 'none', fontWeight: 600, fontSize: '0.95rem' }}>
+                                    <Phone size={18} /> Ring til {firmaNavn}
+                                </a>
+                            )}
+                            {carpenter?.email && (
+                                <a href={`mailto:${carpenter.email}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#fff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '10px', textDecoration: 'none', fontWeight: 600, fontSize: '0.95rem' }}>
+                                    <Mail size={18} /> Skriv en mail
+                                </a>
+                            )}
+                        </div>
+                    )}
+                </div>
+                <div style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '1rem' }}>🔒</span>
+                    <span style={{ fontSize: '0.85rem' }}>Udsendt sikkert via <strong>Bison Frame</strong></span>
+                </div>
             </div>
         );
     }

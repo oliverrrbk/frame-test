@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLoadScript, Autocomplete } from '@react-google-maps/api';
-import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic, Files, Bold, Italic, Underline, List, ListOrdered, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic, Files, Bold, Italic, Underline, List, ListOrdered, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight, Table as TableIcon } from 'lucide-react';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { friendlyError } from '../../utils/friendlyError';
 import { buildQuotePdf } from '../../utils/quotePdf';
-import { getCustomerOfferSentTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
+import { getCustomerOfferSentTemplate, getCustomerOfferRevokedTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
 import { listQuoteTemplates, createQuoteTemplate, updateQuoteTemplate, deleteQuoteTemplate } from '../../utils/quoteTemplates';
 import Coachmark from './Coachmark';
 import SectionTour from './SectionTour';
@@ -52,11 +52,13 @@ const fmtDk = (raw) => {
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // Rens/normalisér indsat HTML (fx fra Word eller Google Docs) ned til et trygt,
-// lille format: p / h2 / h3 / ul / ol / li / b / i / u / br + style="text-align:…".
+// lille format: p / h2 / h3 / ul / ol / li / b / i / u / br + table/tr/td +
+// style="text-align:…" + style="font-size:…pt".
 // Vigtigt: Google Docs/Word lægger formatering i spans med inline-styles
-// (font-weight, font-style, text-decoration) — dem læser vi og konverterer til
-// rigtige tags, så fed/kursiv/understregning og overskrifter bevares 1:1.
+// (font-weight, font-style, text-decoration, font-size) — dem læser vi og
+// konverterer, så fed/kursiv/understregning/overskrifter/størrelser/TABELLER bevares.
 const BLOCK_TAGS = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'SECTION', 'ARTICLE', 'TR']);
+const isBlocky = (t) => BLOCK_TAGS.has(t) || t === 'UL' || t === 'OL' || t === 'LI' || t === 'TABLE';
 const HEADING_OUT = (tag) => (tag === 'H1' || tag === 'H2') ? 'h2' : 'h3';
 const styleFlags = (el) => {
     const s = (el.getAttribute && el.getAttribute('style')) || '';
@@ -65,6 +67,19 @@ const styleFlags = (el) => {
     const italic = /font-style:\s*italic/.test(s);
     const underline = /text-decoration[^;]*underline/.test(s);
     return { bold, italic, underline };
+};
+// Skriftstørrelse i pt. "Normal" (ca. 10-12pt) regnes som standard → null, så vi kun
+// markerer bevidste størrelser. <font size=1..7> oversættes også.
+const fontSizeOf = (el) => {
+    const s = (el.getAttribute && el.getAttribute('style')) || '';
+    let pt = null;
+    const m = s.match(/font-size:\s*([\d.]+)\s*(pt|px)/);
+    if (m) pt = Math.round(m[2] === 'px' ? parseFloat(m[1]) * 0.75 : parseFloat(m[1]));
+    else if (el.tagName === 'FONT' && el.getAttribute('size')) {
+        pt = ({ 1: 8, 2: 10, 3: 12, 4: 14, 5: 18, 6: 24, 7: 36 })[parseInt(el.getAttribute('size'), 10)] || null;
+    }
+    if (pt == null || (pt >= 10.5 && pt <= 12.5)) return null;
+    return Math.max(7, Math.min(48, pt));
 };
 const alignAttr = (el) => {
     const s = (el.getAttribute && el.getAttribute('style')) || '';
@@ -79,15 +94,18 @@ const sanitizeHtml = (html) => {
         if (ctx.bold) t = `<b>${t}</b>`;
         if (ctx.italic) t = `<i>${t}</i>`;
         if (ctx.underline) t = `<u>${t}</u>`;
+        if (ctx.size) t = `<span style="font-size:${ctx.size}pt">${t}</span>`;
         return t;
     };
-    // Serialisér inline-indhold (tekst + b/i/u/span…) til rene b/i/u-tags.
+    // Serialisér inline-indhold (tekst + b/i/u/span…) til rene tags + størrelse.
     const inlineEl = (el, ctx) => {
         const f = styleFlags(el);
+        const sz = fontSizeOf(el);
         return inlineHtml(el, {
             bold: ctx.bold || f.bold || el.tagName === 'B' || el.tagName === 'STRONG',
             italic: ctx.italic || f.italic || el.tagName === 'I' || el.tagName === 'EM',
             underline: ctx.underline || f.underline || el.tagName === 'U',
+            size: sz != null ? sz : ctx.size,
         });
     };
     function inlineHtml(node, ctx) {
@@ -101,7 +119,37 @@ const sanitizeHtml = (html) => {
         });
         return out;
     }
-    // Gå blokke igennem; saml løs inline-tekst i afsnit, og bevar lister/overskrifter.
+    // Indhold i én tabelcelle: fladgør evt. afsnit til <br>-adskilt inline-tekst.
+    const cellHtml = (cell) => {
+        const parts = [];
+        let buf = '';
+        const flushCell = () => { if (buf.trim() || /<br>/.test(buf)) parts.push(buf); buf = ''; };
+        cell.childNodes.forEach((n) => {
+            if (n.nodeType === 3) { buf += wrap(escapeHtml(n.textContent), {}); return; }
+            if (n.nodeType !== 1) return;
+            if (n.tagName === 'BR') { buf += '<br>'; return; }
+            if (isBlocky(n.tagName)) { flushCell(); parts.push(inlineHtml(n, {})); }
+            else buf += inlineEl(n, {});
+        });
+        flushCell();
+        return parts.filter((p) => p.trim()).join('<br>');
+    };
+    // Tabel → rent <table><tbody><tr><td>…</td></tr></tbody></table>.
+    const serializeTable = (table) => {
+        const rows = [];
+        table.querySelectorAll('tr').forEach((tr) => {
+            const cells = [];
+            Array.from(tr.children).forEach((cell) => {
+                if (cell.tagName === 'TD' || cell.tagName === 'TH') {
+                    const head = cell.tagName === 'TH' ? ' data-th="1"' : '';
+                    cells.push(`<td${head}>${cellHtml(cell) || '<br>'}</td>`);
+                }
+            });
+            if (cells.length) rows.push(`<tr>${cells.join('')}</tr>`);
+        });
+        return rows.length ? `<table><tbody>${rows.join('')}</tbody></table>` : '';
+    };
+    // Gå blokke igennem; saml løs inline-tekst i afsnit, og bevar lister/overskrifter/tabeller.
     const out = [];
     const walk = (node) => {
         let buf = '';
@@ -111,12 +159,13 @@ const sanitizeHtml = (html) => {
             if (ch.nodeType !== 1) return;
             const tag = ch.tagName;
             if (tag === 'BR') { buf += '<br>'; return; }
-            const isBlock = BLOCK_TAGS.has(tag) || tag === 'UL' || tag === 'OL' || tag === 'LI';
+            if (tag === 'TABLE') { flush(); const tb = serializeTable(ch); if (tb) out.push(tb); return; }
+            const isBlock = isBlocky(tag);
             if (!isBlock) {
                 // Google Docs pakker hele dokumentet i en ydre <b style="font-weight:normal">.
                 // Hvis et "inline"-element selv rummer blokke, skal vi gå ned i det som blokke
-                // (ellers fladgøres afsnit og lister til én klump tekst).
-                const hasBlockChild = Array.from(ch.children || []).some((c) => BLOCK_TAGS.has(c.tagName) || c.tagName === 'UL' || c.tagName === 'OL' || c.tagName === 'LI');
+                // (ellers fladgøres afsnit, lister og tabeller til én klump tekst).
+                const hasBlockChild = Array.from(ch.children || []).some((c) => isBlocky(c.tagName));
                 if (hasBlockChild) { flush(); walk(ch); }
                 else buf += inlineEl(ch, {});
                 return;
@@ -140,7 +189,7 @@ const sanitizeHtml = (html) => {
                 return;
             }
             // P / DIV / andre block-containere: hvis de selv rummer blokke, gå dybere.
-            const hasBlockChild = Array.from(ch.children || []).some((c) => BLOCK_TAGS.has(c.tagName) || c.tagName === 'UL' || c.tagName === 'OL');
+            const hasBlockChild = Array.from(ch.children || []).some((c) => isBlocky(c.tagName));
             if (hasBlockChild) { walk(ch); return; }
             const inner = inlineHtml(ch, {});
             if (inner.trim() || ch.querySelector('br')) out.push(`<p${alignAttr(ch)}>${inner}</p>`);
@@ -153,7 +202,7 @@ const sanitizeHtml = (html) => {
 // Plain-tekst-linjer (til bygge-to-do/checklist) ud fra editorens HTML.
 const htmlToPlainLines = (html) => {
     if (!html) return [];
-    const withBreaks = String(html).replace(/<\s*br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h[1-6])>/gi, '\n');
+    const withBreaks = String(html).replace(/<\s*br\s*\/?>/gi, '\n').replace(/<\/td>/gi, ' ').replace(/<\/(p|div|li|h[1-6]|tr)>/gi, '\n');
     const tmp = document.createElement('div');
     tmp.innerHTML = withBreaks;
     return (tmp.textContent || '').split('\n').map((s) => s.trim()).filter(Boolean);
@@ -257,6 +306,10 @@ const PREVIEW_CSS = `
   .qqb-editor h3{font-size:1.02rem;font-weight:700;color:#0f172a;margin:10px 0 5px;line-height:1.3;}
   .qqb-editor>*:first-child{margin-top:0;}
   .qqb-editor u{text-decoration:underline;}
+  .qqb-editor table,.qqb-docpage table,.qqb-paperdoc table{border-collapse:collapse;width:100%;margin:10px 0;table-layout:fixed;}
+  .qqb-editor td,.qqb-editor th,.qqb-docpage td,.qqb-docpage th,.qqb-paperdoc td,.qqb-paperdoc th{border:1px solid #cbd5e1;padding:6px 9px;vertical-align:top;text-align:left;word-break:break-word;}
+  .qqb-editor td[data-th="1"],.qqb-docpage td[data-th="1"],.qqb-paperdoc td[data-th="1"]{background:#f1f5f9;font-weight:800;}
+  .qqb-paperdoc td,.qqb-paperdoc th{padding:3px 5px;}
   .qqb-tbtn{transition:background .12s ease,border-color .12s ease,transform .1s ease;}
   .qqb-tbtn:hover{background:#f1f5f9 !important;border-color:#94a3b8 !important;}
   .qqb-tbtn:active{transform:translateY(1px);}
@@ -297,6 +350,9 @@ const PREVIEW_CSS = `
 export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null, draftCreator = null, onOpenMaterialList = null }) {
     const [busy, setBusy] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    // Valgfri: send kunden en kort besked om at tilbuddet er trukket tilbage (kun ved sendte tilbud).
+    const [notifyOnDelete, setNotifyOnDelete] = useState(false);
+    const [revokeMessage, setRevokeMessage] = useState('Vi har trukket vores tidligere fremsendte tilbud tilbage, og det er derfor ikke længere gældende. Ønsker du et opdateret tilbud, er du meget velkommen til at sige til.');
     // Felt-fejl ved afsendelse (markeres rødt) + bekræftelses-popup før mailen sendes.
     const [fieldErrors, setFieldErrors] = useState({});
     const [showSendConfirm, setShowSendConfirm] = useState(false);
@@ -1036,7 +1092,27 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         try {
             const { error } = await supabase.rpc('soft_delete_lead', { p_lead_id: initialLead.id });
             if (error) throw error;
-            toast.success('Tilbuddet er slettet.');
+
+            // Valgfrit: giv kunden besked om at tilbuddet er trukket tilbage. Mailen kan ikke
+            // kaldes tilbage, men linket er nu dødt — en kort note lukker loopet, hvis valgt.
+            if (notifyOnDelete && wasSent && customer.email) {
+                try {
+                    const { sendEmail } = await import('../../utils/sendEmail');
+                    const carpenterName = carpenter?.company_name || carpenter?.owner_name || 'Din Tømrer';
+                    await sendEmail({
+                        to: customer.email,
+                        subject: `Tilbud trukket tilbage – ${carpenterName}`,
+                        html: getCustomerOfferRevokedTemplate(customer.name, carpenter, revokeMessage, initialLead?.case_number || null),
+                        fromName: getCarpenterSenderName(carpenter),
+                        replyTo: carpenter?.email,
+                    });
+                } catch (mailErr) {
+                    console.error('Kunne ikke sende annullerings-mail:', mailErr);
+                    toast.error('Tilbuddet er slettet, men beskeden til kunden kunne ikke sendes.');
+                }
+            }
+
+            toast.success(notifyOnDelete && wasSent && customer.email ? 'Tilbuddet er slettet, og kunden har fået besked.' : 'Tilbuddet er slettet.');
             setConfirmDelete(false);
             if (onDeleted) onDeleted(initialLead.id);
             else if (onCancel) onCancel();
@@ -1144,6 +1220,66 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             document.execCommand('formatBlock', false, `<${cur === tagLower ? 'p' : tagLower}>`);
             sync();
         };
+        // Skriftstørrelse op/ned på markeringen. Vi bruger fontSize=7 som markør og
+        // erstatter den med et span i den ønskede pt-størrelse (giver fri pt-kontrol).
+        const SIZE_SCALE = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 40];
+        const currentPt = () => {
+            const sel = window.getSelection();
+            let node = sel && sel.anchorNode;
+            if (node && node.nodeType === 3) node = node.parentElement;
+            if (!node || !ref.current?.contains(node)) return 12;
+            return Math.round(parseFloat(getComputedStyle(node).fontSize) * 0.75) || 12;
+        };
+        const applyFontSize = (pt) => {
+            ref.current?.focus();
+            const sel = window.getSelection();
+            if (!sel || sel.isCollapsed) { toast('Markér teksten du vil ændre størrelse på'); return; }
+            document.execCommand('fontSize', false, '7');
+            ref.current.querySelectorAll('font[size="7"]').forEach((f) => {
+                const span = document.createElement('span');
+                span.style.fontSize = `${pt}pt`;
+                while (f.firstChild) span.appendChild(f.firstChild);
+                f.replaceWith(span);
+            });
+            sync();
+        };
+        const bumpFont = (dir) => {
+            const cur = currentPt();
+            let i = SIZE_SCALE.findIndex((s) => s >= cur);
+            if (i < 0) i = SIZE_SCALE.length - 1;
+            const ni = Math.max(0, Math.min(SIZE_SCALE.length - 1, i + dir));
+            applyFontSize(SIZE_SCALE[ni]);
+        };
+        // ---- Tabeller ----
+        const tableFromSel = () => {
+            let n = window.getSelection()?.anchorNode;
+            while (n && n !== ref.current) { if (n.tagName === 'TABLE') return n; n = n.parentNode; }
+            return null;
+        };
+        const insertTable = (rows = 3, cols = 3) => {
+            ref.current?.focus();
+            let h = '<table><tbody>';
+            for (let r = 0; r < rows; r++) { h += '<tr>'; for (let c = 0; c < cols; c++) h += '<td><br></td>'; h += '</tr>'; }
+            h += '</tbody></table><p><br></p>';
+            document.execCommand('insertHTML', false, h);
+            sync();
+        };
+        const addRow = () => {
+            const t = tableFromSel();
+            if (!t) { toast.error('Sæt markøren i en tabel først'); return; }
+            const cols = Math.max(1, ...Array.from(t.rows).map((r) => r.cells.length));
+            const body = t.tBodies[0] || t;
+            const tr = document.createElement('tr');
+            for (let c = 0; c < cols; c++) { const td = document.createElement('td'); td.innerHTML = '<br>'; tr.appendChild(td); }
+            body.appendChild(tr);
+            sync();
+        };
+        const addCol = () => {
+            const t = tableFromSel();
+            if (!t) { toast.error('Sæt markøren i en tabel først'); return; }
+            Array.from(t.rows).forEach((r) => { const td = document.createElement('td'); td.innerHTML = '<br>'; r.appendChild(td); });
+            sync();
+        };
         const onPaste = (e) => {
             e.preventDefault();
             const html = e.clipboardData.getData('text/html');
@@ -1166,12 +1302,19 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     {tbtn('Kursiv (Cmd/Ctrl+I)', () => exec('italic'), <Italic size={15} />)}
                     {tbtn('Understreget (Cmd/Ctrl+U)', () => exec('underline'), <Underline size={15} />)}
                     {tdiv}
+                    {tbtn('Mindre skrift', () => bumpFont(-1), <span style={{ fontWeight: 800, fontSize: '0.72rem' }}>A−</span>)}
+                    {tbtn('Større skrift', () => bumpFont(1), <span style={{ fontWeight: 800, fontSize: '0.98rem' }}>A+</span>)}
+                    {tdiv}
                     {tbtn('Punktliste', () => exec('insertUnorderedList'), <List size={16} />)}
                     {tbtn('Nummereret liste', () => exec('insertOrderedList'), <ListOrdered size={16} />)}
                     {tdiv}
                     {tbtn('Venstrejustér', () => exec('justifyLeft'), <AlignLeft size={15} />)}
                     {tbtn('Centrér', () => exec('justifyCenter'), <AlignCenter size={15} />)}
                     {tbtn('Højrejustér', () => exec('justifyRight'), <AlignRight size={15} />)}
+                    {tdiv}
+                    {tbtn('Indsæt tabel (3×3)', () => insertTable(3, 3), <TableIcon size={15} />)}
+                    {tbtn('Tilføj række', addRow, <><Plus size={12} /><span style={{ fontSize: '0.72rem', fontWeight: 700 }}>Række</span></>)}
+                    {tbtn('Tilføj kolonne', addCol, <><Plus size={12} /><span style={{ fontSize: '0.72rem', fontWeight: 700 }}>Kolonne</span></>)}
                     {dictation && (
                         <button
                             type="button"
@@ -1800,7 +1943,40 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             </h2>
                             <p style={{ margin: '0 0 28px', color: '#64748b', fontSize: '1rem', lineHeight: 1.55 }}>
                                 Er du sikker på, at du vil slette tilbuddet til <strong style={{ color: '#0f172a' }}>{customer.name || 'kunden'}</strong> permanent? Dette kan ikke fortrydes.
+                                {wasSent && (
+                                    <span style={{ display: 'block', marginTop: 12, color: '#475569', fontSize: '0.92rem' }}>
+                                        Selve mailen kan ikke kaldes tilbage fra kundens indbakke, men <strong>linket gøres ugyldigt med det samme</strong> — kunden vil se, at tilbuddet er trukket tilbage og kan ikke længere bekræfte det.
+                                    </span>
+                                )}
                             </p>
+
+                            {wasSent && customer.email && (
+                                <div style={{ textAlign: 'left', marginBottom: 24, padding: '14px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14 }}>
+                                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={notifyOnDelete}
+                                            disabled={busy}
+                                            onChange={(e) => setNotifyOnDelete(e.target.checked)}
+                                            style={{ marginTop: 3, width: 18, height: 18, accentColor: '#2563eb', cursor: 'pointer', flexShrink: 0 }}
+                                        />
+                                        <span style={{ fontSize: '0.92rem', color: '#334155', fontWeight: 600 }}>
+                                            Send kunden en kort besked om, at tilbuddet er trukket tilbage
+                                            <span style={{ display: 'block', fontWeight: 400, color: '#94a3b8', fontSize: '0.82rem', marginTop: 2 }}>til {customer.email}</span>
+                                        </span>
+                                    </label>
+                                    {notifyOnDelete && (
+                                        <textarea
+                                            value={revokeMessage}
+                                            disabled={busy}
+                                            onChange={(e) => setRevokeMessage(e.target.value)}
+                                            rows={3}
+                                            style={{ width: '100%', marginTop: 12, padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: '0.9rem', color: '#0f172a', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, boxSizing: 'border-box' }}
+                                        />
+                                    )}
+                                </div>
+                            )}
+
                             <div style={{ display: 'flex', gap: 12 }}>
                                 <button
                                     className="qqb-confirm-cancel"

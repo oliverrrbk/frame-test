@@ -65,6 +65,7 @@ afløser/supplerer hinanden.
 | `setup_case_messages_rpc.sql` | `mutate_case_messages` (atomiske sags-beskeder) |
 | `setup_lead_raw_data_rpc.sql` | `mutate_lead_raw_data(p_id, p_patch)` — atomisk shallow-merge af `leads.raw_data` (kun ændrede top-level-nøgler skrives, så samtidige skrivninger ikke overskriver hinandens andre felter). SECURITY INVOKER → RLS + feltspærre gælder. Bruges af `CaseManagement` (materialer/checklister/sagsdata). |
 | `supabase/soft_delete_lead.sql` | `soft_delete_lead(p_lead_id)` — pålidelig soft-delete af tilbud/kladder (autoriserer ejer/opretter/sales; nægter bekræftede sager for ikke-ejere). **Opdaterer også `protect_lead_sensitive_fields()`** med en `app.allow_delete`-undtagelse → **kør EFTER `add_lead_push_trigger.sql`** så den kanoniske trigger-version vinder |
+| `supabase/add_quote_revocation.sql` | **Tilbagekald af afsendte tilbud (link-invalidering).** Ny kolonne `leads.revoked_at` + **opdaterer `soft_delete_lead()`** (sætter `revoked_at` når et allerede AFSENDT/åbnet/bekræftet tilbud slettes — interne kladder påvirkes ikke) + **opdaterer `update_lead_by_token()`** (nægter bekræftelse hvis `revoked_at`/`status='Slettet'`). Mailen kan ikke kaldes tilbage, men kundens link bliver dødt. Den offentlige `QuoteAcceptPage` viser "trukket tilbage". **Kør EFTER `supabase/soft_delete_lead.sql` OG `supabase/fix_public_quote_confirm.sql`** (overskriver begge funktioner med samme krop + spærren). |
 
 ### 4) RLS-hærdning (efter fundament + tabeller)
 | Fil | Formål |

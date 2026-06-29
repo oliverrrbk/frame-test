@@ -519,6 +519,49 @@ export const getCustomerOfferSentTemplate = (customerName, quoteUrl, categoryNam
     return getBaseTemplate(headerTitle, content, subtext, carpenter);
 };
 
+export const getCustomerOfferRevokedTemplate = (customerName, carpenter, customMessage = null, caseNumber = null) => {
+    const signatureName = getCarpenterSenderName(carpenter);
+    const phone = carpenter?.phone || '';
+    const email = carpenter?.email || '';
+
+    // Tømrerens egen (redigerbare) besked. Newlines → <br>, HTML escapes.
+    const bodyText = (customMessage && String(customMessage).trim())
+        ? String(customMessage).trim()
+        : 'Vi har trukket vores tidligere fremsendte tilbud tilbage, og det er derfor ikke længere gældende. Ønsker du et opdateret tilbud, er du meget velkommen til at sige til.';
+    const bodyHtml = bodyText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+
+    const contactHtml = (phone || email) ? `
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 32px 0; text-align: left;">
+            <h3 style="margin: 0 0 8px 0; color: #1e40af; font-size: 16px;">Har du spørgsmål?</h3>
+            <p style="margin: 0; color: #334155; font-size: 14px; line-height: 1.6;">
+                Du er altid velkommen til at kontakte os${phone ? ` på <a href="tel:${phone}" style="color: #2563eb; text-decoration: none;">${phone}</a>` : ''}${email ? `${phone ? ' eller' : ' på'} <a href="mailto:${email}" style="color: #2563eb; text-decoration: none;">${email}</a>` : ''} — eller blot besvare denne e-mail.
+            </p>
+        </div>` : '';
+
+    const content = `
+        <div style="text-align: center; margin-bottom: 32px;">
+            <h2 style="margin: 0; color: #0f172a; font-size: 24px;">Tilbuddet er trukket tilbage</h2>
+        </div>
+
+        <p style="color: #334155;">Hej ${customerName},</p>
+        <p style="color: #334155; line-height: 1.6;">${bodyHtml}</p>
+
+        <div style="background-color: #fffbeb; padding: 12px 16px; border-left: 3px solid #f59e0b; margin: 24px 0; border-radius: 4px;">
+            <p style="margin: 0; font-size: 13px; color: #b45309; font-weight: 500;">
+                Bemærk: Det tidligere tilbudslink er ikke længere gyldigt.
+            </p>
+        </div>
+
+        ${contactHtml}
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
+
+        <p style="color: #334155; margin-bottom: 0;">Med venlig hilsen,</p>
+        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
+    `;
+    return getBaseTemplate(`Tilbud trukket tilbage${caseNumber ? ` (Sag ${caseNumber})` : ''}`, content, 'Dit tidligere tilbud er ikke længere gældende.', carpenter);
+};
+
 export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, carpenter, quoteUrl, caseNumber = null) => {
     const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
     const signatureName = getCarpenterSenderName(carpenter);

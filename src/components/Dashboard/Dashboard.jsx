@@ -6162,6 +6162,11 @@ const Dashboard = () => {
                         <h2 style={{ margin: '0 0 12px 0', color: '#1a1a1a', fontSize: '1.5rem' }}>Slet sag permanent?</h2>
                         <p style={{ color: '#6b7280', marginBottom: '32px', lineHeight: '1.5' }}>
                             Er du sikker på, at du vil slette <strong>{selectedLead?.customer_name}</strong> permanent? Dette kan ikke fortrydes.
+                            {(selectedLead?.status === 'Sendt tilbud' || selectedLead?.opened_at) && (
+                                <span style={{ display: 'block', marginTop: 12, fontSize: '0.9rem', color: '#475569' }}>
+                                    Tilbuddet er sendt til kunden. Mailen kan ikke kaldes tilbage, men <strong>linket gøres ugyldigt</strong>, så kunden ser, at tilbuddet er trukket tilbage.
+                                </span>
+                            )}
                         </p>
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button 
