@@ -18,8 +18,15 @@ export const BOOKED_INVOICE_STATUSES = ['booked', 'paid', 'manual'];
 // Lille rundings-tolerance så 1,25-op/ned-rundinger ikke efterlader en falsk rest.
 const ROUNDING_TOLERANCE = 2;
 
-// Omvendt betalingspligt (B2B) → ingen moms. Matcher tjekket i InvoiceEditor.
-export const isReverseChargeLead = (lead) => !!(lead?.raw_data?.customerDetails?.cvr);
+// Omvendt betalingspligt → ingen moms. Gælder KUN byggeydelser (B2B), ikke al erhverv,
+// så det er et eksplicit valg. Bagudkompatibelt falder vi tilbage til CVR for ældre
+// sager uden eksplicit valg (uændret adfærd for dem).
+export const isReverseChargeLead = (lead) => {
+    const rd = lead?.raw_data || {};
+    if (rd.reverse_charge === true) return true;
+    if (rd.reverse_charge === false) return false;
+    return !!(rd.customerDetails?.cvr);
+};
 
 // Basis-pris (inkl. moms) — samme prioritet som FinanceOverview brugte.
 const getBasePriceInclVat = (lead) => {

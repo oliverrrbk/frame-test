@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Send, Upload, FileText, CheckCircle2, ChevronDow
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
 import BilagManager from './BilagManager';
+import { isReverseChargeLead } from '../../utils/caseFinance';
 
 const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onOpenCase, onUpdateLead, isMobile = false }) => {
     const [invoiceType, setInvoiceType] = useState('full'); // 'full' or 'aconto'
@@ -26,7 +27,14 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
 
     const isB2B = !!(lead.raw_data?.customerDetails?.cvr);
-    const [isReverseCharge, setIsReverseCharge] = useState(isB2B); // Default til omvendt betalingspligt hvis B2B
+    // Default følger sagens eksplicitte moms-valg (omvendt betalingspligt = kun byggeydelser).
+    // For ældre sager uden valg falder isReverseChargeLead tilbage til CVR (uændret adfærd).
+    const [isReverseCharge, setIsReverseChargeState] = useState(isReverseChargeLead(lead));
+    const setIsReverseCharge = (val) => {
+        setIsReverseChargeState(val);
+        // Gem valget på sagen, så Økonomi-oversigt og genåbning er konsistente.
+        if (onUpdateLead) onUpdateLead({ ...lead, raw_data: { ...(lead.raw_data || {}), reverse_charge: val } });
+    };
     const [showPreview, setShowPreview] = useState(false);
     const [confirmVoidId, setConfirmVoidId] = useState(null);
 
@@ -35,12 +43,32 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
         ? (lead.raw_data?.billing_mode === 'hourly' ? 'Udført arbejde (timer)' : 'Aftalt fast pris')
         : 'Oprindeligt Tilbud';
 
+    // Manuelle sager: prisen er gemt EKSKL. moms, så vi genberegner totalen live ud fra
+    // det valgte moms-valg — så et skift mellem "Med moms"/"Uden moms" straks rammer rigtigt
+    // (uafhængigt af caseFinance, der bruger sagens gemte valg).
+    const isManualCase = !!lead.raw_data?.is_manual_case;
+    const manualBaseExVat = (() => {
+        if (!isManualCase) return null;
+        const rd = lead.raw_data || {};
+        if (rd.billing_mode === 'hourly') {
+            const hours = (rd.time_entries || []).reduce((s, e) => s + (Number(e.hours) || 0), 0);
+            return hours * (Number(rd.hourly_rate) || 0);
+        }
+        if (rd.billing_mode === 'fixed') return Number(rd.fixed_price_ex_vat) || 0;
+        return 0;
+    })();
+    const vatMult = isReverseCharge ? 1 : 1.25;
+
     // Calculations
-    const basePrice = (lead.finance?.caseTotal || 0) - (lead.finance?.extraPrice || 0);
     const extraPrice = lead.finance?.extraPrice || 0;
+    const basePrice = isManualCase
+        ? Math.round(manualBaseExVat * vatMult)
+        : (lead.finance?.caseTotal || 0) - extraPrice;
     const totalToBill = basePrice + extraPrice;
-    
-    const invoiced = lead.finance?.invoiced || 0;
+
+    const invoiced = isManualCase
+        ? Math.round((Number(lead.raw_data?.invoiced_amount) || 0) * vatMult)
+        : (lead.finance?.invoiced || 0);
     const remaining = totalToBill - invoiced;
 
     const getAmountToBill = () => invoiceType === 'full' ? remaining : parseFloat(acontoAmountRaw || 0);
