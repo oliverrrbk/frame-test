@@ -11,6 +11,7 @@ import ManualMaterialsView from './ManualMaterialsView';
 import AftalesedlerTab from './AftalesedlerTab';
 import CaseDrawingsTab from './CaseDrawingsTab';
 import AudioPlayerButton from '../Wizard/AudioPlayerButton';
+import FrameSelect from '../ui/FrameSelect';
 import BilagManager from './BilagManager';
 import { SubcontractorModal } from './Subcontractors';
 import { getFeatures } from '../../utils/features';
@@ -4221,24 +4222,21 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 {(!['worker', 'apprentice'].includes(simulatedRole || profile?.role)) && (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                         <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Medarbejder (Hvem)</label>
-                                                        <select 
+                                                        <FrameSelect
                                                             value={newTime.employeeId}
-                                                            onChange={(e) => setNewTime({ ...newTime, employeeId: e.target.value })}
-                                                            style={{ padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '1rem', color: '#0f172a', width: '100%', boxSizing: 'border-box', backgroundColor: '#fff', appearance: 'none', backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 16px top 50%', backgroundSize: '12px auto' }}
-                                                        >
-                                                            <option value="" disabled>-- Vælg medarbejder --</option>
-                                                            {(() => {
+                                                            onChange={(v) => setNewTime({ ...newTime, employeeId: v })}
+                                                            placeholder="-- Vælg medarbejder --"
+                                                            options={(() => {
                                                                 const allWorkers = [...team];
                                                                 if (profile && !allWorkers.some(w => w.id === profile.id)) {
                                                                     allWorkers.unshift(profile);
                                                                 }
-                                                                return allWorkers.map(worker => (
-                                                                    <option key={worker.id} value={worker.id}>
-                                                                        {worker.owner_name || worker.company_name || worker.email || 'Ukendt'} {worker.id === profile?.id ? '(Dig)' : ''}
-                                                                    </option>
-                                                                ));
+                                                                return allWorkers.map(worker => ({
+                                                                    value: worker.id,
+                                                                    label: `${worker.owner_name || worker.company_name || worker.email || 'Ukendt'}${worker.id === profile?.id ? ' (Dig)' : ''}`,
+                                                                }));
                                                             })()}
-                                                        </select>
+                                                        />
                                                     </div>
                                                 )}
 
