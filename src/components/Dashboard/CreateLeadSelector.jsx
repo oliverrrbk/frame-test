@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calculator, FileText, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { Calculator, FileText, ChevronRight, SlidersHorizontal, Package } from 'lucide-react';
 import Coachmark from './Coachmark';
 import { shouldShowCoach, markCoachSeen } from './coachmarks';
 
@@ -27,7 +27,7 @@ const TOUR = [
     { eyebrow: 'Sådan laver du tilbud', title: 'Prisberegner', body: 'Gå igennem som var du kunden — få et hurtigt overslag på opgaven, og ret til bagefter.' },
 ];
 
-const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, onCustomizeCalculator, isMobile = false, allowCalculator = true }) => {
+const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, onSelectMaterials, onCustomizeCalculator, isMobile = false, allowCalculator = true }) => {
     const cardRefs = [useRef(null), useRef(null)];
     // Guidet gennemgang kun på computer + første gang — og kun når der er flere kort
     // (ikke-tømrere ser kun Hurtigt tilbud, så ingen gennemgang).
@@ -115,6 +115,21 @@ const CreateLeadSelector = ({ onSelectClassic, onSelectCustom, onSelectQuick, on
 
                 </>)}
             </div>
+
+            {/* Selvstændig genvej: lav en materialeliste uden et tilbud (fx send til Davidsen
+                for en pris, før du laver tilbuddet). Diskret link så de tre kort holder fokus. */}
+            {onSelectMaterials && !guiding && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: isMobile ? '16px' : '20px' }}>
+                    <button
+                        onClick={onSelectMaterials}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '999px', border: '1px solid #e2e8f0', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', color: '#475569', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.color = '#1d4ed8'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }}
+                    >
+                        <Package size={16} /> Lav kun en materialeliste (send til leverandør)
+                    </button>
+                </div>
+            )}
 
             {/* "Tilbud fra bunden" er helt taget ud af oprettelses-vælgeren (kan ikke vælges
                 af nogen). Komponenten (CustomProjectCreator) er bevaret i koden, men har

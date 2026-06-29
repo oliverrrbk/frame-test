@@ -946,6 +946,13 @@ const Dashboard = () => {
     const [editQuoteLead, setEditQuoteLead] = useState(null);
     // Materialeliste-byggeren (Del A): null = lukket; objekt = åben med en (evt. ny) lead.
     const [materialBuilderLead, setMaterialBuilderLead] = useState(null);
+    // Hvilken liste byggeren åbner (default = sagens hovedliste; ny id = efterbestilling).
+    const [materialBuilderOpts, setMaterialBuilderOpts] = useState({ listId: 'default', listName: null });
+    // Åbn byggeren på en sag/lead, evt. scopet til en bestemt liste (efterbestilling).
+    const openMaterialBuilder = (lead, opts = {}) => {
+        setMaterialBuilderOpts({ listId: opts.listId || 'default', listName: opts.listName || null });
+        setMaterialBuilderLead(lead || { __new: true });
+    };
 
     // Forespørgsel/sag → forudfyld Hurtigt tilbud fra beregnerens calc_data, og åbn editoren.
     // Mapper materialebudget, avance, timer og kørsel ind i manual_quote-formatet, så
@@ -3458,7 +3465,7 @@ const Dashboard = () => {
                                 }}
                                 onUpdateLead={(updated) => applyLocalLeadUpdate(updated)}
                                 onCreateQuote={() => setIsCreateLeadModalOpen(true)}
-                                onOpenMaterialBuilder={(lead) => setMaterialBuilderLead(lead)}
+                                onOpenMaterialBuilder={(lead, opts) => openMaterialBuilder(lead, opts)}
                             />
                         </div>
                     )}
@@ -5062,7 +5069,7 @@ const Dashboard = () => {
                                                              lead={selectedLead}
                                                              profile={carpenterProfile}
                                                              onUpdate={(updated) => applyLocalLeadUpdate(updated)}
-                                                             onOpenBuilder={(l) => { setIsMaterialListOpen(false); setMaterialBuilderLead(l); }}
+                                                             onOpenBuilder={(l, opts) => { setIsMaterialListOpen(false); openMaterialBuilder(l, opts); }}
                                                          />
                                                          <button 
                                                              onClick={() => setIsMaterialListOpen(false)}
@@ -5953,7 +5960,7 @@ const Dashboard = () => {
                                     onSelectClassic={() => setCreateLeadMode('classic')}
                                     onSelectCustom={() => setCreateLeadMode('custom')}
                                     onSelectQuick={() => setCreateLeadMode('quick')}
-                                    onSelectMaterials={() => { setIsCreateLeadModalOpen(false); setCreateLeadMode(null); setMaterialBuilderLead({ __new: true }); }}
+                                    onSelectMaterials={() => { setIsCreateLeadModalOpen(false); setCreateLeadMode(null); openMaterialBuilder(null); }}
                                     onCustomizeCalculator={effectiveRole === 'admin' ? () => setShowCalcCategories(true) : undefined}
                                 />
                             )}
@@ -5991,7 +5998,7 @@ const Dashboard = () => {
                                     carpenter={carpenterProfile}
                                     draftCreator={myProfile}
                                     isMobile={isMobile}
-                                    onOpenMaterialList={() => setMaterialBuilderLead({ __new: true })}
+                                    onOpenMaterialList={() => openMaterialBuilder(null)}
                                     onCancel={() => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
@@ -6058,7 +6065,7 @@ const Dashboard = () => {
                                 draftCreator={myProfile}
                                 isMobile={isMobile}
                                 initialLead={editQuoteLead}
-                                onOpenMaterialList={() => setMaterialBuilderLead(editQuoteLead)}
+                                onOpenMaterialList={() => openMaterialBuilder(editQuoteLead)}
                                 onCancel={() => setEditQuoteLead(null)}
                                 onDeleted={async () => {
                                     setEditQuoteLead(null);
@@ -6090,6 +6097,8 @@ const Dashboard = () => {
                     draftCreator={myProfile}
                     isMobile={isMobile}
                     initialLead={materialBuilderLead.__new ? null : materialBuilderLead}
+                    listId={materialBuilderOpts.listId}
+                    listName={materialBuilderOpts.listName}
                     onCancel={() => setMaterialBuilderLead(null)}
                     onDeleted={async () => {
                         setMaterialBuilderLead(null);

@@ -3820,6 +3820,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     lead={selectedCase}
                                     profile={profile}
                                     onUpdate={onUpdateLead}
+                                    onOpenBuilder={onOpenMaterialBuilder}
                                 />
                             ) : (
                                 <MaterialList

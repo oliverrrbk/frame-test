@@ -33,13 +33,13 @@ const formatAmountInput = (raw) => {
 };
 const parseAmount = (formatted) => parseFloat(String(formatted).replace(/\./g, '').replace(',', '.')) || 0;
 
-export default function ManualMaterialsView({ lead, profile, onUpdate }) {
+export default function ManualMaterialsView({ lead, profile, onUpdate, onOpenBuilder }) {
     const rd = lead.raw_data || {};
 
-    const [items, setItems] = useState((rd.material_list || []).filter(m => m && m.item));
     const [legacyPdfs, setLegacyPdfs] = useState(rd.material_pdfs || []);
-    const [newItem, setNewItem] = useState({ item: '', qty: '', unit: 'stk' });
     const [deliveryDate, setDeliveryDate] = useState(rd.delivery_info?.date || '');
+    const materialListsMeta = (rd.material_lists_meta && rd.material_lists_meta.length) ? rd.material_lists_meta : [{ id: 'default', name: 'Materialeliste til Opgaven' }];
+    const extraListCount = materialListsMeta.filter(l => l.id !== 'default').length;
 
     // Tilføj-materiale modal
     const [showAdd, setShowAdd] = useState(false);
@@ -177,29 +177,6 @@ export default function ManualMaterialsView({ lead, profile, onUpdate }) {
         await persist({ material_pdfs: next });
     };
 
-    // ---- Hurtig-noter (navn + antal, ingen pris) ----
-    const addItem = async () => {
-        if (!newItem.item.trim()) return;
-        const next = [...items, { ...newItem, status: 'Ikke bestilt', listId: 'manual' }];
-        setItems(next);
-        setNewItem({ item: '', qty: '', unit: 'stk' });
-        await persist({ material_list: next });
-    };
-    const removeItem = async (idx) => {
-        const next = items.filter((_, i) => i !== idx);
-        setItems(next);
-        await persist({ material_list: next });
-    };
-    const cycleItemStatus = async (idx) => {
-        const next = items.map((m, i) => {
-            if (i !== idx) return m;
-            const cur = MAT_STATUSES.indexOf(m.status || 'Ikke bestilt');
-            return { ...m, status: MAT_STATUSES[(cur + 1) % MAT_STATUSES.length] };
-        });
-        setItems(next);
-        await persist({ material_list: next });
-    };
-
     const saveDeliveryDate = async (val) => {
         setDeliveryDate(val);
         await persist({ delivery_info: { ...(rd.delivery_info || {}), date: val } });
@@ -320,29 +297,25 @@ export default function ManualMaterialsView({ lead, profile, onUpdate }) {
                 )}
             </div>
 
-            {/* Hurtig-noter (navn + antal, ingen pris) */}
-            <div style={card}>
-                <h4 style={{ margin: '0 0 4px', fontSize: '1.1rem', color: '#0f172a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={20} color="#64748b" /> Ekstra materialer (valgfrit)</h4>
-                <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: '#94a3b8' }}>Hurtig huskeliste til småting — uden pris og bilag.</p>
-                {items.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
-                        {items.map((m, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: '#f8fafc', borderRadius: '10px', flexWrap: 'wrap' }}>
-                                <span style={{ flex: 1, minWidth: '120px', color: '#0f172a', fontWeight: 600 }}>{m.item}</span>
-                                <span style={{ color: '#64748b', fontSize: '0.9rem' }}>{m.qty} {m.unit}</span>
-                                <StatusPill status={m.status} onClick={() => cycleItemStatus(i)} />
-                                <button onClick={() => removeItem(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1' }}><Trash2 size={16} /></button>
-                            </div>
-                        ))}
+            {/* Materialeliste til forhandler — byg/send via materialeliste-byggeren (samme overalt) */}
+            {onOpenBuilder && (
+                <div style={card}>
+                    <h4 style={{ margin: '0 0 4px', fontSize: '1.1rem', color: '#0f172a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}><FileText size={20} color="#2563eb" /> Materialeliste til forhandler</h4>
+                    <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#94a3b8' }}>Byg en liste, se PDF'en og send den til fx Davidsen for en pris. Mangler du noget mere undervejs, så lav en efterbestilling.</p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button onClick={() => onOpenBuilder(lead, { listId: 'default' })}
+                            style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(145deg,#2563eb,#1d4ed8)', color: '#fff', border: 'none', padding: '14px 18px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem', boxShadow: '0 8px 20px rgba(37,99,235,0.25)' }}>
+                            <Package size={18} /> Åbn materialeliste
+                        </button>
+                        <button onClick={() => onOpenBuilder(lead, { listId: `list_${Date.now()}`, listName: `Efterbestilling ${extraListCount + 1}` })}
+                            style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#fff', border: '2px dashed #cbd5e1', color: '#475569', padding: '14px 18px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.color = '#1d4ed8'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569'; }}>
+                            <Plus size={18} /> Lav ny materialeliste (efterbestilling)
+                        </button>
                     </div>
-                )}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <input value={newItem.item} onChange={(e) => setNewItem({ ...newItem, item: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && addItem()} placeholder="Materiale" style={{ flex: 3, minWidth: '160px', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none' }} />
-                    <input value={newItem.qty} onChange={(e) => setNewItem({ ...newItem, qty: e.target.value })} placeholder="Antal" style={{ flex: 1, minWidth: '70px', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none' }} />
-                    <input value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })} placeholder="stk" style={{ width: '70px', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none' }} />
-                    <button onClick={addItem} style={{ padding: '11px 18px', borderRadius: '10px', border: 'none', background: '#3b82f6', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><Plus size={16} /> Tilføj</button>
                 </div>
-            </div>
+            )}
 
             {/* ---- MODAL: Tilføj materiale (Bison Frame-stil) ---- */}
             {createPortal(

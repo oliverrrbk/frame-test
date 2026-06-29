@@ -164,6 +164,40 @@ export const getCustomerRequestReceivedTemplate = (customerName, categoryName, c
     return getBaseTemplate("Tak for din forespørgsel", content, "Vi glæder os til at kigge på dit projekt.", carpenter);
 };
 
+// Materialeliste sendt til en LEVERANDØR (fx Davidsen) med anmodning om pris.
+// Mailen er bevidst KORT: en hilsen, en kort besked og en tydelig "PDF vedhæftet"-boks.
+// Selve listen (og leveringsoplysninger) står KUN i den vedhæftede PDF — ikke i mail-teksten.
+// opts = { customMessage, caseNumber, title, contactName }.
+export const getSupplierMaterialRequestTemplate = (supplierName, carpenter, items = [], opts = {}) => {
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const signatureName = getCarpenterSenderName(carpenter);
+    // Hilsen: kontaktperson hvis udfyldt ("Hej Kenneth,"), ellers neutral "Hej,".
+    const greetName = (opts.contactName && String(opts.contactName).trim())
+        ? String(opts.contactName).trim()
+        : '';
+
+    const defaultIntro = 'Vi vil gerne bede om en pris på følgende materialer. I finder den fulde materialeliste i den vedhæftede PDF.';
+    const rawIntro = (opts.customMessage != null && String(opts.customMessage).trim()) ? String(opts.customMessage) : defaultIntro;
+    const introHtml = esc(rawIntro).replace(/\n/g, '<br/>');
+
+    const content = `
+        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Hej${greetName ? ` ${esc(greetName)}` : ''},</h2>
+        <p style="color: #334155;">${introHtml}</p>
+        ${opts.title ? `<p style="color: #334155;"><strong>Opgave:</strong> ${esc(opts.title)}</p>` : ''}
+
+        <div style="display: flex; align-items: center; gap: 12px; background-color: #f8fafc; padding: 16px 18px; border-radius: 10px; margin: 20px 0; border: 1px solid #e2e8f0;">
+            <span style="font-size: 22px; line-height: 1;">📎</span>
+            <span style="color: #0f172a; font-size: 14px; font-weight: 600;">Materialeliste er vedhæftet som PDF${opts.caseNumber ? ` · sagsnr. ${esc(opts.caseNumber)}` : ''}</span>
+        </div>
+
+        <p style="color: #334155;">I er velkomne til at svare direkte på denne mail med jeres pris.</p>
+
+        <p style="color: #334155; margin-bottom: 0;">På forhånd tak,</p>
+        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
+    `;
+    return getBaseTemplate("Anmodning om materialepris", content, "Materialeliste – anmodning om pris (PDF vedhæftet)", carpenter);
+};
+
 // Aftaleseddel sendt til kunden. Hvis confirmUrl er angivet (sedlen er ikke bekræftet
 // endnu), vises en "Bekræft aftale"-knap til den sikre bekræftelses-side. Ellers sendes
 // blot en kopi. PDF'en vedhæftes altid mailen.

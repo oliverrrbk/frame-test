@@ -186,7 +186,7 @@ const PREVIEW_CSS = `
   .qqb-rec{animation:qqbrec 1s ease-in-out infinite;}
 `;
 
-export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null, draftCreator = null }) {
+export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null, draftCreator = null, onOpenMaterialList = null }) {
     const [busy, setBusy] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     // Felt-fejl ved afsendelse (markeres rødt) + bekræftelses-popup før mailen sendes.
@@ -1170,6 +1170,12 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     <h3 style={editH}><Package size={18} color="#3b82f6" /> Materialer</h3>
                     {renderMaterialInputs()}
                     {renderUploadField()}
+                    {onOpenMaterialList && (
+                        <button type="button" onClick={() => onOpenMaterialList()}
+                            style={{ marginTop: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 16px', borderRadius: '12px', border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}>
+                            <Package size={16} /> Generér materialeliste til leverandør
+                        </button>
+                    )}
                 </div>
                 <div style={editSection} data-tour="qq-labor">
                     <h3 style={editH}><Hammer size={18} color="#f59e0b" /> Arbejde</h3>

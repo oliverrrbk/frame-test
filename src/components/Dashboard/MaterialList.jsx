@@ -6,7 +6,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { friendlyError } from '../../utils/friendlyError';
 
-const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryToCalendar, existingDeliveryDate }) => {
+const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryToCalendar, existingDeliveryDate, onOpenBuilder, simpleView = false }) => {
     const [materials, setMaterials] = useState([]);
     const [materialListsMeta, setMaterialListsMeta] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
@@ -496,8 +496,112 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
     const isSplitByPhase = materialListsMeta.length > 1;
     const canManageLists = !isLead && profile?.role !== 'worker' && profile?.role !== 'apprentice';
 
+    // ---- SIMPEL VISNING ----
+    // Bruges i forespørgsel + sag/ordrestyring: ingen per-vare-redigering. Man ser status
+    // for hele listen, kan se PDF'en, og åbner byggeren for at rette/sende. Alt redigeres ÉT sted.
+    if (simpleView) {
+        const canEditStatus = !isLead && profile?.role !== 'worker' && profile?.role !== 'apprentice';
+        const statusPill = (active, activeLabel, idleLabel, color) => (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 700, color: active ? '#fff' : '#64748b', background: active ? color : '#f1f5f9', border: `1px solid ${active ? color : '#e2e8f0'}` }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: active ? '#fff' : '#cbd5e1' }} />
+                {active ? activeLabel : idleLabel}
+            </span>
+        );
+        const extraListCount = materialListsMeta.filter(l => l.id !== 'default').length;
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.3s ease-in' }}>
+                {materialListsMeta.map((list) => {
+                    const listMaterials = materials.filter(m => (m.listId || 'default') === list.id);
+                    if (listMaterials.length === 0 && materialListsMeta.length > 1) return null;
+                    const allOrdered = listMaterials.length > 0 && listMaterials.every(m => m.status === 'Bestilt' || m.status === 'Leveret');
+                    const allDelivered = listMaterials.length > 0 && listMaterials.every(m => m.status === 'Leveret');
+                    return (
+                        <div key={list.id} style={{ border: '1px solid #e2e8f0', borderRadius: '16px', background: '#fff', padding: '18px 20px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Package size={20} />
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>{isLead ? 'Foreslået materialeliste' : list.name}</div>
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{listMaterials.length} materialer</div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                                {statusPill(allOrdered, 'Bestilt', 'Ikke bestilt endnu', '#2563eb')}
+                                {statusPill(allDelivered, 'Leveret', 'Ikke leveret endnu', '#10b981')}
+                                <div style={{ flex: 1 }} />
+                                <button onClick={() => handleDownloadPdf(list.id, list.name)} title="Se materialelisten som PDF"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+                                    <Download size={15} /> Se PDF
+                                </button>
+                                {onOpenBuilder && (
+                                    <button onClick={() => onOpenBuilder(lead, { listId: list.id, listName: isLead ? null : list.name })} title="Åbn i materialeliste-bygger"
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: 'none', background: 'linear-gradient(145deg,#2563eb,#1d4ed8)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+                                        <Package size={15} /> Åbn / ret & send
+                                    </button>
+                                )}
+                                {canEditStatus && (
+                                    <>
+                                        <button onClick={() => handleToggleListOrdered(list.id)}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: 'none', background: allOrdered ? '#fee2e2' : '#eff6ff', color: allOrdered ? '#dc2626' : '#2563eb', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+                                            {allOrdered ? <><Trash2 size={15} /> Fortryd bestilt</> : <><Check size={15} /> Markér bestilt</>}
+                                        </button>
+                                        <button onClick={() => handleMarkListDelivered(list.id)}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: 'none', background: allDelivered ? '#f0fdf4' : '#10b981', color: allDelivered ? '#166534' : '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+                                            {allDelivered ? <><Trash2 size={15} /> Fortryd leveret</> : <><Truck size={15} /> Markér leveret</>}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+
+                {/* Lav ny materialeliste (efterbestilling) — kun på en sag, ikke på forespørgsel */}
+                {onOpenBuilder && !isLead && (
+                    <button
+                        onClick={() => onOpenBuilder(lead, { listId: `list_${Date.now()}`, listName: `Efterbestilling ${extraListCount + 1}` })}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#fff', border: '2px dashed #cbd5e1', color: '#475569', padding: '14px 18px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', width: '100%', fontSize: '0.95rem' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.color = '#1d4ed8'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569'; }}
+                    >
+                        <PlusCircle size={18} /> Lav ny materialeliste (efterbestilling)
+                    </button>
+                )}
+
+                {/* Budget (kun i sagen, ikke på forespørgsel) */}
+                {!isLead && profile?.role !== 'worker' && profile?.role !== 'apprentice' && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', background: '#fff' }}>
+                        <div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Forbrugt / Budget</div>
+                            <div style={{ fontSize: '0.95rem', color: '#0f172a', fontWeight: 'bold' }}>{totalSpent.toLocaleString('da-DK')} <span style={{ color: '#94a3b8', fontWeight: 'normal', fontSize: '0.8rem' }}>/ {originalBudget.toLocaleString('da-DK')} kr.</span></div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Restbudget</div>
+                            <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: isOverBudget ? '#ef4444' : '#10b981' }}>{budgetRemaining > 0 ? '+' : ''}{budgetRemaining.toLocaleString('da-DK')} kr.</div>
+                        </div>
+                    </div>
+                )}
+
+                <style dangerouslySetInnerHTML={{__html: `@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}} />
+            </div>
+        );
+    }
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease-in' }}>
+
+            {/* Åbn hele listen i materialeliste-byggeren — byg/ret, se PDF og send til leverandør
+                (samme oplevelse som Hurtigt tilbud). Vises kun når en handler er givet. */}
+            {onOpenBuilder && (
+                <button
+                    onClick={() => onOpenBuilder(lead)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(145deg,#2563eb,#1d4ed8)', color: '#fff', border: 'none', padding: '14px 18px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', width: '100%', fontSize: '1rem', boxShadow: '0 8px 20px rgba(37,99,235,0.25)' }}
+                >
+                    <Package size={18} /> Åbn i materialeliste-bygger — se PDF & send til leverandør
+                </button>
+            )}
 
             {/* MINIMALIST BUDGET DASHBOARD (INLINE) */}
             {(profile?.role !== 'worker' && profile?.role !== 'apprentice' && !isLead) && (
