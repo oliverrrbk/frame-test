@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Mail, Info, HelpCircle, X, ExternalLink, BookOpen, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
@@ -8,10 +8,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Tidligere var den ren CSS :hover → spørgsmålstegnet gjorde intet på mobil.
 const Tooltip = ({ text }) => {
     const [open, setOpen] = useState(false);
+    const [shift, setShift] = useState(0); // vandret korrektion så boblen ikke løber ud over skærmkanten
     const ref = useRef(null);
+    const bubbleRef = useRef(null);
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) { setShift(0); return; }
         const handleOutside = (e) => {
             if (ref.current && !ref.current.contains(e.target)) setOpen(false);
         };
@@ -21,6 +23,16 @@ const Tooltip = ({ text }) => {
             document.removeEventListener('mousedown', handleOutside);
             document.removeEventListener('touchstart', handleOutside);
         };
+    }, [open]);
+
+    // Mål boblen når den åbner og skub den ind på skærmen hvis den klippes i en kant.
+    useLayoutEffect(() => {
+        if (!open || !bubbleRef.current) return;
+        const margin = 12;
+        const rect = bubbleRef.current.getBoundingClientRect();
+        const vw = document.documentElement.clientWidth;
+        if (rect.right > vw - margin) setShift(-(rect.right - (vw - margin)));
+        else if (rect.left < margin) setShift(margin - rect.left);
     }, [open]);
 
     return (
@@ -38,22 +50,22 @@ const Tooltip = ({ text }) => {
             >
                 <HelpCircle size={16} color={open ? '#db2777' : '#94a3b8'} />
             </button>
-            <span style={{
+            <span ref={bubbleRef} style={{
                 position: 'absolute',
                 bottom: open ? '125%' : '135%',
                 left: '50%',
-                transform: 'translateX(-50%)',
+                transform: `translateX(calc(-50% + ${shift}px))`,
                 backgroundColor: '#1e293b',
                 color: '#fff',
                 padding: '10px 14px',
                 borderRadius: '8px',
                 fontSize: '12px',
                 width: 'max-content',
-                maxWidth: '280px',
+                maxWidth: 'min(280px, calc(100vw - 24px))',
                 boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                 opacity: open ? 1 : 0,
                 visibility: open ? 'visible' : 'hidden',
-                transition: 'all 0.2s',
+                transition: 'opacity 0.2s, bottom 0.2s',
                 zIndex: 50,
                 lineHeight: '1.5',
                 fontWeight: 'normal',
@@ -66,7 +78,7 @@ const Tooltip = ({ text }) => {
                     position: 'absolute',
                     top: '100%',
                     left: '50%',
-                    transform: 'translateX(-50%)',
+                    transform: `translateX(calc(-50% - ${shift}px))`, // hold pilen pegende på "?"
                     borderWidth: '6px',
                     borderStyle: 'solid',
                     borderColor: '#1e293b transparent transparent transparent'
