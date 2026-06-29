@@ -35,8 +35,10 @@ import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import { getFeatures } from '../../utils/features';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
+import MaterialListBuilder from './MaterialListBuilder';
 import Coachmark from './Coachmark';
 import DashboardTour from './DashboardTour';
+import AudioPlayerButton from '../Wizard/AudioPlayerButton';
 import FoundersWelcome from './FoundersWelcome';
 import SectionTour from './SectionTour';
 import MobileInstallGuide from './MobileInstallGuide';
@@ -942,6 +944,46 @@ const Dashboard = () => {
     const [createLeadMode, setCreateLeadMode] = useState(null);
     // Når en gemt tilbudskladde (selvlavet hurtigt tilbud) åbnes, redigeres den i QuickQuoteBuilder.
     const [editQuoteLead, setEditQuoteLead] = useState(null);
+    // Materialeliste-byggeren (Del A): null = lukket; objekt = åben med en (evt. ny) lead.
+    const [materialBuilderLead, setMaterialBuilderLead] = useState(null);
+
+    // Forespørgsel/sag → forudfyld Hurtigt tilbud fra beregnerens calc_data, og åbn editoren.
+    // Mapper materialebudget, avance, timer og kørsel ind i manual_quote-formatet, så
+    // tømreren bare retter til og sender. Lead'ets id bevares → samme sag konverteres.
+    const openQuickQuoteFromLead = (lead) => {
+        if (!lead) return;
+        const calc = lead.raw_data?.calc_data || {};
+        const markup = settingsData?.material_markup || 1.15;
+        const base = calc.materialCostBase != null
+            ? calc.materialCostBase
+            : (calc.materialCost ? Math.round(calc.materialCost / markup) : '');
+        const markupPct = calc.materialMarkup ? Math.round((calc.materialMarkup - 1) * 100) : 35;
+        const cat = lead.raw_data?.category;
+        const niceTitle = (categoryNames[cat] || lead.project_category || '').toString();
+        const existingMq = lead.raw_data?.manual_quote;
+        const seeded = {
+            ...lead,
+            project_category: (niceTitle && niceTitle !== 'Manuelt tilbud') ? niceTitle : (lead.project_category || ''),
+            raw_data: {
+                ...lead.raw_data,
+                // Bevar en allerede påbegyndt manuel kladde; ellers byg fra beregnerens tal.
+                manual_quote: existingMq || {
+                    materialCost: base === '' ? '' : Number(base) || '',
+                    materialMarkupPct: markupPct,
+                    laborMode: (Number(calc.laborHours) > 0) ? 'hourly' : 'fixed',
+                    laborRate: calc.hourlyRate || carpenterProfile?.hourly_rate || 550,
+                    laborHours: calc.laborHours || '',
+                    laborFixed: '',
+                    extras: Number(calc.drivingCost) > 0 ? [{ desc: 'Kørsel', amount: Number(calc.drivingCost) }] : [],
+                    noteHtml: '',
+                    workHtml: '',
+                    validityDays: 14,
+                },
+            },
+        };
+        setSelectedLead(null);
+        setEditQuoteLead(seeded);
+    };
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [mapFilters, setMapFilters] = useState({ showNew: true, showSent: true, showConfirmed: true, showOnHold: true });
     const [selectedMapLead, setSelectedMapLead] = useState(null); // lead vist i info-boblen på kortet
@@ -967,9 +1009,7 @@ const Dashboard = () => {
         });
     }, [leadsData, simulatedRole, myProfile, mapFilters]);
 
-    const [quoteBuilder, setQuoteBuilder] = useState(null);
     const [integrationSuccessData, setIntegrationSuccessData] = useState(null);
-    const [showEmailPreview, setShowEmailPreview] = useState(false);
     const invoiceRef = useRef(null);
     
     // Auth & Profile
@@ -1222,84 +1262,6 @@ const Dashboard = () => {
         performGeocoding();
     }, [leadsData, geocodedLeads, isLoaded]);
 
-    useEffect(() => {
-        if (selectedLead && selectedLead.raw_data) {
-            const cat = selectedLead.raw_data.category;
-            const cName = categoryNames[cat] || cat;
-            const defaultMessage = generateHumanQuoteText(cat, selectedLead.raw_data.details, cName);
-
-            const calc = selectedLead.raw_data.calc_data || {};
-
-            let initialCustomLines = (calc.customLines || []).filter(line => 
-                line.description !== 'Ekstra materialer (smådele) & Sikkerhedsbuffer' && 
-                line.description !== 'System-rabat / Afrunding'
-            );
-            const activeHourlyRate = calc.hourlyRate || carpenterProfile?.hourly_rate || 500;
-            const activeLaborHours = calc.laborHours || 0;
-            // NYT: Dekonstruering af materialepris
-            const defaultMarkup = settingsData?.material_markup || 1.15;
-            let activeMaterialCostBase = calc.materialCostBase;
-            let activeMaterialMarkup = calc.materialMarkup;
-            
-            if (activeMaterialCostBase === undefined) {
-                // Legacy support: Regn baglæns fra AI'ens estimerede pris, da den allerede indeholder avance
-                const costInclMarkup = calc.materialCost || 0;
-                activeMaterialCostBase = Math.round(costInclMarkup / defaultMarkup);
-                activeMaterialMarkup = defaultMarkup;
-            }
-            
-            const activeMaterialCost = calc.materialCost || 0;
-            const activeDrivingCost = calc.drivingCost || 0;
-            
-            let activeExtraMaterialsCost = calc.extraMaterialsCost !== undefined ? calc.extraMaterialsCost : 0;
-            
-            // Udregn differencen mellem de rå materialer/timer og det endelige kundetilbud (bagudkompatibilitet)
-            if (calc.finalEstimateExVat && calc.extraMaterialsCost === undefined) {
-                const baseExVat = (activeLaborHours * activeHourlyRate) + activeMaterialCost + activeDrivingCost;
-                activeExtraMaterialsCost = calc.finalEstimateExVat - baseExVat;
-            }
-
-            const isKombi = calc.isKombi || cat === 'Kombi-projekt';
-            let initialSubprojects = [];
-            if (isKombi && Array.isArray(calc.projects)) {
-                initialSubprojects = calc.projects.map(p => {
-                    const subCost = p.result?.calcData?.materialCost || p.materialCost || 0;
-                    const subCostBase = p.materialCostBase !== undefined ? p.materialCostBase : Math.round(subCost / defaultMarkup);
-                    const subMarkup = p.materialMarkup !== undefined ? p.materialMarkup : defaultMarkup;
-                    
-                    return {
-                        id: p.id,
-                        category: p.category,
-                        title: categoryNames[p.category] || p.category,
-                        laborHours: p.result?.calcData?.laborHours || p.laborHours || 0,
-                        materialCost: subCost,
-                        materialCostBase: subCostBase,
-                        materialMarkup: subMarkup
-                    };
-                });
-            }
-
-            setQuoteBuilder({
-                laborHours: activeLaborHours,
-                hourlyRate: activeHourlyRate,
-                materialCostBase: activeMaterialCostBase,
-                materialMarkup: activeMaterialMarkup,
-                materialCost: activeMaterialCost,
-                drivingCost: activeDrivingCost,
-                extraMaterialsCost: activeExtraMaterialsCost,
-                customLines: initialCustomLines, 
-                showPreview: false,
-                isGeneratingPdf: false,
-                showDetailedBreakdown: false, // Nu skjult som standard
-                validityDays: 14,
-                customMessage: defaultMessage,
-                isKombi: isKombi,
-                subprojects: initialSubprojects
-            });
-        } else {
-            setQuoteBuilder(null);
-        }
-    }, [selectedLead, carpenterProfile]);
 
     const handleAcknowledgeDailyMessages = async () => {
         if (!myProfile) return;
@@ -3496,6 +3458,7 @@ const Dashboard = () => {
                                 }}
                                 onUpdateLead={(updated) => applyLocalLeadUpdate(updated)}
                                 onCreateQuote={() => setIsCreateLeadModalOpen(true)}
+                                onOpenMaterialBuilder={(lead) => setMaterialBuilderLead(lead)}
                             />
                         </div>
                     )}
@@ -4308,44 +4271,9 @@ const Dashboard = () => {
                                                             
                                                             return (
                                                                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f3f4f6' }}>
-                                                                    <button 
-                                                                        onClick={(e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                            if ('speechSynthesis' in window) {
-                                                                                const synth = window.speechSynthesis;
-                                                                                const btn = e.currentTarget;
-                                                                                if (synth.speaking || synth.pending) {
-                                                                                    synth.cancel();
-                                                                                    btn.innerHTML = '🔊 Læs højt';
-                                                                                    btn.style.background = '#faf5ff';
-                                                                                    btn.style.color = '#7e22ce';
-                                                                                    btn.style.borderColor = '#d8b4fe';
-                                                                                } else {
-                                                                                    synth.cancel();
-                                                                                    const utterance = new SpeechSynthesisUtterance(summaryBullets.join('. '));
-                                                                                    utterance.lang = 'da-DK';
-                                                                                    utterance.onend = () => {
-                                                                                        btn.innerHTML = '🔊 Læs højt';
-                                                                                        btn.style.background = '#faf5ff';
-                                                                                        btn.style.color = '#7e22ce';
-                                                                                        btn.style.borderColor = '#d8b4fe';
-                                                                                    };
-                                                                                    utterance.onerror = utterance.onend;
-                                                                                    synth.speak(utterance);
-                                                                                    btn.innerHTML = '🛑 Stop Oplæsning';
-                                                                                    btn.style.background = '#fef2f2';
-                                                                                    btn.style.color = '#ef4444';
-                                                                                    btn.style.borderColor = '#fecaca';
-                                                                                }
-                                                                            } else {
-                                                                                toast.error('Oplæsning understøttes desværre ikke i din browser.');
-                                                                            }
-                                                                        }}
-                                                                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #d8b4fe', background: '#faf5ff', color: '#7e22ce', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginBottom: '12px' }}
-                                                                    >
-                                                                        🔊 Læs højt
-                                                                    </button>
+                                                                    <div style={{ marginBottom: '12px' }}>
+                                                                        <AudioPlayerButton text={summaryBullets.join('. ')} title="Læs opsummering op" />
+                                                                    </div>
                                                                     <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc', marginLeft: '10px', fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5' }}>
                                                                         {summaryBullets.map((bullet, idx) => (
                                                                             <li key={idx} style={{ marginBottom: '6px' }}>{bullet}</li>
@@ -4387,6 +4315,7 @@ const Dashboard = () => {
                                                                 <div style={{ padding: '20px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
                                                                     <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                         <FileText size={16} /> Opgavebeskrivelse
+                                                                        {details.notes && <AudioPlayerButton text={details.notes} title="Læs opgavebeskrivelsen op" style={{ marginLeft: 'auto' }} />}
                                                                     </h4>
                                                                     <p style={{ margin: 0, fontSize: '1rem', color: '#1e293b', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
                                                                         {details.notes || 'Ingen beskrivelse angivet for opgaven.'}
@@ -4839,7 +4768,10 @@ const Dashboard = () => {
                                                                         
                                                                         {details.obsNotes && details.obsNotes.toLowerCase() !== 'ingen særlige forbehold' && (
                                                                             <div style={{ backgroundColor: '#fffbeb', padding: '16px', borderRadius: '8px', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b' }}>
-                                                                                <strong style={{ color: '#b45309', display: 'block', marginBottom: '4px', fontSize: '0.9rem' }}>OBS / Særlige Forbehold:</strong>
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                                                    <strong style={{ color: '#b45309', fontSize: '0.9rem' }}>OBS / Særlige Forbehold:</strong>
+                                                                                    <AudioPlayerButton text={details.obsNotes} title="Læs forbehold op" style={{ marginLeft: 'auto' }} />
+                                                                                </div>
                                                                                 <span style={{ color: '#92400e', fontSize: '0.95rem' }}>{details.obsNotes}</span>
                                                                             </div>
                                                                         )}
@@ -5124,10 +5056,13 @@ const Dashboard = () => {
 
                                                  {isMaterialListOpen && (
                                                      <div style={{ marginBottom: '24px', padding: '12px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column' }}>
-                                                         <MaterialList isLead={true} 
-                                                             lead={selectedLead} 
-                                                             profile={carpenterProfile} 
+                                                         {/* Simpel visning: status + se PDF + åbn byggeren. Al redigering sker i byggeren. */}
+                                                         <MaterialList isLead={true}
+                                                             simpleView={true}
+                                                             lead={selectedLead}
+                                                             profile={carpenterProfile}
                                                              onUpdate={(updated) => applyLocalLeadUpdate(updated)}
+                                                             onOpenBuilder={(l) => { setIsMaterialListOpen(false); setMaterialBuilderLead(l); }}
                                                          />
                                                          <button 
                                                              onClick={() => setIsMaterialListOpen(false)}
@@ -5140,345 +5075,17 @@ const Dashboard = () => {
                                              </>
                                          )}
 
-                                        {/* QUOTE BUILDER SEKTION */}
+                                        {/* LAV FÆRDIGT TILBUD — åbner Hurtigt tilbud forudfyldt fra forespørgslen.
+                                            Den primære, enkle vej; den gamle inline-bygger ligger som avanceret valg nedenfor. */}
                                         {!isConfirmedCase(selectedLead) && (
-                                            <>
-                                                <div 
-                                                    onClick={() => setIsQuoteEditorOpen(!isQuoteEditorOpen)}
-                                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px', marginTop: '24px' }}
-                                                >
-                                                    <h3 style={{ color: '#1a1a1a', margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <FileText size={18} style={{ color: '#6b7280' }} /> {(['extensions', 'carport', 'kitchen', 'bath'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
-                                                    </h3>
-                                                    <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: 'bold' }}>
-                                                        {isQuoteEditorOpen ? 'Skjul ▲' : 'Vis ▼'}
-                                                    </span>
-                                                </div>
-
-                                                {isQuoteEditorOpen && (quoteBuilder ? (
-                                                    selectedLead.status === 'Sendt tilbud' && !quoteBuilder.forceEdit ? (
-                                                        <div style={{ marginTop: '24px', padding: '40px 20px', backgroundColor: '#ecfdf5', borderRadius: '14px', border: '1px solid #10b981', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                                                            <div style={{ color: '#10b981', marginBottom: '16px' }}><CheckCircle size={48} /></div>
-                                                            <h3 style={{ margin: '0 0 12px', color: '#065f46', fontSize: '1.5rem' }}>Nu har vi sendt tilbuddet på mail til kunden!</h3>
-                                                            <p style={{ margin: '0 0 32px', color: '#047857', fontSize: '1rem', maxWidth: '400px' }}>
-                                                                Kunden afventer nu, og du får direkte besked (samt en ny mail), så snart de accepterer opgaven.
-                                                            </p>
-                                                            <button 
-                                                                onClick={() => setSelectedLead(null)}
-                                                                style={{ padding: '14px 28px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', marginBottom: '24px' }}
-                                                            >
-                                                                Gå tilbage til dashboardet
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => setQuoteBuilder(p => ({...p, forceEdit: true}))}
-                                                                style={{ background: 'none', border: 'none', color: '#6b7280', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.9rem' }}
-                                                            >
-                                                                Har du lavet en fejl? Tryk her for at rette og sende igen
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                    <div style={{ marginTop: '24px', padding: '24px', backgroundColor: '#f3f1ed', borderRadius: '14px', border: '1px solid #e8e6e1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                        <h3 style={{ margin: '0', color: '#1a1a1a' }}>
-                                                            {(['extensions', 'carport', 'kitchen', 'bath'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') ? 'Lav & Send Skræddersyet Tilbud' : 'Tilpas & Send Endeligt Tilbud'}
-                                                        </h3>
-                                                        <p style={{ margin: '0', color: '#6b7280', fontSize: '0.95rem' }}>
-                                                            {(['extensions', 'carport', 'kitchen', 'bath'].includes(selectedLead.project_category) || selectedLead.price_estimate === 'Besigtigelse kræves') 
-                                                                ? "Dette er et projekt uden auto-estimat. Opbyg tilbuddet fra bunden ved at indtaste dine beregnede timer og materialer, så bygger systemet en professionel PDF-kontrakt." 
-                                                                : "Brug auto-estimatet som skabelon. Ret tallene til, og få systemet til at bygge PDF'en for dig."}
-                                                        </p>
-                                                        
-                                                        <div className="quote-builder-grid" style={{ marginTop: '10px' }}>
-                                                            {quoteBuilder.isKombi && quoteBuilder.subprojects && quoteBuilder.subprojects.length > 0 ? (
-                                                                <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '8px' }}>
-                                                                    <strong style={{ color: '#1a1a1a', fontSize: '0.95rem' }}>Individuel tilpasning pr. underprojekt:</strong>
-                                                                    {quoteBuilder.subprojects.map((sub, sIdx) => (
-                                                                        <details key={sub.id} style={{ border: '1px solid #e8e6e1', borderRadius: '8px', backgroundColor: '#ffffff', overflow: 'hidden' }} open={sIdx === 0}>
-                                                                            <summary style={{ padding: '10px 14px', background: '#fafafa', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none' }}>
-                                                                                <span>Del {sIdx + 1}: {sub.title}</span>
-                                                                                <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'normal' }}>
-                                                                                    ({sub.laborHours} t / {sub.materialCost.toLocaleString('da-DK')} kr.)
-                                                                                </span>
-                                                                            </summary>
-                                                                            <div className="quote-builder-grid" style={{ padding: '12px 14px', borderTop: '1px solid #e8e6e1' }}>
-                                                                                <div className="input-group">
-                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Arbejdstimer (antal)</label>
-                                                                                    <input 
-                                                                                        type="number" 
-                                                                                        value={sub.laborHours} 
-                                                                                        onChange={(e) => {
-                                                                                            const val = Number(e.target.value);
-                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, laborHours: val } : item);
-                                                                                            const newTotalHours = updatedSubs.reduce((sum, item) => sum + item.laborHours, 0);
-                                                                                            setQuoteBuilder({
-                                                                                                ...quoteBuilder,
-                                                                                                subprojects: updatedSubs,
-                                                                                                laborHours: newTotalHours
-                                                                                            });
-                                                                                        }} 
-                                                                                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
-                                                                                    />
-                                                                                </div>
-                                                                                <div className="input-group">
-                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Internt Indkøbsbudget (kr)</label>
-                                                                                    <input 
-                                                                                        type="number" 
-                                                                                        value={sub.materialCostBase} 
-                                                                                        onChange={(e) => {
-                                                                                            const val = Number(e.target.value);
-                                                                                            const newSales = Math.round(val * sub.materialMarkup);
-                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, materialCostBase: val, materialCost: newSales } : item);
-                                                                                            const newTotalMaterials = updatedSubs.reduce((sum, item) => sum + item.materialCost, 0);
-                                                                                            const newTotalBase = updatedSubs.reduce((sum, item) => sum + item.materialCostBase, 0);
-                                                                                            setQuoteBuilder({
-                                                                                                ...quoteBuilder,
-                                                                                                subprojects: updatedSubs,
-                                                                                                materialCostBase: newTotalBase,
-                                                                                                materialCost: newTotalMaterials
-                                                                                            });
-                                                                                        }} 
-                                                                                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
-                                                                                    />
-                                                                                </div>
-                                                                                <div className="input-group">
-                                                                                    <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Materiale-avance (%)</label>
-                                                                                    <input 
-                                                                                        type="number" 
-                                                                                        value={Math.round((sub.materialMarkup - 1) * 100)} 
-                                                                                        onChange={(e) => {
-                                                                                            const pct = Number(e.target.value);
-                                                                                            const factor = 1 + (pct / 100);
-                                                                                            const newSales = Math.round(sub.materialCostBase * factor);
-                                                                                            const updatedSubs = quoteBuilder.subprojects.map(item => item.id === sub.id ? { ...item, materialMarkup: factor, materialCost: newSales } : item);
-                                                                                            const newTotalMaterials = updatedSubs.reduce((sum, item) => sum + item.materialCost, 0);
-                                                                                            setQuoteBuilder({
-                                                                                                ...quoteBuilder,
-                                                                                                subprojects: updatedSubs,
-                                                                                                materialCost: newTotalMaterials
-                                                                                            });
-                                                                                        }} 
-                                                                                        style={{ border: '1px solid #e8e6e1', padding: '8px 12px', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }} 
-                                                                                    />
-                                                                                </div>
-                                                                                <div className="input-group" style={{ backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                                                                    <label style={{ fontSize: '0.8rem', color: '#0f172a', marginBottom: '2px', display: 'block', fontWeight: 'bold' }}>Salgspris (kr)</label>
-                                                                                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#0f172a' }}>
-                                                                                        {sub.materialCost.toLocaleString('da-DK')} kr.
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </details>
-                                                                    ))}
-                                                                    <div className="input-group" style={{ marginTop: '8px' }}>
-                                                                        <label style={{ fontWeight: 'bold' }}>Timepris (kr) - Gælder alle underprojekter</label>
-                                                                        <input type="number" value={quoteBuilder.hourlyRate} onChange={(e) => setQuoteBuilder({...quoteBuilder, hourlyRate: Number(e.target.value)})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <>
-                                                                    <div className="input-group">
-                                                                        <label>Arbejdstimer (antal)</label>
-                                                                        <FormattedNumberInput value={quoteBuilder.laborHours} onChange={(val) => setQuoteBuilder({...quoteBuilder, laborHours: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                                    </div>
-                                                                    <div className="input-group">
-                                                                        <label>Timepris (kr)</label>
-                                                                        <FormattedNumberInput value={quoteBuilder.hourlyRate} onChange={(val) => setQuoteBuilder({...quoteBuilder, hourlyRate: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                                    </div>
-                                                                    <style>{`@media(max-width:768px){.quote-triple-grid{grid-template-columns:1fr !important;}}`}</style>
-                                                                    <div className="quote-triple-grid">
-                                                                        <div className="input-group">
-                                                                            <label>Internt Indkøbsbudget (kr)</label>
-                                                                            <FormattedNumberInput value={quoteBuilder.materialCostBase} onChange={(val) => {
-                                                                                const newSales = Math.round(val * quoteBuilder.materialMarkup);
-                                                                                setQuoteBuilder({...quoteBuilder, materialCostBase: val, materialCost: newSales});
-                                                                            }} style={{ border: '1px solid #e8e6e1', padding: '12px 16px', borderRadius: '8px', width: '100%', fontSize: '0.95rem' }} />
-                                                                        </div>
-                                                                        <div className="input-group">
-                                                                            <label>Materiale-avance (%)</label>
-                                                                            <input 
-                                                                                type="number" 
-                                                                                value={Math.round((quoteBuilder.materialMarkup - 1) * 100)} 
-                                                                                onChange={(e) => {
-                                                                                    const pct = Number(e.target.value);
-                                                                                    const factor = 1 + (pct / 100);
-                                                                                    const newSales = Math.round(quoteBuilder.materialCostBase * factor);
-                                                                                    setQuoteBuilder({...quoteBuilder, materialMarkup: factor, materialCost: newSales});
-                                                                                }} 
-                                                                                style={{ border: '1px solid #e8e6e1', padding: '12px 16px', borderRadius: '8px', width: '100%', fontSize: '0.95rem' }} 
-                                                                            />
-                                                                        </div>
-                                                                        <div className="input-group">
-                                                                            <label style={{ fontWeight: 'bold' }}>Salgspris til kunden</label>
-                                                                            <div style={{ backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '8px', width: '100%', display: 'flex', alignItems: 'center', fontSize: '0.95rem', fontWeight: 'bold', color: '#0f172a', height: '46px' }}>
-                                                                                {quoteBuilder.materialCost.toLocaleString('da-DK')} kr.
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                            <div className="input-group">
-                                                                <label>Kørsel/Øvrigt eks. moms (kr)</label>
-                                                                <FormattedNumberInput value={quoteBuilder.drivingCost} onChange={(val) => setQuoteBuilder({...quoteBuilder, drivingCost: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                            </div>
-                                                            <div className="input-group">
-                                                                <label>Ekstra materialer (smådele) eks. moms</label>
-                                                                <FormattedNumberInput value={quoteBuilder.extraMaterialsCost} onChange={(val) => setQuoteBuilder({...quoteBuilder, extraMaterialsCost: val})} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                            </div>
-                                                        </div>
-
-                                                        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                            {(quoteBuilder.customLines || []).map((line, idx) => (
-                                                                <div key={idx} className="quote-builder-grid" style={{ alignItems: 'flex-start', position: 'relative', border: '1px dashed #cbd5e1', padding: '12px', borderRadius: '8px' }}>
-                                                                    <div className="input-group">
-                                                                        <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Ekstra ydelse / Vare</label>
-                                                                        <input type="text" placeholder="F.eks. Leje af stillads" value={line.description} onChange={(e) => {
-                                                                            const newLines = [...quoteBuilder.customLines];
-                                                                            newLines[idx].description = e.target.value;
-                                                                            setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                        }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                                    </div>
-                                                                    <div className="input-group">
-                                                                        <label style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '2px', display: 'block' }}>Pris eks. moms (kr)</label>
-                                                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                                                            <input type="number" placeholder="Pris (kr)" value={line.price || ''} onChange={(e) => {
-                                                                                const newLines = [...quoteBuilder.customLines];
-                                                                                newLines[idx].price = Number(e.target.value);
-                                                                                setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                            }} style={{ border: '1px solid #e8e6e1', padding: '10px', borderRadius: '6px', width: '100%' }} />
-                                                                            <button onClick={() => {
-                                                                                const newLines = [...quoteBuilder.customLines];
-                                                                                newLines.splice(idx, 1);
-                                                                                setQuoteBuilder({...quoteBuilder, customLines: newLines});
-                                                                            }} style={{ background: '#fef2f2', border: '1px solid #e8e6e1', color: '#ef4444', padding: '10px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>&times; Slet</button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                            <button onClick={() => setQuoteBuilder({...quoteBuilder, customLines: [...(quoteBuilder.customLines || []), { description: '', price: 0 }] })} style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed #94a3b8', color: '#6b7280', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Tilføj ekstra linje</button>
-                                                        </div>
-
-                                                        {(() => {
-                                                            const totalExVat = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
-                                                            const vat = totalExVat * 0.25;
-                                                            const totalIncVat = totalExVat + vat;
-                                                            return (
-                                                                <div style={{ padding: '16px', background: '#e8e6e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem', color: '#475569' }}>
-                                                                        <span>Total ekskl. moms:</span>
-                                                                        <span>{new Intl.NumberFormat('da-DK').format(totalExVat)} kr.</span>
-                                                                    </div>
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem', color: '#475569' }}>
-                                                                        <span>Moms (25%):</span>
-                                                                        <span>{new Intl.NumberFormat('da-DK').format(vat)} kr.</span>
-                                                                    </div>
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #cbd5e1', paddingTop: '8px', marginTop: '4px' }}>
-                                                                        <span style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#0f172a' }}>Total inkl. moms:</span>
-                                                                        <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1d4ed8' }}>
-                                                                            {new Intl.NumberFormat('da-DK').format(totalIncVat)} kr.
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })()}
-
-                                                        {/* PDF Customization UI */}
-                                                        <div style={{ marginTop: '16px', padding: '16px', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(12px)' }}>
-                                                            <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem', color: '#1a1a1a' }}>Tilpas PDF-udseende til kunden</h4>
-                                                            
-                                                            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', marginBottom: '16px' }}>
-                                                                <input 
-                                                                    type="checkbox" 
-                                                                    checked={!quoteBuilder.showDetailedBreakdown} 
-                                                                    onChange={(e) => setQuoteBuilder({...quoteBuilder, showDetailedBreakdown: !e.target.checked})}
-                                                                    style={{ width: '18px', height: '18px', marginTop: '2px' }}
-                                                                />
-                                                                <div>
-                                                                    <strong style={{ display: 'block', fontSize: '0.95rem', color: '#1a1a1a' }}>Skjul detaljer (Vis kun samlet pris)</strong>
-                                                                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Fravælger du detaljer, skjules tømrer-timer, materialer og ekstra ydelser på PDF'en. Kunden ser kun én samlet "Entreprise" pris.</span>
-                                                                </div>
-                                                            </label>
-
-                                                            <div style={{ marginBottom: '16px' }}>
-                                                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', color: '#374151', marginBottom: '6px' }}>Tilbuddets gyldighed (dage)</label>
-                                                                <input 
-                                                                    type="number" 
-                                                                    min="1"
-                                                                    value={quoteBuilder.validityDays || 14} 
-                                                                    onChange={(e) => setQuoteBuilder({...quoteBuilder, validityDays: parseInt(e.target.value) || 14})}
-                                                                    style={{ width: '100px', padding: '10px', borderRadius: '6px', border: '1px solid #e8e6e1' }}
-                                                                />
-                                                                <span style={{ marginLeft: '10px', fontSize: '0.85rem', color: '#6b7280' }}>Dage før tilbuddet udløber</span>
-                                                            </div>
-
-                                                            <div>
-                                                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', color: '#374151', marginBottom: '6px' }}>Bemærkninger / Beskrivelse til kunden</label>
-                                                                <textarea 
-                                                                    value={quoteBuilder.customMessage || ''} 
-                                                                    onChange={(e) => setQuoteBuilder({...quoteBuilder, customMessage: e.target.value})}
-                                                                    placeholder="F.eks. 'Tak for god snak. I tilbuddet er der taget højde for...'"
-                                                                    style={{ width: '100%', minHeight: '80px', padding: '10px', borderRadius: '6px', border: '1px solid #e8e6e1', resize: 'vertical' }}
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '24px' }}>
-                                                            <button  
-                                                                className="btn-primary" 
-                                                                style={{ width: '100%', padding: '16px 24px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', border: 'none', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)', cursor: 'pointer' }}
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    setQuoteBuilder({...quoteBuilder, showPreview: true});
-                                                                }}
-                                                            >
-                                                                {selectedLead.status === 'Sendt tilbud' ? 'Se PDF & Opdateringsmuligheder' : 'Generer & Gennemse Tilbud'}
-                                                            </button>
-                                                        </div>
-                                                        {selectedLead.status === 'Sendt tilbud' && (
-                                                            <div style={{ padding: '12px', background: '#ecfdf5', color: '#065f46', borderRadius: '8px', fontWeight: '500', fontSize: '0.9rem', marginTop: '10px', textAlign: 'center' }}>
-                                                                ✅ Et tilbud (PDF) ligger gemt på sagen. Tryk ovenfor for at ændre det.
-                                                            </div>
-                                                        )}
-
-                                                        {selectedLead.status !== 'Sendt tilbud' && (
-                                                            <div style={{ marginTop: '24px', borderTop: '1px solid #cbd5e1', paddingTop: '20px' }}>
-                                                                <p style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#6b7280', textAlign: 'center', fontWeight: '500' }}>— Eller brug dit eget vante system —</p>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                                                                    <label style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '500' }}>Tilbuddet gælder i</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="1"
-                                                                        value={quoteValidityDays}
-                                                                        onChange={(e) => setQuoteValidityDays(Math.max(1, parseInt(e.target.value) || 1))}
-                                                                        style={{ width: '70px', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 'bold' }}
-                                                                    />
-                                                                    <label style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '500' }}>dage</label>
-                                                                </div>
-                                                                <div className="upload-system-grid">
-                                                                    <input 
-                                                                        type="file" 
-                                                                        accept="application/pdf" 
-                                                                        onChange={(e) => setSelectedPdfFile(e.target.files[0])}
-                                                                        style={{ border: '1px dashed rgba(255, 255, 255, 0.4)', padding: '10px', borderRadius: '6px', flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(12px)', fontSize: '0.9rem', cursor: 'pointer', color: '#1a1a1a' }}
-                                                                    />
-                                                                    <button 
-                                                                        style={{ padding: '0 24px', borderRadius: '6px', border: '1px solid #94a3b8', backgroundColor: '#f3f1ed', color: '#1a1a1a', cursor: selectedPdfFile ? 'pointer' : 'not-allowed', opacity: selectedPdfFile ? 1 : 0.5, fontWeight: 'bold' }}
-                                                                        disabled={!selectedPdfFile || isUploadingPdf}
-                                                                        onClick={() => handleUploadAndSendQuote(selectedLead.id, carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst')}
-                                                                    >
-                                                                        {isUploadingPdf ? 'Sender...' : (selectedLead.status === 'Sendt tilbud' ? 'Sendt. Tilbud til kunde' : 'Upload dit eget tilbud')}
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    )
-                                                ) : (
-                                                    <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#fff5f5', color: '#991b1b', borderRadius: '8px', border: '1px solid #f87171' }}>
-                                                        <strong>Hov!</strong> Dette lead blev oprettet <em>før</em> vi integrerede Tilbuds-generatoren. Værdier til auto-udfyldelse mangler i databasen. Generer dog et nyt test-lead for at se det nye system.
-                                                    </div>
-                                                ))}
-                                            </>
+                                            <button
+                                                onClick={() => openQuickQuoteFromLead(selectedLead)}
+                                                style={{ width: '100%', marginTop: '24px', marginBottom: '8px', padding: '18px', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1.1rem', fontWeight: 800, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', cursor: 'pointer', boxShadow: '0 10px 26px rgba(16,185,129,0.32)' }}
+                                            >
+                                                <FileText size={20} /> Lav færdigt tilbud (Hurtigt tilbud)
+                                            </button>
                                         )}
+
                                         {isConfirmedCase(selectedLead) && (
                                             <div style={{ marginTop: '24px', borderTop: '2px solid #cbd5e1', paddingTop: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                                                 <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', textAlign: 'center' }}>Ordrestyring og Byggeproces</h3>
@@ -5560,343 +5167,6 @@ const Dashboard = () => {
                                             </button>
                                         </div>
 
-                                        {quoteBuilder && quoteBuilder.showPreview && (() => {
-                                            const currentTotalExVat = (quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0);
-                                            return createPortal(
-                                            <div className="pdf-preview-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '40px 20px', paddingBottom: '120px' }}>
-                                                
-                                                <PdfMobileWrapper>
-                                                    <div ref={invoiceRef} style={{ width: '794px', minWidth: '794px', flexShrink: 0, minHeight: '1123px', padding: '60px', boxSizing: 'border-box', backgroundColor: '#ffffff', color: '#1a1a1a', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
-                                                        
-                                                        {/* Invoice Header */}
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #e8e6e1', paddingBottom: '16px', marginBottom: '24px' }}>
-                                                            <div>
-                                                                {carpenterProfile?.logo_url ? (
-                                                                    <img src={carpenterProfile.logo_url} alt="Logo" style={{ maxHeight: '50px', marginBottom: '8px' }} crossOrigin="anonymous" />
-                                                                ) : (
-                                                                    <h1 style={{ margin: 0, fontSize: '20px', color: '#1a1a1a' }}>{carpenterProfile?.company_name || 'Tømrervirksomhed'}</h1>
-                                                                )}
-                                                                <p style={{ margin: '2px 0', fontSize: '11px', color: '#6b7280' }}>CVR: {carpenterProfile?.cvr || 'Under oprettelse'}</p>
-                                                                <p style={{ margin: '2px 0', fontSize: '11px', color: '#6b7280' }}>{carpenterProfile?.address || ''}</p>
-                                                                <p style={{ margin: '2px 0', fontSize: '11px', color: '#6b7280' }}>{carpenterProfile?.phone || ''} | {carpenterProfile?.email || ''}</p>
-                                                            </div>
-                                                            <div style={{ textAlign: 'right' }}>
-                                                                <h2 style={{ margin: 0, fontSize: '22px', color: '#10b981' }}>TILBUD</h2>
-                                                                <p style={{ margin: '4px 0', fontSize: '11px' }}><strong>Dato:</strong> {new Date().toLocaleDateString('da-DK')}</p>
-                                                                <p style={{ margin: '4px 0', fontSize: '11px' }}><strong>Sagsnummer:</strong> {selectedLead.case_number || String(selectedLead.id).substring(0, 8)}</p>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Customer Details */}
-                                                        <div style={{ marginBottom: '32px' }}>
-                                                            <h3 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#6b7280' }}>Kunde:</h3>
-                                                            <strong style={{ fontSize: '13px', display: 'block' }}>{selectedLead.customer_name}</strong>
-                                                            <span style={{ fontSize: '13px', display: 'block' }}>{selectedLead.customer_address}</span>
-                                                            <span style={{ fontSize: '13px', display: 'block' }}>{selectedLead.customer_phone} | {selectedLead.customer_email}</span>
-                                                        </div>
-
-                                                        {/* Custom Message */}
-                                                        {quoteBuilder.customMessage && quoteBuilder.customMessage.trim() !== '' && (
-                                                            <div style={{ marginBottom: '24px', padding: '12px', backgroundColor: '#f3f1ed', borderLeft: '3px solid #10b981', borderRadius: '4px' }}>
-                                                                <p style={{ margin: 0, fontSize: '13px', color: '#374151', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
-                                                                    {quoteBuilder.customMessage}
-                                                                </p>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Line Items Table */}
-                                                        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '32px' }}>
-                                                            <thead>
-                                                                <tr style={{ backgroundColor: '#f3f1ed', borderBottom: '2px solid #cbd5e1' }}>
-                                                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '12px' }}>Beskrivelse</th>
-                                                                    <th style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>Antal/Mængde</th>
-                                                                    <th style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>Enhedspris</th>
-                                                                    <th style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>Total</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {quoteBuilder.showDetailedBreakdown ? (
-                                                                    <>
-                                                                        <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                            <td style={{ padding: '10px', fontSize: '12px' }}>Håndværker - Arbejdstid</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{quoteBuilder.laborHours} timer</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{quoteBuilder.hourlyRate} kr.</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.laborHours * quoteBuilder.hourlyRate)} kr.</td>
-                                                                        </tr>
-                                                                        <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                            <td style={{ padding: '10px', fontSize: '12px' }}>Materialer (ihht. besigtigelse)</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>1 pck.</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.materialCost)} kr.</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.materialCost)} kr.</td>
-                                                                        </tr>
-                                                                        <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                            <td style={{ padding: '10px', fontSize: '12px' }}>Kørsel, logistik og øvrigt</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>1 stk.</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.drivingCost)} kr.</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.drivingCost)} kr.</td>
-                                                                        </tr>
-                                                                        <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                            <td style={{ padding: '10px', fontSize: '12px' }}>Ekstra materialer (smådele)</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>1 stk.</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.extraMaterialsCost || 0)} kr.</td>
-                                                                            <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(quoteBuilder.extraMaterialsCost || 0)} kr.</td>
-                                                                        </tr>
-                                                                        {(quoteBuilder.customLines || []).map((line, idx) => (
-                                                                            <tr key={idx} style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                                <td style={{ padding: '10px', fontSize: '12px' }}>{line.description || 'Ekstra ydelser'}</td>
-                                                                                <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>1 stk.</td>
-                                                                                <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(line.price || 0)} kr.</td>
-                                                                                <td style={{ padding: '10px', textAlign: 'right', fontSize: '12px' }}>{new Intl.NumberFormat('da-DK').format(line.price || 0)} kr.</td>
-                                                                            </tr>
-                                                                        ))}
-                                                                    </>
-                                                                ) : (
-                                                                    <tr style={{ borderBottom: '1px solid #e8e6e1' }}>
-                                                                        <td style={{ padding: '10px', fontSize: '13px', fontWeight: 'bold' }}>Samlet entreprise på opgaven jf. aftale</td>
-                                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px' }}>1 stk.</td>
-                                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px' }}>{new Intl.NumberFormat('da-DK').format(currentTotalExVat || 0)} kr.</td>
-                                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold' }}>{new Intl.NumberFormat('da-DK').format(currentTotalExVat || 0)} kr.</td>
-                                                                    </tr>
-                                                                )}
-                                                            </tbody>
-                                                        </table>
-
-                                                        {/* Totals */}
-                                                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                                                            <div style={{ width: '250px' }}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px' }}>
-                                                                    <span style={{ color: '#475569' }}>Subtotal (eks. moms)</span>
-                                                                    <span>{new Intl.NumberFormat('da-DK').format(currentTotalExVat || 0)} kr.</span>
-                                                                </div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px' }}>
-                                                                    <span style={{ color: '#475569' }}>Moms (25%)</span>
-                                                                    <span>{new Intl.NumberFormat('da-DK').format((currentTotalExVat || 0) * 0.25)} kr.</span>
-                                                                </div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: '2px solid #cbd5e1', borderBottom: '2px solid #cbd5e1', marginTop: '8px', fontSize: '16px', fontWeight: 'bold' }}>
-                                                                    <span>TOTAL AT BETALE</span>
-                                                                    <span>{new Intl.NumberFormat('da-DK').format((currentTotalExVat || 0) * 1.25)} kr.</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div style={{ marginTop: 'auto', fontSize: '9px', color: '#6b7280', borderTop: '1px solid #e8e6e1', paddingTop: '12px', lineHeight: '1.4' }}>
-                                                            <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#374151', fontWeight: 'bold' }}>Tak for tilliden. Dette tilbud er gældende i {quoteBuilder.validityDays || 14} dage fra ovenstående dato.</p>
-                                                            {quoteBuilder.laborHours > 0 && (
-                                                                <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#0f172a', fontWeight: 'bold' }}>
-                                                                    Estimeret varighed for udførelse: Ca. {Math.max(1, Math.ceil(quoteBuilder.laborHours / 37))} arbejdsuger. Den præcise opstartsdato aftales nærmere, når tilbuddet er bekræftet.
-                                                                </p>
-                                                            )}
-                                                            <p style={{ margin: 0 }}>Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder), hvilket sikrer klare og trygge rammer for aftalen. Eventuelle uforudsete forhindringer (f.eks. skjult råd, svamp, ulovlige installationer eller asbest), der ikke med rimelighed kunne forudses ved tilbudsgivningen, er ikke inkluderet og vil blive udbedret i samråd til gældende timepris.</p>
-                                                        </div>
-
-                                                    </div>
-                                                </PdfMobileWrapper>
-
-                                                {/* ActionBar fixed til bunden for funktionalitet */}
-                                                <div className="pdf-action-bar">
-                                                        <div className="pdf-action-buttons">
-                                                                <button 
-                                                                    disabled={quoteBuilder.isGeneratingPdf}
-                                                                    onClick={(e) => { e.stopPropagation(); setQuoteBuilder({...quoteBuilder, showPreview: false}); }} 
-                                                                    style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #475569', backgroundColor: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
-                                                                >
-                                                                    ← Tilbage og redigér
-                                                                </button>
-                                                                <button 
-                                                                    className="email-preview-btn"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setShowEmailPreview(true);
-                                                                    }}
-                                                                    style={{ background: 'none', border: 'none', color: '#10b981', fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                                                >
-                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                                                    E-mail forhåndsvisning
-                                                                </button>
-                                                            <button 
-                                                                disabled={quoteBuilder.isGeneratingPdf}
-                                                                onClick={async (e) => {
-                                                                    e.stopPropagation();
-                                                                    setQuoteBuilder(p => ({...p, isGeneratingPdf: true, uploadStepText: '⏳ Tegner PDF...'}));
-                                                                    
-                                                                    const wrapper = invoiceRef.current?.parentElement?.parentElement;
-                                                                    let oldStyles = {};
-                                                                    if (wrapper) {
-                                                                        oldStyles = {
-                                                                            transform: wrapper.style.transform,
-                                                                            marginBottom: wrapper.style.marginBottom,
-                                                                            marginLeft: wrapper.style.marginLeft,
-                                                                            marginRight: wrapper.style.marginRight
-                                                                        };
-                                                                        wrapper.style.transform = 'none';
-                                                                        wrapper.style.marginBottom = '0px';
-                                                                        wrapper.style.marginLeft = '0px';
-                                                                        wrapper.style.marginRight = '0px';
-                                                                        await new Promise(resolve => requestAnimationFrame(resolve));
-                                                                    }
-
-                                                                    try {
-                                                                        const [{ jsPDF }, html2canvas] = await Promise.all([import('jspdf'), import('html2canvas').then(m => m.default)]);
-                                                                        const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
-                                                                        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                                                                        const pdfWidth = 210;
-                                                                        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                                                                        
-                                                                        const pdf = new jsPDF('p', 'mm', [210, Math.max(297, pdfHeight)]);
-                                                                        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-                                                                        const pdfBlob = pdf.output('blob');
-                                                                        
-                                                                        setQuoteBuilder(p => ({...p, uploadStepText: '☁️ Gemmer sikkert i skyen...'}));
-
-                                                                        const cleanProjectTitle = (categoryNames[selectedLead.project_category] || selectedLead.project_category).replace(/\//g, '-').replace(/\s+/g, '_');
-                                                                        const cleanName = (selectedLead.customer_name || 'Kunde').split(' ')[0].replace(/[^a-zA-ZæøåÆØÅ]/g, '');
-                                                                        const cleanAddress = (selectedLead.customer_address || 'Adresse').split(',')[0].replace(/[^a-zA-Z0-9æøåÆØÅ\s]/g, '').replace(/\s+/g, '_');
-                                                                        
-                                                                        const file = new File([pdfBlob], `Tilbud_${cleanProjectTitle}_${cleanName}_${cleanAddress}.pdf`, { type: 'application/pdf' });
-                                                                        const slug = carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst';
-                                                                        
-                                                                        const finalPrice = ((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25;
-                                                                        
-                                                                        const extraRawData = { 
-                                                                            calc_data: {
-                                                                                laborHours: quoteBuilder.laborHours,
-                                                                                hourlyRate: quoteBuilder.hourlyRate,
-                                                                                materialCostBase: quoteBuilder.materialCostBase,
-                                                                                materialMarkup: quoteBuilder.materialMarkup,
-                                                                                materialCost: quoteBuilder.materialCost,
-                                                                                drivingCost: quoteBuilder.drivingCost,
-                                                                                extraMaterialsCost: quoteBuilder.extraMaterialsCost,
-                                                                                customLines: quoteBuilder.customLines,
-                                                                                projects: quoteBuilder.subprojects,
-                                                                            },
-                                                                            quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown, validityDays: quoteBuilder.validityDays || 14 },
-                                                                            custom_message: quoteBuilder.customMessage
-                                                                        };
-                                                                        
-                                                                        setQuoteBuilder(p => ({...p, uploadStepText: '📧 Sender e-mail...'}));
-                                                                        await handleUploadAndSendQuote(selectedLead.id, slug, file, finalPrice, extraRawData, true);
-                                                                        
-                                                                        setQuoteBuilder(p => ({...p, isGeneratingPdf: false, showPreview: false}));
-                                                                    } catch (err) {
-                                                                        console.error("Fejl i PDF generering:", err);
-                                                                        toast.error("Hov! Der skete en uventet fejl ifm PDF oprettelsen.");
-                                                                        setQuoteBuilder(p => ({...p, isGeneratingPdf: false}));
-                                                                    } finally {
-                                                                        if (wrapper && oldStyles) {
-                                                                            wrapper.style.transform = oldStyles.transform || '';
-                                                                            wrapper.style.marginBottom = oldStyles.marginBottom || '';
-                                                                            wrapper.style.marginLeft = oldStyles.marginLeft || '';
-                                                                            wrapper.style.marginRight = oldStyles.marginRight || '';
-                                                                        }
-                                                                    }
-                                                                }} 
-                                                                style={{ padding: '16px 32px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', flex: 1, transition: 'background-color 0.2s', fontSize: '1rem', opacity: quoteBuilder.isGeneratingPdf ? 0.7 : 1, boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)' }}
-                                                            >
-                                                                {quoteBuilder.isGeneratingPdf ? quoteBuilder.uploadStepText : (selectedLead.status === 'Sendt tilbud' ? 'SENDT. TILBUD TIL KUNDE (Send igen)' : 'SEND TILBUD TIL KUNDE (PDF + Web)')}
-                                                            </button>
-                                                        </div>
-
-                                                        {selectedLead.status === 'Sendt tilbud' && (
-                                                            <>
-                                                            <button 
-                                                                disabled={quoteBuilder.isGeneratingPdf}
-                                                                onClick={async (e) => {
-                                                                    e.stopPropagation();
-                                                                    setQuoteBuilder(p => ({...p, isGeneratingPdf: true, uploadStepText: '⏳ Tegner PDF...'}));
-                                                                    
-                                                                    const wrapper = invoiceRef.current?.parentElement?.parentElement;
-                                                                    let oldStyles = {};
-                                                                    if (wrapper) {
-                                                                        oldStyles = {
-                                                                            transform: wrapper.style.transform,
-                                                                            marginBottom: wrapper.style.marginBottom,
-                                                                            marginLeft: wrapper.style.marginLeft,
-                                                                            marginRight: wrapper.style.marginRight
-                                                                        };
-                                                                        wrapper.style.transform = 'none';
-                                                                        wrapper.style.marginBottom = '0px';
-                                                                        wrapper.style.marginLeft = '0px';
-                                                                        wrapper.style.marginRight = '0px';
-                                                                        await new Promise(resolve => requestAnimationFrame(resolve));
-                                                                    }
-
-                                                                    try {
-                                                                        const [{ jsPDF }, html2canvas] = await Promise.all([import('jspdf'), import('html2canvas').then(m => m.default)]);
-                                                                        const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
-                                                                        const pdf = new jsPDF('p', 'mm', 'a4');
-                                                                        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                                                                        
-                                                                        const pdfWidth = pdf.internal.pageSize.getWidth();
-                                                                        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                                                                        let heightLeft = pdfHeight;
-                                                                        let position = 0;
-
-                                                                        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-                                                                        heightLeft -= 297;
-
-                                                                        while (heightLeft > 0) {
-                                                                            position = heightLeft - pdfHeight;
-                                                                            pdf.addPage();
-                                                                            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-                                                                            heightLeft -= 297;
-                                                                        }
-                                                                        const pdfBlob = pdf.output('blob');
-                                                                        
-                                                                        setQuoteBuilder(p => ({...p, uploadStepText: '☁️ Opdaterer dokumentet...'}));
-
-                                                                        const cleanProjectTitle = (categoryNames[selectedLead.project_category] || selectedLead.project_category).replace(/\//g, '-').replace(/\s+/g, '_');
-                                                                        const cleanName = (selectedLead.customer_name || 'Kunde').split(' ')[0].replace(/[^a-zA-ZæøåÆØÅ]/g, '');
-                                                                        const cleanAddress = (selectedLead.customer_address || 'Adresse').split(',')[0].replace(/[^a-zA-Z0-9æøåÆØÅ\s]/g, '').replace(/\s+/g, '_');
-                                                                        
-                                                                        const file = new File([pdfBlob], `Tilbud_${cleanProjectTitle}_${cleanName}_${cleanAddress}.pdf`, { type: 'application/pdf' });
-                                                                        const slug = carpenterProfile ? carpenterProfile.slug : 'hvem-som-helst';
-                                                                        
-                                                                        const finalPrice = ((quoteBuilder.laborHours * quoteBuilder.hourlyRate) + quoteBuilder.materialCost + quoteBuilder.drivingCost + (quoteBuilder.extraMaterialsCost || 0) + (quoteBuilder.customLines || []).reduce((acc, l) => acc + (l.price || 0), 0)) * 1.25;
-                                                                        
-                                                                        const extraRawData = { 
-                                                                            calc_data: {
-                                                                                laborHours: quoteBuilder.laborHours,
-                                                                                hourlyRate: quoteBuilder.hourlyRate,
-                                                                                materialCostBase: quoteBuilder.materialCostBase,
-                                                                                materialMarkup: quoteBuilder.materialMarkup,
-                                                                                materialCost: quoteBuilder.materialCost,
-                                                                                drivingCost: quoteBuilder.drivingCost,
-                                                                                extraMaterialsCost: quoteBuilder.extraMaterialsCost,
-                                                                                customLines: quoteBuilder.customLines,
-                                                                                projects: quoteBuilder.subprojects,
-                                                                            },
-                                                                            quote_settings: { showDetailedBreakdown: quoteBuilder.showDetailedBreakdown, validityDays: quoteBuilder.validityDays || 14 },
-                                                                            custom_message: quoteBuilder.customMessage
-                                                                        };
-                                                                        
-                                                                        await handleUploadAndSendQuote(selectedLead.id, slug, file, finalPrice, extraRawData, false);
-                                                                        toast.success("Tilbuddet er opdateret (kunden får altid vist det nyeste, når de åbner deres link).");
-                                                                        setQuoteBuilder(p => ({...p, isGeneratingPdf: false, showPreview: false}));
-                                                                    } catch (err) {
-                                                                        console.error("Fejl i PDF generering:", err);
-                                                                        toast.error("Hov! Der skete en uventet fejl.");
-                                                                        setQuoteBuilder(p => ({...p, isGeneratingPdf: false}));
-                                                                    } finally {
-                                                                        if (wrapper && oldStyles) {
-                                                                            wrapper.style.transform = oldStyles.transform || '';
-                                                                            wrapper.style.marginBottom = oldStyles.marginBottom || '';
-                                                                            wrapper.style.marginLeft = oldStyles.marginLeft || '';
-                                                                            wrapper.style.marginRight = oldStyles.marginRight || '';
-                                                                        }
-                                                                    }
-                                                                }} 
-                                                                style={{ padding: '12px 24px', backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: quoteBuilder.isGeneratingPdf ? 'not-allowed' : 'pointer', transition: 'all 0.2s', fontSize: '0.9rem', width: '100%' }}
-                                                            >
-                                                                OPDATER TILBUD LIGE STILLE (Uden at sende e-mail)
-                                                            </button>
-                                                            <div style={{ textAlign: 'center', marginTop: '-4px', fontSize: '0.75rem', color: '#94a3b8' }}>
-                                                                Perfekt hvis du lige har opdaget en tastefejl og kunden endnu ikke har åbnet e-mailen.
-                                                            </div>
-                                                        </>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                        , document.body)})()}
 
                                     </div>
                                 </div>
@@ -6683,6 +5953,7 @@ const Dashboard = () => {
                                     onSelectClassic={() => setCreateLeadMode('classic')}
                                     onSelectCustom={() => setCreateLeadMode('custom')}
                                     onSelectQuick={() => setCreateLeadMode('quick')}
+                                    onSelectMaterials={() => { setIsCreateLeadModalOpen(false); setCreateLeadMode(null); setMaterialBuilderLead({ __new: true }); }}
                                     onCustomizeCalculator={effectiveRole === 'admin' ? () => setShowCalcCategories(true) : undefined}
                                 />
                             )}
@@ -6720,6 +5991,7 @@ const Dashboard = () => {
                                     carpenter={carpenterProfile}
                                     draftCreator={myProfile}
                                     isMobile={isMobile}
+                                    onOpenMaterialList={() => setMaterialBuilderLead({ __new: true })}
                                     onCancel={() => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
@@ -6786,6 +6058,7 @@ const Dashboard = () => {
                                 draftCreator={myProfile}
                                 isMobile={isMobile}
                                 initialLead={editQuoteLead}
+                                onOpenMaterialList={() => setMaterialBuilderLead(editQuoteLead)}
                                 onCancel={() => setEditQuoteLead(null)}
                                 onDeleted={async () => {
                                     setEditQuoteLead(null);
@@ -6808,6 +6081,38 @@ const Dashboard = () => {
                     </div>
                 </div>,
                 document.body
+            )}
+
+            {/* Materialeliste-bygger (Del A) — renderer selv fuldskærm via createPortal */}
+            {materialBuilderLead && (
+                <MaterialListBuilder
+                    carpenter={carpenterProfile}
+                    draftCreator={myProfile}
+                    isMobile={isMobile}
+                    initialLead={materialBuilderLead.__new ? null : materialBuilderLead}
+                    onCancel={() => setMaterialBuilderLead(null)}
+                    onDeleted={async () => {
+                        setMaterialBuilderLead(null);
+                        await refreshLeadsData();
+                    }}
+                    onSaved={async (lead) => {
+                        // "Gem liste" → opdatér listen i baggrunden, men HOLD byggeren åben.
+                        if (lead?.id) {
+                            rememberLocalLead(lead);
+                            setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev.map(l => l.id === lead.id ? lead : l) : [lead, ...prev]);
+                            applyLocalLeadUpdate(lead);
+                        }
+                    }}
+                    onComplete={async (lead) => {
+                        setMaterialBuilderLead(null);
+                        if (lead?.id) {
+                            rememberLocalLead(lead);
+                            setLeadsData(prev => prev.some(l => l.id === lead.id) ? prev.map(l => l.id === lead.id ? lead : l) : [lead, ...prev]);
+                            applyLocalLeadUpdate(lead);
+                        }
+                        await refreshLeadsData({ ensureLead: lead, selectLead: false });
+                    }}
+                />
             )}
 
             {/* Delete Lead Confirm Modal */}
@@ -6851,29 +6156,6 @@ const Dashboard = () => {
                 document.body
             )}
 
-            {/* Email Preview Modal */}
-            {showEmailPreview && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => setShowEmailPreview(false)}>
-                    <div style={{ backgroundColor: '#f1f5f9', borderRadius: '16px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '0', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ position: 'sticky', top: 0, background: '#ffffff', padding: '16px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
-                            <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.1rem' }}>Forhåndsvisning af e-mail til kunden</h3>
-                            <button onClick={() => setShowEmailPreview(false)} style={{ background: 'none', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer' }}>&times;</button>
-                        </div>
-                        <div style={{ padding: '24px' }}>
-                            <div style={{ background: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '16px', border: '1px solid #e2e8f0' }}>
-                                <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '8px' }}><strong>Fra:</strong> {getCarpenterSenderName(carpenterProfile)}</div>
-                                <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '8px' }}><strong>Til:</strong> {selectedLead?.customer_email}</div>
-                                <div style={{ fontSize: '13px', color: '#64748b' }}><strong>Emne:</strong> {selectedLead?.status === 'Sendt tilbud' ? `Dit opdaterede tilbud fra ${carpenterProfile?.company_name || 'Tømreren'} er klar` : `Dit tilbud fra ${carpenterProfile?.company_name || 'Tømreren'} er klar`}</div>
-                            </div>
-                            <div 
-                                style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}
-                                dangerouslySetInnerHTML={{ __html: getCustomerOfferSentTemplate(selectedLead?.customer_name || 'Kunde', '#', selectedLead?.project_category || 'Opgave', carpenterProfile, '#', selectedLead?.status === 'Sendt tilbud', selectedLead?.case_number || String(selectedLead?.id).substring(0,8)) }}
-                            />
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
             {/* Floating Trial Toast */}
             {/* Trial-påmindelse — vises ALDRIG mens onboarding/password-modal er åben (ellers spærrer den
                 for at trykke videre, særligt på mobil). På mobil er den en lille, diskret pille der kan

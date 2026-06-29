@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { QUESTIONS } from './questionsConfig';
 import { generateTaskDescription, generateTaskAndQaHtml } from '../../utils/taskDescription';
+import AudioPlayerButton from './AudioPlayerButton';
 import AiSupportWidget from './AiSupportWidget';
 
 const EstimateAcceptPage = () => {
@@ -372,6 +373,7 @@ const EstimateAcceptPage = () => {
                                         <polyline points="20 6 9 17 4 12"></polyline>
                                     </svg>
                                     Overslaget inkluderer:
+                                    <AudioPlayerButton text={taskList.join('. ')} title="Læs overslaget op" style={{ marginLeft: 'auto' }} />
                                 </h3>
                                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '16px' }}>
                                     {taskList.map((task, idx) => (

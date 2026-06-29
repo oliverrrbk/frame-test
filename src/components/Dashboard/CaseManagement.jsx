@@ -10,6 +10,7 @@ import MaterialList from './MaterialList';
 import ManualMaterialsView from './ManualMaterialsView';
 import AftalesedlerTab from './AftalesedlerTab';
 import CaseDrawingsTab from './CaseDrawingsTab';
+import AudioPlayerButton from '../Wizard/AudioPlayerButton';
 import BilagManager from './BilagManager';
 import { SubcontractorModal } from './Subcontractors';
 import { getFeatures } from '../../utils/features';
@@ -297,16 +298,7 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginTop: '12px' }}>
-                <button
-                    onClick={(e) => { e.stopPropagation(); speakText(sub.text, sub.id); }}
-                    title={speakingId === sub.id ? 'Stop oplæsning' : 'Læs op'}
-                    style={{ background: speakingId === sub.id ? '#dbeafe' : 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '8px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', fontWeight: 600, fontSize: '0.8rem', transition: 'all 0.2s' }}
-                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; e.currentTarget.style.transform = 'scale(1.05)'; }}
-                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = speakingId === sub.id ? '#dbeafe' : 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
-                >
-                    {speakingId === sub.id ? <Square size={15} fill="#3b82f6" /> : <Volume2 size={18} />}
-                    <span>{speakingId === sub.id ? 'Stop' : 'Lyt'}</span>
-                </button>
+                <AudioPlayerButton text={sub.text} title="Læs op" />
                 
                 {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
                     <>
@@ -632,7 +624,7 @@ const CASES_TOUR_STEPS = [
     { sel: '[data-tour="case-tab-drawings"]', placement: 'bottom', eyebrow: 'Fane 7', title: 'Tegninger', body: 'Hav tegninger og plantegninger lige ved hånden — knyttet direkte til sagen.' },
 ];
 
-export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile, onCreateQuote }) {
+export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile, onCreateQuote, onOpenMaterialBuilder }) {
     const [activeCases, setActiveCases] = useState([]);
     // Rundtur: aktiv ved første besøg (desktop, ikke i modal-visning).
     const [casesTourActive, setCasesTourActive] = useState(() => !isModalView && shouldShowCoach('cases_tour'));
@@ -2339,7 +2331,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                                             <PackageCheck size={20} />
                                         </div>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569' }}>{orderedMaterials}/{totalMaterials}</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569' }}>{totalMaterials === 0 ? '–' : (deliveredMaterials === totalMaterials ? 'Leveret' : (notOrderedMaterials === 0 ? 'Bestilt' : 'Mangler'))}</span>
                                     </div>
                                 )}
 
@@ -2368,7 +2360,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '16px', padding: '16px', display: 'flex', gap: '12px' }}>
                                         <MessageCircle size={24} color="#2563eb" style={{ flexShrink: 0 }} />
                                         <div>
-                                            <h4 style={{ margin: '0 0 4px 0', fontSize: '0.9rem', color: '#1e3a8a', fontWeight: 'bold' }}>Dagens Besked</h4>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#1e3a8a', fontWeight: 'bold' }}>Dagens Besked</h4>
+                                                <AudioPlayerButton text={selectedCase.raw_data.daily_message.text} title="Læs besked op" />
+                                            </div>
                                             <p style={{ margin: 0, fontSize: '0.95rem', color: '#1e40af', lineHeight: '1.5' }}>{selectedCase.raw_data.daily_message.text}</p>
                                         </div>
                                     </div>
@@ -2446,8 +2441,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{orderedMaterials} <span style={{ fontSize: '1rem', color: '#94a3b8' }}>/ {totalMaterials}</span></h1>
-                                                        <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Ordrer er bestilt eller leveret</p>
+                                                        <h1 style={{ margin: '0 0 8px 0', fontSize: '1.8rem', fontWeight: '800', color: orderedMaterials > 0 ? '#2563eb' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Package size={26} /> {totalMaterials === 0 ? 'Ingen materialer endnu' : (orderedMaterials > 0 ? 'Delvist bestilt' : 'Ikke bestilt endnu')}</h1>
+                                                        <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Se materialelisten for detaljer</p>
                                                     </>
                                                 )}
                                                 
@@ -3829,9 +3824,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 <MaterialList
                                     lead={selectedCase}
                                     profile={profile}
+                                    simpleView={true}
                                     onUpdate={onUpdateLead}
                                     onAddDeliveryToCalendar={handleAddDeliveryToCalendar}
                                     existingDeliveryDate={existingDeliveryDate}
+                                    onOpenBuilder={onOpenMaterialBuilder}
                                 />
                             )
                         )}

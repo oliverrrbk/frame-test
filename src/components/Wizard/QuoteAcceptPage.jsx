@@ -4,6 +4,7 @@ import { CheckCircle, CalendarDays, Phone, Mail, ShieldCheck } from 'lucide-reac
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { computeQuoteExpiry } from '../../utils/quoteExpiry';
+import AudioPlayerButton from './AudioPlayerButton';
 
 const QuoteAcceptPage = () => {
     const { lead_id } = useParams();
@@ -306,7 +307,10 @@ const QuoteAcceptPage = () => {
 
                 {/* Opgavebeskrivelse */}
                 <div style={{ padding: '32px', borderBottom: '1px solid #f1f5f9' }}>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', color: '#1e293b' }}>Opgavebeskrivelse</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#1e293b' }}>Opgavebeskrivelse</h3>
+                        <AudioPlayerButton text={lead?.raw_data?.custom_message || `Vi takker for muligheden for at byde på din opgave vedr. ${lead.project_category}. Nedenfor finder du vores fulde tilbud på opgaven inkl. materialer og arbejdsløn.`} title="Læs opgavebeskrivelsen op" />
+                    </div>
                     <p style={{ margin: '0', color: '#475569', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
                         {lead?.raw_data?.custom_message || `Vi takker for muligheden for at byde på din opgave vedr. ${lead.project_category}. Nedenfor finder du vores fulde tilbud på opgaven inkl. materialer og arbejdsløn.`}
                     </p>
