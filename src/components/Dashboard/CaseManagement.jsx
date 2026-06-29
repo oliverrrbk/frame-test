@@ -625,7 +625,7 @@ const CASES_TOUR_STEPS = [
     { sel: '[data-tour="case-tab-drawings"]', placement: 'bottom', eyebrow: 'Fane 7', title: 'Tegninger', body: 'Hav tegninger og plantegninger lige ved hånden — knyttet direkte til sagen.' },
 ];
 
-export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile, onCreateQuote, onOpenMaterialBuilder }) {
+export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile, onCreateQuote, onCreateCase, onOpenMaterialBuilder }) {
     const [activeCases, setActiveCases] = useState([]);
     // Rundtur: aktiv ved første besøg (desktop, ikke i modal-visning).
     const [casesTourActive, setCasesTourActive] = useState(() => !isModalView && shouldShowCoach('cases_tour'));
@@ -2152,14 +2152,23 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             {/* OVERBYGNING ELLER MODAL LUK-KNAP */}
             {!selectedCase ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div data-tour="cases-header" style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div data-tour="cases-header" style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <HardHat size={24} />
                         </div>
-                        <div>
+                        <div style={{ flex: '1 1 240px' }}>
                             <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem', fontWeight: 'bold', color: '#1a1a1a' }}>Sager & Ordrestyring</h3>
                             <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>Fuld native styring af alle dine bekræftede tømreropgaver, lærlinge-KS, materialebestillinger og timeregistreringer.</p>
                         </div>
+                        {/* Opret en sag direkte — uden at skulle sende et tilbud først (timepris-flow). */}
+                        {onCreateCase && !['worker', 'apprentice'].includes(profile?.role) && (
+                            <button onClick={onCreateCase}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 18px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(16,185,129,0.25)', flexShrink: 0, whiteSpace: 'nowrap' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; }}>
+                                <Plus size={18} /> Opret sag
+                            </button>
+                        )}
                     </div>
 
                     {/* Eksempel-sag — vises kun under rundvisningen, så nye brugere uden sager
@@ -2238,6 +2247,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 <p style={{ margin: 0, fontSize: '0.875rem' }}>
                                     Når en kunde accepterer et tilbud, skifter status automatisk, og sagen vil fremgå her for hele holdet.
                                 </p>
+                                {onCreateCase && !['worker', 'apprentice'].includes(profile?.role) && (
+                                    <button onClick={onCreateCase}
+                                        style={{ marginTop: '20px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(16,185,129,0.25)' }}>
+                                        <Plus size={18} /> Opret en sag uden tilbud
+                                    </button>
+                                )}
                             </div>
                         ) : (caseViewTab === 'mine' && myCasesCount === 0 && !caseSearch.trim()) ? (
                             <div style={{ padding: '48px', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', color: '#6b7280' }}>
