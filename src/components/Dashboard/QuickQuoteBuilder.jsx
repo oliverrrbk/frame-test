@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLoadScript, Autocomplete } from '@react-google-maps/api';
-import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic } from 'lucide-react';
+import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic, Files } from 'lucide-react';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { friendlyError } from '../../utils/friendlyError';
 import { buildQuotePdf } from '../../utils/quotePdf';
 import { getCustomerOfferSentTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
+import { listQuoteTemplates, createQuoteTemplate, updateQuoteTemplate, deleteQuoteTemplate } from '../../utils/quoteTemplates';
 import Coachmark from './Coachmark';
 import SectionTour from './SectionTour';
 import SmtpIntegration from './SmtpIntegration';
@@ -91,10 +92,6 @@ const draftHasContent = (d) => !!(d && (
     htmlToPlainLines(d.workDescHtml || '').join('').trim() ||
     (Array.isArray(d.extras) && d.extras.some(e => (e.desc || '').trim() || num(e.amount) > 0))
 ));
-
-// Besked på tilbuddet (PDF) — rich-text/HTML. Leder naturligt over i beskrivelsen nedenfor.
-const STANDARD_PDF_NOTE_HTML = (kundeNavn) =>
-`Hej ${escapeHtml(kundeNavn || 'der')},<br><br>Hermed fremsendes tilbud på følgende arbejde:`;
 
 // Mail-skabelonen tilføjer selv "Hej {navn}," + "Med venlig hilsen {firma}" + knappen,
 // så den personlige besked er KUN selve brødteksten (ingen dobbelt hilsen/signatur).
@@ -180,6 +177,11 @@ const PREVIEW_CSS = `
   .qqb-tbtn{transition:background .12s ease,border-color .12s ease,transform .1s ease;}
   .qqb-tbtn:hover{background:#f1f5f9 !important;border-color:#94a3b8 !important;}
   .qqb-tbtn:active{transform:translateY(1px);}
+  .qqb-chip{transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease;}
+  .qqb-chip:hover{transform:translateY(-1px);border-color:#bfdbfe !important;box-shadow:0 4px 12px rgba(59,130,246,.14);}
+  .qqb-chip-edit:hover{background:#eff6ff !important;color:#1d4ed8 !important;}
+  .qqb-newtpl{transition:transform .12s ease,box-shadow .15s ease,filter .12s ease;}
+  .qqb-newtpl:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(59,130,246,.28);filter:brightness(1.02);}
   @keyframes qqbspin{to{transform:rotate(360deg);}}
   .qqb-spin{animation:qqbspin .8s linear infinite;}
   @keyframes qqbrec{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.8);}}
@@ -272,6 +274,99 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         processingMessage: 'Skriver arbejdsbeskrivelsen ned…',
         successMessage: 'Tilføjet til arbejdsbeskrivelsen',
     });
+
+    // ---- Skabeloner til arbejdsbeskrivelsen ----
+    // Genbrugelige rich-text-skabeloner (deles pr. firma). Indsættes i editoren
+    // som HTML, så fed/punkter/afsnit bevares 1:1 (ikke "komprimeret").
+    const [templates, setTemplates] = useState([]);
+    const [tplModalOpen, setTplModalOpen] = useState(false);
+    const [tplEditing, setTplEditing] = useState(null);   // { id, name, body_html } under redigering/oprettelse
+    const [tplName, setTplName] = useState('');
+    const [tplSaving, setTplSaving] = useState(false);
+    const [tplConfirmDelete, setTplConfirmDelete] = useState(false);
+    const tplEditorRef = useRef(null);
+
+    // Hent firmaets skabeloner én gang ved mount.
+    useEffect(() => {
+        let alive = true;
+        listQuoteTemplates(carpenter).then((rows) => { if (alive) setTemplates(rows); });
+        return () => { alive = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Indsæt en skabelon i arbejdsbeskrivelsen — ved markøren hvis den står inde i
+    // feltet, ellers tilføjet i bunden. Bagefter kan den frit rettes.
+    const insertTemplate = (tpl) => {
+        const el = workEditorRef.current;
+        if (!el) return;
+        const clean = sanitizeHtml(tpl.body_html || '');
+        if (!clean.trim()) { toast.error('Skabelonen er tom'); return; }
+        el.focus();
+        const sel = window.getSelection();
+        const caretInside = sel && sel.rangeCount > 0 && el.contains(sel.anchorNode);
+        const cur = el.innerHTML || '';
+        if (caretInside && cur.trim()) {
+            document.execCommand('insertHTML', false, clean);
+        } else {
+            el.innerHTML = cur.trim() ? `${cur}<br>${clean}` : clean;
+        }
+        setWorkDescHtml(el.innerHTML);
+        toast.success(`Skabelon "${tpl.name}" indsat`);
+    };
+
+    // Åbn popup'en — enten tom (ny) eller forudfyldt (rediger eksisterende).
+    const openNewTemplate = () => { setTplEditing({ id: null, name: '', body_html: '' }); setTplName(''); setTplConfirmDelete(false); setTplModalOpen(true); };
+    const openEditTemplate = (tpl) => { setTplEditing(tpl); setTplName(tpl.name || ''); setTplConfirmDelete(false); setTplModalOpen(true); };
+    const closeTemplateModal = () => { if (tplSaving) return; setTplModalOpen(false); setTplEditing(null); setTplConfirmDelete(false); };
+
+    // Sæt indholdet i popup-editoren imperativt når den åbnes (contentEditable er ukontrolleret).
+    useEffect(() => {
+        if (!tplModalOpen) return;
+        requestAnimationFrame(() => { if (tplEditorRef.current) tplEditorRef.current.innerHTML = tplEditing?.body_html || ''; });
+    }, [tplModalOpen, tplEditing]);
+
+    const saveTemplate = async () => {
+        const name = tplName.trim();
+        const bodyHtml = sanitizeHtml(tplEditorRef.current?.innerHTML || '');
+        if (!name) { toast.error('Giv skabelonen et navn'); return; }
+        if (!htmlToPlainLines(bodyHtml).length) { toast.error('Skriv lidt indhold i skabelonen'); return; }
+        setTplSaving(true);
+        try {
+            if (tplEditing?.id) {
+                const updated = await updateQuoteTemplate(tplEditing.id, { name, bodyHtml });
+                setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+                toast.success('Skabelon opdateret');
+            } else {
+                const created = await createQuoteTemplate(carpenter, { name, bodyHtml });
+                setTemplates((prev) => [created, ...prev]);
+                toast.success('Skabelon gemt');
+            }
+            setTplModalOpen(false);
+            setTplEditing(null);
+        } catch (e) {
+            toast.error(friendlyError(e) || 'Kunne ikke gemme skabelonen');
+        } finally {
+            setTplSaving(false);
+        }
+    };
+
+    const removeTemplate = async () => {
+        const tpl = tplEditing;
+        if (!tpl?.id) return;
+        setTplSaving(true);
+        try {
+            await deleteQuoteTemplate(tpl.id);
+            setTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
+            toast.success('Skabelon slettet');
+            setTplModalOpen(false);
+            setTplEditing(null);
+        } catch (e) {
+            toast.error(friendlyError(e) || 'Kunne ikke slette skabelonen');
+        } finally {
+            setTplSaving(false);
+        }
+    };
+
     // Kunde — strukturerede felter (gade/postnr/by) hentes fra customerDetails hvis de findes.
     const cd0 = initialLead?.raw_data?.customerDetails || {};
     const [customer, setCustomer] = useState({
@@ -402,15 +497,12 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     });
     // Davidsen-PDF
     const [materialFile, setMaterialFile] = useState(null);
-    // Personlige beskeder — adskilt: én på tilbuddet (PDF), én i mailen.
-    const [pdfNote, setPdfNote] = useState(mq0.noteHtml || '');
+    // Personlig besked i selve mailen (kunden får detaljerne her + i arbejdsbeskrivelsen).
     const [emailMessage, setEmailMessage] = useState(initialLead?.raw_data?.custom_message || STANDARD_EMAIL_MSG);
     // Hvor mange dage tilbuddet er gyldigt (vises i PDF + mail, og styrer udløb på kunde-siden).
     const [validityDays, setValidityDays] = useState(initialLead?.raw_data?.quote_settings?.validityDays || mq0.validityDays || 14);
     // Ved redigering er beskeden allerede skrevet — undlad at overskrive med standard-hilsen.
-    const pdfNoteTouched = useRef(isEditing);
     const emailMsgTouched = useRef(isEditing);
-    const pdfNoteRef = useRef(null);
     // Preview-fane (kun på mobil) + live-regenerering af PDF
     const [previewTab, setPreviewTab] = useState('edit'); // 'edit' | 'pdf' | 'mail'
     const [regenerating, setRegenerating] = useState(false);
@@ -437,21 +529,10 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     // PDF-viewer uden mørk værktøjslinje + tilpas til bredden, så siden fylder rammen og kan læses.
     const viewerSrc = (u) => u ? `${u}#toolbar=0&navpanes=0&statusbar=0&view=FitH` : u;
 
-    // Forudfyld PDF-beskeden (med hilsen) når kundenavn ændres, indtil brugeren selv retter.
-    // contentEditable er ukontrolleret, så vi sætter både state og editorens indhold imperativt.
-    // Mail-beskeden er kun brødtekst og styres ikke af navnet (skabelonen tilføjer "Hej {navn},").
-    useEffect(() => {
-        if (pdfNoteTouched.current) return;
-        const html = STANDARD_PDF_NOTE_HTML(customer.name);
-        setPdfNote(html);
-        if (pdfNoteRef.current) pdfNoteRef.current.innerHTML = html;
-    }, [customer.name]);
-
-    // Ved redigering af en gemt kladde: indsæt det gemte rich-text-indhold i editorerne
+    // Ved redigering af en gemt kladde: indsæt det gemte rich-text-indhold i editoren
     // (contentEditable er ukontrolleret, så det skal sættes imperativt efter mount).
     useEffect(() => {
         if (!isEditing) return;
-        if (pdfNoteRef.current) pdfNoteRef.current.innerHTML = mq0.noteHtml || '';
         if (workEditorRef.current) workEditorRef.current.innerHTML = mq0.workHtml || '';
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -463,12 +544,12 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         if (!canAutosave.current) return;
         const t = setTimeout(() => {
             try {
-                const snap = { title, materialCost, markup, laborMode, laborFixed, laborRate, laborHours, extras, workDescHtml, pdfNote, customer, emailMessage, validityDays, savedAt: Date.now() };
+                const snap = { title, materialCost, markup, laborMode, laborFixed, laborRate, laborHours, extras, workDescHtml, customer, emailMessage, validityDays, savedAt: Date.now() };
                 if (draftHasContent(snap)) window.localStorage.setItem(draftKey, JSON.stringify(snap));
             } catch { /* localStorage kan være fuld/blokeret — ignorér */ }
         }, 600);
         return () => clearTimeout(t);
-    }, [title, materialCost, markup, laborMode, laborFixed, laborRate, laborHours, extras, workDescHtml, pdfNote, customer, emailMessage, validityDays, draftKey]);
+    }, [title, materialCost, markup, laborMode, laborFixed, laborRate, laborHours, extras, workDescHtml, customer, emailMessage, validityDays, draftKey]);
 
     // Fortsæt i den gemte kladde: indlæs øjebliksbilledet i alle felter.
     const continueDraft = () => {
@@ -483,17 +564,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             setLaborHours(d.laborHours || '');
             setExtras((Array.isArray(d.extras) && d.extras.length) ? d.extras.map(e => ({ id: uid(), desc: e.desc || '', amount: e.amount != null ? String(e.amount) : '' })) : [{ id: uid(), desc: '', amount: '' }]);
             setWorkDescHtml(d.workDescHtml || '');
-            setPdfNote(d.pdfNote || '');
             if (d.customer) setCustomer({ name: '', email: '', phone: '', address: '', zip: '', city: '', ...d.customer });
             setEmailMessage(d.emailMessage || STANDARD_EMAIL_MSG);
             setValidityDays(d.validityDays || 14);
-            // contentEditable-editorerne er ukontrollerede → sæt indholdet imperativt.
-            // Markér som "rørt" så standard-hilsenerne ikke overskriver det genindlæste.
-            pdfNoteTouched.current = true;
+            // contentEditable-editoren er ukontrolleret → sæt indholdet imperativt.
+            // Markér som "rørt" så standard-hilsenen ikke overskriver det genindlæste.
             emailMsgTouched.current = true;
             requestAnimationFrame(() => {
                 if (workEditorRef.current) workEditorRef.current.innerHTML = d.workDescHtml || '';
-                if (pdfNoteRef.current) pdfNoteRef.current.innerHTML = d.pdfNote || '';
             });
         }
         canAutosave.current = true;
@@ -536,8 +614,6 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         totalExVat: calc.totalExVat,
         vat: calc.vat,
         totalIncVat: calc.totalIncVat,
-        noteHtml: pdfNote,
-        note: htmlToPlainLines(pdfNote).join('\n'),
         validityDays: num(validityDays) || 14,
     });
 
@@ -924,8 +1000,8 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         </>
     );
 
-    // Genbrugelig Word-lignende rich-text-editor (bruges af både "Besked på tilbuddet" og
-    // "Arbejdsbeskrivelse"). execCommand styrer fed/kursiv/punkter; Cmd/Ctrl+B virker natively.
+    // Genbrugelig Word-lignende rich-text-editor (bruges af "Arbejdsbeskrivelse" og
+    // skabelon-popup'en). execCommand styrer fed/kursiv/punkter; Cmd/Ctrl+B virker natively.
     // onMouseDown-preventDefault på knapperne bevarer markeringen i editoren.
     const tbtn = (title, onClick, content) => (
         <button type="button" title={title} className="qqb-tbtn" onMouseDown={(e) => e.preventDefault()} onClick={onClick}
@@ -1162,10 +1238,6 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     />
                     <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Vises på tilbuddet og i mailen. Efter {validityDays} dage markeres tilbuddet som udløbet for kunden.</p>
                 </div>
-                <div style={editSection}>
-                    <label style={label}>Besked på tilbuddet</label>
-                    {renderRichEditor(pdfNoteRef, (h) => { pdfNoteTouched.current = true; setPdfNote(h); }, 'Skriv en kort intro til kunden — fx "Hermed fremsendes tilbud på følgende arbejde:"', '80px')}
-                </div>
                 <div style={editSection} data-tour="qq-materials">
                     <h3 style={editH}><Package size={18} color="#3b82f6" /> Materialer</h3>
                     {renderMaterialInputs()}
@@ -1183,6 +1255,33 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 </div>
                 <div style={editSection} data-tour="qq-workdesc">
                     <h3 style={editH}><CheckCircle2 size={18} color="#10b981" /> Arbejdsbeskrivelse</h3>
+                    {/* Skabelon-bar: indsæt en gemt tekst med ét klik — eller byg en ny. */}
+                    <div style={{ marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                            {templates.map((t) => (
+                                <div key={t.id} className="qqb-chip" style={{ display: 'inline-flex', alignItems: 'stretch', borderRadius: '999px', border: '1px solid #e2e8f0', background: '#fff', overflow: 'hidden' }}>
+                                    <button type="button" onClick={() => insertTemplate(t)} title={`Indsæt "${t.name}"`}
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '7px 13px', border: 'none', background: 'transparent', color: '#334155', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', maxWidth: '210px' }}>
+                                        <Files size={14} color="#3b82f6" style={{ flexShrink: 0 }} />
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
+                                    </button>
+                                    <button type="button" className="qqb-chip-edit" onClick={() => openEditTemplate(t)} title="Rediger skabelon"
+                                        style={{ display: 'inline-flex', alignItems: 'center', padding: '0 10px', border: 'none', borderLeft: '1px solid #f1f5f9', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>
+                                        <Pencil size={13} />
+                                    </button>
+                                </div>
+                            ))}
+                            <button type="button" className="qqb-newtpl" onClick={openNewTemplate}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '999px', border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer' }}>
+                                <Plus size={15} /> Ny skabelon
+                            </button>
+                        </div>
+                        {templates.length === 0 && (
+                            <p style={{ margin: '8px 2px 0', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.4 }}>
+                                Gem dine faste tekster som skabeloner og indsæt dem med ét klik.
+                            </p>
+                        )}
+                    </div>
                     {renderRichEditor(workEditorRef, setWorkDescHtml, 'Skriv arbejdsbeskrivelsen frit — markér tekst og gør den fed, lav punkter, eller indsæt direkte fra Word.', '96px', workDictation)}
                 </div>
                 <div style={editSection}>
@@ -1587,6 +1686,75 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                     style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(239,68,68,0.32)' }}
                                 >
                                     <Trash2 size={17} /> {busy ? 'Sletter…' : 'Ja, slet tilbud'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Skabelon-popup: opret / rediger en genbrugelig arbejdsbeskrivelse. */}
+                {tplModalOpen && (
+                    <div
+                        className="qqb-confirm-backdrop"
+                        onClick={closeTemplateModal}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100085, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 'calc(24px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
+                    >
+                        <div
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: 'min(560px, 100%)', maxHeight: '92vh', overflowY: 'auto', background: '#fff', borderRadius: 24, padding: '26px 26px 22px', boxShadow: '0 30px 80px rgba(15,23,42,0.45)' }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+                                <div style={{ width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Files size={20} color="#3b82f6" />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <h2 style={{ margin: 0, fontSize: '1.18rem', fontWeight: 800, color: '#0f172a' }}>{tplEditing?.id ? 'Rediger skabelon' : 'Ny skabelon'}</h2>
+                                    <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Genbrug den på dine tilbud med ét klik.</p>
+                                </div>
+                                <button type="button" onClick={closeTemplateModal} className="qqb-close" title="Luk"
+                                    style={{ width: 36, height: 36, borderRadius: 10, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <div style={{ marginTop: 18 }}>
+                                <label style={label}>Navn på skabelonen *</label>
+                                <input className="qqb-input" style={input} value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder="F.eks. Udskiftning af tag" maxLength={80} />
+                            </div>
+
+                            <div style={{ marginTop: 16 }}>
+                                <label style={label}>Indhold</label>
+                                {renderRichEditor(tplEditorRef, () => {}, 'Skriv skabelonteksten — markér og gør fed, lav punkter, eller indsæt direkte fra Word. Formateringen bevares når du indsætter den.', '200px')}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 22 }}>
+                                {tplEditing?.id && (
+                                    tplConfirmDelete ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 'auto' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ef4444' }}>Sikker?</span>
+                                            <button type="button" disabled={tplSaving} onClick={removeTemplate}
+                                                style={{ padding: '8px 12px', borderRadius: 10, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.82rem', cursor: tplSaving ? 'not-allowed' : 'pointer' }}>
+                                                {tplSaving ? 'Sletter…' : 'Ja, slet'}
+                                            </button>
+                                            <button type="button" disabled={tplSaving} onClick={() => setTplConfirmDelete(false)}
+                                                style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+                                                Nej
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button type="button" className="qqb-iconbtn" disabled={tplSaving} onClick={() => setTplConfirmDelete(true)} title="Slet skabelon"
+                                            style={{ marginRight: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 12px', borderRadius: 10, border: '1px solid #fee2e2', background: '#fff', color: '#ef4444', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+                                            <Trash2 size={15} /> Slet
+                                        </button>
+                                    )
+                                )}
+                                <button type="button" disabled={tplSaving} onClick={closeTemplateModal}
+                                    style={{ marginLeft: tplEditing?.id ? 0 : 'auto', padding: '12px 18px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
+                                    Fortryd
+                                </button>
+                                <button type="button" disabled={tplSaving} onClick={saveTemplate}
+                                    style={{ padding: '12px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(145deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: tplSaving ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 8px 20px rgba(37,99,235,0.32)' }}>
+                                    <Save size={16} /> {tplSaving ? 'Gemmer…' : (tplEditing?.id ? 'Gem ændringer' : 'Gem skabelon')}
                                 </button>
                             </div>
                         </div>

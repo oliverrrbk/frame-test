@@ -51,6 +51,7 @@ afløser/supplerer hinanden.
 | `supabase/setup_chat_edit_delete_hide.sql` | Chat: `edited_at`/`deleted_at` på beskeder (rediger/fortryd) + `hidden_at` på `chat_participants` (skjul samtale pr. bruger) + UPDATE-RLS for egen besked/deltager-række + `REPLICA IDENTITY FULL`. Kør EFTER `setup_chat.sql` |
 | `setup_error_logs.sql` | In-house fejlfinder: `error_logs`-tabel + RLS (alle må logge, kun superadmin må læse) |
 | `setup_quote_dataset.sql` | **Tilbuds-datasæt (datavold til fremtidig AI-tilbudsmotor).** `quote_dataset`-tabel (én række pr. sag: tilbud + udfald: accepteret/faktureret/faktiske timer) + superadmin-RLS + **fejl-sikker trigger på `leads`** (`capture_quote_dataset`) der snapshotter ved tilbud/status/udfald. Triggeren kan ALDRIG vælte et lead-skriv. **Jura:** at TRÆNE/SÆLGE på tværs af kunder kræver licens-klausul i vilkårene først. |
+| `setup_quote_templates.sql` | **Tilbuds-skabeloner** til feltet "Arbejdsbeskrivelse" i Hurtigt tilbud. `quote_templates`-tabel (rich-text `body_html`) gemt pr. FIRMA (`carpenter_id` = firma-roden = `company_id \|\| egen id`) + RLS så hele teamet deler skabelonerne. Bruges af `src/utils/quoteTemplates.js` + `QuickQuoteBuilder.jsx`. |
 
 ### 3) RPC'er (funktioner)
 | Fil | Formål |
