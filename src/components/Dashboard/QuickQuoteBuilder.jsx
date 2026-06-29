@@ -1234,6 +1234,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             ref.current?.focus();
             const sel = window.getSelection();
             if (!sel || sel.isCollapsed) { toast('Markér teksten du vil ændre størrelse på'); return; }
+            try { document.execCommand('styleWithCSS', false, false); } catch { /* ikke understøttet */ }
             document.execCommand('fontSize', false, '7');
             ref.current.querySelectorAll('font[size="7"]').forEach((f) => {
                 const span = document.createElement('span');

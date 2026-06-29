@@ -11,25 +11,31 @@ const kr = (n) => {
 
 // ---- Rich-text fra arbejdsbeskrivelsen (HTML) → blokke jsPDF kan tegne ----
 // Understøtter: afsnit, overskrifter, linjeskift, fed, kursiv, understregning,
-// punkt-/nummererede lister og venstre/center/højre-justering. HTML'en er på
-// forhånd normaliseret af sanitizeHtml (QuickQuoteBuilder), så vi kan stole på
-// et lille sæt tags: p/h2/h3/ul/ol/li/b/i/u/br + style="text-align:…".
+// skriftstørrelser, punkt-/nummererede lister, TABELLER og justering. HTML'en er
+// på forhånd normaliseret af sanitizeHtml: p/h2/h3/ul/ol/li/b/i/u/br/table/tr/td
+// + style="text-align:…" + style="font-size:…pt".
 function parseRichBlocks(html) {
     const doc = new DOMParser().parseFromString(html || '', 'text/html');
     const blocks = [];
+    const sizeOf = (el) => {
+        const m = ((el.getAttribute && el.getAttribute('style')) || '').match(/font-size:\s*([\d.]+)pt/);
+        return m ? parseFloat(m[1]) : null;
+    };
     const inline = (node, style) => {
         const runs = [];
         node.childNodes.forEach((ch) => {
             if (ch.nodeType === 3) {
                 const t = ch.textContent.replace(/\s+/g, ' ');
-                if (t) runs.push({ text: t, bold: !!style.bold, italic: !!style.italic, underline: !!style.underline });
+                if (t) runs.push({ text: t, bold: !!style.bold, italic: !!style.italic, underline: !!style.underline, size: style.size || null });
             } else if (ch.nodeType === 1) {
                 const tag = ch.tagName;
                 if (tag === 'BR') { runs.push({ br: true }); return; }
+                const cs = sizeOf(ch);
                 runs.push(...inline(ch, {
                     bold: style.bold || tag === 'B' || tag === 'STRONG',
                     italic: style.italic || tag === 'I' || tag === 'EM',
                     underline: style.underline || tag === 'U',
+                    size: cs != null ? cs : style.size,
                 }));
             }
         });
@@ -46,7 +52,19 @@ function parseRichBlocks(html) {
         }
         if (ch.nodeType !== 1) return;
         const tag = ch.tagName;
-        if (tag === 'UL' || tag === 'OL') {
+        if (tag === 'TABLE') {
+            const rows = [];
+            ch.querySelectorAll('tr').forEach((tr) => {
+                const cells = [];
+                Array.from(tr.children).forEach((cell) => {
+                    if (cell.tagName === 'TD' || cell.tagName === 'TH') {
+                        cells.push({ runs: inline(cell, {}), head: cell.getAttribute('data-th') === '1' || cell.tagName === 'TH' });
+                    }
+                });
+                if (cells.length) rows.push(cells);
+            });
+            if (rows.length) blocks.push({ type: 'table', rows });
+        } else if (tag === 'UL' || tag === 'OL') {
             const items = [];
             ch.childNodes.forEach((li) => { if (li.nodeType === 1 && li.tagName === 'LI') items.push(inline(li, {})); });
             if (items.length) blocks.push({ type: 'list', ordered: tag === 'OL', items });
@@ -67,29 +85,31 @@ function parseRichBlocks(html) {
 function renderRich(pdf, blocks, o) {
     const fontOf = (r) => (r.bold && r.italic) ? 'bolditalic' : r.bold ? 'bold' : r.italic ? 'italic' : 'normal';
     const headingColor = o.headingColor || o.color;
+    const tableBorder = [203, 213, 225];
     let y = o.y;
-    const spaceW = () => pdf.getTextWidth(' ');
 
-    // Bryd runs op i wrappede linjer (måler ord for ord) inden for bredden maxW.
-    // Hver linje: { segs:[{text,font,underline,w}], width }.
-    const layout = (runs, maxW, size) => {
-        pdf.setFontSize(size);
+    // Bryd runs op i wrappede linjer (måler ord for ord, pr. skriftstørrelse) inden for maxW.
+    // Hver linje: { segs:[{text,font,underline,size,w}], width, maxSize }.
+    const layout = (runs, maxW, baseSize) => {
         const lines = [];
-        let cur = { segs: [], width: 0 };
-        const pushLine = () => { lines.push(cur); cur = { segs: [], width: 0 }; };
+        let cur = { segs: [], width: 0, maxSize: baseSize };
+        const pushLine = () => { lines.push(cur); cur = { segs: [], width: 0, maxSize: baseSize }; };
         (runs || []).forEach((r) => {
             if (r.br) { pushLine(); return; }
+            const rs = r.size || baseSize;
             const font = fontOf(r);
             pdf.setFont('helvetica', font);
+            pdf.setFontSize(rs);
+            const sp = pdf.getTextWidth(' ');
             (r.text || '').split(' ').forEach((word) => {
                 if (word === '') return;
                 const ww = pdf.getTextWidth(word);
-                const lead = cur.width > 0 ? spaceW() : 0;
-                if (cur.width > 0 && cur.width + lead + ww > maxW) pushLine();
-                const sep = cur.width > 0 ? ' ' : '';
-                const segW = (cur.width > 0 ? spaceW() : 0) + ww;
-                cur.segs.push({ text: sep + word, font, underline: !!r.underline, w: segW });
+                if (cur.width > 0 && cur.width + sp + ww > maxW) pushLine();
+                const atStart = cur.width === 0;
+                const segW = (atStart ? 0 : sp) + ww;
+                cur.segs.push({ text: (atStart ? '' : ' ') + word, font, underline: !!r.underline, size: rs, w: segW });
                 cur.width += segW;
+                if (rs > cur.maxSize) cur.maxSize = rs;
             });
         });
         if (cur.segs.length || lines.length === 0) pushLine();
@@ -97,15 +117,16 @@ function renderRich(pdf, blocks, o) {
     };
 
     // Tegn de wrappede linjer fra x, justeret efter align inden for [x, maxX].
-    const drawLines = (lines, x, maxX, size, lineGap, color, align) => {
+    const drawLines = (lines, x, maxX, baseSize, baseGap, color, align) => {
         const maxW = maxX - x;
         lines.forEach((line) => {
+            const gap = Math.max(baseGap, (line.maxSize || baseSize) * 0.46);
             let cx = x;
             if (align === 'center') cx = x + Math.max(0, (maxW - line.width) / 2);
             else if (align === 'right') cx = x + Math.max(0, maxW - line.width);
             line.segs.forEach((seg) => {
                 pdf.setFont('helvetica', seg.font);
-                pdf.setFontSize(size);
+                pdf.setFontSize(seg.size || baseSize);
                 pdf.setTextColor(...color);
                 pdf.text(seg.text, cx, y);
                 if (seg.underline) {
@@ -116,8 +137,50 @@ function renderRich(pdf, blocks, o) {
                 }
                 cx += seg.w;
             });
-            y += lineGap;
+            y += gap;
         });
+    };
+
+    // Tegn en tabel som et rigtigt gitter med rammer og ombrudt celletekst.
+    const drawTable = (rows) => {
+        const cols = Math.max(1, ...rows.map((r) => r.length));
+        const colW = (o.maxX - o.x) / cols;
+        const padX = 2.2, padY = 2.2, cellSize = Math.min(o.size, 9.5);
+        const cellGap = Math.max(4.4, cellSize * 0.5);
+        const ascent = cellSize * 0.3528 * 0.82;
+        y += 1.5;
+        rows.forEach((row) => {
+            const cellLines = [];
+            for (let ci = 0; ci < cols; ci++) {
+                cellLines.push(row[ci] ? layout(row[ci].runs, colW - 2 * padX, cellSize) : [{ segs: [], width: 0, maxSize: cellSize }]);
+            }
+            const maxLines = Math.max(1, ...cellLines.map((ls) => ls.length));
+            const rowH = maxLines * cellGap + 2 * padY;
+            let cx = o.x;
+            for (let ci = 0; ci < cols; ci++) {
+                const isHead = row[ci] && row[ci].head;
+                if (isHead) { pdf.setFillColor(241, 245, 249); pdf.rect(cx, y, colW, rowH, 'F'); }
+                pdf.setDrawColor(...tableBorder);
+                pdf.setLineWidth(0.3);
+                pdf.rect(cx, y, colW, rowH);
+                let ty = y + padY + ascent;
+                cellLines[ci].forEach((linerow) => {
+                    let tx = cx + padX;
+                    linerow.segs.forEach((seg) => {
+                        const font = isHead ? (seg.font.includes('italic') ? 'bolditalic' : 'bold') : seg.font;
+                        pdf.setFont('helvetica', font);
+                        pdf.setFontSize(seg.size || cellSize);
+                        pdf.setTextColor(...o.color);
+                        pdf.text(seg.text, tx, ty);
+                        tx += seg.w;
+                    });
+                    ty += cellGap;
+                });
+                cx += colW;
+            }
+            y += rowH;
+        });
+        y += 2.5;
     };
 
     blocks.forEach((b, idx) => {
@@ -128,6 +191,8 @@ function renderRich(pdf, blocks, o) {
             const runs = b.runs.map((r) => (r.br ? r : { ...r, bold: true }));
             drawLines(layout(runs, o.maxX - o.x, size), o.x, o.maxX, size, gap, headingColor, b.align);
             y += 1.5;
+        } else if (b.type === 'table') {
+            drawTable(b.rows);
         } else if (b.type === 'list') {
             let n = 1;
             b.items.forEach((item) => {

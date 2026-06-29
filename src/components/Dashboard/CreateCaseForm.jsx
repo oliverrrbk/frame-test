@@ -29,6 +29,9 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
     const [billingMode, setBillingMode] = useState('hourly');
     const [fixedPrice, setFixedPrice] = useState('');   // fast pris, ekskl. moms
     const [hourlyRate, setHourlyRate] = useState('');   // timepris kr/time, ekskl. moms
+    // Omvendt betalingspligt gælder KUN byggeydelser (B2B) — ikke al erhverv. Derfor
+    // default MED moms, og man vælger selv omvendt betalingspligt til ved byggeydelser.
+    const [reverseCharge, setReverseCharge] = useState(false);
     const [busy, setBusy] = useState(false);
 
     const setC = (patch) => setCustomer((prev) => ({ ...prev, ...patch }));
@@ -36,11 +39,14 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
     // Dansk talformat → tal (fjern tusind-punktummer, brug komma som decimaltegn).
     const parseDkNum = (v) => parseFloat(String(v ?? '').replace(/\./g, '').replace(/\s/g, '').replace(',', '.')) || 0;
 
-    // Tømreren indtaster altid ekskl. moms. Privat → 25% moms lægges på fakturaen;
-    // erhverv (CVR) → uden moms (omvendt betalingspligt).
-    const momsHint = customerType === 'erhverv'
-        ? 'Erhverv: fakturaen sendes uden moms (omvendt betalingspligt).'
-        : 'Privat: der lægges automatisk 25% moms oven i på fakturaen.';
+    // Tømreren indtaster altid ekskl. moms. Privat → altid +25% moms. Erhverv → MED moms
+    // som standard, medmindre man vælger omvendt betalingspligt (kun byggeydelser).
+    const isReverseChargeChoice = customerType === 'erhverv' && reverseCharge;
+    const momsHint = customerType !== 'erhverv'
+        ? 'Privat: der lægges automatisk 25% moms oven i på fakturaen.'
+        : (reverseCharge
+            ? 'Omvendt betalingspligt: fakturaen sendes uden moms (kun bygge- og anlægsydelser).'
+            : 'Erhverv: fakturaen sendes med 25% moms (almindeligt B2B-salg).');
 
     // Minimum for en brugbar sag: navn + mindst én kontaktmåde (telefon eller mail).
     const canSave = customer.name.trim() && (customer.phone.trim() || customer.email.trim());
@@ -68,8 +74,11 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                 ...(isEmployeeCreator ? { assigned_workers: [draftCreator.id] } : {}),
                 is_manual_case: true,       // markør: oprettet direkte uden tilbud
                 billing_mode: billingMode,  // 'hourly' (timepris) eller 'fixed'
+                // Eksplicit moms-valg: false = med 25% moms (standard, også erhverv),
+                // true = omvendt betalingspligt (kun byggeydelser B2B).
+                reverse_charge: isReverseChargeChoice,
                 // Pris gemmes altid ekskl. moms (tømrerens tal). caseFinance lægger moms
-                // på ved visning/faktura ud fra privat/erhverv.
+                // på ved visning/faktura ud fra moms-valget.
                 ...(billingMode === 'fixed' && parseDkNum(fixedPrice) > 0 ? { fixed_price_ex_vat: parseDkNum(fixedPrice) } : {}),
                 ...(billingMode === 'hourly' && parseDkNum(hourlyRate) > 0 ? { hourly_rate: parseDkNum(hourlyRate) } : {}),
                 confirmed_at: nowIso,
@@ -234,6 +243,23 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                                     <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>kr/time</span>
                                 </div>
                                 <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Fakturaen foreslår automatisk dine registrerede timer × timeprisen. {momsHint}</p>
+                            </div>
+                        )}
+
+                        {/* Moms-valg (kun erhverv): standard MED moms — omvendt betalingspligt
+                            vælges kun til ved bygge- og anlægsydelser. */}
+                        {customerType === 'erhverv' && (
+                            <div>
+                                <label style={labelStyle}>Moms</label>
+                                <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '10px', padding: '4px', gap: '4px', width: '100%' }}>
+                                    {[{ v: false, t: 'Med moms (25%)' }, { v: true, t: 'Omvendt betalingspligt' }].map(({ v, t }) => (
+                                        <button key={String(v)} type="button" onClick={() => setReverseCharge(v)}
+                                            style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem', background: reverseCharge === v ? '#fff' : 'transparent', color: reverseCharge === v ? '#0f172a' : '#64748b', boxShadow: reverseCharge === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Omvendt betalingspligt bruges kun ved byggeydelser til andre virksomheder. Er du i tvivl, så vælg "Med moms".</p>
                             </div>
                         )}
                     </div>
