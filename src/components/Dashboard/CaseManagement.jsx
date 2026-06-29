@@ -15,6 +15,7 @@ import FrameSelect from '../ui/FrameSelect';
 import BilagManager from './BilagManager';
 import { SubcontractorModal } from './Subcontractors';
 import { getFeatures } from '../../utils/features';
+import { isReverseChargeLead } from '../../utils/caseFinance';
 import ProfileCard from './ProfileCard';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
 import { useClickOutside } from '../../hooks/useClickOutside';
@@ -1796,6 +1797,20 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const hasHourBudget = !isManualCase && (parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) > 0);
     const getBasePrice = (lead) => {
         if (!lead) return 0;
+        const rd = lead.raw_data || {};
+        // Manuel sag (uden tilbud): pris fra afregningsform, gemt ekskl. moms.
+        // Privat → +25% moms; erhverv (CVR) → uden moms. Timepris = timer × timepris.
+        if (rd.is_manual_case) {
+            const toIncl = (ex) => isReverseChargeLead(lead) ? Math.round(ex) : Math.round(ex * 1.25);
+            if (rd.billing_mode === 'hourly' && Number(rd.hourly_rate) > 0) {
+                const hours = (rd.time_entries || []).reduce((s, e) => s + (Number(e.hours) || 0), 0);
+                return toIncl(hours * Number(rd.hourly_rate));
+            }
+            if (rd.billing_mode === 'fixed' && Number(rd.fixed_price_ex_vat) > 0) {
+                return toIncl(Number(rd.fixed_price_ex_vat));
+            }
+            return 0;
+        }
         if (lead.raw_data?.calc_data?.totalPrice) {
             return parseFloat(lead.raw_data.calc_data.totalPrice) || 0;
         }

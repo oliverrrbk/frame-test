@@ -27,9 +27,20 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
     const [description, setDescription] = useState('');
     const [startDate, setStartDate] = useState('');
     const [billingMode, setBillingMode] = useState('hourly');
+    const [fixedPrice, setFixedPrice] = useState('');   // fast pris, ekskl. moms
+    const [hourlyRate, setHourlyRate] = useState('');   // timepris kr/time, ekskl. moms
     const [busy, setBusy] = useState(false);
 
     const setC = (patch) => setCustomer((prev) => ({ ...prev, ...patch }));
+
+    // Dansk talformat → tal (fjern tusind-punktummer, brug komma som decimaltegn).
+    const parseDkNum = (v) => parseFloat(String(v ?? '').replace(/\./g, '').replace(/\s/g, '').replace(',', '.')) || 0;
+
+    // Tømreren indtaster altid ekskl. moms. Privat → 25% moms lægges på fakturaen;
+    // erhverv (CVR) → uden moms (omvendt betalingspligt).
+    const momsHint = customerType === 'erhverv'
+        ? 'Erhverv: fakturaen sendes uden moms (omvendt betalingspligt).'
+        : 'Privat: der lægges automatisk 25% moms oven i på fakturaen.';
 
     // Minimum for en brugbar sag: navn + mindst én kontaktmåde (telefon eller mail).
     const canSave = customer.name.trim() && (customer.phone.trim() || customer.email.trim());
@@ -57,6 +68,10 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                 ...(isEmployeeCreator ? { assigned_workers: [draftCreator.id] } : {}),
                 is_manual_case: true,       // markør: oprettet direkte uden tilbud
                 billing_mode: billingMode,  // 'hourly' (timepris) eller 'fixed'
+                // Pris gemmes altid ekskl. moms (tømrerens tal). caseFinance lægger moms
+                // på ved visning/faktura ud fra privat/erhverv.
+                ...(billingMode === 'fixed' && parseDkNum(fixedPrice) > 0 ? { fixed_price_ex_vat: parseDkNum(fixedPrice) } : {}),
+                ...(billingMode === 'hourly' && parseDkNum(hourlyRate) > 0 ? { hourly_rate: parseDkNum(hourlyRate) } : {}),
                 confirmed_at: nowIso,
                 customerDetails: {
                     street: customer.address,
@@ -200,6 +215,27 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                                 </div>
                             </div>
                         </div>
+
+                        {/* Pris pr. afregningsform — altid ekskl. moms (tømrerens tal). */}
+                        {billingMode === 'fixed' ? (
+                            <div>
+                                <label style={labelStyle}>Fast pris <span style={{ fontWeight: 400, color: '#94a3b8' }}>(ekskl. moms)</span></label>
+                                <div style={{ position: 'relative' }}>
+                                    <input style={{ ...inputStyle, paddingRight: '42px' }} value={fixedPrice} onChange={(e) => setFixedPrice(e.target.value)} placeholder="Fx 45.000" inputMode="decimal" />
+                                    <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>kr.</span>
+                                </div>
+                                <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>{momsHint}</p>
+                            </div>
+                        ) : (
+                            <div>
+                                <label style={labelStyle}>Timepris <span style={{ fontWeight: 400, color: '#94a3b8' }}>(ekskl. moms)</span></label>
+                                <div style={{ position: 'relative' }}>
+                                    <input style={{ ...inputStyle, paddingRight: '70px' }} value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="Fx 550" inputMode="decimal" />
+                                    <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>kr/time</span>
+                                </div>
+                                <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Fakturaen foreslår automatisk dine registrerede timer × timeprisen. {momsHint}</p>
+                            </div>
+                        )}
                     </div>
                     <p style={{ margin: '14px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>
                         Materialer kan du tilføje senere inde på sagen, hvis du får brug for det.

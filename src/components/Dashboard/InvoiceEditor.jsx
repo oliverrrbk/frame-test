@@ -30,6 +30,11 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
     const [showPreview, setShowPreview] = useState(false);
     const [confirmVoidId, setConfirmVoidId] = useState(null);
 
+    // Fakturalinjens tekst: manuelle sager har intet tilbud — brug en sigende tekst.
+    const baseLineDescription = lead.raw_data?.is_manual_case
+        ? (lead.raw_data?.billing_mode === 'hourly' ? 'Udført arbejde (timer)' : 'Aftalt fast pris')
+        : 'Oprindeligt Tilbud';
+
     // Calculations
     const basePrice = (lead.finance?.caseTotal || 0) - (lead.finance?.extraPrice || 0);
     const extraPrice = lead.finance?.extraPrice || 0;
@@ -63,7 +68,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
         if (invoiceType === 'aconto') {
             invoiceLines.push({ description: 'Aconto betaling', priceExVat: subtotalExVat });
         } else {
-            invoiceLines.push({ description: 'Oprindeligt Tilbud', priceExVat: (basePrice / (isReverseCharge ? 1 : 1.25)) });
+            invoiceLines.push({ description: baseLineDescription, priceExVat: (basePrice / (isReverseCharge ? 1 : 1.25)) });
             if (extraPrice > 0) invoiceLines.push({ description: 'Ekstra Aftalesedler', priceExVat: (extraPrice / (isReverseCharge ? 1 : 1.25)) });
             if (invoiced > 0) invoiceLines.push({ description: 'Tidligere Aconto betalt', priceExVat: -(invoiced / (isReverseCharge ? 1 : 1.25)) });
         }

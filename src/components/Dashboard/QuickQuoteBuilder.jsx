@@ -349,7 +349,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
 
     // Materialer
     const [materialCost, setMaterialCost] = useState(mq0.materialCost ? String(mq0.materialCost) : '');   // indkøbspris ekskl. moms
-    const [markup, setMarkup] = useState(mq0.materialMarkupPct != null ? String(mq0.materialMarkupPct) : '35');             // avance %
+    const [markup, setMarkup] = useState(mq0.materialMarkupPct != null ? String(mq0.materialMarkupPct) : '10');             // avance % (standard 10 %)
     // Arbejde
     const [laborMode, setLaborMode] = useState(mq0.laborMode || 'fixed');    // 'fixed' | 'hourly'
     const [laborFixed, setLaborFixed] = useState(mq0.laborFixed ? String(mq0.laborFixed) : '');
@@ -677,7 +677,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         if (d) {
             setTitle(d.title || '');
             setMaterialCost(d.materialCost || '');
-            setMarkup(d.markup != null ? String(d.markup) : '35');
+            setMarkup(d.markup != null ? String(d.markup) : '10');
             setLaborMode(d.laborMode || 'fixed');
             setLaborFixed(d.laborFixed || '');
             setLaborRate(d.laborRate || String(carpenter?.hourly_rate || carpenter?.raw_data?.hourly_rate || '550'));
@@ -888,7 +888,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         setCustomer({ name: 'Eksempelkunde (dig selv)', email: myEmail, phone: '', address: 'Byggevej 12', zip: '8000', city: 'Aarhus' });
         setTitle('Eksempel: Nyt trægulv i stue');
         setMaterialCost('8000');
-        setMarkup('35');
+        setMarkup('10');
         setLaborMode('fixed');
         setLaborFixed('12000');
         setWorkDescHtml('<p>Levering og montering af nyt trægulv inkl. afslibning og oliebehandling. Bortskaffelse af det gamle gulv er inkluderet.</p>');
@@ -1066,7 +1066,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 </div>
                 <div>
                     <label style={label}>Avance %</label>
-                    <input className="qqb-input" style={input} inputMode="decimal" placeholder="35" value={markup} onChange={(e) => setMarkup(e.target.value)} />
+                    <input className="qqb-input" style={input} inputMode="decimal" placeholder="10" value={markup} onChange={(e) => setMarkup(e.target.value)} />
                 </div>
             </div>
             <div style={resultChip}>

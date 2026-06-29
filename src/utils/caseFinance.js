@@ -24,6 +24,23 @@ export const isReverseChargeLead = (lead) => !!(lead?.raw_data?.customerDetails?
 // Basis-pris (inkl. moms) — samme prioritet som FinanceOverview brugte.
 const getBasePriceInclVat = (lead) => {
     const rd = lead?.raw_data || {};
+
+    // Manuel sag (oprettet uden tilbud): prisen styres af afregningsformen og gemmes
+    // EKSKL. moms (tømrerens tal). Privat → læg 25% moms på; erhverv (CVR) → uden moms
+    // (omvendt betalingspligt). Timepris = registrerede timer × timepris.
+    if (rd.is_manual_case) {
+        const toIncl = (exVat) => isReverseChargeLead(lead) ? Math.round(exVat) : Math.round(exVat * 1.25);
+        if (rd.billing_mode === 'hourly' && Number(rd.hourly_rate) > 0) {
+            const hours = (rd.time_entries || []).reduce((sum, e) => sum + (Number(e.hours) || 0), 0);
+            return toIncl(hours * Number(rd.hourly_rate));
+        }
+        if (rd.billing_mode === 'fixed' && Number(rd.fixed_price_ex_vat) > 0) {
+            return toIncl(Number(rd.fixed_price_ex_vat));
+        }
+        // Ingen pris sat endnu → 0 (falder ikke igennem til tilbuds-felterne).
+        return 0;
+    }
+
     if (rd.calc_data?.totalPrice) {
         return parseFloat(rd.calc_data.totalPrice) || 0;
     }
