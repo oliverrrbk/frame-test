@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLoadScript, Autocomplete } from '@react-google-maps/api';
-import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic, Files } from 'lucide-react';
+import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic, Files, Bold, Italic, Underline, List, ListOrdered, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -50,27 +50,105 @@ const fmtDk = (raw) => {
 
 // ---- Rich-text helpers til arbejdsbeskrivelsen ----
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-// Rens indsat HTML (fx fra Word) ned til et trygt whitelist: fed/kursiv/lister/afsnit/linjeskift.
-const TAG_MAP = { B: 'b', STRONG: 'b', I: 'i', EM: 'i', UL: 'ul', OL: 'ul', LI: 'li', P: 'p', DIV: 'div', BR: 'br', H1: 'p', H2: 'p', H3: 'p', H4: 'p' };
+
+// Rens/normalisér indsat HTML (fx fra Word eller Google Docs) ned til et trygt,
+// lille format: p / h2 / h3 / ul / ol / li / b / i / u / br + style="text-align:…".
+// Vigtigt: Google Docs/Word lægger formatering i spans med inline-styles
+// (font-weight, font-style, text-decoration) — dem læser vi og konverterer til
+// rigtige tags, så fed/kursiv/understregning og overskrifter bevares 1:1.
+const BLOCK_TAGS = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'SECTION', 'ARTICLE', 'TR']);
+const HEADING_OUT = (tag) => (tag === 'H1' || tag === 'H2') ? 'h2' : 'h3';
+const styleFlags = (el) => {
+    const s = (el.getAttribute && el.getAttribute('style')) || '';
+    const fw = (s.match(/font-weight:\s*([^;]+)/) || [])[1] || '';
+    const bold = /bold|[6-9]00/.test(fw);
+    const italic = /font-style:\s*italic/.test(s);
+    const underline = /text-decoration[^;]*underline/.test(s);
+    return { bold, italic, underline };
+};
+const alignAttr = (el) => {
+    const s = (el.getAttribute && el.getAttribute('style')) || '';
+    const m = s.match(/text-align:\s*(center|right|justify)/);
+    return m ? ` style="text-align:${m[1] === 'justify' ? 'justify' : m[1]}"` : '';
+};
 const sanitizeHtml = (html) => {
     const doc = new DOMParser().parseFromString(html || '', 'text/html');
-    const clean = (node) => {
+    const wrap = (txt, ctx) => {
+        if (!txt) return '';
+        let t = txt;
+        if (ctx.bold) t = `<b>${t}</b>`;
+        if (ctx.italic) t = `<i>${t}</i>`;
+        if (ctx.underline) t = `<u>${t}</u>`;
+        return t;
+    };
+    // Serialisér inline-indhold (tekst + b/i/u/span…) til rene b/i/u-tags.
+    const inlineEl = (el, ctx) => {
+        const f = styleFlags(el);
+        return inlineHtml(el, {
+            bold: ctx.bold || f.bold || el.tagName === 'B' || el.tagName === 'STRONG',
+            italic: ctx.italic || f.italic || el.tagName === 'I' || el.tagName === 'EM',
+            underline: ctx.underline || f.underline || el.tagName === 'U',
+        });
+    };
+    function inlineHtml(node, ctx) {
         let out = '';
         node.childNodes.forEach((ch) => {
-            if (ch.nodeType === 3) {
-                out += escapeHtml(ch.textContent);
-            } else if (ch.nodeType === 1) {
-                const tag = TAG_MAP[ch.tagName];
-                const inner = clean(ch);
-                if (ch.tagName === 'BR') out += '<br>';
-                else if ((ch.tagName === 'H1' || ch.tagName === 'H2' || ch.tagName === 'H3' || ch.tagName === 'H4') && inner.trim()) out += `<p><b>${inner}</b></p>`;
-                else if (tag && tag !== 'br') out += `<${tag}>${inner}</${tag}>`;
-                else out += inner; // ukendte tags (span, font m.m.) pakkes ud, teksten bevares
+            if (ch.nodeType === 3) out += wrap(escapeHtml(ch.textContent), ctx);
+            else if (ch.nodeType === 1) {
+                if (ch.tagName === 'BR') { out += '<br>'; return; }
+                out += inlineEl(ch, ctx);
             }
         });
         return out;
+    }
+    // Gå blokke igennem; saml løs inline-tekst i afsnit, og bevar lister/overskrifter.
+    const out = [];
+    const walk = (node) => {
+        let buf = '';
+        const flush = () => { if (buf.trim() || /<br>/.test(buf)) out.push(`<p>${buf}</p>`); buf = ''; };
+        node.childNodes.forEach((ch) => {
+            if (ch.nodeType === 3) { buf += wrap(escapeHtml(ch.textContent), {}); return; }
+            if (ch.nodeType !== 1) return;
+            const tag = ch.tagName;
+            if (tag === 'BR') { buf += '<br>'; return; }
+            const isBlock = BLOCK_TAGS.has(tag) || tag === 'UL' || tag === 'OL' || tag === 'LI';
+            if (!isBlock) {
+                // Google Docs pakker hele dokumentet i en ydre <b style="font-weight:normal">.
+                // Hvis et "inline"-element selv rummer blokke, skal vi gå ned i det som blokke
+                // (ellers fladgøres afsnit og lister til én klump tekst).
+                const hasBlockChild = Array.from(ch.children || []).some((c) => BLOCK_TAGS.has(c.tagName) || c.tagName === 'UL' || c.tagName === 'OL' || c.tagName === 'LI');
+                if (hasBlockChild) { flush(); walk(ch); }
+                else buf += inlineEl(ch, {});
+                return;
+            }
+            flush();
+            if (tag === 'UL' || tag === 'OL') {
+                const lt = tag === 'OL' ? 'ol' : 'ul';
+                const items = [];
+                ch.childNodes.forEach((li) => {
+                    if (li.nodeType === 1 && li.tagName === 'LI') {
+                        const inner = inlineHtml(li, {});
+                        if (inner.trim()) items.push(`<li>${inner}</li>`);
+                    }
+                });
+                if (items.length) out.push(`<${lt}>${items.join('')}</${lt}>`);
+                return;
+            }
+            if (/^H[1-6]$/.test(tag)) {
+                const inner = inlineHtml(ch, {});
+                if (inner.trim()) out.push(`<${HEADING_OUT(tag)}${alignAttr(ch)}>${inner}</${HEADING_OUT(tag)}>`);
+                return;
+            }
+            // P / DIV / andre block-containere: hvis de selv rummer blokke, gå dybere.
+            const hasBlockChild = Array.from(ch.children || []).some((c) => BLOCK_TAGS.has(c.tagName) || c.tagName === 'UL' || c.tagName === 'OL');
+            if (hasBlockChild) { walk(ch); return; }
+            const inner = inlineHtml(ch, {});
+            if (inner.trim() || ch.querySelector('br')) out.push(`<p${alignAttr(ch)}>${inner}</p>`);
+        });
+        flush();
     };
-    return clean(doc.body);
+    walk(doc.body);
+    return out.join('');
 };
 // Plain-tekst-linjer (til bygge-to-do/checklist) ud fra editorens HTML.
 const htmlToPlainLines = (html) => {
@@ -173,15 +251,24 @@ const PREVIEW_CSS = `
   .qqb-editor:focus{border-color:#3b82f6 !important;box-shadow:0 0 0 3px rgba(59,130,246,.15);}
   .qqb-editor p{margin:0 0 6px;}
   .qqb-editor ul{margin:6px 0;padding-left:22px;}
+  .qqb-editor ol{margin:6px 0;padding-left:24px;}
   .qqb-editor li{margin:2px 0;}
+  .qqb-editor h2{font-size:1.18rem;font-weight:800;color:#0f172a;margin:12px 0 6px;line-height:1.3;}
+  .qqb-editor h3{font-size:1.02rem;font-weight:700;color:#0f172a;margin:10px 0 5px;line-height:1.3;}
+  .qqb-editor>*:first-child{margin-top:0;}
+  .qqb-editor u{text-decoration:underline;}
   .qqb-tbtn{transition:background .12s ease,border-color .12s ease,transform .1s ease;}
   .qqb-tbtn:hover{background:#f1f5f9 !important;border-color:#94a3b8 !important;}
   .qqb-tbtn:active{transform:translateY(1px);}
-  .qqb-chip{transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease;}
-  .qqb-chip:hover{transform:translateY(-1px);border-color:#bfdbfe !important;box-shadow:0 4px 12px rgba(59,130,246,.14);}
-  .qqb-chip-edit:hover{background:#eff6ff !important;color:#1d4ed8 !important;}
   .qqb-newtpl{transition:transform .12s ease,box-shadow .15s ease,filter .12s ease;}
   .qqb-newtpl:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(59,130,246,.28);filter:brightness(1.02);}
+  .qqb-tplcard{transition:border-color .12s ease,box-shadow .12s ease,transform .12s ease;}
+  .qqb-tplcard:hover{border-color:#bfdbfe !important;box-shadow:0 6px 18px rgba(59,130,246,.13);transform:translateY(-1px);}
+  .qqb-tpl-preview{font-size:0.82rem;color:#64748b;line-height:1.45;max-height:62px;overflow:hidden;position:relative;}
+  .qqb-tpl-preview *{margin:0 !important;font-size:0.82rem !important;line-height:1.45 !important;}
+  .qqb-tpl-preview b,.qqb-tpl-preview strong,.qqb-tpl-preview h2,.qqb-tpl-preview h3{font-weight:800 !important;color:#475569 !important;}
+  .qqb-tpl-preview ul,.qqb-tpl-preview ol{padding-left:18px;}
+  .qqb-tpl-preview::after{content:'';position:absolute;left:0;right:0;bottom:0;height:18px;background:linear-gradient(transparent,#fff);}
   @keyframes qqbspin{to{transform:rotate(360deg);}}
   .qqb-spin{animation:qqbspin .8s linear infinite;}
   @keyframes qqbrec{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.8);}}
@@ -279,6 +366,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     // Genbrugelige rich-text-skabeloner (deles pr. firma). Indsættes i editoren
     // som HTML, så fed/punkter/afsnit bevares 1:1 (ikke "komprimeret").
     const [templates, setTemplates] = useState([]);
+    const [tplLibraryOpen, setTplLibraryOpen] = useState(false);
     const [tplModalOpen, setTplModalOpen] = useState(false);
     const [tplEditing, setTplEditing] = useState(null);   // { id, name, body_html } under redigering/oprettelse
     const [tplName, setTplName] = useState('');
@@ -599,7 +687,11 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         return { mCost, mPct, materialSell, laborTotal, extrasSum, totalExVat, vat, totalIncVat };
     }, [materialCost, markup, laborMode, laborFixed, laborRate, laborHours, extras]);
 
-    const buildQuoteObj = () => ({
+    const buildQuoteObj = () => {
+    // Normalisér editorens rå HTML til vores faste format (p/h2/h3/ul/ol/li/b/i/u +
+    // text-align) — så både PDF'en og det gemte tilbud altid får ens, ren formatering.
+    const workHtmlClean = sanitizeHtml(workDescHtml);
+    return {
         materialCost: calc.mCost,
         materialMarkupPct: calc.mPct,
         materialSell: calc.materialSell,
@@ -609,13 +701,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         laborHours: num(laborHours),
         laborTotal: calc.laborTotal,
         extras: extras.filter(e => num(e.amount) > 0 || (e.desc || '').trim()).map(e => ({ desc: e.desc || 'Tillæg', amount: num(e.amount) })),
-        workHtml: workDescHtml,
-        workLines: htmlToPlainLines(workDescHtml),
+        workHtml: workHtmlClean,
+        workLines: htmlToPlainLines(workHtmlClean),
         totalExVat: calc.totalExVat,
         vat: calc.vat,
         totalIncVat: calc.totalIncVat,
         validityDays: num(validityDays) || 14,
-    });
+    };
+    };
 
     // ---- Preview af PDF + mail ----
     // Dobbelt-buffer: to PDF-lag oven på hinanden. Den nye version loades usynligt i baggrunden
@@ -1012,6 +1105,13 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const renderRichEditor = (ref, onChange, placeholder, minHeight = '96px', dictation = null) => {
         const sync = () => { if (ref.current) onChange(ref.current.innerHTML); };
         const exec = (cmd) => { ref.current?.focus(); document.execCommand(cmd, false, null); sync(); };
+        // Skift blok-type (overskrift/brødtekst). Klik på en aktiv overskrift slår den fra igen.
+        const fmtBlock = (tagLower) => {
+            ref.current?.focus();
+            const cur = (document.queryCommandValue('formatBlock') || '').toLowerCase();
+            document.execCommand('formatBlock', false, `<${cur === tagLower ? 'p' : tagLower}>`);
+            sync();
+        };
         const onPaste = (e) => {
             e.preventDefault();
             const html = e.clipboardData.getData('text/html');
@@ -1020,12 +1120,23 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             document.execCommand('insertHTML', false, clean);
             sync();
         };
+        const tdiv = <span style={{ width: '1px', height: '22px', background: '#e2e8f0', margin: '0 3px', flexShrink: 0 }} />;
         return (
             <>
-                <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'center' }}>
-                    {tbtn('Fed (Cmd/Ctrl+B)', () => exec('bold'), <span style={{ fontWeight: 900, fontSize: '0.95rem' }}>F</span>)}
-                    {tbtn('Kursiv', () => exec('italic'), <span style={{ fontStyle: 'italic', fontFamily: 'serif' }}>K</span>)}
-                    {tbtn('Punktliste', () => exec('insertUnorderedList'), <><span style={{ fontSize: '1.1rem', lineHeight: 1 }}>•</span><span style={{ fontSize: '0.78rem' }}>Liste</span></>)}
+                <div style={{ display: 'flex', gap: '5px', marginBottom: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {tbtn('Overskrift', () => fmtBlock('h2'), <Heading2 size={16} />)}
+                    {tbtn('Underoverskrift', () => fmtBlock('h3'), <Heading3 size={16} />)}
+                    {tdiv}
+                    {tbtn('Fed (Cmd/Ctrl+B)', () => exec('bold'), <Bold size={15} />)}
+                    {tbtn('Kursiv (Cmd/Ctrl+I)', () => exec('italic'), <Italic size={15} />)}
+                    {tbtn('Understreget (Cmd/Ctrl+U)', () => exec('underline'), <Underline size={15} />)}
+                    {tdiv}
+                    {tbtn('Punktliste', () => exec('insertUnorderedList'), <List size={16} />)}
+                    {tbtn('Nummereret liste', () => exec('insertOrderedList'), <ListOrdered size={16} />)}
+                    {tdiv}
+                    {tbtn('Venstrejustér', () => exec('justifyLeft'), <AlignLeft size={15} />)}
+                    {tbtn('Centrér', () => exec('justifyCenter'), <AlignCenter size={15} />)}
+                    {tbtn('Højrejustér', () => exec('justifyRight'), <AlignRight size={15} />)}
                     {dictation && (
                         <button
                             type="button"
@@ -1255,32 +1366,15 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 </div>
                 <div style={editSection} data-tour="qq-workdesc">
                     <h3 style={editH}><CheckCircle2 size={18} color="#10b981" /> Arbejdsbeskrivelse</h3>
-                    {/* Skabelon-bar: indsæt en gemt tekst med ét klik — eller byg en ny. */}
+                    {/* Skabeloner: ét vindue med alle dine faste tekster — indsæt eller byg en ny. */}
                     <div style={{ marginBottom: '12px' }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                            {templates.map((t) => (
-                                <div key={t.id} className="qqb-chip" style={{ display: 'inline-flex', alignItems: 'stretch', borderRadius: '999px', border: '1px solid #e2e8f0', background: '#fff', overflow: 'hidden' }}>
-                                    <button type="button" onClick={() => insertTemplate(t)} title={`Indsæt "${t.name}"`}
-                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '7px 13px', border: 'none', background: 'transparent', color: '#334155', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', maxWidth: '210px' }}>
-                                        <Files size={14} color="#3b82f6" style={{ flexShrink: 0 }} />
-                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
-                                    </button>
-                                    <button type="button" className="qqb-chip-edit" onClick={() => openEditTemplate(t)} title="Rediger skabelon"
-                                        style={{ display: 'inline-flex', alignItems: 'center', padding: '0 10px', border: 'none', borderLeft: '1px solid #f1f5f9', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>
-                                        <Pencil size={13} />
-                                    </button>
-                                </div>
-                            ))}
-                            <button type="button" className="qqb-newtpl" onClick={openNewTemplate}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '999px', border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer' }}>
-                                <Plus size={15} /> Ny skabelon
-                            </button>
-                        </div>
-                        {templates.length === 0 && (
-                            <p style={{ margin: '8px 2px 0', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.4 }}>
-                                Gem dine faste tekster som skabeloner og indsæt dem med ét klik.
-                            </p>
-                        )}
+                        <button type="button" className="qqb-newtpl" onClick={() => setTplLibraryOpen(true)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 15px', borderRadius: '12px', border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}>
+                            <Files size={16} /> Skabeloner{templates.length ? ` (${templates.length})` : ''}
+                        </button>
+                        <p style={{ margin: '8px 2px 0', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.4 }}>
+                            Indsæt en færdig tekst med ét klik — eller byg en ny. Den sættes ind, så du frit kan rette i den.
+                        </p>
                     </div>
                     {renderRichEditor(workEditorRef, setWorkDescHtml, 'Skriv arbejdsbeskrivelsen frit — markér tekst og gør den fed, lav punkter, eller indsæt direkte fra Word.', '96px', workDictation)}
                 </div>
@@ -1692,12 +1786,81 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     </div>
                 )}
 
+                {/* Skabelon-bibliotek: ét vindue med alle firmaets skabeloner — vælg, rediger eller opret. */}
+                {tplLibraryOpen && (
+                    <div
+                        className="qqb-confirm-backdrop"
+                        onClick={() => setTplLibraryOpen(false)}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100085, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 'calc(24px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
+                    >
+                        <div
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: 'min(680px, 100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 24, boxShadow: '0 30px 80px rgba(15,23,42,0.45)', overflow: 'hidden' }}
+                        >
+                            {/* Header */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '22px 24px 18px', borderBottom: '1px solid #f1f5f9' }}>
+                                <div style={{ width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Files size={20} color="#3b82f6" />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <h2 style={{ margin: 0, fontSize: '1.22rem', fontWeight: 800, color: '#0f172a' }}>Skabeloner</h2>
+                                    <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>Klik på en skabelon for at indsætte den i arbejdsbeskrivelsen.</p>
+                                </div>
+                                <button type="button" onClick={() => setTplLibraryOpen(false)} className="qqb-close" title="Luk"
+                                    style={{ width: 36, height: 36, borderRadius: 10, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            {/* Liste */}
+                            <div className="qqb-col" style={{ flex: 1, overflowY: 'auto', padding: '18px 24px 8px' }}>
+                                <button type="button" className="qqb-newtpl" onClick={openNewTemplate}
+                                    style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 16px', borderRadius: 14, border: '1.5px dashed #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', marginBottom: 16 }}>
+                                    <Plus size={17} /> Ny skabelon
+                                </button>
+
+                                {templates.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '26px 16px 34px', color: '#94a3b8' }}>
+                                        <div style={{ width: 56, height: 56, borderRadius: 16, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                                            <Files size={26} color="#cbd5e1" />
+                                        </div>
+                                        <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#64748b' }}>Ingen skabeloner endnu</p>
+                                        <p style={{ margin: '4px 0 0', fontSize: '0.82rem' }}>Byg din første med knappen ovenfor — så ligger den klar til alle dine tilbud.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 12 }}>
+                                        {templates.map((t) => (
+                                            <div key={t.id} className="qqb-tplcard" onClick={() => { insertTemplate(t); setTplLibraryOpen(false); }}
+                                                style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 16, padding: '14px 16px', cursor: 'pointer', background: '#fff' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, paddingRight: 70 }}>
+                                                    <Files size={15} color="#3b82f6" style={{ flexShrink: 0 }} />
+                                                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
+                                                </div>
+                                                <div className="qqb-tpl-preview" dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.body_html || '') || '<span style="color:#cbd5e1">Tom skabelon</span>' }} />
+                                                <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4 }}>
+                                                    <button type="button" title="Rediger" onClick={(e) => { e.stopPropagation(); openEditTemplate(t); }}
+                                                        style={{ width: 30, height: 30, borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                </div>
+                                                <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontWeight: 800, color: '#1d4ed8' }}>
+                                                    <Plus size={14} /> Indsæt i beskrivelsen
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Skabelon-popup: opret / rediger en genbrugelig arbejdsbeskrivelse. */}
                 {tplModalOpen && (
                     <div
                         className="qqb-confirm-backdrop"
                         onClick={closeTemplateModal}
-                        style={{ position: 'fixed', inset: 0, zIndex: 100085, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 'calc(24px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100092, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 'calc(24px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
                     >
                         <div
                             onClick={(e) => e.stopPropagation()}

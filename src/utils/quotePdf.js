@@ -10,7 +10,10 @@ const kr = (n) => {
 };
 
 // ---- Rich-text fra arbejdsbeskrivelsen (HTML) → blokke jsPDF kan tegne ----
-// Understøtter: afsnit, linjeskift, fed, kursiv og punktlister.
+// Understøtter: afsnit, overskrifter, linjeskift, fed, kursiv, understregning,
+// punkt-/nummererede lister og venstre/center/højre-justering. HTML'en er på
+// forhånd normaliseret af sanitizeHtml (QuickQuoteBuilder), så vi kan stole på
+// et lille sæt tags: p/h2/h3/ul/ol/li/b/i/u/br + style="text-align:…".
 function parseRichBlocks(html) {
     const doc = new DOMParser().parseFromString(html || '', 'text/html');
     const blocks = [];
@@ -19,31 +22,43 @@ function parseRichBlocks(html) {
         node.childNodes.forEach((ch) => {
             if (ch.nodeType === 3) {
                 const t = ch.textContent.replace(/\s+/g, ' ');
-                if (t) runs.push({ text: t, bold: !!style.bold, italic: !!style.italic });
+                if (t) runs.push({ text: t, bold: !!style.bold, italic: !!style.italic, underline: !!style.underline });
             } else if (ch.nodeType === 1) {
                 const tag = ch.tagName;
                 if (tag === 'BR') { runs.push({ br: true }); return; }
                 runs.push(...inline(ch, {
-                    bold: style.bold || tag === 'B' || tag === 'STRONG' || /^H[1-6]$/.test(tag),
+                    bold: style.bold || tag === 'B' || tag === 'STRONG',
                     italic: style.italic || tag === 'I' || tag === 'EM',
+                    underline: style.underline || tag === 'U',
                 }));
             }
         });
         return runs;
     };
-    const pushPara = (runs) => { if (runs.length) blocks.push({ type: 'para', runs }); };
+    const alignOf = (el) => {
+        const m = ((el.getAttribute && el.getAttribute('style')) || '').match(/text-align:\s*(center|right|justify)/);
+        return m ? (m[1] === 'justify' ? 'left' : m[1]) : 'left';
+    };
     doc.body.childNodes.forEach((ch) => {
         if (ch.nodeType === 3) {
-            if (ch.textContent.trim()) pushPara([{ text: ch.textContent.replace(/\s+/g, ' '), bold: false, italic: false }]);
-        } else if (ch.nodeType === 1) {
-            const tag = ch.tagName;
-            if (tag === 'UL' || tag === 'OL') {
-                const items = [];
-                ch.childNodes.forEach((li) => { if (li.nodeType === 1 && li.tagName === 'LI') items.push(inline(li, {})); });
-                if (items.length) blocks.push({ type: 'list', items });
-            } else {
-                pushPara(inline(ch, {}));
-            }
+            if (ch.textContent.trim()) blocks.push({ type: 'para', align: 'left', runs: [{ text: ch.textContent.replace(/\s+/g, ' ') }] });
+            return;
+        }
+        if (ch.nodeType !== 1) return;
+        const tag = ch.tagName;
+        if (tag === 'UL' || tag === 'OL') {
+            const items = [];
+            ch.childNodes.forEach((li) => { if (li.nodeType === 1 && li.tagName === 'LI') items.push(inline(li, {})); });
+            if (items.length) blocks.push({ type: 'list', ordered: tag === 'OL', items });
+        } else if (tag === 'H1' || tag === 'H2') {
+            const runs = inline(ch, {});
+            if (runs.length) blocks.push({ type: 'heading', level: 2, align: alignOf(ch), runs });
+        } else if (tag === 'H3' || tag === 'H4') {
+            const runs = inline(ch, {});
+            if (runs.length) blocks.push({ type: 'heading', level: 3, align: alignOf(ch), runs });
+        } else {
+            const runs = inline(ch, {});
+            if (runs.length) blocks.push({ type: 'para', align: alignOf(ch), runs });
         }
     });
     return blocks;
@@ -51,39 +66,84 @@ function parseRichBlocks(html) {
 
 function renderRich(pdf, blocks, o) {
     const fontOf = (r) => (r.bold && r.italic) ? 'bolditalic' : r.bold ? 'bold' : r.italic ? 'italic' : 'normal';
+    const headingColor = o.headingColor || o.color;
     let y = o.y;
-    // Tilbuddet tegnes på ÉN lang side (ingen sideskift) — derfor ingen paginering her.
-    const ensure = () => {};
     const spaceW = () => pdf.getTextWidth(' ');
-    const drawRuns = (runs, startX, hangX) => {
-        let cx = startX;
-        ensure();
-        runs.forEach((r) => {
-            if (r.br) { y += o.lineGap; cx = hangX; ensure(); return; }
-            pdf.setFont('helvetica', fontOf(r));
-            r.text.split(' ').forEach((word) => {
+
+    // Bryd runs op i wrappede linjer (måler ord for ord) inden for bredden maxW.
+    // Hver linje: { segs:[{text,font,underline,w}], width }.
+    const layout = (runs, maxW, size) => {
+        pdf.setFontSize(size);
+        const lines = [];
+        let cur = { segs: [], width: 0 };
+        const pushLine = () => { lines.push(cur); cur = { segs: [], width: 0 }; };
+        (runs || []).forEach((r) => {
+            if (r.br) { pushLine(); return; }
+            const font = fontOf(r);
+            pdf.setFont('helvetica', font);
+            (r.text || '').split(' ').forEach((word) => {
                 if (word === '') return;
-                const w = pdf.getTextWidth(word);
-                if (cx > hangX && cx + w > o.maxX) { y += o.lineGap; cx = hangX; ensure(); pdf.setFont('helvetica', fontOf(r)); }
-                pdf.text(word, cx, y);
-                cx += w + spaceW();
+                const ww = pdf.getTextWidth(word);
+                const lead = cur.width > 0 ? spaceW() : 0;
+                if (cur.width > 0 && cur.width + lead + ww > maxW) pushLine();
+                const sep = cur.width > 0 ? ' ' : '';
+                const segW = (cur.width > 0 ? spaceW() : 0) + ww;
+                cur.segs.push({ text: sep + word, font, underline: !!r.underline, w: segW });
+                cur.width += segW;
             });
         });
-        y += o.lineGap;
+        if (cur.segs.length || lines.length === 0) pushLine();
+        return lines;
     };
-    blocks.forEach((b) => {
-        pdf.setFontSize(o.size);
-        pdf.setTextColor(...o.color);
-        if (b.type === 'para') {
-            drawRuns(b.runs, o.x, o.x);
-        } else if (b.type === 'list') {
-            b.items.forEach((item) => {
-                ensure();
-                pdf.setFont('helvetica', 'normal');
-                pdf.setTextColor(...o.color);
-                pdf.text('•', o.x, y);
-                drawRuns(item, o.x + 5, o.x + 5);
+
+    // Tegn de wrappede linjer fra x, justeret efter align inden for [x, maxX].
+    const drawLines = (lines, x, maxX, size, lineGap, color, align) => {
+        const maxW = maxX - x;
+        lines.forEach((line) => {
+            let cx = x;
+            if (align === 'center') cx = x + Math.max(0, (maxW - line.width) / 2);
+            else if (align === 'right') cx = x + Math.max(0, maxW - line.width);
+            line.segs.forEach((seg) => {
+                pdf.setFont('helvetica', seg.font);
+                pdf.setFontSize(size);
+                pdf.setTextColor(...color);
+                pdf.text(seg.text, cx, y);
+                if (seg.underline) {
+                    const tw = pdf.getTextWidth(seg.text);
+                    pdf.setDrawColor(...color);
+                    pdf.setLineWidth(0.35);
+                    pdf.line(cx, y + 1.1, cx + tw, y + 1.1);
+                }
+                cx += seg.w;
             });
+            y += lineGap;
+        });
+    };
+
+    blocks.forEach((b, idx) => {
+        if (b.type === 'heading') {
+            const size = b.level === 2 ? 12.5 : 11;
+            const gap = b.level === 2 ? 6.2 : 5.6;
+            if (idx > 0) y += 2.5;
+            const runs = b.runs.map((r) => (r.br ? r : { ...r, bold: true }));
+            drawLines(layout(runs, o.maxX - o.x, size), o.x, o.maxX, size, gap, headingColor, b.align);
+            y += 1.5;
+        } else if (b.type === 'list') {
+            let n = 1;
+            b.items.forEach((item) => {
+                const marker = b.ordered ? `${n}.` : '•';
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(o.size);
+                pdf.setTextColor(...o.color);
+                pdf.text(marker, o.x, y);
+                const indent = o.x + (b.ordered ? Math.max(6, pdf.getTextWidth(`${n}. `)) : 5);
+                drawLines(layout(item, o.maxX - indent, o.size), indent, o.maxX, o.size, o.lineGap, o.color, 'left');
+                n++;
+            });
+            y += 1.5;
+        } else {
+            drawLines(layout(b.runs, o.maxX - o.x, o.size), o.x, o.maxX, o.size, o.lineGap, o.color, b.align);
+            y += 1.5;
         }
     });
     return y;
@@ -207,7 +267,7 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     // ellers fald tilbage til de simple linjer / en neutral tekst.
     const richText = (quote?.workHtml || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
     if (richText) {
-        y = renderRich(pdf, parseRichBlocks(quote.workHtml), { x: left, maxX: right, y, lineGap: 5, size: 10, color: muted });
+        y = renderRich(pdf, parseRichBlocks(quote.workHtml), { x: left, maxX: right, y, lineGap: 5, size: 10, color: muted, headingColor: brand });
         y += 3;
     } else {
         const scopeLines = (quote?.workLines || []).filter(t => (t || '').trim());
