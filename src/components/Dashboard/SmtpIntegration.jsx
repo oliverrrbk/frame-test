@@ -153,12 +153,12 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
     const confirmDisconnect = async () => {
         setIsSaving(true);
         try {
+            // Ren UPDATE (ikke upsert): rækken findes allerede, og upsert tvinger
+            // Postgres gennem INSERT-stien, som fejler mod RLS på carpenter_secrets.
             const { error } = await supabase
                 .from('carpenter_secrets')
-                .upsert({ 
-                    carpenter_id: carpenterProfile.id,
-                    smtp_settings: null
-                }, { onConflict: 'carpenter_id' });
+                .update({ smtp_settings: null })
+                .eq('carpenter_id', carpenterProfile.id);
 
             if (error) throw error;
             setSettings({ smtp_host: '', smtp_port: '', smtp_user: '', smtp_pass: '', smtp_from_email: '', imap_host: '' });
