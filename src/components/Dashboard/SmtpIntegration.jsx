@@ -3,6 +3,18 @@ import { createPortal } from 'react-dom';
 import { Mail, Info, HelpCircle, X, ExternalLink, BookOpen, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
+import AudioPlayerButton from '../Wizard/AudioPlayerButton';
+
+// Hele SMTP-guiden som én naturlig oplæsnings-tekst (dansk TTS).
+// Bruges af "Læs op"-knappen i guide-modalen, så man kan lytte i stedet for at læse.
+const SMTP_GUIDE_SPEECH = [
+    'Guide til egen e-mail via S M T P.',
+    'For at systemet kan sende tilbud direkte fra din egen mail-indbakke, skal det have tilladelse til at logge ind på din mailserver. Du bruger både S M T P-serveren til at sende, og I M A P-serveren, så en kopi havner i din Sendt Post-mappe. Fremgangsmåden afhænger af, hvem du har din e-mail hos. Find din udbyder herunder.',
+    'Microsoft 365, altså Outlook. Microsoft tillader ikke dit normale kodeord. Du skal oprette en app-adgangskode. Log ind på din Microsoft-konto under Sikkerhed. Gå til Avancerede sikkerhedsindstillinger. Find App-adgangskoder og tryk opret. Kopiér koden og sæt den ind i Bison Frame. Send-serveren er smtp punktum office365 punktum com. Sendt Post-serveren er outlook punktum office365 punktum com. Port 587 til afsendelse, og 993 til Sendt Post.',
+    'Google Workspace. Ligesom Microsoft kræver Google, at du bruger en speciel app-adgangskode i stedet for dit normale kodeord. Gå til din Google-konto under Sikkerhed. Slå to-trins-bekræftelse til, hvis det er slået fra. Søg efter App-adgangskoder og opret en ny. Kopiér koden og sæt den ind i Bison Frame. Send-serveren er smtp punktum gmail punktum com. Sendt Post-serveren er imap punktum gmail punktum com. Port 587 til afsendelse, og 993 til Sendt Post.',
+    'DanDomain. Her bruger du dit helt normale e-mail-kodeord, det samme som når du logger ind på webmail. Vigtigt: hos DanDomain hedder send-serveren a-smtp punktum dandomain punktum dk, altså med et a foran, ikke smtp eller websmtp. Sendt Post-serveren hedder post punktum dandomain punktum dk. Port 587 til afsendelse, og 993 til Sendt Post.',
+    'Simply punktum com og One punktum com, samt øvrige webhoteller. Du bruger dit helt normale e-mail-kodeord. Bemærk at send-serveren og Sendt Post-serveren har lidt forskellige navne. Hos Simply er send-serveren websmtp punktum simply punktum com og Sendt Post imap punktum simply punktum com. Hos One punktum com er send-serveren send punktum one punktum com og Sendt Post imap punktum one punktum com. Port 587 til afsendelse, og 993 til Sendt Post.',
+].join(' ');
 
 // Tooltip der både virker på desktop (hover) OG mobil/touch (tryk).
 // Tidligere var den ren CSS :hover → spørgsmålstegnet gjorde intet på mobil.
@@ -448,21 +460,28 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
         {/* --- HELP MODAL --- */}
         {showHelpModal && createPortal(
             <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, padding: '20px', backdropFilter: 'blur(8px)' }} onClick={() => setShowHelpModal(false)}>
-                <div style={{ backgroundColor: '#fff', borderRadius: '24px', width: '100%', maxWidth: '1100px', maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={(e) => e.stopPropagation()}>
-                    
-                    <div style={{ position: 'sticky', top: 0, background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', padding: '30px 40px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ backgroundColor: '#fff', borderRadius: '24px', width: '100%', maxWidth: '1100px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={(e) => e.stopPropagation()}>
+
+                    <div style={{ flexShrink: 0, background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', padding: '24px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', zIndex: 10 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
                             <h2 style={{ margin: 0, fontSize: '1.8rem', display: 'flex', alignItems: 'center', gap: '12px', color: '#0f172a' }}>
                                 <BookOpen color="#db2777" size={28} /> Guide til Egen E-mail (SMTP)
                             </h2>
                             <p style={{ margin: 0, color: '#64748b', fontSize: '15px' }}>Find din udbyder og brug både <strong>SMTP</strong>-serveren (til at sende) og <strong>IMAP</strong>-serveren (så kopien havner i din "Sendt Post").</p>
                         </div>
-                        <button onClick={() => setShowHelpModal(false)} style={{ background: '#f1f5f9', border: 'none', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={(e) => e.currentTarget.style.background = '#f1f5f9'}>
-                            <X size={24} />
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                            <AudioPlayerButton
+                                text={SMTP_GUIDE_SPEECH}
+                                title="Læs guiden op"
+                                style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+                            />
+                            <button onClick={() => setShowHelpModal(false)} style={{ background: '#f1f5f9', border: 'none', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={(e) => e.currentTarget.style.background = '#f1f5f9'}>
+                                <X size={24} />
+                            </button>
+                        </div>
                     </div>
 
-                    <div style={{ padding: '40px', color: '#334155', lineHeight: '1.6' }}>
+                    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '32px 40px 40px', color: '#334155', lineHeight: '1.6' }}>
                         <p style={{ marginTop: 0, fontSize: '16px', marginBottom: '30px', maxWidth: '800px' }}>
                             For at systemet kan sende tilbud direkte fra din egen mail-indbakke, skal den have tilladelse til at logge ind på din mailserver. Fremgangsmåden afhænger fuldstændig af, hvem du har din e-mail hos. Find din udbyder herunder:
                         </p>
