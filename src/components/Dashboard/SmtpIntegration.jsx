@@ -1,16 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Mail, Info, HelpCircle, X, ExternalLink, BookOpen, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Tooltip der både virker på desktop (hover) OG mobil/touch (tryk).
+// Tidligere var den ren CSS :hover → spørgsmålstegnet gjorde intet på mobil.
 const Tooltip = ({ text }) => {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const handleOutside = (e) => {
+            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', handleOutside);
+        document.addEventListener('touchstart', handleOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleOutside);
+            document.removeEventListener('touchstart', handleOutside);
+        };
+    }, [open]);
+
     return (
-        <div className="tooltip-container" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginLeft: '6px', top: '2px' }}>
-            <HelpCircle size={15} color="#94a3b8" style={{ cursor: 'help' }} />
-            <div className="tooltip-text" style={{
+        <span
+            ref={ref}
+            style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginLeft: '6px', top: '2px' }}
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+        >
+            <button
+                type="button"
+                aria-label="Hjælp"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o); }}
+                style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer', display: 'inline-flex', lineHeight: 0 }}
+            >
+                <HelpCircle size={16} color={open ? '#db2777' : '#94a3b8'} />
+            </button>
+            <span style={{
                 position: 'absolute',
-                bottom: '135%',
+                bottom: open ? '125%' : '135%',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 backgroundColor: '#1e293b',
@@ -21,17 +51,18 @@ const Tooltip = ({ text }) => {
                 width: 'max-content',
                 maxWidth: '280px',
                 boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                opacity: 0,
-                visibility: 'hidden',
+                opacity: open ? 1 : 0,
+                visibility: open ? 'visible' : 'hidden',
                 transition: 'all 0.2s',
                 zIndex: 50,
                 lineHeight: '1.5',
                 fontWeight: 'normal',
                 whiteSpace: 'normal',
-                textAlign: 'left'
+                textAlign: 'left',
+                pointerEvents: open ? 'auto' : 'none'
             }}>
-                <div dangerouslySetInnerHTML={{ __html: text }} />
-                <div style={{
+                <span dangerouslySetInnerHTML={{ __html: text }} />
+                <span style={{
                     position: 'absolute',
                     top: '100%',
                     left: '50%',
@@ -39,16 +70,9 @@ const Tooltip = ({ text }) => {
                     borderWidth: '6px',
                     borderStyle: 'solid',
                     borderColor: '#1e293b transparent transparent transparent'
-                }}></div>
-            </div>
-            <style>{`
-                .tooltip-container:hover .tooltip-text {
-                    opacity: 1;
-                    visibility: visible;
-                    bottom: 125%;
-                }
-            `}</style>
-        </div>
+                }}></span>
+            </span>
+        </span>
     );
 };
 
@@ -264,7 +288,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                             <div className="input-group" style={{ flex: 2 }}>
                                 <label style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
                                     SMTP Server
-                                    <Tooltip text="Adressen på din mailudbyders server.<br/>• Simply: websmtp.simply.com<br/>• Microsoft: smtp.office365.com<br/>• Google: smtp.gmail.com" />
+                                    <Tooltip text="Adressen på din mailudbyders server (til at <b>sende</b> med).<br/>• DanDomain: asmtp.dandomain.dk<br/>• Simply: websmtp.simply.com<br/>• Microsoft: smtp.office365.com<br/>• Google: smtp.gmail.com" />
                                 </label>
                                 <input 
                                     type="text" 
@@ -294,7 +318,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                         <div className="input-group">
                             <label style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
                                 IMAP Server (Valgfri)
-                                <Tooltip text="Bruges til at gemme tilbud automatisk i din 'Sendt Post'-mappe.<br/><br/>Standard for DanDomain er <b>post.dandomain.dk</b> og for Simply.com <b>imap.simply.com</b>.<br/><br/>Lader du feltet stå tomt, forsøger systemet selv at gætte den ud fra din SMTP-server." />
+                                <Tooltip text="Bruges til at gemme tilbud automatisk i din 'Sendt Post'-mappe.<br/><br/>• DanDomain: <b>post.dandomain.dk</b><br/>• Simply: <b>imap.simply.com</b><br/>• Microsoft: <b>outlook.office365.com</b><br/>• Google: <b>imap.gmail.com</b><br/><br/>Lader du feltet stå tomt, forsøger systemet selv at gætte den ud fra din SMTP-server." />
                             </label>
                             <input
                                 type="text"
@@ -304,7 +328,16 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                                 placeholder="fx post.dandomain.dk (kan stå tom)"
                                 style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '100%', marginTop: '6px' }}
                             />
-                            <span style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', display: 'block' }}>Sikrer at en kopi af tilbuddet havner i din "Sendt Post". Port 993 (sikker) bruges automatisk.</span>
+                            <span style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                                Sikrer at en kopi af tilbuddet havner i din "Sendt Post". Port 993 (sikker) bruges automatisk.{' '}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowHelpModal(true)}
+                                    style={{ background: 'none', border: 'none', padding: 0, color: '#db2777', fontWeight: '600', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                    Kender du ikke din server? Se guide →
+                                </button>
+                            </span>
                         </div>
 
                         {testResult && (
@@ -391,7 +424,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                             <h2 style={{ margin: 0, fontSize: '1.8rem', display: 'flex', alignItems: 'center', gap: '12px', color: '#0f172a' }}>
                                 <BookOpen color="#db2777" size={28} /> Guide til Egen E-mail (SMTP)
                             </h2>
-                            <p style={{ margin: 0, color: '#64748b', fontSize: '15px' }}>Sådan giver du systemet tilladelse til at sende fra din mail.</p>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '15px' }}>Find din udbyder og brug både <strong>SMTP</strong>-serveren (til at sende) og <strong>IMAP</strong>-serveren (så kopien havner i din "Sendt Post").</p>
                         </div>
                         <button onClick={() => setShowHelpModal(false)} style={{ background: '#f1f5f9', border: 'none', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={(e) => e.currentTarget.style.background = '#f1f5f9'}>
                             <X size={24} />
@@ -423,7 +456,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                                         Læs Microsofts guide <ExternalLink size={16} />
                                     </a>
                                     <div style={{ marginTop: '16px', fontSize: '13px', color: '#64748b', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                        <strong>Server:</strong> smtp.office365.com<br/><strong>Port:</strong> 587
+                                        <strong>SMTP (send):</strong> smtp.office365.com<br/><strong>IMAP (Sendt Post):</strong> outlook.office365.com<br/><strong>Port:</strong> 587 (SMTP) / 993 (IMAP)
                                     </div>
                                 </div>
                             </div>
@@ -446,24 +479,43 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                                         Læs Googles guide <ExternalLink size={16} />
                                     </a>
                                     <div style={{ marginTop: '16px', fontSize: '13px', color: '#64748b', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                        <strong>Server:</strong> smtp.gmail.com<br/><strong>Port:</strong> 587
+                                        <strong>SMTP (send):</strong> smtp.gmail.com<br/><strong>IMAP (Sendt Post):</strong> imap.gmail.com<br/><strong>Port:</strong> 587 (SMTP) / 993 (IMAP)
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Standard Webhotel Box */}
+                            {/* DanDomain Box */}
                             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
                                 <h3 style={{ margin: '0 0 16px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px' }}>
                                     <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#f59e0b' }}></div>
-                                    Webhoteller (Simply mv.)
+                                    DanDomain
                                 </h3>
                                 <p style={{ fontSize: '14px', margin: '0 0 16px 0', flexGrow: 1 }}>
-                                    Gælder <strong>Simply.com, DanDomain, One.com</strong> mv.<br/><br/>
-                                    Hvis du har din mail via et normalt webhotel, er det meget nemmere. Her skal du blot bruge dit <strong>helt normale e-mail kodeord</strong>, fuldstændig som når du logger ind på din mail normalt.
+                                    Du bruger dit <strong>helt normale e-mail kodeord</strong> — det samme som når du logger ind på webmail.<br/><br/>
+                                    <strong>Vigtigt:</strong> Hos DanDomain hedder send-serveren <strong>asmtp</strong>.dandomain.dk (ikke "smtp" eller "websmtp"), mens "Sendt Post"-serveren hedder <strong>post</strong>.dandomain.dk.
                                 </p>
                                 <div style={{ marginTop: 'auto' }}>
                                     <div style={{ marginTop: '16px', fontSize: '13px', color: '#64748b', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                        <strong>Server:</strong> fx websmtp.simply.com<br/>eller dandomain.dk<br/><strong>Port:</strong> 587
+                                        <strong>SMTP (send):</strong> asmtp.dandomain.dk<br/><strong>IMAP (Sendt Post):</strong> post.dandomain.dk<br/><strong>Port:</strong> 587 (SMTP) / 993 (IMAP)
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Simply / øvrige webhoteller Box */}
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+                                <h3 style={{ margin: '0 0 16px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px' }}>
+                                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#8b5cf6' }}></div>
+                                    Simply.com & One.com
+                                </h3>
+                                <p style={{ fontSize: '14px', margin: '0 0 16px 0', flexGrow: 1 }}>
+                                    Gælder almindelige webhoteller som <strong>Simply.com og One.com</strong>.<br/><br/>
+                                    Du bruger dit <strong>helt normale e-mail kodeord</strong>. Bemærk at send-serveren (SMTP) og "Sendt Post"-serveren (IMAP) har lidt forskellige navne.
+                                </p>
+                                <div style={{ marginTop: 'auto' }}>
+                                    <div style={{ marginTop: '16px', fontSize: '13px', color: '#64748b', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                        <strong>Simply</strong> — SMTP: websmtp.simply.com · IMAP: imap.simply.com<br/>
+                                        <strong>One.com</strong> — SMTP: send.one.com · IMAP: imap.one.com<br/>
+                                        <strong>Port:</strong> 587 (SMTP) / 993 (IMAP)
                                     </div>
                                 </div>
                             </div>
