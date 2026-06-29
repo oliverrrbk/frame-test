@@ -1,6 +1,102 @@
 import { applyCors } from './_cors.js';
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
+import { ImapFlow } from 'imapflow';
+
+/**
+ * Gætter IMAP-hosten ud fra SMTP-hosten, hvis brugeren ikke selv har angivet én.
+ */
+function guessImapHost(smtpHost) {
+    if (!smtpHost) return null;
+    const host = smtpHost.toLowerCase().trim();
+
+    if (host.includes('dandomain')) return 'post.dandomain.dk';
+    if (host.includes('simply.com')) return 'imap.simply.com';
+    if (host.includes('office365') || host.includes('outlook')) return 'outlook.office365.com';
+    if (host.includes('gmail') || host.includes('googlemail') || host.includes('google')) return 'imap.gmail.com';
+    if (host.includes('one.com')) return 'imap.one.com';
+    // Generisk: byt 'smtp' ud med 'imap' (fx smtp.minhost.dk -> imap.minhost.dk)
+    if (host.includes('smtp')) return host.replace('smtp', 'imap');
+
+    return host;
+}
+
+/**
+ * Bygger den rå RFC822-besked (MIME) fra mailOptions uden faktisk at sende.
+ * Bruger Nodemailers streamTransport, så vi får præcis samme indhold som den
+ * afsendte mail. newline: 'windows' giver CRLF, hvilket IMAP APPEND kræver.
+ */
+async function buildRawMessage(mailOptions) {
+    const builder = nodemailer.createTransport({
+        streamTransport: true,
+        buffer: true,
+        newline: 'windows',
+    });
+    const built = await builder.sendMail(mailOptions);
+    return built.message; // Buffer med fuld RFC822-besked
+}
+
+/**
+ * Lægger en kopi af mailen i brugerens "Sendt post"-mappe via IMAP APPEND.
+ * Returnerer { ok, reason?, folder? } og kaster aldrig — kalderen håndterer fejl blødt.
+ */
+async function saveToSentFolder({ smtpSettings, rawMessage }) {
+    const imapHost = (smtpSettings.imap_host || '').trim() || guessImapHost(smtpSettings.smtp_host);
+    if (!imapHost) return { ok: false, reason: 'Ingen IMAP-host kunne bestemmes' };
+
+    const client = new ImapFlow({
+        host: imapHost,
+        port: 993,
+        secure: true,
+        auth: {
+            user: smtpSettings.smtp_user,
+            pass: smtpSettings.smtp_pass,
+        },
+        logger: false,
+        // Korte timeouts så en hængende IMAP-server ikke holder serverless-funktionen i live
+        connectionTimeout: 8000,
+        greetingTimeout: 5000,
+        socketTimeout: 10000,
+        tls: { rejectUnauthorized: false },
+    });
+
+    try {
+        await client.connect();
+
+        // Find "Sendt post"-mappen
+        const mailboxes = await client.list();
+        const sentNames = [
+            'sent', 'sendt', 'sendt post', 'sent items', 'sent mail',
+            'sendte beskeder', 'sendte', 'gesendt', 'sent messages',
+        ];
+
+        let sentPath = null;
+
+        // 1) Mest pålideligt: IMAP special-use flaget \Sent (uafhængigt af sprog)
+        for (const mb of mailboxes) {
+            if (mb.specialUse === '\\Sent') { sentPath = mb.path; break; }
+        }
+        // 2) Eksakt navne-match
+        if (!sentPath) {
+            for (const mb of mailboxes) {
+                const name = (mb.name || '').toLowerCase().trim();
+                if (sentNames.includes(name)) { sentPath = mb.path; break; }
+            }
+        }
+        // 3) Sidste forsøg: delvist match
+        if (!sentPath) {
+            const partial = mailboxes.find(mb => /sent|sendt|gesendt/i.test(mb.name || ''));
+            if (partial) sentPath = partial.path;
+        }
+
+        if (!sentPath) return { ok: false, reason: 'Sendt-mappe blev ikke fundet' };
+
+        await client.append(sentPath, rawMessage, ['\\Seen']);
+        return { ok: true, folder: sentPath };
+    } finally {
+        try { await client.logout(); } catch { /* ignorér oprydningsfejl */ }
+    }
+}
 
 export default async function handler(req, res) {
     if (applyCors(req, res)) return;
@@ -118,7 +214,6 @@ export default async function handler(req, res) {
             const mailOptions = {
                 from: customSenderName,
                 to: to,
-                bcc: customFrom,
                 subject: subject,
                 html: html,
                 replyTo: replyTo || undefined,
@@ -133,6 +228,26 @@ export default async function handler(req, res) {
             }
 
             const info = await transporter.sendMail(mailOptions);
+
+            // Læg en kopi i brugerens "Sendt post"-mappe via IMAP.
+            // Dette må ALDRIG vælte selve afsendelsen — kunden skal have succes-svar,
+            // selv hvis IMAP-uploadet timer ud eller fejler.
+            try {
+                const rawMessage = await buildRawMessage(mailOptions);
+                const result = await Promise.race([
+                    saveToSentFolder({ smtpSettings, rawMessage }),
+                    new Promise((resolve) => setTimeout(
+                        () => resolve({ ok: false, reason: 'IMAP timeout' }),
+                        12000
+                    )),
+                ]);
+                if (!result.ok) {
+                    console.warn('IMAP Sendt-kopi sprunget over:', result.reason);
+                }
+            } catch (imapError) {
+                console.error('IMAP Append fejlede (mailen er stadig sendt korrekt):', imapError);
+            }
+
             return res.status(200).json({ success: true, data: info, provider: 'smtp' });
         }
 
