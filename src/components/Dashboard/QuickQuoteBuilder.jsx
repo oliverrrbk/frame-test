@@ -337,10 +337,32 @@ const PREVIEW_CSS = `
   .qqb-paperedit:hover{border-color:#94a3b8 !important;background:#f8fafc !important;}
   /* Word-agtigt dokument i editoren */
   .qqb-docpage{padding:clamp(28px,5vw,56px) clamp(24px,6vw,64px);}
+  .qqb-docpage h1,.qqb-editor h1{font-size:1.7rem;font-weight:800;color:#0f172a;margin:16px 0 8px;line-height:1.25;}
   .qqb-docpage h2{font-size:1.5rem;font-weight:800;margin:18px 0 8px;}
   .qqb-docpage h3{font-size:1.2rem;font-weight:700;margin:14px 0 6px;}
   .qqb-docpage p{margin:0 0 10px;}
   .qqb-docpage ul,.qqb-docpage ol{margin:8px 0;}
+  .qqb-docpage>*:first-child,.qqb-editor>*:first-child{margin-top:0;}
+  .qqb-paperdoc h1{font-size:1.05rem;font-weight:800;color:#0f172a;margin:8px 0 4px;line-height:1.25;}
+  .qqb-paperdoc img,.qqb-docpage img,.qqb-editor img{max-width:100%;height:auto;}
+  /* Skabeloner: fuldskærm + berøringsvenligt på mobil */
+  @media (max-width:640px){
+    .qqb-tplgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+    .qqb-tplnew{min-height:172px;gap:8px;font-size:0.82rem;border-radius:14px;}
+    .qqb-tplnew-circle{width:44px;height:44px;}
+    .qqb-tplnew-circle svg{width:22px;height:22px;}
+    .qqb-tplpaper{border-radius:14px;}
+    .qqb-paperthumb{height:146px;}
+    .qqb-paperthumb::after{height:34px;}
+    .qqb-paperdoc{padding:12px 13px;font-size:0.62rem;}
+    .qqb-paperfoot{padding:11px 11px 13px;}
+    .qqb-papername{font-size:0.82rem;}
+    .qqb-docpage{padding:22px 18px !important;}
+    .qqb-docpage h1,.qqb-editor h1{font-size:1.35rem;}
+    .qqb-docpage h2{font-size:1.28rem;}
+    .qqb-docpage h3{font-size:1.08rem;}
+    .qqb-tbtn{height:38px !important;min-width:38px !important;}
+  }
   @keyframes qqbspin{to{transform:rotate(360deg);}}
   .qqb-spin{animation:qqbspin .8s linear infinite;}
   @keyframes qqbrec{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.8);}}
@@ -2016,24 +2038,24 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     <div
                         className="qqb-confirm-backdrop"
                         onClick={() => setTplLibraryOpen(false)}
-                        style={{ position: 'fixed', inset: 0, zIndex: 100085, background: 'rgba(15,23,42,0.62)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(8px, 2vw, 28px)', paddingTop: 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-top))', paddingBottom: 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-bottom))' }}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100085, background: 'rgba(15,23,42,0.62)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 0 : 'clamp(8px, 2vw, 28px)', paddingTop: isMobile ? 0 : 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-top))', paddingBottom: isMobile ? 0 : 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-bottom))' }}
                     >
                         <div
                             onClick={(e) => e.stopPropagation()}
-                            style={{ width: 'min(1200px, 100%)', height: '94vh', display: 'flex', flexDirection: 'column', background: '#f1f5f9', borderRadius: 22, boxShadow: '0 30px 80px rgba(15,23,42,0.45)', overflow: 'hidden' }}
+                            style={{ width: isMobile ? '100%' : 'min(1200px, 100%)', height: isMobile ? '100dvh' : '94vh', display: 'flex', flexDirection: 'column', background: '#f1f5f9', borderRadius: isMobile ? 0 : 22, boxShadow: isMobile ? 'none' : '0 30px 80px rgba(15,23,42,0.45)', overflow: 'hidden' }}
                         >
                             {/* Header */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 24px', background: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
-                                <div style={{ width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <Files size={20} color="#3b82f6" />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 12, padding: isMobile ? 'calc(14px + env(safe-area-inset-top)) 16px 14px' : '18px 24px', background: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+                                <div style={{ width: isMobile ? 38 : 42, height: isMobile ? 38 : 42, borderRadius: 12, background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Files size={isMobile ? 18 : 20} color="#3b82f6" />
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Skabeloner</h2>
-                                    <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>Klik en skabelon for at åbne og redigere — eller tryk Indsæt for at bruge den i tilbuddet.</p>
+                                    <h2 style={{ margin: 0, fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: 800, color: '#0f172a' }}>Skabeloner</h2>
+                                    <p style={{ margin: '2px 0 0', fontSize: isMobile ? '0.76rem' : '0.82rem', color: '#94a3b8', lineHeight: 1.4 }}>{isMobile ? 'Tryk for at åbne — eller Indsæt for at bruge den.' : 'Klik en skabelon for at åbne og redigere — eller tryk Indsæt for at bruge den i tilbuddet.'}</p>
                                 </div>
                                 <button type="button" onClick={() => setTplLibraryOpen(false)} className="qqb-close" title="Luk"
-                                    style={{ width: 38, height: 38, borderRadius: 11, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <X size={19} />
+                                    style={{ width: isMobile ? 40 : 38, height: isMobile ? 40 : 38, borderRadius: 11, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <X size={20} />
                                 </button>
                             </div>
 
@@ -2083,61 +2105,79 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     <div
                         className="qqb-confirm-backdrop"
                         onClick={closeTemplateModal}
-                        style={{ position: 'fixed', inset: 0, zIndex: 100092, background: 'rgba(15,23,42,0.62)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(8px, 2vw, 28px)', paddingTop: 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-top))', paddingBottom: 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-bottom))' }}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100092, background: 'rgba(15,23,42,0.62)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 0 : 'clamp(8px, 2vw, 28px)', paddingTop: isMobile ? 0 : 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-top))', paddingBottom: isMobile ? 0 : 'calc(clamp(8px,2vw,28px) + env(safe-area-inset-bottom))' }}
                     >
                         <div
                             onClick={(e) => e.stopPropagation()}
-                            style={{ width: 'min(1040px, 100%)', height: '94vh', display: 'flex', flexDirection: 'column', background: '#eef2f6', borderRadius: 22, boxShadow: '0 30px 80px rgba(15,23,42,0.45)', overflow: 'hidden' }}
+                            style={{ width: isMobile ? '100%' : 'min(1040px, 100%)', height: isMobile ? '100dvh' : '94vh', display: 'flex', flexDirection: 'column', background: '#eef2f6', borderRadius: isMobile ? 0 : 22, boxShadow: isMobile ? 'none' : '0 30px 80px rgba(15,23,42,0.45)', overflow: 'hidden' }}
                         >
-                            {/* Top-bjælke: tilbage + navn + handlinger */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', background: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+                            {/* Top-bjælke: tilbage + navn + handlinger. På mobil flyttes primær-handlingerne ned i bundbjælken. */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12, padding: isMobile ? 'calc(12px + env(safe-area-inset-top)) 14px 12px' : '14px 18px', background: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
                                 <button type="button" onClick={closeTemplateModal} className="qqb-close" title="Tilbage til skabeloner"
-                                    style={{ width: 38, height: 38, borderRadius: 11, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <X size={19} />
+                                    style={{ width: isMobile ? 40 : 38, height: isMobile ? 40 : 38, borderRadius: 11, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <X size={20} />
                                 </button>
                                 <input
                                     value={tplName}
                                     onChange={(e) => setTplName(e.target.value)}
                                     placeholder="Navngiv skabelonen…"
                                     maxLength={80}
-                                    style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: '1.12rem', fontWeight: 800, color: '#0f172a', background: 'transparent' }}
+                                    style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: isMobile ? '1.02rem' : '1.12rem', fontWeight: 800, color: '#0f172a', background: 'transparent' }}
                                 />
                                 {tplEditing?.id && (
                                     tplConfirmDelete ? (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ef4444' }}>Slet?</span>
+                                            {!isMobile && <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ef4444' }}>Slet?</span>}
                                             <button type="button" disabled={tplSaving} onClick={removeTemplate}
-                                                style={{ padding: '8px 12px', borderRadius: 10, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}>
+                                                style={{ padding: '9px 12px', borderRadius: 10, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                                 {tplSaving ? 'Sletter…' : 'Ja, slet'}
                                             </button>
                                             <button type="button" disabled={tplSaving} onClick={() => setTplConfirmDelete(false)}
-                                                style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
+                                                style={{ padding: '9px 12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
                                                 Nej
                                             </button>
                                         </div>
                                     ) : (
                                         <button type="button" disabled={tplSaving} onClick={() => setTplConfirmDelete(true)} title="Slet skabelon" className="qqb-paperedit"
-                                            style={{ width: 38, height: 38, borderRadius: 10, border: '1px solid #fee2e2', background: '#fff', color: '#ef4444', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            style={{ width: isMobile ? 40 : 38, height: isMobile ? 40 : 38, borderRadius: 10, border: '1px solid #fee2e2', background: '#fff', color: '#ef4444', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                             <Trash2 size={16} />
                                         </button>
                                     )
                                 )}
-                                <button type="button" disabled={tplSaving} onClick={insertFromEditor}
-                                    style={{ padding: '10px 16px', borderRadius: 11, border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-                                    <Plus size={15} /> Indsæt i tilbud
-                                </button>
-                                <button type="button" disabled={tplSaving} onClick={saveTemplate}
-                                    style={{ padding: '10px 18px', borderRadius: 11, border: 'none', background: 'linear-gradient(145deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', cursor: tplSaving ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, boxShadow: '0 8px 20px rgba(37,99,235,0.32)', flexShrink: 0 }}>
-                                    <Save size={16} /> {tplSaving ? 'Gemmer…' : 'Gem'}
-                                </button>
+                                {!isMobile && (
+                                    <button type="button" disabled={tplSaving} onClick={insertFromEditor}
+                                        style={{ padding: '10px 16px', borderRadius: 11, border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                                        <Plus size={15} /> Indsæt i tilbud
+                                    </button>
+                                )}
+                                {!isMobile && (
+                                    <button type="button" disabled={tplSaving} onClick={saveTemplate}
+                                        style={{ padding: '10px 18px', borderRadius: 11, border: 'none', background: 'linear-gradient(145deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', cursor: tplSaving ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, boxShadow: '0 8px 20px rgba(37,99,235,0.32)', flexShrink: 0 }}>
+                                        <Save size={16} /> {tplSaving ? 'Gemmer…' : 'Gem'}
+                                    </button>
+                                )}
                             </div>
 
                             {/* Dokument-lærred: hvidt A4-agtigt "papir" med editoren */}
-                            <div className="qqb-col" style={{ flex: 1, overflowY: 'auto', padding: 'clamp(14px, 3vw, 40px) clamp(10px, 3vw, 40px)' }}>
+                            <div className="qqb-col" style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '12px 10px' : 'clamp(14px, 3vw, 40px) clamp(10px, 3vw, 40px)' }}>
                                 <div style={{ maxWidth: 820, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 10px 40px rgba(15,23,42,0.12)' }}>
                                     {renderRichEditor(tplEditorRef, () => {}, 'Skriv din skabelon her — overskrifter, fed, punkter, justering. Du kan også indsætte direkte fra Word eller Google Docs, så bevares formateringen.', 'min(58vh, 760px)', null, true)}
                                 </div>
                             </div>
+
+                            {/* Mobil: primær-handlinger i en fast bundbjælke — nemme at ramme med tommelen. */}
+                            {isMobile && (
+                                <div style={{ display: 'flex', gap: 10, padding: '12px 14px calc(12px + env(safe-area-inset-bottom))', background: '#fff', borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
+                                    <button type="button" disabled={tplSaving} onClick={insertFromEditor}
+                                        style={{ flex: 1, padding: '14px', borderRadius: 13, border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                                        <Plus size={17} /> Indsæt i tilbud
+                                    </button>
+                                    <button type="button" disabled={tplSaving} onClick={saveTemplate}
+                                        style={{ flex: 1, padding: '14px', borderRadius: 13, border: 'none', background: 'linear-gradient(145deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: tplSaving ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: '0 8px 20px rgba(37,99,235,0.32)' }}>
+                                        <Save size={17} /> {tplSaving ? 'Gemmer…' : 'Gem'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
