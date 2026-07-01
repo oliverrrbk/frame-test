@@ -40,6 +40,10 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
             const existingList = lead.raw_data?.material_list;
             if (existingList && existingList.length > 0) {
                 setMaterials(existingList.map(m => ({ ...m, listId: m.listId || 'default' })));
+            } else if (lead.raw_data?.is_manual_case) {
+                // Sag oprettet manuelt uden bekræftet tilbud: generér ALDRIG en liste —
+                // tømreren skal selv oprette den. Tom = "ingen liste endnu" (empty state).
+                setMaterials([]);
             } else {
                 const generated = generateMaterialList(
                     lead.project_category,
@@ -508,6 +512,48 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
             </span>
         );
         const extraListCount = materialListsMeta.filter(l => l.id !== 'default').length;
+        // Ingen materialer endnu (fx sag oprettet manuelt uden bekræftet tilbud): vis
+        // en tydelig "opret liste"-tilstand i stedet for en tom/misvisende liste-kort.
+        const hasMaterials = materials.length > 0;
+        if (!hasMaterials && !isLead) {
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.3s ease-in' }}>
+                    <div
+                        className="ml-empty-card"
+                        onClick={() => onOpenBuilder && onOpenBuilder(lead, { listId: 'default', listName: null })}
+                        role={onOpenBuilder ? 'button' : undefined}
+                        style={{ position: 'relative', overflow: 'hidden', border: '2px dashed #cbd5e1', borderRadius: '20px', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', cursor: onOpenBuilder ? 'pointer' : 'default', boxShadow: '0 2px 8px rgba(15,23,42,0.03)' }}
+                    >
+                        <div className="ml-empty-sheen" />
+                        <div className="ml-empty-icon" style={{ position: 'relative', width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(145deg,#eff6ff,#dbeafe)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '6px', boxShadow: '0 8px 22px rgba(37,99,235,0.18)' }}>
+                            <Package size={28} />
+                        </div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>Du har ikke oprettet en materialliste endnu</div>
+                        <div style={{ fontSize: '0.9rem', color: '#64748b', maxWidth: '380px', lineHeight: 1.55 }}>Byg listen op med de materialer, opgaven kræver — og send den til leverandøren for en pris.</div>
+                        {onOpenBuilder && (
+                            <button className="ml-empty-btn" onClick={(e) => { e.stopPropagation(); onOpenBuilder(lead, { listId: 'default', listName: null }); }}
+                                style={{ marginTop: '12px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 24px', borderRadius: '13px', border: 'none', background: 'linear-gradient(145deg,#2563eb,#1d4ed8)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(37,99,235,0.28)' }}>
+                                <PlusCircle size={18} /> Opret materialliste
+                            </button>
+                        )}
+                    </div>
+                    <style dangerouslySetInnerHTML={{__html: `
+                        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                        @keyframes mlFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+                        @keyframes mlSheen { 0% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(220%) skewX(-18deg); } }
+                        .ml-empty-card { transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease, background .22s ease; }
+                        .ml-empty-card:hover { border-color: #3b82f6; border-style: solid; background: rgba(255,255,255,0.92); transform: translateY(-3px); box-shadow: 0 18px 40px rgba(37,99,235,0.14); }
+                        .ml-empty-icon { animation: mlFloat 3.4s ease-in-out infinite; transition: transform .22s ease, box-shadow .22s ease; }
+                        .ml-empty-card:hover .ml-empty-icon { transform: scale(1.06); box-shadow: 0 12px 30px rgba(37,99,235,0.28); }
+                        .ml-empty-sheen { position: absolute; top: 0; bottom: 0; left: 0; width: 55%; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); opacity: 0; }
+                        .ml-empty-card:hover .ml-empty-sheen { opacity: 1; animation: mlSheen 1.1s ease; }
+                        .ml-empty-btn { transition: transform .16s ease, box-shadow .22s ease, filter .16s ease; }
+                        .ml-empty-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(37,99,235,0.42); filter: brightness(1.04); }
+                        .ml-empty-btn:active { transform: translateY(0); }
+                    `}} />
+                </div>
+            );
+        }
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.3s ease-in' }}>
                 {materialListsMeta.map((list) => {

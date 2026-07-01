@@ -41,11 +41,24 @@ const PREVIEW_CSS = `
   @keyframes mlbspin{to{transform:rotate(360deg);}}
   .mlb-spin{animation:mlbspin .8s linear infinite;}
   @keyframes mlbConfirmPop{0%{opacity:0;transform:translateY(16px) scale(.92);}60%{opacity:1;transform:translateY(-4px) scale(1.01);}100%{opacity:1;transform:translateY(0) scale(1);}}
+  @keyframes mlbOverlayIn{from{opacity:0;}to{opacity:1;}}
+  .mlb-overlay{animation:mlbOverlayIn .2s ease both;}
+  .mlb-clearall{transition:all .18s ease;border:1px solid transparent !important;}
+  .mlb-clearall:hover{background:#fef2f2 !important;border-color:#fecaca !important;transform:translateY(-1px);box-shadow:0 6px 16px rgba(220,38,38,.14);}
+  .mlb-clearall:active{transform:translateY(0);}
+  .mlb-danger{transition:transform .15s ease,box-shadow .2s ease,filter .15s ease;}
+  .mlb-danger:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(220,38,38,.45) !important;filter:brightness(1.03);}
+  .mlb-danger:active{transform:translateY(0);}
+  .mlb-cancel{transition:all .15s ease;}
+  .mlb-cancel:hover{background:#f1f5f9 !important;border-color:#cbd5e1 !important;transform:translateY(-1px);}
+  @keyframes mlbIconPulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(220,38,38,.28);}70%{transform:scale(1.04);box-shadow:0 0 0 14px rgba(220,38,38,0);}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(220,38,38,0);}}
+  .mlb-dangericon{animation:mlbIconPulse 2.2s ease-in-out infinite;}
 `;
 
 export default function MaterialListBuilder({ carpenter, isMobile = false, onCancel, onComplete, onSaved, onDeleted, initialLead = null, draftCreator = null, listId = 'default', listName = null }) {
     const [busy, setBusy] = useState(false);
     const [showSendConfirm, setShowSendConfirm] = useState(false);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
     // Den aktuelle lead (kan blive oprettet ved første "Gem liste" på en ny liste) — styrer
     // om efterfølgende gem/send opdaterer samme sag, og om "Slet" vises.
@@ -65,7 +78,9 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
             return existing.map(m => ({ id: uid(), item: m.item || '', qty: m.qty ?? '', unit: m.unit || 'stk', section: m.section || 'Hovedmaterialer', status: m.status }));
         }
         // En ny liste (fx efterbestilling) starter tom. Kun standard-listen seedes fra beregnerens forslag.
-        if (listId === 'default' && initialLead?.project_category && initialLead.project_category !== 'Manuelt tilbud') {
+        // Sager oprettet manuelt UDEN bekræftet tilbud (is_manual_case) seedes ALDRIG — de
+        // gav ellers en tilfældig "standard"-liste, som tømreren ikke selv havde lavet.
+        if (listId === 'default' && !initialLead?.raw_data?.is_manual_case && initialLead?.project_category && initialLead.project_category !== 'Manuelt tilbud') {
             try {
                 const gen = generateMaterialList(
                     initialLead.project_category,
@@ -158,6 +173,13 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
     const updateItem = (id, field, value) => setItems(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
     const addItem = () => setItems(prev => [...prev, { id: uid(), item: '', qty: '', unit: 'stk', section: 'Hovedmaterialer' }]);
     const removeItem = (id) => setItems(prev => prev.filter(r => r.id !== id));
+    // Ryd hele listen på én gang (bekræftes i popup) — én tom række tilbage, så
+    // tømreren kan starte forfra uden at slette hver vare enkeltvis.
+    const clearAllItems = () => {
+        setItems([{ id: uid(), item: '', qty: '', unit: 'stk', section: 'Hovedmaterialer' }]);
+        setShowClearConfirm(false);
+        toast.success('Alle materialer fjernet');
+    };
 
     // material_list-poster i det format MaterialList/sagen forventer (tagget med DENNE listId).
     const buildMaterialListForSave = () => filledItems.map(r => ({
@@ -381,7 +403,12 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
                         )}
                     </div>
                 ))}
-                <button className="mlb-add" onClick={addItem} style={{ marginTop: '4px', background: 'none', border: 'none', color: '#3b82f6', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', transition: 'opacity .15s' }}><Plus size={16} /> Tilføj vare</button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    <button className="mlb-add" onClick={addItem} style={{ background: 'none', border: 'none', color: '#3b82f6', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', transition: 'opacity .15s' }}><Plus size={16} /> Tilføj vare</button>
+                    {filledItems.length > 0 && (
+                        <button className="mlb-clearall" onClick={() => setShowClearConfirm(true)} style={{ background: 'none', color: '#dc2626', borderRadius: '10px', padding: '7px 13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}><Trash2 size={15} /> Slet alle materialer</button>
+                    )}
+                </div>
             </div>
 
             <div style={editSection}>
@@ -557,6 +584,27 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
                             <button disabled={busy} onClick={() => setShowSendConfirm(false)} style={{ flex: 1, padding: '14px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>Tilbage</button>
                             <button className="mlb-send" disabled={busy} onClick={() => { setShowSendConfirm(false); save(true); }} style={{ flex: 1.4, padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(16,185,129,0.32)' }}>
                                 <Send size={17} /> {busy ? 'Sender…' : 'Ja, send'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bekræft: slet alle materialer */}
+            {showClearConfirm && (
+                <div className="mlb-overlay" onClick={() => setShowClearConfirm(false)} style={{ position: 'fixed', inset: 0, zIndex: 100080, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                    <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(460px, 100%)', background: 'linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.94))', borderRadius: 24, padding: '32px 28px 24px', boxShadow: '0 30px 80px rgba(15,23,42,0.45), inset 0 1px 0 rgba(255,255,255,0.9)', border: '1px solid rgba(255,255,255,0.6)', animation: 'mlbConfirmPop .3s cubic-bezier(.34,1.56,.64,1) both' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '22px' }}>
+                            <div className="mlb-dangericon" style={{ width: 66, height: 66, borderRadius: '50%', background: 'linear-gradient(145deg,#fee2e2,#fecaca)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
+                                <Trash2 size={28} color="#dc2626" />
+                            </div>
+                            <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>Slet alle materialer?</h2>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem', lineHeight: 1.55 }}>Er du sikker på, at du sletter alle materialer på denne materialliste? Det kan ikke fortrydes.</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                            <button className="mlb-cancel" onClick={() => setShowClearConfirm(false)} style={{ flex: 1, padding: '14px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>Fortryd</button>
+                            <button className="mlb-danger" onClick={clearAllItems} style={{ flex: 1.4, padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(220,38,38,0.32)' }}>
+                                <Trash2 size={17} /> Ja, slet alle
                             </button>
                         </div>
                     </div>
