@@ -10,6 +10,8 @@ import { da } from 'date-fns/locale';
 import { renderElementsToCanvas } from './renderUtils';
 import SectionTour from '../Dashboard/SectionTour';
 import { shouldShowCoach } from '../Dashboard/coachmarks';
+import { cacheGet, cacheSet } from '../../utils/dataCache';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 
 // Rundtur for Skitser & Tegninger — let men grundig. Kun desktop, første gang,
 // og kun på hoved-biblioteket (ikke når galleriet er indlejret i en sagsmappe).
@@ -23,6 +25,8 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
     const [drawingsTourActive, setDrawingsTourActive] = useState(() => !leadId && shouldShowCoach('drawings_tour'));
     const [drawings, setDrawings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const online = useOnlineStatus();
+    const drawingsCacheKey = `bf:drawings:${leadId || myProfile?.id || 'all'}`;
     const [activeDrawingId, setActiveDrawingId] = useState(null);
     const [isBoardOpen, setIsBoardOpen] = useState(false);
     const [drawingToDelete, setDrawingToDelete] = useState(null);
@@ -55,6 +59,16 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
     ];
 
     const fetchDrawings = async () => {
+        // OFFLINE-FØRST: vis straks sidst kendte skitser fra cachen, så galleriet ikke
+        // står og loader i det uendelige uden net. Friske hentes bagefter hvis online.
+        try {
+            const cached = await cacheGet(drawingsCacheKey);
+            if (Array.isArray(cached) && cached.length > 0) {
+                setDrawings(cached);
+                setIsLoading(false);
+            }
+        } catch { /* cache er best-effort */ }
+
         setIsLoading(true);
         try {
             let query = supabase.from('drawings').select('*, leads(id)').order('created_at', { ascending: false });
@@ -94,9 +108,12 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
             }
 
             setDrawings(enrichedData);
+            // Gem til offline-brug (best-effort). document_data kan være stort, men
+            // IndexedDB rummer det fint. Miniaturer/billeder caches af service workeren.
+            cacheSet(drawingsCacheKey, enrichedData);
         } catch (err) {
             console.error("Fejl ved hentning af skitser:", err);
-            // toast.error("Kunne ikke hente skitser.");
+            // Offline/fejl: behold de cachede skitser (allerede vist ovenfor).
         } finally {
             setIsLoading(false);
         }
@@ -114,6 +131,11 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
         if (!leadId) { // Only needed in generic gallery
             loadLeads();
         }
+
+        // Kom nettet tilbage mens man står på fanen? Hent friske skitser med det samme.
+        const onOnline = () => { fetchDrawings(); if (!leadId) loadLeads(); };
+        window.addEventListener('online', onOnline);
+        return () => window.removeEventListener('online', onOnline);
     }, [leadId, myProfile]);
 
     const handleNewDrawing = () => {
@@ -660,6 +682,16 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
                     <div style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
                     <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>Henter dine skitser...</span>
                     <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+                </div>
+            ) : (drawings.length === 0 && !online) ? (
+                <div style={{ textAlign: 'center', padding: '80px 24px', background: 'linear-gradient(to bottom, rgba(248,250,252,0.5), rgba(241,245,249,0.8))', border: '2px dashed #cbd5e1', borderRadius: '20px', marginTop: '20px' }}>
+                    <div style={{ width: '72px', height: '72px', background: 'linear-gradient(145deg,#fef3c7,#fde68a)', color: '#b45309', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', boxShadow: '0 8px 22px rgba(15,23,42,0.10)' }}>
+                        <FileText size={34} />
+                    </div>
+                    <h3 style={{ color: '#1e293b', fontSize: '1.3rem', fontWeight: 800, marginBottom: '10px' }}>Skitser kræver internet</h3>
+                    <p style={{ color: '#64748b', maxWidth: '420px', margin: '0 auto', fontSize: '1rem', lineHeight: 1.6 }}>
+                        Du er offline lige nu. Skitser du har åbnet før vises automatisk — og så snart du har forbindelse igen, henter vi resten med det samme.
+                    </p>
                 </div>
             ) : drawings.length === 0 ? (
                 <div style={{ 

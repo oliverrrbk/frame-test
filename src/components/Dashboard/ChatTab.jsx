@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import UserAvatar from '../ui/UserAvatar';
 import SectionTour from './SectionTour';
 import { shouldShowCoach } from './coachmarks';
+import { cacheGet, cacheSet } from '../../utils/dataCache';
 
 // Rundtur for Beskeder/chat (let). Kun desktop, første gang.
 const CHAT_TOUR_STEPS = [
@@ -296,9 +297,21 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
 
   const loadTeammatesAndThreads = async () => {
     if (!profile || !profile.id) return;
+    const companyId = profile.company_id || profile.id;
+
+    // OFFLINE-FØRST: vis straks sidst kendte kolleger + tråde fra cachen, så chatten
+    // ikke står og loader uden net. Friske hentes bagefter hvis online.
+    try {
+      const cached = await cacheGet(`bf:chat:threads:${companyId}`);
+      if (cached) {
+        if (Array.isArray(cached.teammates)) setTeammates(cached.teammates);
+        if (Array.isArray(cached.threads)) { setThreads(cached.threads); setIsLoadingThreads(false); }
+        if (cached.threadReads) setThreadReads(prev => ({ ...prev, ...cached.threadReads }));
+      }
+    } catch { /* cache er best-effort */ }
+
     setIsLoadingThreads(true);
     try {
-      const companyId = profile.company_id || profile.id;
 
       // 1. Fetch teammates (carpenters)
       const { data: teamData, error: teamError } = await supabase
@@ -367,15 +380,29 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
 
       setThreadReads(prev => ({ ...prev, ...newThreadReads }));
       setThreads(enrichedThreads);
+      // Gem til offline-brug (best-effort), så chatten kan ses uden net.
+      cacheSet(`bf:chat:threads:${companyId}`, { teammates: teamData || [], threads: enrichedThreads, threadReads: newThreadReads });
     } catch (error) {
       console.error('Error loading chat info:', error);
-      toast.error('Kunne ikke hente chatsystem.');
+      // Offline/fejl: behold de cachede tråde (allerede vist ovenfor) i stedet for at hænge.
+      if (typeof navigator !== 'undefined' && navigator.onLine !== false) {
+        toast.error('Kunne ikke hente chatsystem.');
+      }
     } finally {
       setIsLoadingThreads(false);
     }
   };
 
   const loadMessages = async (threadId) => {
+    // OFFLINE-FØRST: vis straks sidst kendte beskeder for tråden fra cachen.
+    try {
+      const cached = await cacheGet(`bf:chat:msgs:${threadId}`);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setMessages(cached);
+        setIsLoadingMessages(false);
+      }
+    } catch { /* cache er best-effort */ }
+
     setIsLoadingMessages(true);
     try {
       const { data, error } = await supabase
@@ -386,9 +413,13 @@ const ChatTab = ({ profile, leads = [], targetLeadId, clearTargetLeadId, onThrea
 
       if (error) throw error;
       setMessages(data || []);
+      cacheSet(`bf:chat:msgs:${threadId}`, data || []);
     } catch (error) {
       console.error('Error loading messages:', error);
-      toast.error('Kunne ikke hente beskeder.');
+      // Offline/fejl: behold de cachede beskeder (allerede vist ovenfor).
+      if (typeof navigator !== 'undefined' && navigator.onLine !== false) {
+        toast.error('Kunne ikke hente beskeder.');
+      }
     } finally {
       setIsLoadingMessages(false);
     }

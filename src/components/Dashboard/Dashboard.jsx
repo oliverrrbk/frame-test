@@ -50,6 +50,7 @@ import { shouldShowCoach, markCoachSeen } from './coachmarks';
 import { cacheGet, cacheSet } from '../../utils/dataCache';
 import { isOfflineError } from '../../utils/friendlyError';
 import TabErrorBoundary from '../TabErrorBoundary';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 
 // Rundtur for Kunder & Forespørgsler (Bølge 3). Forklarer salgs-pipelinen.
 const LEADS_TOUR_STEPS = [
@@ -1058,6 +1059,7 @@ const Dashboard = () => {
         id: 'google-map-script',
         libraries: MAP_LIBRARIES
     });
+    const isOnline = useOnlineStatus();
 
     useEffect(() => {
         setIsProfileMenuOpen(false);
@@ -1527,13 +1529,15 @@ const Dashboard = () => {
         // åbne appen og se sine nuværende sager UDEN net. Friske data hentes
         // bagefter herunder og overskriver, hvis der er forbindelse.
         try {
-            const [leadsSnap, matSnap, profSnap] = await Promise.all([
+            const [leadsSnap, matSnap, profSnap, teamSnap] = await Promise.all([
                 cacheGet(`bf:leads:${userId}`),
                 cacheGet(`bf:materials:${userId}`),
                 cacheGet(`bf:profile:${userId}`),
+                cacheGet(`bf:team:${userId}`),
             ]);
             if (profSnap?.myProfile) setMyProfile(profSnap.myProfile);
             if (profSnap?.companyProfile) setCarpenterProfile(profSnap.companyProfile);
+            if (Array.isArray(teamSnap)) setTeamMembers(teamSnap);
             if (matSnap?.materials) setMaterialsData(matSnap.materials);
             if (Array.isArray(matSnap?.disabledCategories)) setDisabledCategories(matSnap.disabledCategories);
             if (Array.isArray(leadsSnap)) {
@@ -1670,7 +1674,7 @@ const Dashboard = () => {
         // Hvis det er en admin, hent deres medarbejdere til lead-fordeling
         if (userProfile.role === 'admin') {
             const { data: teamData } = await supabase.from('carpenters').select('*').eq('company_id', userProfile.company_id || userProfile.id);
-            if (teamData) setTeamMembers(teamData);
+            if (teamData) { setTeamMembers(teamData); cacheSet(`bf:team:${userId}`, teamData); }
         } else if (userProfile.role === 'accountant') {
             setLeadFilter('Bekræftet opgave');
             const { data: adminSecrets } = await supabase.from('carpenter_secrets').select('economic_api_key, dinero_api_key').eq('carpenter_id', userProfile.company_id).single();
@@ -5441,10 +5445,21 @@ const Dashboard = () => {
                                 </div>
                             
                             <div data-tour="map-canvas" className="map-canvas-panel" style={{ flex: 1, border: '1px solid #e8e6e1', borderRadius: '14px', overflow: 'hidden', marginTop: '16px', position: 'relative', zIndex: 0 }}>
-                                {!isLoaded ? (
+                                {(!isLoaded && (!isOnline || loadError)) ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '12px', padding: '48px 24px', height: '100%' }}>
+                                        <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(145deg,#fef3c7,#fde68a)', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 22px rgba(15,23,42,0.10)' }}>
+                                            <MapPin size={28} />
+                                        </div>
+                                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>{isOnline ? 'Kortet kunne ikke hentes' : 'Kortet kræver internet'}</div>
+                                        <div style={{ fontSize: '0.92rem', color: '#64748b', maxWidth: '380px', lineHeight: 1.55 }}>{isOnline ? 'Der opstod en fejl under hentning af Google Maps. Prøv igen.' : 'Google Maps kan ikke hentes uden forbindelse. Når du er online igen, kan du hente kortet.'}</div>
+                                        {isOnline && (
+                                            <button onClick={() => window.location.reload()} style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '11px 20px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#2563eb,#1d4ed8)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(37,99,235,0.28)' }}>
+                                                <RefreshCw size={16} /> Hent kortet
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : !isLoaded ? (
                                     <div style={{ padding: '40px', textAlign: 'center' }}>Henter Google Maps HD miljøet...</div>
-                                ) : loadError ? (
-                                    <div style={{ padding: '40px', textAlign: 'center', color: 'red' }}>Kunne ikke hente Google Maps. Tjek din API nøgle.</div>
                                 ) : (
                                     <GoogleMap
                                       mapContainerStyle={mapContainerStyle}

@@ -227,7 +227,7 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
         };
 
         if (profile) fetchTeam();
-        if (payrollCompanyId) fetchPayrollSettings(payrollCompanyId).then(setPayrollSettings);
+        if (payrollCompanyId) fetchPayrollSettings(payrollCompanyId).then(setPayrollSettings).catch(() => setPayrollSettings(null));
     }, [profile]);
 
     // Payroll Reminder Widget Logic
@@ -335,7 +335,7 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
     const allEntries = useMemo(() => {
         let entries = [];
         // Byggesager (leads)
-        leadsData.forEach(lead => {
+        (leadsData || []).forEach(lead => {
             const leadEntries = lead.raw_data?.time_entries || [];
             leadEntries.forEach(t => {
                 entries.push({
