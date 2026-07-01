@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import { friendlyError } from '../../utils/friendlyError';
 import confetti from 'canvas-confetti';
 import { QUESTIONS } from './questionsConfig';
 import { generateTaskDescription, generateTaskAndQaHtml } from '../../utils/taskDescription';
@@ -97,6 +98,10 @@ const EstimateAcceptPage = () => {
 
     const submitFinalQuote = async () => {
         if (isSaving) return;
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            toast.error('Ingen forbindelse — tjek dit internet og prøv igen.');
+            return;
+        }
         setIsSaving(true);
         try {
             const contactPreferenceStr = isAsap ? 'Hurtigst muligt' : `${selectedDays.join(', ')} (${selectedTime})`;
@@ -175,7 +180,7 @@ const EstimateAcceptPage = () => {
             setIsAccepted(true);
         } catch (err) {
             console.error("Fejl ved accept af overslag:", err);
-            toast.error("Hov! Der skete en fejl. Prøv igen.");
+            toast.error(friendlyError(err, "Hov! Der skete en fejl. Prøv igen."));
         } finally {
             setIsSaving(false);
         }

@@ -21,7 +21,8 @@ import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil }
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { getRoleLabel } from '../../utils/roles';
 import { buildCaseMessage, mutateCaseMessages } from '../../utils/caseMessages';
-import { friendlyError } from '../../utils/friendlyError';
+import { friendlyError, isOfflineError } from '../../utils/friendlyError';
+import { enqueueMutation } from '../../utils/mutationQueue';
 import { mutateLeadRawData } from '../../utils/leadRawData';
 import { getChecklistForCategory, buildPhasesChecklist } from '../../utils/checklistGenerator';
 import UserAvatar from '../ui/UserAvatar';
@@ -813,17 +814,29 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         if (!newDailyMessage.trim() || !selectedCase) return;
         const author = { name: profile?.owner_name || profile?.name || profile?.company_name || 'Mester', role: profile?.role };
         const msg = buildCaseMessage({ text: newDailyMessage, forId: msgRecipient === 'all' ? null : msgRecipient, author });
-        try {
-            await mutateCaseMessages({ leadId: selectedCase.id, add: [msg] });
+        // Vis beskeden optimistisk med det samme, uanset net.
+        const applyOptimistic = () => {
             const updatedRawData = { ...(selectedCase.raw_data || {}), case_messages: [ ...((selectedCase.raw_data?.case_messages) || []), msg ] };
             if (onUpdateLead) onUpdateLead({ ...selectedCase, raw_data: updatedRawData });
             setNewDailyMessage('');
             setMsgRecipient('all');
             setIsDailyMessageOpen(false);
+        };
+        try {
+            await mutateCaseMessages({ leadId: selectedCase.id, add: [msg] });
+            applyOptimistic();
             toast.success(msg.forId ? 'Besked sendt til medarbejderen!' : 'Besked sendt til holdet!');
         } catch (e) {
-            console.error('Send besked fejl:', e);
-            toast.error('Kunne ikke sende besked.');
+            // Offline: gem i køen (sendes automatisk når nettet er tilbage) i stedet
+            // for at tabe beskeden. Beskeden er en ren, additiv RPC — sikker at afspille.
+            if (isOfflineError(e)) {
+                enqueueMutation('case_message', { leadId: String(selectedCase.id), add: [msg] });
+                applyOptimistic();
+                toast('Ingen forbindelse — beskeden sendes automatisk når du får net igen.', { icon: '📡', duration: 5000 });
+            } else {
+                console.error('Send besked fejl:', e);
+                toast.error(friendlyError(e, 'Kunne ikke sende besked.'));
+            }
         }
     };
 

@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+import { registerMutationHandler, flushMutationQueue } from './utils/mutationQueue';
+import { mutateCaseMessages } from './utils/caseMessages';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 
@@ -24,6 +27,7 @@ import { isStandalonePWA } from './utils/pwa';
 import { logError } from './utils/errorLogger';
 import { ensurePushSubscription } from './utils/pushSubscription';
 import { getFeatures } from './utils/features';
+import OfflineBanner from './components/OfflineBanner';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 // Protected Route Komponent
 class ErrorBoundary extends React.Component {
@@ -313,6 +317,28 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Offline-kø: registrér handlere og tøm køen automatisk, når nettet er tilbage.
+  // Handlinger lavet uden signal (fx sags-beskeder) sendes så af sig selv.
+  useEffect(() => {
+    registerMutationHandler('case_message', ({ leadId, add, removeIds }) =>
+      mutateCaseMessages({ leadId, add: add || [], removeIds: removeIds || [] })
+    );
+
+    let toastShown = false;
+    const flush = async () => {
+      const { flushed } = await flushMutationQueue();
+      if (flushed > 0 && !toastShown) {
+        toastShown = true;
+        toast.success(`${flushed} ${flushed === 1 ? 'ændring' : 'ændringer'} synkroniseret.`, { icon: '✅' });
+        setTimeout(() => { toastShown = false; }, 3000);
+      }
+    };
+
+    flush(); // ved opstart: send evt. ting fra sidste session der aldrig nåede ud
+    window.addEventListener('online', flush);
+    return () => window.removeEventListener('online', flush);
+  }, []);
+
   // Selvhelende push: har brugeren tidligere slået notifikationer til, gen-tilmelder
   // vi lydløst ved hver app-start, hvis abonnementet er udløbet/forsvundet. Så skal
   // svend/lærling/tømrer aldrig selv ind og trykke "til" igen efter en opdatering.
@@ -345,6 +371,7 @@ function App() {
 
   return (
     <div className="smooth-fade-in" style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
+        <OfflineBanner />
         <Toaster position="top-center" />
         <BrowserRouter>
           <AnimatedRoutes session={session} setSession={setSession} />

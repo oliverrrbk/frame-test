@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import { friendlyError } from '../../utils/friendlyError';
 import { QUESTIONS } from './questionsConfig';
 import { generateTaskDescription } from '../../utils/taskDescription';
 
@@ -36,6 +37,11 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
 
     const submitFinalQuote = async () => {
         if (isSaving) return;
+        // Hurtig offline-besked: undgå at kunden trykker og venter forgæves.
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            toast.error('Ingen forbindelse — tjek dit internet og prøv igen.');
+            return;
+        }
         setIsSaving(true);
         try {
             const getKombiTitle = (kombiProjects) => {
@@ -169,7 +175,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
             }
         } catch (err) {
             console.error("Fejl ved afsendelse af lead:", err);
-            toast.error("Hov! Der skete en fejl. Prøv igen.");
+            toast.error(friendlyError(err, "Hov! Der skete en fejl. Prøv igen."));
         } finally {
             setIsSaving(false);
         }

@@ -4,6 +4,7 @@ import { CheckCircle, CalendarDays, Phone, Mail, ShieldCheck } from 'lucide-reac
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { computeQuoteExpiry } from '../../utils/quoteExpiry';
+import { friendlyError } from '../../utils/friendlyError';
 import AudioPlayerButton from './AudioPlayerButton';
 
 const QuoteAcceptPage = () => {
@@ -97,6 +98,10 @@ const QuoteAcceptPage = () => {
         }
         if (lead?.status === 'Slettet' || lead?.revoked_at) {
             toast.error("Dette tilbud er trukket tilbage og kan ikke længere bekræftes.");
+            return;
+        }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            toast.error('Ingen forbindelse — tjek dit internet og prøv igen.');
             return;
         }
 
@@ -198,7 +203,8 @@ const QuoteAcceptPage = () => {
             }
             
         } catch (error) {
-            toast.error('Der opstod en fejl ved godkendelse: ' + error.message);
+            console.error('Fejl ved godkendelse af tilbud:', error);
+            toast.error(friendlyError(error, 'Der opstod en fejl ved godkendelse. Prøv igen.'));
         } finally {
             setIsAccepting(false);
         }

@@ -7,6 +7,7 @@ import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import { buildAgreementPdf } from '../../utils/agreementPdf';
 import { sendEmail } from '../../utils/sendEmail';
 import { getAgreementEmailTemplate } from '../../utils/emailTemplates';
+import { friendlyError } from '../../utils/friendlyError';
 
 // Bekræftet = enten underskrevet på pladsen ELLER bekræftet af kunden via mail-link.
 // 'Godkendt' beholdes som bagudkompatibel værdi for gamle aftalesedler.
@@ -291,6 +292,10 @@ export default function AftalesedlerTab({ selectedCase, profile, carpenterProfil
             toast.error('Angiv en gyldig modtager-e-mail.');
             return;
         }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            toast.error('Ingen forbindelse — aftalesedlen kan ikke sendes lige nu. Prøv igen når du har net.');
+            return;
+        }
         const { agreement, base64, confirmUrl } = preview;
 
         setIsSending(true);
@@ -321,7 +326,7 @@ export default function AftalesedlerTab({ selectedCase, profile, carpenterProfil
         } catch (error) {
             toast.dismiss(loadingId);
             console.error('Send aftaleseddel fejl:', error);
-            toast.error('Kunne ikke sende aftaleseddel.');
+            toast.error(friendlyError(error, 'Kunne ikke sende aftaleseddel.'));
             setIsSending(false);
         }
     };

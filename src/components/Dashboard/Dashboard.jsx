@@ -45,6 +45,8 @@ import SectionTour from './SectionTour';
 import MobileInstallGuide from './MobileInstallGuide';
 import CalculatorGuide from './CalculatorGuide';
 import { shouldShowCoach, markCoachSeen } from './coachmarks';
+import { cacheGet, cacheSet } from '../../utils/dataCache';
+import { isOfflineError } from '../../utils/friendlyError';
 
 // Rundtur for Kunder & Forespørgsler (Bølge 3). Forklarer salgs-pipelinen.
 const LEADS_TOUR_STEPS = [
@@ -1517,8 +1519,37 @@ const Dashboard = () => {
 
     const initProfileAndData = async (authUser) => {
         const userId = authUser.id;
+
+        // OFFLINE-FØRST: vis straks sidst kendte data fra cachen, så tømreren kan
+        // åbne appen og se sine nuværende sager UDEN net. Friske data hentes
+        // bagefter herunder og overskriver, hvis der er forbindelse.
+        try {
+            const [leadsSnap, matSnap, profSnap] = await Promise.all([
+                cacheGet(`bf:leads:${userId}`),
+                cacheGet(`bf:materials:${userId}`),
+                cacheGet(`bf:profile:${userId}`),
+            ]);
+            if (profSnap?.myProfile) setMyProfile(profSnap.myProfile);
+            if (profSnap?.companyProfile) setCarpenterProfile(profSnap.companyProfile);
+            if (matSnap?.materials) setMaterialsData(matSnap.materials);
+            if (Array.isArray(matSnap?.disabledCategories)) setDisabledCategories(matSnap.disabledCategories);
+            if (Array.isArray(leadsSnap)) {
+                setLeadsData(leadsSnap);
+                setIsDashboardLoaded(true); // vis UI nu — også selvom nettet fejler
+            } else if (profSnap) {
+                setIsDashboardLoaded(true);
+            }
+        } catch { /* cache er best-effort */ }
+
+      try {
         // Hent den faktiske indloggede brugers profil først
-        const { data: myDbProfile } = await supabase.from('carpenters').select('*').eq('id', userId).single();
+        const { data: myDbProfile, error: myProfileErr } = await supabase.from('carpenters').select('*').eq('id', userId).single();
+        // Offline (og vi har allerede vist cache): stop pænt i stedet for at
+        // ramme profil-oprettelse eller crashe på manglende data længere nede.
+        if (myProfileErr && isOfflineError(myProfileErr)) {
+            setIsDashboardLoaded(true);
+            return;
+        }
         if (myDbProfile) {
             setMyProfile(myDbProfile);
         }
@@ -1905,14 +1936,18 @@ const Dashboard = () => {
                 }
                 
                 setMaterialsData(workingData);
-                
+
                 const dbSysMat = workingData.find(m => m.category === 'SYSTEM' && m.name && m.name.startsWith('DISABLED_CATEGORIES||'));
+                let disabledCats = [];
                 if (dbSysMat) {
                     const str = dbSysMat.name.replace('DISABLED_CATEGORIES||', '');
-                    setDisabledCategories(str ? str.split(',') : []);
+                    disabledCats = str ? str.split(',') : [];
+                    setDisabledCategories(disabledCats);
                 } else {
                     setDisabledCategories([]);
                 }
+                // Gem materialer til offline-brug (best-effort).
+                cacheSet(`bf:materials:${userId}`, { materials: workingData, disabledCategories: disabledCats });
             }
             setIsMaterialsLoading(false);
         }
@@ -2008,6 +2043,19 @@ const Dashboard = () => {
         });
         if (activeTab === 'leads') setIsLeadsLoading(false);
         setIsDashboardLoaded(true);
+
+        // Gem frisk snapshot til offline-brug (best-effort). Nøgler pr. bruger, så
+        // næste kolde start uden net kan vise de nuværende sager med det samme.
+        cacheSet(`bf:leads:${userId}`, workingLeads);
+        cacheSet(`bf:profile:${userId}`, { myProfile: myDbProfile || null, companyProfile: userProfile || null });
+      } catch (err) {
+        // Typisk offline / dårligt signal. Cachen er allerede vist ovenfor (hvis
+        // den fandtes), så vi undgår bare den uendelige "Indlæser…"-spinner.
+        console.warn('Kunne ikke hente friske data (sandsynligvis offline):', err);
+        setIsDashboardLoaded(true);
+        if (activeTab === 'leads') setIsLeadsLoading(false);
+        if (activeTab === 'materials') setIsMaterialsLoading(false);
+      }
     };
 
     // Gem en fakturarekord på sagen (historik + faktureret beløb). Bruges af både
