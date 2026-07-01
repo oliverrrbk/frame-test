@@ -2037,6 +2037,87 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         const hrs = (c.raw_data?.time_entries || []).reduce((sum, item) => sum + item.hours, 0);
         const estHrs = parseFloat(c.raw_data?.calc_data?.laborHours) || 40;
 
+        // Status-farver (delt mellem desktop- og mobil-varianten)
+        const statusStyle = c.status === 'Sæt i bero'
+            ? { label: 'Sat i bero', bg: '#fff7ed', color: '#ea580c', border: '#fdba74' }
+            : c.status === 'Historik'
+            ? { label: 'Afsluttet', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' }
+            : c.status === 'Afbrudt Sag'
+            ? { label: 'Tabt / Afvist', bg: '#fef2f2', color: '#dc2626', border: '#fca5a5' }
+            : { label: 'Aktiv Sag', bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
+        const overtime = !c.raw_data?.is_manual_quote && hrs > estHrs;
+        const timeLabel = `${hrs} t${c.raw_data?.is_manual_quote ? '' : ` / ${estHrs} t`}`;
+
+        // --- MOBIL: kompakt, skimbart kort ---
+        if (isMobile) {
+            const pmIds = Array.isArray(c.raw_data?.assigned_pm) ? c.raw_data.assigned_pm : (c.raw_data?.assigned_pm ? [c.raw_data.assigned_pm] : []);
+            const crew = [
+                ...pmIds.map(id => ({ id, isPm: true, m: team.find(t => t.id === id) })),
+                ...((c.raw_data?.assigned_workers || []).map(id => ({ id, isPm: false, m: team.find(t => t.id === id) }))),
+            ].filter(x => x.m);
+            return (
+                <div
+                    key={c.id}
+                    onClick={() => setSelectedCaseIdState(c.id)}
+                    className="mobile-case-card"
+                    style={{ padding: '16px', backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid #e8e6e1', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', WebkitTapHighlightColor: 'transparent' }}
+                >
+                    {/* Linje 1: status + dato */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ padding: '3px 9px', fontSize: '0.7rem', fontWeight: 'bold', borderRadius: '30px', background: statusStyle.bg, color: statusStyle.color, border: `1px solid ${statusStyle.border}` }}>
+                            {statusStyle.label}
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                            {new Date(c.created_at).toLocaleDateString('da-DK')}
+                        </span>
+                    </div>
+
+                    {/* Linje 2: titel */}
+                    <h4 style={{ margin: '0 0 2px 0', fontSize: '1rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Sag {c.case_number || String(c.id).substring(0,8)} - {c.raw_data?.project_title || c.project_category}
+                    </h4>
+
+                    {/* Linje 3: kunde + adresse (én linje) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#6b7280', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', marginBottom: '12px' }}>
+                        <span style={{ fontWeight: 600, color: '#475569', flexShrink: 0 }}>
+                            {c.customer_name || (c.raw_data?.customerDetails?.customerType === 'erhverv' ? 'Virksomhed' : 'Privatkunde')}
+                        </span>
+                        {c.customer_address && (
+                            <>
+                                <span style={{ color: '#cbd5e1', flexShrink: 0 }}>·</span>
+                                <MapPin size={12} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.customer_address)}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>{c.customer_address}</a>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Linje 4: fremdrift + timer i én fod-række */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                                <div style={{ width: `${pct}%`, height: '100%', background: '#10b981', transition: 'width 0.3s' }} />
+                            </div>
+                        </div>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#4b5563', flexShrink: 0 }}>{pct}%</span>
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', flexShrink: 0 }}>·</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: overtime ? '#ef4444' : '#1e293b', flexShrink: 0 }}>{timeLabel}</span>
+                        {crew.length > 0 && (
+                            <div style={{ display: 'flex', flexShrink: 0, paddingLeft: '4px' }}>
+                                {crew.slice(0, 3).map((x, i) => (
+                                    <div key={x.id} title={`${x.m.owner_name || x.m.company_name || 'Ukendt'}${x.isPm ? ' (PM)' : ''}`} style={{ marginLeft: i === 0 ? 0 : '-6px', borderRadius: '50%', border: x.isPm ? '1.5px solid #2563eb' : '1.5px solid #ffffff', boxShadow: '0 0 0 1px #ffffff' }}>
+                                        <UserAvatar name={x.m.owner_name || x.m.company_name || ''} avatarUrl={x.m.avatar_url} size={20} ring={false} />
+                                    </div>
+                                ))}
+                                {crew.length > 3 && (
+                                    <div style={{ marginLeft: '-6px', width: '20px', height: '20px', borderRadius: '50%', background: '#f1f5f9', border: '1.5px solid #ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700, color: '#64748b' }}>+{crew.length - 3}</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div
                 key={c.id}
@@ -2180,11 +2261,43 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
+                /* Mobil sagskort — Frame-stil: glas, blødt, taktilt */
+                .mobile-case-card {
+                    background: rgba(255,255,255,0.72) !important;
+                    backdrop-filter: blur(12px) saturate(140%);
+                    -webkit-backdrop-filter: blur(12px) saturate(140%);
+                    transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), box-shadow 0.18s ease, border-color 0.18s ease;
+                }
+                .mobile-case-card:active {
+                    transform: scale(0.975);
+                    box-shadow: 0 6px 18px rgba(16,185,129,0.14) !important;
+                    border-color: #a7f3d0 !important;
+                }
+                /* Kompakt mobil-header knap */
+                .mobile-create-btn { transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), box-shadow 0.18s ease; }
+                .mobile-create-btn:active { transform: scale(0.94); box-shadow: 0 4px 12px rgba(16,185,129,0.35); }
             `}</style>
             
             {/* OVERBYGNING ELLER MODAL LUK-KNAP */}
             {!selectedCase ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {isMobile ? (
+                        /* MOBIL: slank header-række med kompakt "Opret sag" i hjørnet */
+                        <div data-tour="cases-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '2px 2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <HardHat size={18} />
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>Sager</h3>
+                            </div>
+                            {onCreateCase && !['worker', 'apprentice'].includes(profile?.role) && (
+                                <button onClick={onCreateCase} className="mobile-create-btn"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 14px', borderRadius: '999px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 6px 16px rgba(16,185,129,0.28)', flexShrink: 0, whiteSpace: 'nowrap', WebkitTapHighlightColor: 'transparent' }}>
+                                    <Plus size={16} strokeWidth={2.5} /> Opret sag
+                                </button>
+                            )}
+                        </div>
+                    ) : (
                     <div data-tour="cases-header" style={{ padding: '24px', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                         <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <HardHat size={24} />
@@ -2203,6 +2316,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             </button>
                         )}
                     </div>
+                    )}
 
                     {/* Eksempel-sag — vises kun under rundvisningen, så nye brugere uden sager
                         stadig kan se hvordan en sag ser ud. Ikke en rigtig DB-sag. */}
@@ -2261,7 +2375,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     Alle sager ({activeCases.length})
                                 </button>
                             </div>
-                            <div data-tour="cases-search" style={{ position: 'relative', flex: '1 1 280px', maxWidth: '420px' }}>
+                            <div data-tour="cases-search" style={{ position: 'relative', flex: isMobile ? '1 1 100%' : '1 1 280px', maxWidth: isMobile ? 'none' : '420px' }}>
                                 <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
                                 <input
                                     type="text"
@@ -2309,7 +2423,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
                                             Aktive sager ({aktiveSager.length})
                                         </h4>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(360px, 1fr))', gap: isMobile ? '12px' : '20px' }}>
                                             {aktiveSager.map(renderCaseCard)}
                                         </div>
                                     </div>
@@ -2322,7 +2436,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#94a3b8' }} />
                                             Afsluttede sager ({afsluttedeSager.length})
                                         </h4>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(360px, 1fr))', gap: isMobile ? '12px' : '20px' }}>
                                             {afsluttedeSager.map(renderCaseCard)}
                                         </div>
                                     </div>

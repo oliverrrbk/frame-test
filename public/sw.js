@@ -13,8 +13,17 @@
 //   • Cross-origin (Supabase, /api/*, Google Maps, OpenAI) -> RØRES IKKE,
 //     går altid direkte på nettet. Intet API-svar caches nogensinde.
 
-const CACHE = 'bison-frame-v1';
+const CACHE = 'bison-frame-v2';
+// Separat cache til Supabase Storage-billeder (logo, portræt, avatarer, skitse-
+// miniaturer). Holdes adskilt fra app-skallen, så den kan have sit eget loft/oprydning.
+const IMG_CACHE = 'bison-frame-img-v1';
 const CORE_ASSETS = ['/', '/index.html', '/manifest.json', '/logo.png', '/favicon.svg'];
+
+// Er dette en Supabase Storage-billedanmodning? (offentlige filer på et andet domæne)
+// Vi cacher dem, så logo/portræt/avatar/skitser stadig kan vises uden net.
+function isStorageImage(url) {
+    return url.pathname.includes('/storage/v1/object/public/');
+}
 
 // ---- Install: precache app-skallen (best-effort, så install aldrig fejler) ----
 self.addEventListener('install', (event) => {
@@ -29,7 +38,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
-            Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+            Promise.all(keys.filter((k) => k !== CACHE && k !== IMG_CACHE).map((k) => caches.delete(k)))
         ).then(() => self.clients.claim())
     );
 });
@@ -43,7 +52,30 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(request.url);
 
-    // Rør kun vores eget domæne. Supabase/Google/OpenAI m.fl. går altid på nettet.
+    // Supabase Storage-billeder (andet domæne): cache-first + baggrunds-opdatering,
+    // så logo/portræt/avatar/skitser vises offline når de er set mindst én gang online.
+    // Billed-anmodninger fra <img> er 'no-cors' → opaque responses, som Cache API
+    // gerne må gemme. Vi cacher kun ved reelt svar (aldrig en fejl/offline-respons).
+    if (isStorageImage(url)) {
+        event.respondWith(
+            caches.open(IMG_CACHE).then((cache) =>
+                cache.match(request).then((cached) => {
+                    const network = fetch(request)
+                        .then((resp) => {
+                            if (resp && (resp.ok || resp.type === 'opaque')) {
+                                cache.put(request, resp.clone()).catch(() => {});
+                            }
+                            return resp;
+                        })
+                        .catch(() => cached);
+                    return cached || network;
+                })
+            )
+        );
+        return;
+    }
+
+    // Rør ellers kun vores eget domæne. Supabase-API/Google/OpenAI m.fl. går altid på nettet.
     if (url.origin !== self.location.origin) return;
 
     // API-ruter må aldrig caches.

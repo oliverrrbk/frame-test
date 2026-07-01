@@ -49,6 +49,7 @@ import CalculatorGuide from './CalculatorGuide';
 import { shouldShowCoach, markCoachSeen } from './coachmarks';
 import { cacheGet, cacheSet } from '../../utils/dataCache';
 import { isOfflineError } from '../../utils/friendlyError';
+import TabErrorBoundary from '../TabErrorBoundary';
 
 // Rundtur for Kunder & Forespørgsler (Bølge 3). Forklarer salgs-pipelinen.
 const LEADS_TOUR_STEPS = [
@@ -3423,6 +3424,7 @@ const Dashboard = () => {
                     )}
 
                     {activeTab === 'worker_timesheet' && ['worker', 'apprentice', 'sales'].includes(effectiveRole) && (
+                        <TabErrorBoundary label="Timer" onRetry={refreshData}>
                         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
                         <WorkerTimesheet
                             leadsData={roleFilteredLeads}
@@ -3431,6 +3433,7 @@ const Dashboard = () => {
                             onDataChange={refreshData}
                         />
                         </Suspense>
+                        </TabErrorBoundary>
                     )}
 
                     {activeTab === 'worker_drafts' && ['worker', 'sales'].includes(effectiveRole) && (
@@ -3523,7 +3526,8 @@ const Dashboard = () => {
                     )}
                     {activeTab === 'calendar' && (
                         <div className="tab-pane active" style={{ height: '100%', overflowY: 'auto' }}>
-                            <CalendarView 
+                            <TabErrorBoundary label="Kalenderen" onRetry={refreshData}>
+                            <CalendarView
                                 leadsData={leadsData}
                                 myProfile={myProfile}
                                 simulatedRole={simulatedRole}
@@ -3536,17 +3540,20 @@ const Dashboard = () => {
                                     setActiveTab('cases');
                                 }}
                             />
+                            </TabErrorBoundary>
                         </div>
                     )}
                     {activeTab === 'chat' && (
                         <div className="tab-pane active" style={{ height: '100%' }}>
-                            <ChatTab 
+                            <TabErrorBoundary label="Intern chat" onRetry={refreshData}>
+                            <ChatTab
                                 profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.company_id || carpenterProfile?.id }}
                                 leads={leadsData}
                                 targetLeadId={chatTargetLeadId}
                                 clearTargetLeadId={() => setChatTargetLeadId(null)}
                                 onThreadRead={() => chatUnreadRefreshRef.current && chatUnreadRefreshRef.current()}
                             />
+                            </TabErrorBoundary>
                         </div>
                     )}
                     {activeTab === 'finance' && (
@@ -3568,6 +3575,7 @@ const Dashboard = () => {
                     )}
                     {activeTab === 'admin_timesheet' && (
                         <div className="tab-pane active " style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
+                            <TabErrorBoundary label="Løn & timer" onRetry={refreshData}>
                             <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
                             <AdminTimesheet
                                 leadsData={leadsData}
@@ -3575,6 +3583,7 @@ const Dashboard = () => {
                                 onDataChange={refreshData}
                             />
                             </Suspense>
+                            </TabErrorBoundary>
                         </div>
                     )}
                     {activeTab === 'leads' && (
@@ -5340,7 +5349,9 @@ const Dashboard = () => {
                     
                     {activeTab === 'drawings' && (
                         <div className="dashboard-workspace fade-in" style={{ height: '100%' }}>
-                            <DrawingsGallery myProfile={myProfile} />
+                            <TabErrorBoundary label="Skitser & tegninger" onRetry={refreshData}>
+                                <DrawingsGallery myProfile={myProfile} />
+                            </TabErrorBoundary>
                         </div>
                     )}
                     
