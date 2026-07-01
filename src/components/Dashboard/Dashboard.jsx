@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import { lazyWithReload } from '../../utils/lazyWithReload';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Home, Droplets, Phone, Calendar, PenTool,  Settings, Package, Users, Globe, Wrench, Menu, LogOut, User, Shield, ShieldAlert, Info, Truck, Check, CheckCircle, MapPin, Link, Bell, MessageSquare, FileText, ExternalLink, UploadCloud, Archive, Mail, Eye, Search, Sliders, CreditCard, Lock, Briefcase, Tent, LayoutGrid, AppWindow, DoorOpen, Layers, ArrowUpToLine, PanelRight, Utensils, PlusSquare, Car, AlignJustify, HardHat, Calculator, Wallet, Clock, RefreshCw, ChevronDown, Play, X, CalendarClock, Smartphone } from 'lucide-react';
@@ -12,12 +13,13 @@ import { getFeedbackTemplate, getCustomerOfferSentTemplate, getCustomerRequestRe
 import { generateHumanQuoteText } from '../../utils/quoteTextGenerator';
 import { parseBreakdownToExplanation } from '../../utils/explanationGenerator';
 import { generateTaskDescription } from '../../utils/taskDescription';
+import { isReverseChargeLead } from '../../utils/caseFinance';
 import AiTrainingView from './AiTrainingView';
 import TeamManagement from './TeamManagement';
 import CaseManagement from './CaseManagement';
 import MaterialList from './MaterialList';
-const WorkerTimesheet = lazy(() => import('./WorkerTimesheet'));
-const AdminTimesheet = lazy(() => import('./AdminTimesheet'));
+const WorkerTimesheet = lazyWithReload(() => import('./WorkerTimesheet'));
+const AdminTimesheet = lazyWithReload(() => import('./AdminTimesheet'));
 import WorkerDrafts from './WorkerDrafts';
 import ProjectManagerOverview from './ProjectManagerOverview';
 import FinanceOverview from './FinanceOverview';
@@ -27,9 +29,9 @@ import EmployeeOnboardingModal from './EmployeeOnboardingModal';
 import SuperAdminView from './SuperAdminView';
 import MyProfileView from './MyProfileView';
 import SubscriptionSettings from './SubscriptionSettings';
-const DashboardOverview = lazy(() => import('./DashboardOverview'));
+const DashboardOverview = lazyWithReload(() => import('./DashboardOverview'));
 import WorkerOverview from './WorkerOverview';
-const GuestDashboard = lazy(() => import('../Guest/GuestDashboard'));
+const GuestDashboard = lazyWithReload(() => import('../Guest/GuestDashboard'));
 import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
@@ -4063,8 +4065,8 @@ const Dashboard = () => {
                                         {/* Manuel Overslag Email Afsendelse / Vis Tilbud */}
                                         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
 
-                                            {isConfirmedCase(selectedLead) && (
-                                                <a 
+                                            {isConfirmedCase(selectedLead) && !selectedLead.raw_data?.is_manual_case && (
+                                                <a
                                                     href={`${window.location.origin}/${carpenterProfile?.slug || 't'}/tilbud/${selectedLead.quote_token || selectedLead.id}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
@@ -4143,7 +4145,79 @@ const Dashboard = () => {
                                         <div className="lead-details-grid">
                                             {/* TILBUD / OVERSLAG BOKS (Nu flyttet øverst) */}
                                             <div style={{ padding: '16px', backgroundColor: isConfirmedCase(selectedLead) ? '#ecfdf5' : '#f7f6f3', borderRadius: '14px', border: isConfirmedCase(selectedLead) ? '1px solid #10b981' : '1px solid #e8e6e1' }}>
-                                                {isConfirmedCase(selectedLead) ? (
+                                                {selectedLead.raw_data?.is_manual_case ? (() => {
+                                                    // Manuel sag (oprettet uden tilbud): pris fra afregningsform, gemt ekskl. moms.
+                                                    // Privat → +25% moms; erhverv med omvendt betalingspligt → uden moms.
+                                                    const rd = selectedLead.raw_data;
+                                                    const reverse = isReverseChargeLead(selectedLead);
+                                                    const toIncl = (ex) => reverse ? Math.round(ex) : Math.round(ex * 1.25);
+                                                    const PriceBreakdown = ({ incVat }) => {
+                                                        const exVat = reverse ? incVat : Math.round(incVat / 1.25);
+                                                        const vat = incVat - exVat;
+                                                        return (
+                                                            <>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                    <span style={{ opacity: 0.8 }}>Ekskl. moms:</span>
+                                                                    <span>{exVat.toLocaleString('da-DK')} kr.</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                    <span style={{ opacity: 0.8 }}>Moms ({reverse ? '0' : '25'}%):</span>
+                                                                    <span>{vat.toLocaleString('da-DK')} kr.</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #a7f3d0', paddingTop: '6px', marginTop: '4px', fontWeight: 'bold', fontSize: '1.05rem', color: '#065f46' }}>
+                                                                    <span>Inkl. moms:</span>
+                                                                    <span>{incVat.toLocaleString('da-DK')} kr.</span>
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    };
+                                                    if (rd.billing_mode === 'fixed' && Number(rd.fixed_price_ex_vat) > 0) {
+                                                        return (
+                                                            <>
+                                                                <span style={{ fontSize: '0.85rem', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Aftalt fast pris</span>
+                                                                <div style={{ margin: '12px 0 0', color: '#064e3b', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <PriceBreakdown incVat={toIncl(Number(rd.fixed_price_ex_vat))} />
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    }
+                                                    if (rd.billing_mode === 'hourly' && Number(rd.hourly_rate) > 0) {
+                                                        const hours = (rd.time_entries || []).reduce((s, e) => s + (Number(e.hours) || 0), 0);
+                                                        const soFarIncl = toIncl(hours * Number(rd.hourly_rate));
+                                                        return (
+                                                            <>
+                                                                <span style={{ fontSize: '0.85rem', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Afregnes efter timepris</span>
+                                                                <div style={{ margin: '12px 0 0', color: '#064e3b', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                        <span style={{ opacity: 0.8 }}>Timepris (ekskl. moms):</span>
+                                                                        <span>{Number(rd.hourly_rate).toLocaleString('da-DK')} kr./time</span>
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                        <span style={{ opacity: 0.8 }}>Registrerede timer:</span>
+                                                                        <span>{hours.toLocaleString('da-DK')} timer</span>
+                                                                    </div>
+                                                                    <div style={{ borderTop: '1px solid #a7f3d0', paddingTop: '6px', marginTop: '4px' }}>
+                                                                        {hours > 0 ? (
+                                                                            <>
+                                                                                <div style={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Kostet indtil videre</div>
+                                                                                <PriceBreakdown incVat={soFarIncl} />
+                                                                            </>
+                                                                        ) : (
+                                                                            <div style={{ fontWeight: 'bold', color: '#065f46' }}>0 kr. — endnu ingen timer registreret</div>
+                                                                        )}
+                                                                    </div>
+                                                                    <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#059669', fontStyle: 'italic' }}>Beløbet stiger, efterhånden som der registreres timer i Ordrestyring.</p>
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <>
+                                                            <span style={{ fontSize: '0.85rem', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bekræftet opgave</span>
+                                                            <p style={{ margin: '12px 0 0', fontWeight: 'bold', color: '#065f46', fontSize: '1.05rem' }}>Pris ikke angivet endnu</p>
+                                                        </>
+                                                    );
+                                                })() : isConfirmedCase(selectedLead) ? (
                                                     <>
                                                         <span style={{ fontSize: '0.85rem', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tilbud givet og accepteret</span>
                                                         <div style={{ margin: '12px 0 0', color: '#064e3b', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -4291,8 +4365,34 @@ const Dashboard = () => {
     )}
 </div>
                                                 
-                                                {/* AI Opgavebeskrivelse som dropdown (skjult for 'special' sager) */}
-                                                {selectedLead.project_category !== 'special' && (
+                                                {/* Manuel sag (uden tilbud): vis brugerens egen beskrivelse, ikke AI/beregner-summary */}
+                                                {selectedLead.raw_data?.is_manual_case && (() => {
+                                                    const desc = (selectedLead.raw_data?.case_description || '').trim();
+                                                    return (
+                                                        <details style={{ padding: '12px', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e8e6e1', cursor: 'pointer' }}>
+                                                            <summary style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', outline: 'none' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexGrow: 1 }}>
+                                                                    <FileText size={14} />
+                                                                    Opsummering af opgaven
+                                                                </div>
+                                                                <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>Læs mere ▼</span>
+                                                            </summary>
+                                                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f3f4f6' }}>
+                                                                {desc && (
+                                                                    <div style={{ marginBottom: '12px' }}>
+                                                                        <AudioPlayerButton text={desc} title="Læs beskrivelsen op" />
+                                                                    </div>
+                                                                )}
+                                                                <p style={{ margin: 0, fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                                                                    {desc || 'Ingen beskrivelse angivet.'}
+                                                                </p>
+                                                            </div>
+                                                        </details>
+                                                    );
+                                                })()}
+
+                                                {/* AI Opgavebeskrivelse som dropdown (skjult for 'special' og manuelle sager) */}
+                                                {selectedLead.project_category !== 'special' && !selectedLead.raw_data?.is_manual_case && (
                                                     <details style={{ padding: '12px', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e8e6e1', cursor: 'pointer' }}>
                                                         <summary style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', outline: 'none' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexGrow: 1 }}>
@@ -4344,7 +4444,9 @@ const Dashboard = () => {
                                             </div>
                                         </div>
 
-                                        <div 
+                                        {/* Beregner-/detaljesektion — skjules helt for manuelle sager (ingen beregner brugt) */}
+                                        {!selectedLead.raw_data?.is_manual_case && (
+                                        <div
                                             onClick={() => setIsCustomerChoicesOpen(!isCustomerChoicesOpen)}
                                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px' }}
                                         >
@@ -4359,8 +4461,9 @@ const Dashboard = () => {
                                                 {isCustomerChoicesOpen ? 'Skjul ▲' : 'Vis ▼'}
                                             </span>
                                         </div>
+                                        )}
 
-                                        {isCustomerChoicesOpen && (
+                                        {!selectedLead.raw_data?.is_manual_case && isCustomerChoicesOpen && (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                                                 {selectedLead.raw_data && (() => {
                                                     const details = selectedLead.raw_data.details || {};
@@ -4950,8 +5053,9 @@ const Dashboard = () => {
                                             <WindowsChecklist leadId={selectedLead.id} />
                                         )}
 
-                                        {/* GRUNDLAG FOR PRISESTIMATET ACCORDION */}
-                                        <div 
+                                        {/* GRUNDLAG FOR PRISESTIMATET ACCORDION — skjules for manuelle sager (ingen beregner) */}
+                                        {!selectedLead.raw_data?.is_manual_case && (
+                                        <div
                                             onClick={() => setIsPriceBasisOpen(!isPriceBasisOpen)}
                                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#fafaf9', borderRadius: '12px', border: '1px solid #e8e6e1', cursor: 'pointer', marginBottom: '16px', marginTop: '24px' }}
                                         >
@@ -4962,8 +5066,9 @@ const Dashboard = () => {
                                                 {isPriceBasisOpen ? 'Skjul ▲' : 'Vis ▼'}
                                             </span>
                                         </div>
+                                        )}
 
-                                        {isPriceBasisOpen && (
+                                        {!selectedLead.raw_data?.is_manual_case && isPriceBasisOpen && (
                                             <div style={{ marginBottom: '24px', padding: '24px', backgroundColor: '#fcfcfc', borderRadius: '14px', border: '1px solid #e8e6e1' }}>
                                                 {(() => {
                                                     const calc = selectedLead.raw_data?.calc_data;

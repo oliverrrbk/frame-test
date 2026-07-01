@@ -3,9 +3,18 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { installGlobalErrorLogging } from './utils/errorLogger';
+import { reloadForFreshChunks } from './utils/lazyWithReload';
 
 // Usynlig fejl-opsamling (fanger uventede fejl + afviste promises på alle enheder).
 installGlobalErrorLogging();
+
+// Vite fyrer 'vite:preloadError' når en modulepreload af en kode-bid fejler (typisk
+// efter et deploy hvor de gamle hash-navne er væk). Self-heal med ét reload, så
+// brugeren aldrig ser en crash. preventDefault stopper Vites default (kaster fejlen).
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  reloadForFreshChunks();
+});
 
 // Service worker: KUN i produktion. I dev cacher den ellers stale JS-bundles
 // (filerne er ikke hash-navngivne i dev), hvilket kan crashe appen ("React er null").

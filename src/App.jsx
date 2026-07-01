@@ -7,28 +7,31 @@ import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 
 // Tunge sider lazy-loades, så koden først hentes når ruten besøges (hurtigere mobil-load).
-const Wizard = lazy(() => import('./components/Wizard/Wizard'));
-const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
-const LandingPage = lazy(() => import('./components/Landing/LandingPage'));
-const CalculatorPage = lazy(() => import('./components/Landing/CalculatorPage'));
-const FeaturesPage = lazy(() => import('./components/Landing/FeaturesPage'));
-const PricingPage = lazy(() => import('./components/Landing/PricingPage'));
-const GetStartedPage = lazy(() => import('./components/Landing/GetStartedPage'));
-const AboutUsPage = lazy(() => import('./components/Landing/AboutUsPage'));
-const ResetPassword = lazy(() => import('./components/Auth/ResetPassword'));
-const ConfirmedPage = lazy(() => import('./components/Auth/ConfirmedPage'));
-const AdminDashboard = lazy(() => import('./components/Admin/AdminDashboard'));
-const QuoteAcceptPage = lazy(() => import('./components/Wizard/QuoteAcceptPage'));
-const EstimateAcceptPage = lazy(() => import('./components/Wizard/EstimateAcceptPage'));
-const AgreementConfirmPage = lazy(() => import('./components/Wizard/AgreementConfirmPage'));
-const GuestActivate = lazy(() => import('./components/Guest/GuestActivate'));
+// lazyWithReload self-healer efter et deploy: fanger "Failed to fetch dynamically imported
+// module" (gammelt chunk-hash forsvundet) og laver ét reload i stedet for at crashe.
+const Wizard = lazyWithReload(() => import('./components/Wizard/Wizard'));
+const Dashboard = lazyWithReload(() => import('./components/Dashboard/Dashboard'));
+const LandingPage = lazyWithReload(() => import('./components/Landing/LandingPage'));
+const CalculatorPage = lazyWithReload(() => import('./components/Landing/CalculatorPage'));
+const FeaturesPage = lazyWithReload(() => import('./components/Landing/FeaturesPage'));
+const PricingPage = lazyWithReload(() => import('./components/Landing/PricingPage'));
+const GetStartedPage = lazyWithReload(() => import('./components/Landing/GetStartedPage'));
+const AboutUsPage = lazyWithReload(() => import('./components/Landing/AboutUsPage'));
+const ResetPassword = lazyWithReload(() => import('./components/Auth/ResetPassword'));
+const ConfirmedPage = lazyWithReload(() => import('./components/Auth/ConfirmedPage'));
+const AdminDashboard = lazyWithReload(() => import('./components/Admin/AdminDashboard'));
+const QuoteAcceptPage = lazyWithReload(() => import('./components/Wizard/QuoteAcceptPage'));
+const EstimateAcceptPage = lazyWithReload(() => import('./components/Wizard/EstimateAcceptPage'));
+const AgreementConfirmPage = lazyWithReload(() => import('./components/Wizard/AgreementConfirmPage'));
+const GuestActivate = lazyWithReload(() => import('./components/Guest/GuestActivate'));
 import { supabase } from './supabaseClient';
 import { isStandalonePWA } from './utils/pwa';
 import { logError } from './utils/errorLogger';
 import { ensurePushSubscription } from './utils/pushSubscription';
 import { getFeatures } from './utils/features';
 import OfflineBanner from './components/OfflineBanner';
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { lazyWithReload, isChunkLoadError, reloadForFreshChunks } from './utils/lazyWithReload';
+import React, { useState, useEffect, Suspense } from 'react';
 // Protected Route Komponent
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -37,10 +40,22 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
+    // Chunk-fejl (gammelt deploy) vises ALDRIG som crash — vi reloader i stedet.
+    // Marker som "reloading" så render() viser en blank skærm i det splitsekund
+    // reloadet tager, ikke den røde crash-skærm.
+    if (isChunkLoadError(error)) {
+      return { hasError: true, reloading: true, error };
+    }
     return { hasError: true, error };
   }
 
   componentDidCatch(error, info) {
+    // Sidste sikkerhedsnet: hvis en chunk-fejl alligevel skulle nå hertil (fx en
+    // dynamisk import inde i et komponent-tree uden for lazyWithReload), så self-heal
+    // med ét reload i stedet for at vise crash-skærmen.
+    if (isChunkLoadError(error) && reloadForFreshChunks()) {
+      return;
+    }
     console.error("Dashboard crashed:", error, info);
     this.setState({ info });
     logError({
@@ -51,6 +66,10 @@ class ErrorBoundary extends React.Component {
   }
 
   render() {
+    // Chunk-fejl self-healer med reload — vis blank skærm imens, ikke crash-UI.
+    if (this.state.reloading) {
+      return null;
+    }
     if (this.state.hasError) {
       return (
         <div style={{ padding: '20px', background: '#fee2e2', color: '#991b1b', height: '100vh', display: 'flex', flexDirection: 'column' }}>
