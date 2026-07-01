@@ -160,7 +160,12 @@ export default function WorkerTimesheet({ leadsData, myProfile, simulatedRole, o
             });
             setIsAdding(true);
             setEditingEntry(null);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            const sc = document.querySelector('.dashboard-content');
+            if (sc && sc.scrollHeight > sc.clientHeight) {
+                sc.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         };
         window.addEventListener('open-add-timesheet', handleOpenAdd);
         return () => window.removeEventListener('open-add-timesheet', handleOpenAdd);

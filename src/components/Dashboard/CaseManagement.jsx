@@ -1635,7 +1635,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             desc: entry.desc,
             employeeId: entry.employeeId
         });
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        const sc = document.querySelector('.dashboard-content');
+        if (sc && sc.scrollHeight > sc.clientHeight) {
+            sc.scrollTo({ top: sc.scrollHeight, behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
     };
 
     const handleDeleteTime = (entryId) => {
