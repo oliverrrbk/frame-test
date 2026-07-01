@@ -235,7 +235,7 @@ serve(async (req) => {
 
             const { data: lead, error: leadError } = await supabaseClient
                 .from("leads")
-                .select("id, status, customer_name, project_category, carpenter_id")
+                .select("id, status, customer_name, project_category, carpenter_id, raw_data")
                 .eq("id", leadId)
                 .single();
 
@@ -266,6 +266,15 @@ serve(async (req) => {
                 slot = "new_lead";
                 notificationType = "lead_request";
             } else if (lead.status === "Bekræftet opgave") {
+                // Manuelt oprettede sager (uden tilbud) er IKKE en kundebekræftelse — man
+                // opretter dem jo selv og ved godt de findes. Notifikationen "Tilbud godkendt"
+                // sendes derfor kun, når en kunde faktisk har bekræftet et tilbud.
+                if (lead.raw_data?.is_manual_case === true) {
+                    return new Response(JSON.stringify({ success: true, message: "Manuelt oprettet sag — ingen bekræftelses-notifikation", ...stats }), {
+                        headers: { "Content-Type": "application/json" },
+                        status: 200
+                    });
+                }
                 title = "Tilbud godkendt";
                 bodyText = `${lead.customer_name || 'Kunden'} har bekræftet tilbuddet på ${lead.project_category || 'projekt'}.`;
                 slot = "quote_accepted";
