@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { HardHat, User, MapPin, Briefcase, Save, Building2, Clock } from 'lucide-react';
+import { HardHat, User, MapPin, Briefcase, Save, Building2, Clock, Mic, MicOff, Loader2 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { friendlyError } from '../../utils/friendlyError';
+import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 
 // Dansk telefon-formatering (+45 XX XX XX XX) — samme mønster som i QuickQuoteBuilder/wizarden.
 const formatDkPhone = (raw) => {
@@ -42,6 +43,16 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
     const addrBlurRef = useRef(null);
 
     const setC = (patch) => setCustomer((prev) => ({ ...prev, ...patch }));
+
+    // Indtaling af opgavebeskrivelsen — samme fagterm-korrektion som aftalesedlen
+    // (WHISPER_PROMPT + FAGTERM_CORRECTION_PROMPT fra fagtermer.js via mode 'transcribe').
+    const descriptionDictation = useVoiceDictation((text) => {
+        setDescription((prev) => `${prev ? `${prev.trim()} ` : ''}${text}`.trim());
+    }, {
+        mode: 'transcribe',
+        processingMessage: 'Skriver sagsbeskrivelsen…',
+        successMessage: 'Tilføjet til beskrivelsen',
+    });
 
     // Debounced adresse-opslag mens man skriver vej + husnr.
     const handleAddressChange = (value) => {
@@ -93,6 +104,16 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
 
     // Dansk talformat → tal (fjern tusind-punktummer, brug komma som decimaltegn).
     const parseDkNum = (v) => parseFloat(String(v ?? '').replace(/\./g, '').replace(/\s/g, '').replace(',', '.')) || 0;
+
+    // Vis pris med tusind-adskillelse (dansk: 60000 → 60.000) mens man skriver, så beløbet
+    // er nemt at overskue. parseDkNum tolker formatet igen ved gem.
+    const formatDkThousands = (raw) => {
+        const s = String(raw ?? '').replace(/[^\d,]/g, '');   // kun cifre + komma
+        if (!s) return '';
+        const [intPart, ...rest] = s.split(',');
+        const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return rest.length ? `${grouped},${rest.join('').slice(0, 2)}` : grouped;
+    };
 
     // Tømreren indtaster altid ekskl. moms. Privat → altid +25% moms. Erhverv → MED moms
     // som standard, medmindre man vælger omvendt betalingspligt (kun byggeydelser).
@@ -282,7 +303,30 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                             <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Fx Tilbygning, timepris" />
                         </div>
                         <div>
-                            <label style={labelStyle}>Beskrivelse <span style={{ fontWeight: 400, color: '#94a3b8' }}>(valgfrit)</span></label>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                                <label style={{ ...labelStyle, marginBottom: 0 }}>Beskrivelse <span style={{ fontWeight: 400, color: '#94a3b8' }}>(valgfrit)</span></label>
+                                <button
+                                    type="button"
+                                    onClick={descriptionDictation.isProcessing ? undefined : descriptionDictation.toggle}
+                                    disabled={descriptionDictation.isProcessing}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                        minHeight: '36px', padding: '8px 12px', borderRadius: '999px',
+                                        border: descriptionDictation.isRecording ? '1px solid #fecaca' : '1px solid #c7d2fe',
+                                        background: descriptionDictation.isRecording ? '#fef2f2' : (descriptionDictation.isProcessing ? '#f8fafc' : '#eef2ff'),
+                                        color: descriptionDictation.isRecording ? '#dc2626' : (descriptionDictation.isProcessing ? '#64748b' : '#4f46e5'),
+                                        fontWeight: 800, fontSize: '0.8rem',
+                                        cursor: descriptionDictation.isProcessing ? 'wait' : 'pointer',
+                                        boxShadow: descriptionDictation.isRecording ? '0 0 0 4px rgba(239, 68, 68, 0.08)' : 'none',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                >
+                                    {descriptionDictation.isProcessing
+                                        ? <Loader2 size={14} className="animate-spin" />
+                                        : (descriptionDictation.isRecording ? <MicOff size={14} /> : <Mic size={14} />)}
+                                    {descriptionDictation.isProcessing ? 'Skriver…' : (descriptionDictation.isRecording ? 'Stop' : 'Indtal')}
+                                </button>
+                            </div>
                             <textarea style={{ ...inputStyle, minHeight: '80px', resize: 'vertical', fontFamily: 'inherit' }} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Kort note om hvad der skal laves…" />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
@@ -308,7 +352,7 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                             <div>
                                 <label style={labelStyle}>Fast pris <span style={{ fontWeight: 400, color: '#94a3b8' }}>(ekskl. moms)</span></label>
                                 <div style={{ position: 'relative' }}>
-                                    <input style={{ ...inputStyle, paddingRight: '42px' }} value={fixedPrice} onChange={(e) => setFixedPrice(e.target.value)} placeholder="Fx 45.000" inputMode="decimal" />
+                                    <input style={{ ...inputStyle, paddingRight: '42px' }} value={fixedPrice} onChange={(e) => setFixedPrice(formatDkThousands(e.target.value))} placeholder="Fx 45.000" inputMode="decimal" />
                                     <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>kr.</span>
                                 </div>
                                 <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>{momsHint}</p>
@@ -317,7 +361,7 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                             <div>
                                 <label style={labelStyle}>Timepris <span style={{ fontWeight: 400, color: '#94a3b8' }}>(ekskl. moms)</span></label>
                                 <div style={{ position: 'relative' }}>
-                                    <input style={{ ...inputStyle, paddingRight: '70px' }} value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="Fx 550" inputMode="decimal" />
+                                    <input style={{ ...inputStyle, paddingRight: '70px' }} value={hourlyRate} onChange={(e) => setHourlyRate(formatDkThousands(e.target.value))} placeholder="Fx 550" inputMode="decimal" />
                                     <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>kr/time</span>
                                 </div>
                                 <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Fakturaen foreslår automatisk dine registrerede timer × timeprisen. {momsHint}</p>

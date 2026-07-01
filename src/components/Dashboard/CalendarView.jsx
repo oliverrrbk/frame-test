@@ -371,7 +371,10 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
         let leads = scheduledLeads.filter(lead => {
             const start = new Date(lead.raw_data.start_date); start.setHours(0,0,0,0);
-            const end = new Date(lead.raw_data.end_date); end.setHours(23,59,59,999);
+            // Manuelt oprettede sager (uden tilbud) har kun start_date, ingen end_date.
+            // Fald tilbage til start_date, så en endagssag stadig placeres på sin dag
+            // (ellers gav new Date(undefined) en Invalid Date, og sagen forsvandt helt).
+            const end = new Date(lead.raw_data.end_date || lead.raw_data.start_date); end.setHours(23,59,59,999);
             if (checkDate >= start && checkDate <= end) {
                 const isWeekend = checkDate.getDay() === 0 || checkDate.getDay() === 6;
                 const allowWeekends = lead.raw_data.include_weekends === true;
