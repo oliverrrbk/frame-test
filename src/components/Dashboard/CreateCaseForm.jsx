@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { HardHat, User, MapPin, Briefcase, Save, Building2, Clock } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -34,7 +34,62 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
     const [reverseCharge, setReverseCharge] = useState(false);
     const [busy, setBusy] = useState(false);
 
+    // Adresse-forslag via DAWA (dataforsyningen) — officiel dansk adresse-API, ingen nøgle.
+    // Samme kilde som resten af systemet bruger (Register/Wizard) til adresse + postnr→by.
+    const [addrSuggestions, setAddrSuggestions] = useState([]);
+    const [showAddrSuggestions, setShowAddrSuggestions] = useState(false);
+    const addrDebounceRef = useRef(null);
+    const addrBlurRef = useRef(null);
+
     const setC = (patch) => setCustomer((prev) => ({ ...prev, ...patch }));
+
+    // Debounced adresse-opslag mens man skriver vej + husnr.
+    const handleAddressChange = (value) => {
+        setC({ address: value });
+        if (addrDebounceRef.current) clearTimeout(addrDebounceRef.current);
+        if (!value || value.trim().length < 3) {
+            setAddrSuggestions([]);
+            setShowAddrSuggestions(false);
+            return;
+        }
+        addrDebounceRef.current = setTimeout(async () => {
+            try {
+                const res = await fetch(`https://api.dataforsyningen.dk/adgangsadresser/autocomplete?q=${encodeURIComponent(value)}&per_side=6`);
+                if (!res.ok) return;
+                const data = await res.json();
+                setAddrSuggestions(Array.isArray(data) ? data : []);
+                setShowAddrSuggestions(true);
+            } catch { /* netværksfejl — ignorér, brugeren kan skrive manuelt */ }
+        }, 200);
+    };
+
+    // Vælg et forslag → udfyld vej, postnr og by i ét hug (tekst-regex som fallback).
+    const selectAddress = (item) => {
+        const a = item?.adgangsadresse || {};
+        let street = [a.vejnavn, a.husnr].filter(Boolean).join(' ').trim();
+        let postnr = a.postnr || '';
+        let by = a.postnrnavn || '';
+        if ((!street || !postnr) && item?.tekst) {
+            const m = item.tekst.match(/^(.*?),\s*(\d{4})\s+(.+)$/);
+            if (m) { street = street || m[1].trim(); postnr = postnr || m[2]; by = by || m[3].trim(); }
+        }
+        setC({ address: street || customer.address, zip: postnr || customer.zip, city: by || customer.city });
+        setAddrSuggestions([]);
+        setShowAddrSuggestions(false);
+        if (addrBlurRef.current) clearTimeout(addrBlurRef.current);
+    };
+
+    // Skriver man postnummer manuelt, slår vi byen op (DAWA), så byen altid følger postnr.
+    const handleZipChange = (value) => {
+        const z = value.replace(/[^\d]/g, '').slice(0, 4);
+        setC({ zip: z });
+        if (z.length === 4) {
+            fetch(`https://api.dataforsyningen.dk/postnumre/${z}`)
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(d => { if (d && d.navn) setC({ city: d.navn }); })
+                .catch(() => { /* ukendt postnr — lad brugeren udfylde by selv */ });
+        }
+    };
 
     // Dansk talformat → tal (fjern tusind-punktummer, brug komma som decimaltegn).
     const parseDkNum = (v) => parseFloat(String(v ?? '').replace(/\./g, '').replace(/\s/g, '').replace(',', '.')) || 0;
@@ -178,13 +233,36 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                         <MapPin size={18} color="#10b981" /> Adresse <span style={{ fontWeight: 400, fontSize: '0.85rem', color: '#94a3b8' }}>(hvor opgaven er)</span>
                     </h3>
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 2fr', gap: '14px' }}>
-                        <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1' }}>
+                        <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1', position: 'relative' }}>
                             <label style={labelStyle}>Vej og nr.</label>
-                            <input style={inputStyle} value={customer.address} onChange={(e) => setC({ address: e.target.value })} placeholder="Byggevej 12" />
+                            <input
+                                style={inputStyle}
+                                value={customer.address}
+                                onChange={(e) => handleAddressChange(e.target.value)}
+                                onFocus={() => { if (addrSuggestions.length > 0) setShowAddrSuggestions(true); }}
+                                onBlur={() => { addrBlurRef.current = setTimeout(() => setShowAddrSuggestions(false), 150); }}
+                                placeholder="Byggevej 12"
+                                autoComplete="off"
+                            />
+                            {showAddrSuggestions && addrSuggestions.length > 0 && (
+                                <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: '4px', position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: '240px', overflowY: 'auto' }}>
+                                    {addrSuggestions.map((item, idx) => (
+                                        <li
+                                            key={item.tekst || idx}
+                                            onMouseDown={(e) => { e.preventDefault(); selectAddress(item); }}
+                                            style={{ padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                        >
+                                            {item.tekst}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                         <div>
                             <label style={labelStyle}>Postnr.</label>
-                            <input style={inputStyle} value={customer.zip} onChange={(e) => setC({ zip: e.target.value.replace(/[^\d]/g, '').slice(0, 4) })} placeholder="8000" inputMode="numeric" />
+                            <input style={inputStyle} value={customer.zip} onChange={(e) => handleZipChange(e.target.value)} placeholder="8000" inputMode="numeric" />
                         </div>
                         <div style={{ gridColumn: isMobile ? 'auto' : '2 / 4' }}>
                             <label style={labelStyle}>By</label>
