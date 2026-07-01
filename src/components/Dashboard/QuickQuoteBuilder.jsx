@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLoadScript, Autocomplete } from '@react-google-maps/api';
-import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic, Files, Bold, Italic, Underline, List, ListOrdered, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight, Table as TableIcon } from 'lucide-react';
+import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic, Files, Bold, Italic, Underline, List, ListOrdered, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight, Table as TableIcon, ChevronLeft, Eye } from 'lucide-react';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -335,6 +335,14 @@ const PREVIEW_CSS = `
   .qqb-paperfoot{padding:13px 14px 15px;}
   .qqb-papername{font-weight:800;font-size:0.9rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .qqb-paperedit:hover{border-color:#94a3b8 !important;background:#f8fafc !important;}
+  /* Arbejdsbeskrivelse-kort (mobil): tryk for at åbne fuldskærms-editoren */
+  .qqb-desccard{position:relative;display:block;width:100%;text-align:left;padding:0;border:1px solid #e2e8f0;border-radius:16px;background:#fff;cursor:pointer;overflow:hidden;box-shadow:0 6px 18px rgba(15,23,42,.06);transition:transform .12s ease,box-shadow .15s ease,border-color .12s ease;-webkit-tap-highlight-color:transparent;}
+  .qqb-desccard:active{transform:scale(.994);box-shadow:0 4px 12px rgba(15,23,42,.08);border-color:#cbd5e1;}
+  .qqb-desccard-body{position:relative;max-height:168px;overflow:hidden;padding:16px 18px 8px;font-size:0.9rem;line-height:1.55;color:#334155;}
+  .qqb-desccard-body::after{content:'';position:absolute;left:0;right:0;bottom:0;height:52px;background:linear-gradient(transparent,#fff);}
+  .qqb-desccard-foot{display:flex;align-items:center;gap:7px;padding:12px 18px;border-top:1px solid #f1f5f9;color:#1d4ed8;font-weight:800;font-size:0.85rem;background:linear-gradient(145deg,#f8fafc,#eff6ff);}
+  .qqb-desccard-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:30px 20px;border-style:dashed;border-color:#bfdbfe;background:linear-gradient(160deg,#f8fafc,#eff6ff);}
+  .qqb-desccard-emptyicon{width:52px;height:52px;border-radius:50%;background:#fff;border:1px solid #dbeafe;display:flex;align-items:center;justify-content:center;color:#3b82f6;margin-bottom:8px;box-shadow:0 6px 16px rgba(59,130,246,.18);}
   /* Word-agtigt dokument i editoren */
   .qqb-docpage{padding:clamp(28px,5vw,56px) clamp(24px,6vw,64px);}
   .qqb-docpage h1,.qqb-editor h1{font-size:1.7rem;font-weight:800;color:#0f172a;margin:16px 0 8px;line-height:1.25;}
@@ -475,6 +483,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     // eller om brugeren har skrevet egne ting (og dermed skal advares før overskrivning).
     const lastTemplateHtmlRef = useRef('');
 
+    // ---- Arbejdsbeskrivelse i fuldskærm (kun mobil) ----
+    // På mobil er den inline værktøjslinje uoverskuelig. I stedet vises et lille kort,
+    // og redigeringen sker i et fuldskærms-vindue med indbygget PDF-forhåndsvisning,
+    // så man aldrig behøver forlade beskrivelsen for at se, hvordan tilbuddet ser ud.
+    const [descEditorOpen, setDescEditorOpen] = useState(false);
+    const [descShowPdf, setDescShowPdf] = useState(false);
+    const closeDescEditor = () => { setDescShowPdf(false); setDescEditorOpen(false); };
+
     // Hent firmaets skabeloner én gang ved mount.
     useEffect(() => {
         let alive = true;
@@ -515,6 +531,13 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         if (!tplModalOpen) return;
         requestAnimationFrame(() => { if (tplEditorRef.current) tplEditorRef.current.innerHTML = tplEditing?.body_html || ''; });
     }, [tplModalOpen, tplEditing]);
+
+    // Pod arbejdsbeskrivelses-editoren når fuldskærms-vinduet åbnes (mobil). Springer over
+    // mens PDF'en vises, så teksten ikke gen-podes bag den (og markøren ikke hopper).
+    useEffect(() => {
+        if (!descEditorOpen || descShowPdf) return;
+        requestAnimationFrame(() => { if (workEditorRef.current) workEditorRef.current.innerHTML = workDescHtml || ''; });
+    }, [descEditorOpen, descShowPdf]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const saveTemplate = async () => {
         const name = tplName.trim();
@@ -1592,7 +1615,23 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             Indsæt en færdig tekst med ét klik — eller byg en ny. Den sættes ind, så du frit kan rette i den.
                         </p>
                     </div>
-                    {renderRichEditor(workEditorRef, setWorkDescHtml, 'Skriv arbejdsbeskrivelsen frit — markér tekst og gør den fed, lav punkter, eller indsæt direkte fra Word.', '96px', workDictation)}
+                    {isMobile ? (
+                        // Mobil: et roligt kort man trykker på — al redigering sker i fuldskærm.
+                        (workDescHtml || '').trim() ? (
+                            <button type="button" className="qqb-desccard" onClick={() => { setDescShowPdf(false); setDescEditorOpen(true); }}>
+                                <div className="qqb-desccard-body qqb-paperdoc" dangerouslySetInnerHTML={{ __html: sanitizeHtml(workDescHtml) }} />
+                                <div className="qqb-desccard-foot"><Pencil size={15} /> Tryk for at redigere</div>
+                            </button>
+                        ) : (
+                            <button type="button" className="qqb-desccard qqb-desccard-empty" onClick={() => { setDescShowPdf(false); setDescEditorOpen(true); }}>
+                                <div className="qqb-desccard-emptyicon"><Pencil size={20} /></div>
+                                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1d4ed8' }}>Skriv arbejdsbeskrivelsen</div>
+                                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: 3 }}>Tryk for at åbne — du får hele skærmen at skrive på.</div>
+                            </button>
+                        )
+                    ) : (
+                        renderRichEditor(workEditorRef, setWorkDescHtml, 'Skriv arbejdsbeskrivelsen frit — markér tekst og gør den fed, lav punkter, eller indsæt direkte fra Word.', '96px', workDictation)
+                    )}
                 </div>
                 <div style={editSection}>
                     <h3 style={editH}><Plus size={18} color="#64748b" /> Tillæg</h3>
@@ -2028,6 +2067,85 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                 >
                                     <Trash2 size={17} /> {busy ? 'Sletter…' : 'Ja, slet tilbud'}
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Arbejdsbeskrivelse i fuldskærm (kun mobil): skriv i ro, og forhåndsvis PDF'en
+                    uden at forlade vinduet. Ligger under skabelon-modalerne i z-index, så
+                    "Skabeloner" herfra lægger sig pænt ovenpå. */}
+                {isMobile && descEditorOpen && (
+                    <div
+                        className="qqb-confirm-backdrop"
+                        style={{ position: 'fixed', inset: 0, zIndex: 100080, background: 'rgba(15,23,42,0.62)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', flexDirection: 'column' }}
+                    >
+                        <div style={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', background: '#eef2f6', overflow: 'hidden' }}>
+                            {/* Top-bjælke: tilbage + titel + skabeloner */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'calc(12px + env(safe-area-inset-top)) 14px 12px', background: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+                                <button type="button" onClick={descShowPdf ? () => setDescShowPdf(false) : closeDescEditor} className="qqb-close" title={descShowPdf ? 'Tilbage til tekst' : 'Færdig'}
+                                    style={{ width: 40, height: 40, borderRadius: 11, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    {descShowPdf ? <ChevronLeft size={22} /> : <X size={20} />}
+                                </button>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '1.02rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>{descShowPdf ? "Forhåndsvisning" : 'Arbejdsbeskrivelse'}</div>
+                                    <div style={{ fontSize: '0.74rem', color: '#94a3b8', lineHeight: 1.3 }}>{descShowPdf ? 'Sådan ser tilbuddet ud lige nu' : 'Skriv frit — hele skærmen er din'}</div>
+                                </div>
+                                {!descShowPdf && (
+                                    <button type="button" className="qqb-newtpl" onClick={() => setTplLibraryOpen(true)}
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 11, border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', flexShrink: 0 }}>
+                                        <Files size={15} /> Skabeloner{templates.length ? ` (${templates.length})` : ''}
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Krop: enten skrive-lærred eller live PDF. Begge holdes i DOM'en,
+                                så editoren beholder sit indhold når man skifter frem og tilbage. */}
+                            <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+                                <div className="qqb-col" style={{ position: 'absolute', inset: 0, overflowY: 'auto', padding: '12px 10px', display: descShowPdf ? 'none' : 'block' }}>
+                                    <div style={{ maxWidth: 820, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 10px 40px rgba(15,23,42,0.12)' }}>
+                                        {renderRichEditor(workEditorRef, setWorkDescHtml, 'Skriv arbejdsbeskrivelsen frit — markér tekst og gør den fed, lav punkter, eller indsæt direkte fra Word.', 'min(62vh, 760px)', workDictation, true)}
+                                    </div>
+                                </div>
+                                {descShowPdf && (
+                                    <div style={{ position: 'absolute', inset: 0, background: '#1e293b', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '14px 12px' }}>
+                                        {regenerating && (
+                                            <div style={{ position: 'absolute', top: 18, right: 18, zIndex: 3, background: 'rgba(15,23,42,0.82)', color: '#fff', padding: '6px 12px', borderRadius: 999, fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 7, backdropFilter: 'blur(4px)' }}>
+                                                <span className="qqb-spin" style={{ width: 11, height: 11, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block' }} />
+                                                Opdaterer…
+                                            </div>
+                                        )}
+                                        <div style={{ flex: 1, minHeight: 0, width: '100%', maxWidth: 760, borderRadius: 14, background: '#fff', boxShadow: '0 24px 60px rgba(0,0,0,0.45)', overflow: 'hidden' }}>
+                                            {frontUrl ? (
+                                                <iframe title="Arbejdsbeskrivelse PDF" src={viewerSrc(frontUrl)} style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }} />
+                                            ) : (
+                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>Genererer…</div>
+                                            )}
+                                        </div>
+                                        <a className="qqb-link" href={frontUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 12, color: '#93c5fd', fontWeight: 600, fontSize: '0.88rem' }}>Åbn i nyt vindue ▸</a>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Bundbjælke: forhåndsvis / færdig — store, tommelfinger-venlige knapper. */}
+                            <div style={{ display: 'flex', gap: 10, padding: '12px 14px calc(12px + env(safe-area-inset-bottom))', background: '#fff', borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
+                                {descShowPdf ? (
+                                    <button type="button" onClick={() => setDescShowPdf(false)}
+                                        style={{ flex: 1, padding: '15px', borderRadius: 13, border: 'none', background: 'linear-gradient(145deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(37,99,235,0.32)' }}>
+                                        <Pencil size={17} /> Ret i teksten
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button type="button" onClick={() => setDescShowPdf(true)}
+                                            style={{ flex: 1, padding: '15px', borderRadius: 13, border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                            <Eye size={18} /> Forhåndsvis PDF
+                                        </button>
+                                        <button type="button" onClick={closeDescEditor}
+                                            style={{ flex: 1, padding: '15px', borderRadius: 13, border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(16,185,129,0.32)' }}>
+                                            <CheckCircle2 size={18} /> Færdig
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
