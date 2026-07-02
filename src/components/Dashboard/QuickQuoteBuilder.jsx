@@ -716,8 +716,12 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         ...customer,
         address: [customer.address, [customer.zip, customer.city].filter(Boolean).join(' ')].filter(Boolean).join(', ').trim(),
     });
-    // Davidsen-PDF
+    // Davidsen-PDF (nyligt valgt fil, endnu ikke uploadet)
     const [materialFile, setMaterialFile] = useState(null);
+    // Allerede gemte materiale-PDF'er (fx fra Stark/Bygma) — vises så de kan fjernes igen.
+    const [savedPdfs, setSavedPdfs] = useState(initialLead?.raw_data?.material_pdfs || []);
+    // PDF der afventer bekræftelse på fjernelse ({...pdf} for gemt, {transient:true} for den valgte fil).
+    const [pdfToRemove, setPdfToRemove] = useState(null);
     // Personlig besked i selve mailen (kunden får detaljerne her + i arbejdsbeskrivelsen).
     const [emailMessage, setEmailMessage] = useState(initialLead?.raw_data?.custom_message || STANDARD_EMAIL_MSG);
     // Hvor mange dage tilbuddet er gyldigt (vises i PDF + mail, og styrer udløb på kunde-siden).
@@ -1050,7 +1054,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             // 3) Gem lead — opdater eksisterende kladde eller indsæt ny
             // Et allerede sendt tilbud forbliver "Sendt tilbud" — det hopper ikke tilbage til kladde.
             const status = (sendToCustomer || wasSent) ? 'Sendt tilbud' : 'Tilbudskladder';
-            const existingPdfs = initialLead?.raw_data?.material_pdfs || [];
+            // Behold de gemte PDF'er (minus dem tømreren har fjernet) og læg evt. ny fil til.
             // Fuld adresse til visning/Google Maps-links i lead-/sagslisten.
             const fullAddress = [customer.address, [customer.zip, customer.city].filter(Boolean).join(' ')]
                 .filter(Boolean).join(', ').trim();
@@ -1084,7 +1088,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 // Strukturerede kundefelter bevares så de kan genindlæses korrekt ved redigering.
                 customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city, customerType, cvr: customerType === 'erhverv' ? cvr : '' },
                 quote_pdf_url: quotePdfUrl ? `${quotePdfUrl}?t=${Date.now()}` : (initialLead?.raw_data?.quote_pdf_url),
-                material_pdfs: materialFile ? [...existingPdfs, ...materialPdfs] : existingPdfs,
+                material_pdfs: [...savedPdfs, ...materialPdfs],
                 checklist: initialLead?.raw_data?.checklist || seedChecklist(quoteObj.workLines),
             };
 
@@ -1207,14 +1211,50 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         </>
     );
 
+    // Fjern en PDF efter bekræftelse. Gemte PDF'er persisteres straks (så fjernelsen
+    // holder, også hvis man ikke gemmer tilbuddet bagefter); en netop valgt fil ryddes bare.
+    const confirmRemovePdf = async () => {
+        const target = pdfToRemove;
+        if (!target) return;
+        setPdfToRemove(null);
+        if (target.transient) { setMaterialFile(null); toast.success('PDF fjernet'); return; }
+        const next = savedPdfs.filter(p => p.id !== target.id);
+        setSavedPdfs(next);
+        if (initialLead?.id) {
+            try {
+                const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', initialLead.id).single();
+                const merged = { ...(latest?.raw_data || initialLead.raw_data || {}), material_pdfs: next };
+                const { error } = await supabase.from('leads').update({ raw_data: merged }).eq('id', initialLead.id);
+                if (error) throw error;
+            } catch (e) {
+                setSavedPdfs(savedPdfs); // rul tilbage ved fejl
+                toast.error(friendlyError(e, 'Kunne ikke fjerne PDF\'en. Prøv igen.'));
+                return;
+            }
+        }
+        toast.success('PDF fjernet');
+    };
+
     const renderUploadField = () => (
         <>
             <label style={{ ...label, marginTop: '14px' }}>Materialeliste (PDF)</label>
+            {/* Allerede gemte PDF'er (fx fra Stark/Bygma) — kan åbnes og fjernes igen */}
+            {savedPdfs.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
+                    {savedPdfs.map(p => (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+                            <FileText size={18} color="#dc2626" style={{ flexShrink: 0 }} />
+                            <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, fontSize: '0.9rem', color: '#0f172a', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>{p.name || 'Materialeliste'}</a>
+                            <button onClick={() => setPdfToRemove(p)} title="Fjern PDF" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px', display: 'flex' }}><Trash2 size={16} /></button>
+                        </div>
+                    ))}
+                </div>
+            )}
             {materialFile ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
                     <FileText size={18} color="#16a34a" />
                     <span style={{ flex: 1, fontSize: '0.9rem', color: '#166534', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{materialFile.name}</span>
-                    <button onClick={() => setMaterialFile(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><Trash2 size={16} /></button>
+                    <button onClick={() => setPdfToRemove({ transient: true, name: materialFile.name })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><Trash2 size={16} /></button>
                 </div>
             ) : (
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', border: '2px dashed #cbd5e1', borderRadius: '12px', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
@@ -2066,6 +2106,45 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                     style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(239,68,68,0.32)' }}
                                 >
                                     <Trash2 size={17} /> {busy ? 'Sletter…' : 'Ja, slet tilbud'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Bekræftelse ved fjernelse af en vedhæftet materiale-PDF */}
+                {pdfToRemove && (
+                    <div
+                        className="qqb-confirm-backdrop"
+                        onClick={() => setPdfToRemove(null)}
+                        style={{ position: 'fixed', inset: 0, zIndex: 100080, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 'calc(24px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
+                    >
+                        <div
+                            className="qqb-confirm-card"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: 'min(440px, 100%)', background: '#fff', borderRadius: 24, padding: '34px 30px 26px', textAlign: 'center', boxShadow: '0 30px 80px rgba(15,23,42,0.45)' }}
+                        >
+                            <div className="qqb-confirm-icon" style={{ width: 72, height: 72, borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px' }}>
+                                <Trash2 size={32} color="#ef4444" />
+                            </div>
+                            <h2 style={{ margin: '0 0 12px', fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>Fjern PDF'en?</h2>
+                            <p style={{ margin: '0 0 28px', color: '#64748b', fontSize: '1rem', lineHeight: 1.55 }}>
+                                Er du sikker på, at du vil fjerne <strong style={{ color: '#0f172a' }}>{pdfToRemove.name || 'materialelisten'}</strong> fra tilbuddet?
+                            </p>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                                <button
+                                    className="qqb-confirm-cancel"
+                                    onClick={() => setPdfToRemove(null)}
+                                    style={{ flex: 1, padding: '14px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
+                                >
+                                    Fortryd
+                                </button>
+                                <button
+                                    className="qqb-confirm-delete"
+                                    onClick={confirmRemovePdf}
+                                    style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(239,68,68,0.32)' }}
+                                >
+                                    <Trash2 size={17} /> Ja, fjern PDF
                                 </button>
                             </div>
                         </div>

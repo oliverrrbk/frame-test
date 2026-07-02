@@ -40,9 +40,10 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
             const existingList = lead.raw_data?.material_list;
             if (existingList && existingList.length > 0) {
                 setMaterials(existingList.map(m => ({ ...m, listId: m.listId || 'default' })));
-            } else if (lead.raw_data?.is_manual_case) {
-                // Sag oprettet manuelt uden bekræftet tilbud: generér ALDRIG en liste —
-                // tømreren skal selv oprette den. Tom = "ingen liste endnu" (empty state).
+            } else if (lead.raw_data?.is_manual_case || lead.raw_data?.material_list_cleared) {
+                // Sag oprettet manuelt uden bekræftet tilbud — ELLER en liste tømreren
+                // selv har slettet: generér ALDRIG (den ville ellers dukke op igen ved reload).
+                // Tom = "ingen liste endnu" (empty state).
                 setMaterials([]);
             } else {
                 const generated = generateMaterialList(
@@ -79,7 +80,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
         setMaterials(updated);
     };
 
-    const handleSaveList = async (materialsToSave = materials, metaToSave = materialListsMeta) => {
+    const handleSaveList = async (materialsToSave = materials, metaToSave = materialListsMeta, extraPatch = {}) => {
         setIsSaving(true);
         try {
             const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
@@ -89,7 +90,8 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                 ...currentRawData,
                 material_list: materialsToSave,
                 material_lists_meta: metaToSave,
-                delivery_info: deliveryInfo
+                delivery_info: deliveryInfo,
+                ...extraPatch
             };
 
             const { error } = await supabase
@@ -278,9 +280,11 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
         const newMaterials = materials.filter(m => m.listId !== listToDelete);
         setMaterialListsMeta(newMeta);
         setMaterials(newMaterials);
-        handleSaveList(newMaterials, newMeta);
+        // Når der ikke er flere varer tilbage: markér listen som bevidst slettet, så
+        // beregnerens forslag ikke gen-genereres ved næste indlæsning.
+        handleSaveList(newMaterials, newMeta, newMaterials.length === 0 ? { material_list_cleared: true } : {});
         setListToDelete(null);
-        toast.success('Materialelisten blev slettet');
+        toast.success('Materiallisten blev slettet');
     };
 
     const handleUpdateListMeta = (listId, field, value) => {
@@ -597,6 +601,10 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: 'none', background: allDelivered ? '#f0fdf4' : '#10b981', color: allDelivered ? '#166534' : '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
                                             {allDelivered ? <><Trash2 size={15} /> Fortryd leveret</> : <><Truck size={15} /> Markér leveret</>}
                                         </button>
+                                        <button onClick={() => setListToDelete(list.id)} title="Slet hele materiallisten"
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+                                            <Trash2 size={15} /> Slet materialliste
+                                        </button>
                                     </>
                                 )}
                             </div>
@@ -628,6 +636,34 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                             <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: isOverBudget ? '#ef4444' : '#10b981' }}>{budgetRemaining > 0 ? '+' : ''}{budgetRemaining.toLocaleString('da-DK')} kr.</div>
                         </div>
                     </div>
+                )}
+
+                {/* Bekræft sletning af hel materialliste */}
+                {listToDelete && createPortal(
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+                        <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '440px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                                <div style={{ padding: '12px', backgroundColor: '#fee2e2', color: '#ef4444', borderRadius: '50%' }}>
+                                    <Trash2 size={28} />
+                                </div>
+                                <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a' }}>Slet materialliste?</h2>
+                            </div>
+                            <p style={{ color: '#64748b', fontSize: '1rem', lineHeight: '1.5', marginBottom: '32px' }}>
+                                Er du sikker på, at du vil slette denne materialliste og <strong>alle dens varer</strong>? Handlingen kan ikke fortrydes.
+                            </p>
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                                <button onClick={() => setListToDelete(null)}
+                                    style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569' }}>
+                                    Annullér
+                                </button>
+                                <button onClick={confirmDeleteList}
+                                    style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: '#ef4444', color: 'white', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)' }}>
+                                    Ja, slet liste
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
                 )}
 
                 <style dangerouslySetInnerHTML={{__html: `@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}} />
