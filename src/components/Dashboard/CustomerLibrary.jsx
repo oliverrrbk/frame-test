@@ -472,20 +472,25 @@ function CustomerFormModal({ customer, companyId, createdBy, isMobile, onClose, 
 function CustomerDetailModal({ customer: c, leads, stats, isMobile, onClose, onEdit, onDeleted, onOpenCase, onOpenLead, onCreateQuoteForCustomer }) {
     const [tab, setTab] = useState('overblik');
     const [confirmDel, setConfirmDel] = useState(false);
+    const [busyDel, setBusyDel] = useState(false);
     const isBiz = c.customer_type === 'erhverv';
 
     const cases = leads.filter(l => CASE_STATUSES.includes(l.status));
     const quotes = leads.filter(l => QUOTE_STATUSES.includes(l.status || 'Ny forespørgsel'));
 
     const del = async () => {
+        if (busyDel) return;
+        setBusyDel(true);
         try {
             const { error } = await supabase.from('customers').delete().eq('id', c.id);
             if (error) throw error;
             toast.success('Kunde slettet. (Sager og tilbud bevares.)');
+            setConfirmDel(false);
             onDeleted(c.id);
         } catch (e) {
             console.error('Kunne ikke slette kunde:', e);
             toast.error('Kunne ikke slette kunden.');
+            setBusyDel(false);
         }
     };
 
@@ -535,8 +540,8 @@ function CustomerDetailModal({ customer: c, leads, stats, isMobile, onClose, onE
                         <button onClick={onEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '10px 16px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', background: 'rgba(255,255,255,0.14)', color: '#fff' }}>
                             <Pencil size={15} /> Rediger
                         </button>
-                        <button onClick={() => setConfirmDel(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '10px 14px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', background: 'rgba(239,68,68,0.18)', color: '#fca5a5' }}>
-                            <Trash2 size={15} />
+                        <button onClick={() => setConfirmDel(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '10px 16px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', background: 'rgba(239,68,68,0.18)', color: '#fca5a5' }}>
+                            <Trash2 size={15} /> Slet
                         </button>
                     </div>
                 </div>
@@ -577,19 +582,40 @@ function CustomerDetailModal({ customer: c, leads, stats, isMobile, onClose, onE
                     {tab === 'tilbud' && <LeadList leads={quotes} onOpenCase={onOpenCase} onOpenLead={onOpenLead} emptyText="Ingen tilbud på denne kunde endnu." />}
                 </div>
 
-                {confirmDel && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 1000070, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setConfirmDel(false)}>
-                        <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: '20px', padding: '26px', maxWidth: '400px', width: '100%', boxShadow: '0 30px 80px rgba(15,23,42,0.3)' }}>
-                            <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Slet {c.name}?</h3>
-                            <p style={{ margin: '0 0 20px', color: '#64748b', fontSize: '0.9rem' }}>Kundekortet fjernes fra biblioteket. Tilbud og sager bevares, men mister koblingen til kunden.</p>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                                <button onClick={() => setConfirmDel(false)} style={{ padding: '11px 18px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, color: '#475569' }}>Annullér</button>
-                                <button onClick={del} style={{ padding: '11px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 700, background: '#ef4444', color: '#fff' }}>Slet kunde</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </motion.div>
+
+            {confirmDel && createPortal(
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.62)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000090, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => !busyDel && setConfirmDel(false)}>
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.94, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.18 }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ background: '#fff', borderRadius: '24px', padding: '30px 28px', maxWidth: '420px', width: '100%', boxShadow: '0 30px 80px rgba(15,23,42,0.35)', textAlign: 'center' }}
+                    >
+                        <div style={{ width: '64px', height: '64px', margin: '0 auto 18px', borderRadius: '20px', background: 'linear-gradient(135deg,#fee2e2,#fecaca)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Trash2 size={30} color="#dc2626" />
+                        </div>
+                        <h3 style={{ margin: '0 0 10px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Slet {c.name}?</h3>
+                        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.92rem', lineHeight: 1.5 }}>
+                            Kundekortet fjernes fra dit bibliotek. Tilbud og sager bevares — de mister blot koblingen til kunden.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={() => setConfirmDel(false)} disabled={busyDel}
+                                style={{ flex: 1, padding: '13px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#fff', cursor: busyDel ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.95rem', color: '#475569', transition: 'background .18s' }}
+                                onMouseEnter={(e) => { if (!busyDel) e.currentTarget.style.background = '#f8fafc'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}>
+                                Behold kunde
+                            </button>
+                            <button onClick={del} disabled={busyDel}
+                                style={{ flex: 1, padding: '13px', borderRadius: '14px', border: 'none', cursor: busyDel ? 'wait' : 'pointer', fontWeight: 700, fontSize: '0.95rem', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', boxShadow: '0 4px 14px rgba(220,38,38,0.32)', opacity: busyDel ? 0.75 : 1, transition: 'transform .18s' }}
+                                onMouseEnter={(e) => { if (!busyDel) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; }}>
+                                {busyDel ? 'Sletter…' : 'Slet kunde'}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 }
