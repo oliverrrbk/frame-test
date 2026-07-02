@@ -3,7 +3,24 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Phone, Mail, Pencil, Trash2, Plus, X, Loader2, Wrench, HardHat, ChevronDown, MapPin, CheckCircle } from 'lucide-react';
+import { Building2, Phone, Mail, Pencil, Trash2, Plus, X, Loader2, Wrench, HardHat, ChevronDown, MapPin, CheckCircle, Send } from 'lucide-react';
+
+// Delt hjælper: send/opret gæste-login til en person på en konkret sag.
+// Bruges både af opret/redigér-modalen og af "Send gæste-login"-dialogen på kortet.
+export async function inviteGuestToLead({ leadId, invitedByCompanyId, name, email, phone, companyName, role }) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/invite-guest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+        body: JSON.stringify({
+            leadId, invitedByCompanyId, name, email, phone: phone || '',
+            companyName, role, origin: window.location.origin,
+        }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Kunne ikke sende.');
+    return data;
+}
 
 /*
  * Underleverandører = eksterne partnere/kontakter UDEN login.
@@ -60,19 +77,12 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
         if (!effLeadId) { toast.error('Vælg hvilken sag de skal have adgang til.'); return; }
         setSendingEmail(email);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch('/api/invite-guest', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-                body: JSON.stringify({
-                    leadId: effLeadId, invitedByCompanyId, name, email, phone: phone || '',
-                    companyName: form.company_name, role, origin: window.location.origin,
-                }),
+            const data = await inviteGuestToLead({
+                leadId: effLeadId, invitedByCompanyId, name, email, phone,
+                companyName: form.company_name, role,
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Kunne ikke sende.');
             setSentEmails(prev => ({ ...prev, [email]: true }));
-            toast.success(data.isNewUser === false ? 'Tilføjet til sagen! 📨' : 'Gæste-login sendt! 📨');
+            toast.success(data.isNewUser === false ? 'Tilføjet til sagen' : 'Gæste-login sendt');
         } catch (e) {
             console.error(e);
             toast.error(e.message);
@@ -88,8 +98,9 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
         const busy = sendingEmail === person.email;
         return (
             <button type="button" onClick={() => sendGuestLogin(person)} disabled={busy || done}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '10px', border: done ? '1px solid #a7f3d0' : '1px solid #bfdbfe', background: done ? '#ecfdf5' : '#eff6ff', color: done ? '#059669' : '#2563eb', fontWeight: 700, fontSize: '0.8rem', cursor: busy || done ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
-                {done ? '✓ Login sendt' : busy ? 'Sender…' : '📨 Send gæste-login'}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '8px 14px', borderRadius: '10px', border: done ? '1px solid #a7f3d0' : '1px solid #ddd6fe', background: done ? '#ecfdf5' : '#f5f3ff', color: done ? '#059669' : '#6d28d9', fontWeight: 700, fontSize: '0.8rem', cursor: busy || done ? 'default' : 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+                {done ? <CheckCircle size={15} /> : busy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                {done ? 'Login sendt' : busy ? 'Sender…' : 'Send gæste-login'}
             </button>
         );
     };
@@ -222,7 +233,7 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
 
                         {guestEnabled && (
                             <div style={{ background: 'linear-gradient(135deg,#eff6ff,#f5f3ff)', border: '1px solid #dbeafe', borderRadius: '14px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb' }}>📨 Gæste-login til Frame</div>
+                                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#6d28d9', display: 'flex', alignItems: 'center', gap: '7px' }}><Send size={15} /> Gæste-login til Frame</div>
                                 <p style={{ margin: 0, fontSize: '0.82rem', color: '#475569', lineHeight: 1.5 }}>
                                     Giv mesteren og/eller svendene adgang til sagen + deres egne timer. De vælger selv adgangskode første gang — tilføjes de senere til flere sager, sker det helt uden nyt login.
                                 </p>
@@ -601,6 +612,118 @@ function LeadSelect({ value, onChange, options }) {
     );
 }
 
+// Sikrer at en underleverandør (HELE holdet) ligger på en sags "Holdet på sagen".
+// Read-modify-write på lead.raw_data, så andre felter ikke overskrives.
+async function ensureSubcontractorOnLead(leadId, sc) {
+    const { data } = await supabase.from('leads').select('raw_data').eq('id', leadId).single();
+    const rd = data?.raw_data || {};
+    const list = Array.isArray(rd.assigned_subcontractors) ? [...rd.assigned_subcontractors] : [];
+    const allWorkerIds = (sc.workers || []).map(w => w.id);
+    const idx = list.findIndex(s => String(s.id) === String(sc.id));
+    const snapshot = {
+        id: sc.id, company_name: sc.company_name, trade: sc.trade || '',
+        contact_name: sc.contact_name || '', contact_phone: sc.contact_phone || '', contact_email: sc.contact_email || '',
+        workers: sc.workers || [], selected_workers: allWorkerIds,
+    };
+    if (idx >= 0) list[idx] = { ...list[idx], ...snapshot };
+    else list.push(snapshot);
+    await supabase.from('leads').update({ raw_data: { ...rd, assigned_subcontractors: list } }).eq('id', leadId);
+}
+
+// Dialog: send gæste-login til en underleverandørs folk (mester + svende/lærlinge)
+// på en valgt sag. At sende lægger samtidig hele holdet på sagens "Holdet på sagen".
+function GuestLoginDialog({ sc, invitedByCompanyId, selectableLeads, onClose }) {
+    const [pickedLeadId, setPickedLeadId] = useState(selectableLeads[0]?.id || '');
+    const [sent, setSent] = useState({});        // `${leadId}:${email}` -> true
+    const [sending, setSending] = useState(null); // email under afsendelse
+    const mapWorkerRole = (r) => (r === 'Lærling' ? 'apprentice' : r === 'Projektleder' ? 'project_manager' : 'journeyman');
+    const leadTitleOf = (l) => l?.raw_data?.project_title || l?.project_category || `Sag #${l?.case_number || ''}`;
+
+    const people = [
+        ...((sc.contact_name || sc.contact_email) ? [{ key: 'mester', name: sc.contact_name || sc.company_name, email: sc.contact_email, phone: sc.contact_phone, roleLabel: 'Mester', role: 'subcontractor_owner' }] : []),
+        ...((sc.workers || []).map(w => ({ key: w.id, name: w.name, email: w.email, phone: w.phone, roleLabel: w.role || 'Svend', role: mapWorkerRole(w.role) }))),
+    ];
+
+    const send = async (p) => {
+        if (!pickedLeadId) { toast.error('Vælg hvilken sag de skal have adgang til.'); return; }
+        if (!p.name?.trim() || !p.email?.trim()) { toast.error('Personen skal have navn og e-mail.'); return; }
+        setSending(p.email);
+        try {
+            const data = await inviteGuestToLead({ leadId: pickedLeadId, invitedByCompanyId, name: p.name, email: p.email, phone: p.phone, companyName: sc.company_name, role: p.role });
+            await ensureSubcontractorOnLead(pickedLeadId, sc);
+            setSent(prev => ({ ...prev, [`${pickedLeadId}:${p.email}`]: true }));
+            toast.success(data.isNewUser === false ? 'Tilføjet til sagen' : 'Gæste-login sendt');
+        } catch (e) { toast.error(e.message); }
+        finally { setSending(null); }
+    };
+
+    return createPortal(
+        <AnimatePresence>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }} transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }} onClick={(e) => e.stopPropagation()}
+                    style={{ width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', background: '#fff', borderRadius: '24px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 24px', borderBottom: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Send size={20} /></div>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.12rem', color: '#0f172a', fontWeight: 700 }}>Send gæste-login</h3>
+                                <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>{sc.company_name}</p>
+                            </div>
+                        </div>
+                        <button onClick={onClose} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}><X size={18} /></button>
+                    </div>
+                    <div style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                        {selectableLeads.length === 0 ? (
+                            <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '14px', fontSize: '0.9rem' }}>
+                                Der er ingen aktive sager endnu. Bekræft en sag først, så kan du give adgang til den.
+                            </div>
+                        ) : (
+                            <>
+                                <div>
+                                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '5px' }}>Gæste-login gælder sagen</label>
+                                    <LeadSelect value={pickedLeadId} onChange={setPickedLeadId} options={selectableLeads.map(l => ({ id: l.id, label: `${leadTitleOf(l)}${l.customer_name ? ` · ${l.customer_name}` : ''}` }))} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {people.length === 0 && (
+                                        <div style={{ fontSize: '0.88rem', color: '#94a3b8' }}>Tilføj en mester eller svende på underleverandøren først.</div>
+                                    )}
+                                    {people.map(p => {
+                                        const done = sent[`${pickedLeadId}:${p.email}`];
+                                        const busy = sending === p.email;
+                                        const noEmail = !p.email?.trim();
+                                        return (
+                                            <div key={p.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: '14px', background: '#fff' }}>
+                                                <div style={{ minWidth: 0 }}>
+                                                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.92rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name || 'Uden navn'} <span style={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.78rem' }}>· {p.roleLabel}</span></div>
+                                                    <div style={{ fontSize: '0.8rem', color: noEmail ? '#f59e0b' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{noEmail ? 'Mangler e-mail' : p.email}</div>
+                                                </div>
+                                                {noEmail ? (
+                                                    <span style={{ flexShrink: 0, fontSize: '0.78rem', color: '#94a3b8' }}>—</span>
+                                                ) : (
+                                                    <button onClick={() => send(p)} disabled={busy || done}
+                                                        style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 14px', borderRadius: '10px', border: done ? '1px solid #a7f3d0' : 'none', background: done ? '#ecfdf5' : 'linear-gradient(135deg, #7c3aed, #9333ea)', color: done ? '#059669' : '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: busy || done ? 'default' : 'pointer', boxShadow: done ? 'none' : '0 6px 14px rgba(124,58,237,0.22)', transition: 'all 0.15s' }}>
+                                                        {done ? <CheckCircle size={15} /> : busy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                                                        {done ? 'Sendt' : busy ? 'Sender…' : 'Send'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <p style={{ margin: 0, fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                                    Når du sender, får personen adgang til den valgte sag, og hele holdet lægges automatisk på sagens “Holdet på sagen”.
+                                </p>
+                            </>
+                        )}
+                    </div>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>,
+        document.body
+    );
+}
+
 // ---------------------------------------------------------------------------
 // MANAGER — fast administrationssektion (under Team)
 // ---------------------------------------------------------------------------
@@ -610,6 +733,7 @@ export function SubcontractorManager({ profile, isMobile = false, leadsData = []
     const [isLoading, setIsLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState(null);
+    const [guestDialogSc, setGuestDialogSc] = useState(null);   // underleverandør til send-login-dialog
 
     // Bekræftede sager til gæste-login-vælgeren — genbruger den allerede indlæste
     // leadsData (samme kilde som resten af appen), så listen altid er korrekt.
@@ -737,6 +861,14 @@ export function SubcontractorManager({ profile, isMobile = false, leadsData = []
                                         )}
                                     </div>
                                 )); })()}
+
+                                <button
+                                    onClick={() => setGuestDialogSc(sc)}
+                                    style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '11px', borderRadius: '12px', border: '1px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+                                    <Send size={15} /> Send gæste-login
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -752,6 +884,15 @@ export function SubcontractorManager({ profile, isMobile = false, leadsData = []
                 selectableLeads={activeLeads}
                 invitedByCompanyId={companyId}
             />
+
+            {guestDialogSc && (
+                <GuestLoginDialog
+                    sc={guestDialogSc}
+                    invitedByCompanyId={companyId}
+                    selectableLeads={activeLeads}
+                    onClose={() => setGuestDialogSc(null)}
+                />
+            )}
         </div>
     );
 }

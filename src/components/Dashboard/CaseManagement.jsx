@@ -865,6 +865,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [deletingTimeEntryId, setDeletingTimeEntryId] = useState(null);
     const [timeOverwriteWarning, setTimeOverwriteWarning] = useState(null);
     const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
+    const [subRates, setSubRates] = useState({});          // subId -> timeløn (kr/time ekskl. moms) til fakturapris-kontrol
+    const [timeDateFilter, setTimeDateFilter] = useState(null);  // null = alle dage, ellers 'YYYY-MM-DD'
 
     // States til Mesterens ugentlige medarbejder-tidsstyring
     const [selectedEmployeeForTidslog, setSelectedEmployeeForTidslog] = useState('');
@@ -1233,7 +1235,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             setAssignedSubs(assignedSubs.filter(s => s.id !== sc.id)); // toggle af
             return;
         }
-        // Gem et snapshot af firma+mester på sagen, så oplysningerne bevares
+        // Gem et snapshot af firma+mester på sagen, så oplysningerne bevares.
+        // Hele holdet kommer med (mester + alle svende/lærlinge) — så "underleverandør
+        // på sagen" altid betyder hele deres crew.
         setAssignedSubs([...assignedSubs, {
             id: sc.id,
             company_name: sc.company_name,
@@ -1242,7 +1246,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             contact_phone: sc.contact_phone || '',
             contact_email: sc.contact_email || '',
             workers: sc.workers || [],
-            selected_workers: []
+            selected_workers: (sc.workers || []).map(w => w.id)
         }]);
     };
 
@@ -1531,10 +1535,25 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         toast.success('Udfyldt som seneste registrering.');
     };
 
+    // Slår en underleverandør-person op ud fra et syntetisk id
+    // (sub:<subId>:mester  eller  sub:<subId>:w:<workerId>).
+    const subPersonFromId = (id) => {
+        if (typeof id !== 'string' || !id.startsWith('sub:')) return null;
+        const parts = id.split(':');
+        const sub = (assignedSubs || []).find(s => String(s.id) === parts[1]);
+        if (!sub) return null;
+        if (parts[2] === 'mester') return { name: sub.contact_name || sub.company_name, subId: sub.id, company: sub.company_name };
+        if (parts[2] === 'w') {
+            const w = (sub.workers || []).find(x => String(x.id) === parts.slice(3).join(':'));
+            return { name: w?.name || 'Underleverandør', subId: sub.id, company: sub.company_name };
+        }
+        return null;
+    };
+
     // Timeregistrering-håndtering
     const handleAddTimeEntry = async (e) => {
         e.preventDefault();
-        
+
         const effectiveEmployeeId = newTime.employeeId || profile?.id;
         
         if (!newTime.startTime || !newTime.endTime || !effectiveEmployeeId) {
@@ -1549,6 +1568,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
         const emp = team.find(t => t.id === effectiveEmployeeId);
         let employeeName = emp?.owner_name || emp?.company_name || emp?.email;
+        if (!employeeName) {
+            const subP = subPersonFromId(effectiveEmployeeId);
+            if (subP) employeeName = `${subP.name} (${subP.company})`;
+        }
         if (!employeeName && editingTimeId) {
             const oldEntry = timeEntries.find(t => t.id === editingTimeId);
             if (oldEntry && oldEntry.employeeId === effectiveEmployeeId) {
@@ -1817,8 +1840,24 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     // Beregn tidsbudget overholdelse (inklusive godkendte aftalesedler)
     const totalActualHours = timeEntries
-        .filter(item => ['worker', 'apprentice', 'sales'].includes(profile?.role) ? item.employeeId === profile.id : true)
+        .filter(item => ['worker', 'apprentice', 'sales', 'guest'].includes(profile?.role) ? item.employeeId === profile.id : true)
         .reduce((sum, item) => sum + item.hours, 0);
+
+    // Underleverandør-timer: alt registreret på folk uden for eget hold (mester + svende
+    // via syntetiske id'er, eller en gæst der selv logger). Bruges til den lilla boks +
+    // fakturapris-kontrol pr. underleverandør.
+    const ownTeamIds = new Set([profile?.id, ...team.map(t => t.id)].filter(Boolean).map(String));
+    const subcontractorHours = timeEntries
+        .filter(e => !ownTeamIds.has(String(e.employeeId)))
+        .reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
+    const subcontractorBreakdown = (assignedSubs || []).map(sub => {
+        const hours = timeEntries.filter(e => {
+            const p = subPersonFromId(e.employeeId);
+            return p && String(p.subId) === String(sub.id);
+        }).reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
+        return { id: sub.id, company_name: sub.company_name, hours };
+    }).filter(b => b.hours > 0);
+
     const baseBudgetedHours = parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) || 40;
     // Selvlavede tilbud har ikke et beregnet timeestimat — vis kun de FAKTISKE timer.
     const isManualCase = !!selectedCase?.raw_data?.is_manual_quote;
@@ -4301,7 +4340,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     {(() => {
                                         const myTotalHours = timeEntries.filter(t => t.employeeId === profile?.id).reduce((sum, t) => sum + parseFloat(t.hours || 0), 0).toFixed(2);
-                                        const isWorker = ['worker', 'apprentice'].includes(profile?.role);
+                                        // Begrænset visning (kun egne timer): svend, lærling OG gæst (underleverandør).
+                                        const isWorker = ['worker', 'apprentice', 'guest'].includes(profile?.role);
                                         
                                         return (
                                             <>
@@ -4340,6 +4380,18 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         </div>
                                                     </div>
                                                     )}
+
+                                                    {!isWorker && (assignedSubs.length > 0 || subcontractorHours > 0) && (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f5f3ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <Store size={22} />
+                                                        </div>
+                                                        <div style={{ textAlign: 'center' }}>
+                                                            <div style={{ fontSize: '0.7rem', color: '#7c3aed', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Underlev. timer</div>
+                                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#7c3aed' }}>{subcontractorHours.toFixed(2)} <span style={{ fontSize: '0.8rem', color: '#a78bfa', fontWeight: '600' }}>t</span></div>
+                                                        </div>
+                                                    </div>
+                                                    )}
                                                 </div>
 
                                                 <button 
@@ -4352,11 +4404,70 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         );
                                     })()}
 
+                                    {/* Underleverandør-forbrug + fakturapris-kontrol (kun mester/kontor/PL) */}
+                                    {!['worker', 'apprentice', 'guest'].includes(simulatedRole || profile?.role) && subcontractorBreakdown.length > 0 && (
+                                        <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '16px', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                <Store size={16} /> Underleverandør-forbrug
+                                            </div>
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#7c3aed', lineHeight: 1.5 }}>Indtast timeløn, så beregnes fakturaprisen — til at sammenligne med den faktura underleverandøren sender.</p>
+                                            {subcontractorBreakdown.map(b => {
+                                                const rate = parseFloat(String(subRates[b.id] ?? '').replace(/\./g, '').replace(',', '.')) || 0;
+                                                const exVat = b.hours * rate;
+                                                const vat = exVat * 0.25;
+                                                return (
+                                                    <div key={b.id} style={{ background: '#fff', border: '1px solid #e9d5ff', borderRadius: '12px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                                            <strong style={{ color: '#0f172a', fontSize: '0.92rem' }}>{b.company_name}</strong>
+                                                            <span style={{ fontSize: '0.85rem', color: '#7c3aed', fontWeight: 700 }}>{b.hours.toFixed(2)} timer</span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                                            <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Timeløn (ekskl. moms)</label>
+                                                            <div style={{ position: 'relative' }}>
+                                                                <input inputMode="decimal" value={subRates[b.id] ?? ''} onChange={(e) => setSubRates(prev => ({ ...prev, [b.id]: e.target.value.replace(/[^0-9.,]/g, '') }))} placeholder="Fx 450" style={{ width: '120px', padding: '8px 40px 8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.9rem', outline: 'none' }} />
+                                                                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>kr.</span>
+                                                            </div>
+                                                        </div>
+                                                        {rate > 0 && (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '8px', fontSize: '0.88rem' }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>Ekskl. moms</span><span>{Math.round(exVat).toLocaleString('da-DK')} kr.</span></div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>Moms (25%)</span><span>{Math.round(vat).toLocaleString('da-DK')} kr.</span></div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, color: '#7c3aed' }}><span>Inkl. moms</span><span>{Math.round(exVat + vat).toLocaleString('da-DK')} kr.</span></div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                        {timeEntries.length === 0 ? (
-                                            <p style={{ color: '#6b7280', fontSize: '0.9rem', fontStyle: 'italic', padding: '40px 16px', textAlign: 'center' }}>Ingen arbejdstimer er registreret endnu.</p>
-                                        ) : (
-                                            timeEntries.map(entry => (
+                                        {(() => {
+                                            const role = simulatedRole || profile?.role;
+                                            const canSeeAll = !['worker', 'apprentice', 'guest'].includes(role);
+                                            let entries = canSeeAll ? timeEntries : timeEntries.filter(e => e.employeeId === profile?.id);
+                                            if (timeDateFilter) entries = entries.filter(e => e.date === timeDateFilter);
+                                            const byDate = {};
+                                            entries.forEach(e => { (byDate[e.date] = byDate[e.date] || []).push(e); });
+                                            const dates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a));
+                                            return (
+                                                <>
+                                                    {timeEntries.length > 0 && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                                                            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} /> Vælg dag</label>
+                                                            <input type="date" value={timeDateFilter || ''} onChange={(e) => setTimeDateFilter(e.target.value || null)} style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '0.88rem', color: '#0f172a' }} />
+                                                            {timeDateFilter && <button type="button" onClick={() => setTimeDateFilter(null)} style={{ fontSize: '0.8rem', color: '#7c3aed', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700 }}>Ryd</button>}
+                                                        </div>
+                                                    )}
+                                                    {entries.length === 0 ? (
+                                                        <p style={{ color: '#6b7280', fontSize: '0.9rem', fontStyle: 'italic', padding: '40px 16px', textAlign: 'center' }}>{timeDateFilter ? 'Ingen timer registreret på den valgte dag.' : 'Ingen arbejdstimer er registreret endnu.'}</p>
+                                                    ) : dates.map(date => (
+                                                        <div key={date} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748b', textTransform: 'capitalize', marginTop: '4px' }}>
+                                                                {new Date(date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                                                <span style={{ color: '#a78bfa', fontWeight: 700, marginLeft: '8px' }}>· {byDate[date].reduce((s, e) => s + (parseFloat(e.hours) || 0), 0).toFixed(2)} t</span>
+                                                            </div>
+                                                            {byDate[date].map(entry => (
                                                 <div 
                                                     key={entry.id} 
                                                     className="timesheet-row log-card"
@@ -4407,8 +4518,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         )}
                                                     </div>
                                                 </div>
-                                            ))
-                                        )}
+                                            ))}
+                                                        </div>
+                                                    ))}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
 
@@ -4455,10 +4570,21 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                                 if (profile && !allWorkers.some(w => w.id === profile.id)) {
                                                                     allWorkers.unshift(profile);
                                                                 }
-                                                                return allWorkers.map(worker => ({
+                                                                const opts = allWorkers.map(worker => ({
                                                                     value: worker.id,
                                                                     label: `${worker.owner_name || worker.company_name || worker.email || 'Ukendt'}${worker.id === profile?.id ? ' (Dig)' : ''}`,
                                                                 }));
+                                                                // Underleverandørens folk (mester + svende) — så man kan registrere
+                                                                // deres faktisk udførte timer på sagen.
+                                                                (assignedSubs || []).forEach(sub => {
+                                                                    if (sub.contact_name || sub.contact_email) {
+                                                                        opts.push({ value: `sub:${sub.id}:mester`, label: `${sub.contact_name || sub.company_name} · ${sub.company_name} (Underleverandør)` });
+                                                                    }
+                                                                    (sub.workers || []).forEach(w => {
+                                                                        opts.push({ value: `sub:${sub.id}:w:${w.id}`, label: `${w.name || 'Svend'} · ${sub.company_name} (Underleverandør)` });
+                                                                    });
+                                                                });
+                                                                return opts;
                                                             })()}
                                                         />
                                                     </div>
