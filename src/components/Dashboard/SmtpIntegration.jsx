@@ -108,44 +108,48 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // hjælp. 'match' bruges til at genkende udbyderen ud fra afsender-mailens domæne.
 const SMTP_PROVIDERS = [
     {
-        key: 'gmail', name: 'Gmail / Google', emoji: '📮',
+        key: 'gmail', name: 'Gmail / Google',
         smtp_host: 'smtp.gmail.com', smtp_port: '587', imap_host: 'imap.gmail.com', imap_port: '993',
         appPassword: true, url: 'https://myaccount.google.com/apppasswords',
-        steps: [
-            'Slå 2-trins-bekræftelse til på din Google-konto (kræves for app-koder).',
-            'Åbn myaccount.google.com/apppasswords og opret en app-kode.',
-            'Kopiér den 16-cifrede kode ind i feltet "Adgangskode" herunder.',
+        // Visuel trin-for-trin guide (vises i popup). 'img' kan pege på et rigtigt
+        // screenshot i /public senere — er den tom, vises et pænt illustreret trin.
+        walkthrough: [
+            { title: 'Slå 2-trins-bekræftelse til', desc: 'Gå til din Google-konto → Sikkerhed → aktivér "2-trins-bekræftelse". Det er et krav for at kunne lave en app-kode.', img: '' },
+            { title: 'Åbn App-adgangskoder', desc: 'Gå til myaccount.google.com/apppasswords. Log ind hvis du bliver bedt om det.', img: '' },
+            { title: 'Opret en app-kode', desc: 'Giv den et navn (fx "Frame") og tryk Opret. Google viser nu en 16-cifret kode.', img: '' },
+            { title: 'Kopiér koden ind i Frame', desc: 'Kopiér den 16-cifrede kode og indsæt den i feltet "Adgangskode" her i Frame. Tryk til sidst "Test Forbindelse".', img: '' },
         ],
         match: (d) => /(^|\.)gmail\.com$|googlemail\.com$/.test(d),
     },
     {
-        key: 'microsoft', name: 'Microsoft 365 / Outlook', emoji: '📨',
+        key: 'microsoft', name: 'Microsoft 365 / Outlook',
         smtp_host: 'smtp.office365.com', smtp_port: '587', imap_host: 'outlook.office365.com', imap_port: '993',
         appPassword: true, url: 'https://account.microsoft.com/security',
-        steps: [
-            'Slå 2-trins-bekræftelse til på din Microsoft-konto.',
-            'Opret en app-adgangskode under Sikkerhed → Avancerede sikkerhedsindstillinger.',
-            'Kopiér app-koden ind i feltet "Adgangskode" herunder.',
+        walkthrough: [
+            { title: 'Slå 2-trins-bekræftelse til', desc: 'Gå til account.microsoft.com/security og aktivér 2-trins-bekræftelse på din konto.', img: '' },
+            { title: 'Find Avancerede sikkerhedsindstillinger', desc: 'Under Sikkerhed → "Avancerede sikkerhedsindstillinger" finder du App-adgangskoder.', img: '' },
+            { title: 'Opret en app-adgangskode', desc: 'Tryk "Opret en ny app-adgangskode". Microsoft viser nu en kode.', img: '' },
+            { title: 'Kopiér koden ind i Frame', desc: 'Indsæt app-koden i feltet "Adgangskode" her i Frame, og tryk "Test Forbindelse".', img: '' },
         ],
         match: (d) => /(outlook\.|hotmail\.|live\.|office365)/.test(d),
     },
     {
-        key: 'one', name: 'One.com', emoji: '1️⃣',
+        key: 'one', name: 'One.com',
         smtp_host: 'send.one.com', smtp_port: '587', imap_host: 'imap.one.com', imap_port: '993',
         appPassword: false, match: () => false,
     },
     {
-        key: 'simply', name: 'Simply.com', emoji: '💚',
+        key: 'simply', name: 'Simply.com',
         smtp_host: 'websmtp.simply.com', smtp_port: '587', imap_host: 'imap.simply.com', imap_port: '993',
         appPassword: false, match: () => false,
     },
     {
-        key: 'dandomain', name: 'DanDomain', emoji: '🇩🇰',
+        key: 'dandomain', name: 'DanDomain',
         smtp_host: 'asmtp.dandomain.dk', smtp_port: '587', imap_host: 'post.dandomain.dk', imap_port: '993',
         appPassword: false, note: 'Bemærk: DanDomains SMTP-server har et "asmtp"-præfiks (ikke "smtp").',
         match: () => false,
     },
-    { key: 'other', name: 'Andet / eget domæne', emoji: '🌐', appPassword: false, match: () => false },
+    { key: 'other', name: 'Andet / eget domæne', appPassword: false, match: () => false },
 ];
 
 const detectProvider = (email) => {
@@ -153,6 +157,50 @@ const detectProvider = (email) => {
     if (!d) return null;
     return SMTP_PROVIDERS.find(p => p.match(d)) || null;
 };
+
+// Frame-stil dropdown til udbyder-valg (ingen emojis, ren og professionel).
+const Chevron = ({ open }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9" /></svg>
+);
+
+function ProviderSelect({ value, onChange }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, []);
+    const selected = SMTP_PROVIDERS.find(p => p.key === value);
+    return (
+        <div ref={ref} style={{ position: 'relative' }}>
+            <div onClick={() => setOpen(o => !o)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: '12px', border: open ? '1px solid #db2777' : '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', userSelect: 'none', boxShadow: open ? '0 0 0 3px rgba(219,39,119,0.12)' : 'none', transition: 'all 0.15s' }}>
+                <span style={{ color: selected ? '#0f172a' : '#94a3b8', fontWeight: selected ? 600 : 400, fontSize: '0.95rem' }}>{selected ? selected.name : '— Vælg din udbyder —'}</span>
+                <Chevron open={open} />
+            </div>
+            <AnimatePresence>
+                {open && (
+                    <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 16px 32px -8px rgba(15,23,42,0.18)', zIndex: 40, overflow: 'hidden', padding: '6px', maxHeight: '280px', overflowY: 'auto' }}>
+                        {SMTP_PROVIDERS.map(p => {
+                            const active = p.key === value;
+                            return (
+                                <div key={p.key} onClick={() => { onChange(p.key); setOpen(false); }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.92rem', fontWeight: active ? 700 : 500, color: active ? '#9d174d' : '#334155', background: active ? '#fce7f3' : 'transparent', transition: 'background 0.12s' }}
+                                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#f8fafc'; }}
+                                    onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                                    <span>{p.name}</span>
+                                    {active && <CheckCircle2 size={16} style={{ color: '#db2777' }} />}
+                                </div>
+                            );
+                        })}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
 
 const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedIntegration }) => {
     const isExpanded = expandedIntegration === 'smtp';
@@ -171,6 +219,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
     const [isConfigured, setIsConfigured] = useState(false);
     const [provider, setProvider] = useState('');       // valgt udbyder-key ('' = ingen valgt endnu)
     const [showAdvanced, setShowAdvanced] = useState(false);  // vis server/port-felter for kendte udbydere
+    const [showProviderGuide, setShowProviderGuide] = useState(false);  // trin-popup for app-kode-udbydere
     const [showHelpModal, setShowHelpModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
@@ -214,6 +263,8 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                 smtp_user: prev.smtp_user || prev.smtp_from_email || '',
             }));
             setShowAdvanced(false);
+            // App-kode-udbydere (Gmail/Microsoft): åbn den visuelle trin-guide med det samme.
+            if (p.appPassword) setShowProviderGuide(true);
         } else {
             setShowAdvanced(true);   // 'Andet': vis felterne, så man kan skrive dem selv
         }
@@ -351,22 +402,10 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {/* Udbyder-vælger — auto-udfylder server/port */}
+                        {/* Udbyder-vælger (Frame-dropdown) — auto-udfylder server/port */}
                         <div className="input-group">
                             <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>Vælg din udbyder</label>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                {SMTP_PROVIDERS.map(p => {
-                                    const active = provider === p.key;
-                                    return (
-                                        <button key={p.key} type="button" onClick={() => applyProvider(p.key)}
-                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 14px', borderRadius: '999px', border: active ? '1px solid #db2777' : '1px solid #e2e8f0', background: active ? '#fce7f3' : '#fff', color: active ? '#9d174d' : '#475569', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.15s' }}
-                                            onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#f8fafc'; }}
-                                            onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = '#fff'; }}>
-                                            <span>{p.emoji}</span> {p.name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <ProviderSelect value={provider} onChange={applyProvider} />
                             <span style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'block' }}>Vi udfylder automatisk server og port for dig.</span>
                         </div>
 
@@ -378,12 +417,15 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                                 return (
                                     <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '14px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, color: '#c2410c', fontSize: '0.9rem' }}><AlertTriangle size={16} /> {p.name} kræver en app-kode</div>
-                                        <ol style={{ margin: 0, paddingLeft: '18px', color: '#7c2d12', fontSize: '0.85rem', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            {p.steps.map((s, i) => <li key={i}>{s}</li>)}
-                                        </ol>
-                                        <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 14px', borderRadius: '10px', background: '#db2777', color: '#fff', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none' }}>
-                                            <ExternalLink size={15} /> Åbn app-kode-siden
-                                        </a>
+                                        <p style={{ margin: 0, color: '#7c2d12', fontSize: '0.85rem', lineHeight: 1.6 }}>Brug ikke din normale adgangskode — opret en app-kode. Følg den korte trin-guide, så er du klar på et øjeblik.</p>
+                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                            <button type="button" onClick={() => setShowProviderGuide(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 14px', borderRadius: '10px', background: '#db2777', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+                                                <BookOpen size={15} /> Vis trin-guide
+                                            </button>
+                                            <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 14px', borderRadius: '10px', background: '#fff', color: '#c2410c', border: '1px solid #fed7aa', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none' }}>
+                                                <ExternalLink size={15} /> Åbn app-kode-siden
+                                            </a>
+                                        </div>
                                     </div>
                                 );
                             }
@@ -594,6 +636,13 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                         </div>
 
                         {isConfigured && (
+                            <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }}>
+                                <CheckCircle2 size={20} style={{ flexShrink: 0 }} />
+                                <span style={{ fontSize: '0.92rem', fontWeight: 700 }}>Din mail er sat op og klar{testResult?.success ? ' — testet og virker' : ''}.</span>
+                            </div>
+                        )}
+
+                        {isConfigured && (
                             <button
                                 style={{ width: '100%', marginTop: '8px', padding: '10px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
                                 onClick={handleDisconnect}
@@ -606,6 +655,44 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                 </div>
             )}
         </div>
+
+        {/* --- TRIN-GUIDE POPUP (app-kode-udbydere) --- */}
+        {showProviderGuide && createPortal((() => {
+            const p = SMTP_PROVIDERS.find(x => x.key === provider);
+            if (!p || !p.appPassword) return null;
+            return (
+                <div onClick={() => setShowProviderGuide(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                    <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#fce7f3', color: '#db2777', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Mail size={20} /></div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.12rem', color: '#0f172a', fontWeight: 700 }}>Sådan får du en app-kode</h3>
+                                    <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>{p.name}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowProviderGuide(false)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}><X size={18} /></button>
+                        </div>
+                        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {(p.walkthrough || []).map((step, i) => (
+                                <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                                    <div style={{ flexShrink: 0, width: '30px', height: '30px', borderRadius: '50%', background: '#db2777', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem' }}>{i + 1}</div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.95rem' }}>{step.title}</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.55, marginTop: '2px' }}>{step.desc}</div>
+                                        {step.img && <img src={step.img} alt={step.title} style={{ width: '100%', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '10px' }} />}
+                                    </div>
+                                </div>
+                            ))}
+                            <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', background: '#db2777', color: '#fff', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>
+                                <ExternalLink size={16} /> Åbn app-kode-siden
+                            </a>
+                            <button type="button" onClick={() => setShowProviderGuide(false)} style={{ background: 'none', border: 'none', color: '#64748b', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', padding: '4px' }}>Luk og udfyld selv</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        })(), document.body)}
 
         {/* --- HELP MODAL --- */}
         {showHelpModal && createPortal(
