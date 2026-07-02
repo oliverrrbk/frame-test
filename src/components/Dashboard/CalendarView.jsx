@@ -134,7 +134,8 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [collisionWarning, setCollisionWarning] = useState(null); // { lead, day, daysDuration }
 
     // Sag-planlægning fra kalenderen (additivt — ny funktion)
-    const [showAddChooser, setShowAddChooser] = useState(false);          // "+"-vælger (mobil)
+    const [showAddChooser, setShowAddChooser] = useState(false);          // vælger: sag eller aftale
+    const [chooserDate, setChooserDate] = useState(null);                 // dagen der blev trykket på
     const [showCasePicker, setShowCasePicker] = useState(false);          // vælg sag
     const [casePickerSearch, setCasePickerSearch] = useState('');
     const [scheduleConfirm, setScheduleConfirm] = useState(null);         // { lead, startDate, durationDays, mode }
@@ -213,6 +214,14 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         setShowEventModal(true);
     };
 
+    // Tryk på en vilkårlig dag i kalenderen: lad brugeren vælge om der skal
+    // planlægges en sag eller oprettes en aftale (i stedet for at gå direkte
+    // til aftale-modalen). Husker dagen, så begge veje starter på den dato.
+    const openAddChooser = (dateObj) => {
+        setChooserDate(dateObj || null);
+        setShowAddChooser(true);
+    };
+
     // ----------------- DATA PREPARATION -----------------
     
     // 1. Relevante bygge-sager
@@ -244,6 +253,11 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             if (!selectedEmployeeIds.includes('all') && selectedEmployeeIds.length > 0) {
                 const workers = lead.raw_data?.assigned_workers || [];
                 const pms = lead.raw_data?.assigned_pm || [];
+                // Sager uden tildelt hold hører ikke til nogen bestemt medarbejder. Vis dem
+                // altid — ellers bliver en netop oprettet/bekræftet sag (der endnu ikke har
+                // et hold) usynlig i gitteret, når kalenderen er filtreret til én person.
+                // Det var årsagen til at planlagte sager "ikke satte sig ind på dagene".
+                if (workers.length === 0 && pms.length === 0) return true;
                 if (!workers.some(w => selectedEmployeeIds.includes(String(w))) && !pms.some(p => selectedEmployeeIds.includes(String(p)))) return false;
             }
             return true;
@@ -1059,7 +1073,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         
                         {/* Tilføj aftale */}
                         {(
-                            <button onClick={() => setShowAddChooser(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                            <button onClick={() => openAddChooser(selectedMobileDate)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                                 <Plus size={24} color="#0f172a" strokeWidth={3} />
                             </button>
                         )}
@@ -1525,7 +1539,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             <div
                                 key={day}
                                 data-cal-day={`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
-                                onClick={() => openModalForDate(checkDate)}
+                                onClick={() => openAddChooser(checkDate)}
                                 onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
                                 onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = isToday ? '#3b82f6' : '#e2e8f0'; }}
                                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(226, 232, 240, 0.8)'; }}
@@ -1642,7 +1656,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     const { isHoliday, leads, absences, events } = getItemsForDay(checkDate);
 
                     return (
-                        <div key={idx} onClick={() => openModalForDate(checkDate)} 
+                        <div key={idx} onClick={() => openAddChooser(checkDate)}
                             onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(226, 232, 240, 0.8)'; }}
                             onDragLeave={(e) => { e.currentTarget.style.background = isToday ? '#eff6ff' : '#fff'; clearDragTimeout(); }}
                             onDrop={(e) => { e.preventDefault(); e.currentTarget.style.background = isToday ? '#eff6ff' : '#fff'; handleDropOnDate(checkDate); }}
@@ -1732,7 +1746,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     if (items.events.length > 0 && items.leads.length === 0) color = '#bae6fd';
                                     if (items.leads.length > 2) color = '#3b82f6'; // Travl
                                     
-                                    return <div key={dIdx} onClick={(e) => { e.stopPropagation(); openModalForDate(d); }} style={{ width: '12px', height: '12px', borderRadius: '3px', background: color, cursor: isManager ? 'pointer' : 'default' }} title={`${dIdx+1}. ${monthNames[mIdx]}`} />
+                                    return <div key={dIdx} onClick={(e) => { e.stopPropagation(); openAddChooser(d); }} style={{ width: '12px', height: '12px', borderRadius: '3px', background: color, cursor: isManager ? 'pointer' : 'default' }} title={`${dIdx+1}. ${monthNames[mIdx]}`} />
                                 })}
                             </div>
                         </div>
@@ -2290,17 +2304,20 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             )}
             {/* MODAL: "+"-VÆLGER (Ny begivenhed / Tilføj sag) */}
             {showAddChooser && createPortal(
-                <div onClick={() => setShowAddChooser(false)} style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', padding: isMobile ? 0 : '20px' }}>
+                <div onClick={() => { setShowAddChooser(false); setChooserDate(null); }} style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', padding: isMobile ? 0 : '20px' }}>
                     <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: isMobile ? 40 : 16, scale: isMobile ? 1 : 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                         style={{ background: '#fff', width: '100%', maxWidth: isMobile ? '100%' : '440px', borderRadius: isMobile ? '24px 24px 0 0' : '24px', padding: isMobile ? '24px 20px calc(env(safe-area-inset-bottom) + 24px)' : '28px', boxShadow: '0 24px 48px -12px rgba(15,23,42,0.3)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#0f172a' }}>Tilføj til kalenderen</h3>
-                            <button onClick={() => setShowAddChooser(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '10px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}><X size={18} /></button>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', gap: '12px' }}>
+                            <div style={{ minWidth: 0 }}>
+                                <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#0f172a' }}>Tilføj til kalenderen</h3>
+                                {chooserDate && <p style={{ margin: '3px 0 0', fontSize: '0.88rem', color: '#64748b', textTransform: 'capitalize' }}>{format(chooserDate, 'EEEE d. MMMM', { locale: da })}</p>}
+                            </div>
+                            <button onClick={() => { setShowAddChooser(false); setChooserDate(null); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: '10px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', flexShrink: 0 }}><X size={18} /></button>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {[
-                                { Icon: CalendarIcon, color: '#0284c7', bg: '#e0f2fe', title: 'Ny begivenhed', desc: 'Møde, levering, arrangement m.m.', onClick: () => { setShowAddChooser(false); openModalForDate(selectedMobileDate); } },
-                                { Icon: Briefcase, color: '#7c3aed', bg: '#ede9fe', title: 'Tilføj sag til kalenderen', desc: 'Planlæg en bekræftet sag', onClick: () => { setShowAddChooser(false); setShowCasePicker(true); } }
+                                { Icon: Briefcase, color: '#7c3aed', bg: '#ede9fe', title: 'Planlæg en sag', desc: 'Vælg en sag og læg den i kalenderen', onClick: () => { setShowAddChooser(false); setShowCasePicker(true); } },
+                                { Icon: CalendarIcon, color: '#0284c7', bg: '#e0f2fe', title: 'Opret kalenderaftale', desc: 'Møde, levering, arrangement m.m.', onClick: () => { setShowAddChooser(false); openModalForDate(chooserDate || selectedMobileDate); } }
                             ].map((opt, i) => {
                                 const Icon = opt.Icon;
                                 return (
@@ -2352,9 +2369,12 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     const scheduled = !!lead.raw_data?.start_date;
                                     return (
                                         <button key={lead.id} onClick={() => {
-                                            const base = isMobile ? selectedMobileDate : new Date();
+                                            // Start på den dag brugeren trykkede på i kalenderen (falder tilbage
+                                            // til sagens egen dato, hvis den allerede er planlagt, ellers i dag).
+                                            const base = chooserDate || (isMobile ? selectedMobileDate : new Date());
                                             const startStr = lead.raw_data?.start_date ? new Date(lead.raw_data.start_date).toISOString().substring(0, 10) : `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}`;
                                             setShowCasePicker(false);
+                                            setChooserDate(null);
                                             openScheduleConfirm(lead, startStr, days, scheduled ? 'edit' : 'new');
                                         }}
                                             style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px', cursor: 'pointer', transition: 'all 0.2s' }}
@@ -2389,6 +2409,10 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             const allowHol = scheduleConfirm.allowHolidays;
                             const end = endFromDuration(startStr, days, allowWknd, allowHol);
                             const collision = checkCollision(lead, new Date(startStr + 'T00:00:00'), end, allowWknd, allowHol);
+                            // Var sagen allerede planlagt, da modalen blev åbnet? (edit-tilstand)
+                            const alreadyScheduled = scheduleConfirm.mode === 'edit' && !!lead.raw_data?.start_date;
+                            const existingStart = lead.raw_data?.start_date ? new Date(lead.raw_data.start_date) : null;
+                            const existingEnd = lead.raw_data?.end_date ? new Date(lead.raw_data.end_date) : existingStart;
                             return (
                                 <>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
@@ -2399,9 +2423,16 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                         </div>
                                     </div>
 
-                                    <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '14px', padding: '14px 16px', marginBottom: '18px', color: '#0369a1', fontSize: '0.95rem', lineHeight: 1.5 }}>
-                                        Denne sag er estimeret til at vare <strong>{estimatFraTimer(lead)} dage</strong>. Passer det — eller vil du justere?
-                                    </div>
+                                    {alreadyScheduled ? (
+                                        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '14px 16px', marginBottom: '18px', color: '#92400e', fontSize: '0.95rem', lineHeight: 1.5, display: 'flex', gap: '10px' }}>
+                                            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                            <span>Denne sag er allerede planlagt <strong style={{ textTransform: 'capitalize' }}>{format(existingStart, 'd. MMM', { locale: da })} – {format(existingEnd, 'd. MMM yyyy', { locale: da })}</strong>. Vil du ændre eller forlænge perioden nedenfor?</span>
+                                        </div>
+                                    ) : (
+                                        <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '14px', padding: '14px 16px', marginBottom: '18px', color: '#0369a1', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                                            Denne sag er estimeret til at vare <strong>{estimatFraTimer(lead)} dage</strong>. Passer det — eller vil du justere?
+                                        </div>
+                                    )}
 
                                     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Startdato</label>
                                     <input type="date" value={startStr} onChange={e => setScheduleConfirm(s => ({ ...s, startDate: e.target.value }))} style={{ width: '100%', boxSizing: 'border-box', padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '16px', outline: 'none', marginBottom: '16px' }} />
