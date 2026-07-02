@@ -833,6 +833,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const breakdownDrivesHours = laborMode === 'hourly' && breakdownManHours > 0;
     const effLaborHours = breakdownDrivesHours ? breakdownManHours : num(laborHours);
 
+    // Delopgaver med timer prissættes pr. mandetime — så snart man tilføjer timer,
+    // skifter vi fra fast pris til timepris, så beløbet (mandetimer × timepris) rent
+    // faktisk ryger med i tilbuddet. Vælger man bagefter selv fast pris igen, respekteres det.
+    useEffect(() => {
+        if (breakdownManHours > 0 && laborMode === 'fixed') setLaborMode('hourly');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [breakdownManHours]);
+
     // ---- Live-beregning ----
     const calc = useMemo(() => {
         const mCost = num(materialCost);

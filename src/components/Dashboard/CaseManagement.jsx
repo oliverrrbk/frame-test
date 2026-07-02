@@ -735,6 +735,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [todoList, setTodoList] = useState([]);
     const [newTodoText, setNewTodoText] = useState('');
     const [showHourCompare, setShowHourCompare] = useState(false);
+    const [showBreakdownEdit, setShowBreakdownEdit] = useState(false);
+    const editBreakdownRef = useRef(null); // seneste redigerede delopgaver, gemmes ved luk
 
     // States til logs
     const [logsList, setLogsList] = useState([]);
@@ -3904,17 +3906,28 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     </div>
                                 )}
 
-                                {/* Sammenlign estimerede vs. faktiske timer pr. delopgave (kun når der er estimater). */}
-                                {(profile?.role !== 'worker' && profile?.role !== 'apprentice')
-                                    && todoList.some(s => (s.subTasks || []).some(t => subManHours(t) > 0)) && (
-                                    <button
-                                        onClick={() => setShowHourCompare(true)}
-                                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(14,165,233,0.18)'; e.currentTarget.style.borderColor = '#38bdf8'; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#bae6fd'; }}
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', background: 'linear-gradient(180deg, #f0f9ff, #ffffff)', color: '#0369a1', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', transition: 'all .15s' }}
-                                    >
-                                        <TrendingUp size={17} /> Sammenlign timer (estimeret vs. faktisk)
-                                    </button>
+                                {/* Delopgaver & timer: redigér (altid) + sammenlign estimeret vs. faktisk (når der er estimater). */}
+                                {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
+                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                        <button
+                                            onClick={() => setShowBreakdownEdit(true)}
+                                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(15,23,42,0.12)'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                                            style={{ flex: '1 1 220px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', padding: '12px', borderRadius: '12px', border: '1px dashed #cbd5e1', background: '#fff', color: '#334155', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', transition: 'all .15s' }}
+                                        >
+                                            <Edit2 size={16} /> Redigér delopgaver & timer
+                                        </button>
+                                        {todoList.some(s => (s.subTasks || []).some(t => subManHours(t) > 0)) && (
+                                            <button
+                                                onClick={() => setShowHourCompare(true)}
+                                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(14,165,233,0.18)'; e.currentTarget.style.borderColor = '#38bdf8'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#bae6fd'; }}
+                                                style={{ flex: '1 1 220px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', background: 'linear-gradient(180deg, #f0f9ff, #ffffff)', color: '#0369a1', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', transition: 'all .15s' }}
+                                            >
+                                                <TrendingUp size={17} /> Sammenlign timer
+                                            </button>
+                                        )}
+                                    </div>
                                 )}
 
                                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndGlobal}>
@@ -3998,13 +4011,27 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             </div>
                         )}
 
+                        {/* Redigér delopgaver & timer — også for manuelle/gamle sager. Gemmes ved luk. */}
+                        {showBreakdownEdit && (
+                            <WorkBreakdownModal
+                                mode="edit"
+                                steps={todoList}
+                                onChange={(next) => { editBreakdownRef.current = next; setTodoList(next); }}
+                                onClose={() => {
+                                    setShowBreakdownEdit(false);
+                                    if (editBreakdownRef.current) { saveCaseDataToDb({ checklist: editBreakdownRef.current }); editBreakdownRef.current = null; }
+                                }}
+                                hourlyRate={parseFloat(selectedCase?.raw_data?.calc_data?.hourlyRate) || parseFloat(selectedCase?.raw_data?.hourly_rate) || parseFloat(carpenterProfile?.hourly_rate) || parseFloat(carpenterProfile?.raw_data?.hourly_rate) || 550}
+                            />
+                        )}
+
                         {/* Sammenlign-timer popup — læse-visning, auto-fordeling fra "done"-delopgaver */}
                         {showHourCompare && (
                             <WorkBreakdownModal
                                 mode="compare"
                                 steps={todoList}
                                 onClose={() => setShowHourCompare(false)}
-                                hourlyRate={parseFloat(selectedCase?.raw_data?.calc_data?.hourlyRate) || parseFloat(carpenterProfile?.hourly_rate) || parseFloat(carpenterProfile?.raw_data?.hourly_rate) || 550}
+                                hourlyRate={parseFloat(selectedCase?.raw_data?.calc_data?.hourlyRate) || parseFloat(selectedCase?.raw_data?.hourly_rate) || parseFloat(carpenterProfile?.hourly_rate) || parseFloat(carpenterProfile?.raw_data?.hourly_rate) || 550}
                                 actualHours={totalActualHours}
                             />
                         )}

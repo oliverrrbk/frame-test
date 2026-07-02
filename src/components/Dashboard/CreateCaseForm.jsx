@@ -4,6 +4,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { friendlyError } from '../../utils/friendlyError';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
+import WorkBreakdownModal, { totalManHours } from './WorkBreakdownModal';
 
 // Dansk telefon-formatering (+45 XX XX XX XX) — samme mønster som i QuickQuoteBuilder/wizarden.
 const formatDkPhone = (raw) => {
@@ -34,6 +35,9 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
     // default MED moms, og man vælger selv omvendt betalingspligt til ved byggeydelser.
     const [reverseCharge, setReverseCharge] = useState(false);
     const [busy, setBusy] = useState(false);
+    // Valgfri delopgaver (byggeprocessen) — bliver til sagens bygge-to-do fra start.
+    const [breakdown, setBreakdown] = useState([]);
+    const [showBreakdown, setShowBreakdown] = useState(false);
 
     // Adresse-forslag via DAWA (dataforsyningen) — officiel dansk adresse-API, ingen nøgle.
     // Samme kilde som resten af systemet bruger (Register/Wizard) til adresse + postnr→by.
@@ -167,6 +171,8 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                 },
                 ...(description.trim() ? { case_description: description.trim() } : {}),
                 ...(startDate ? { start_date: startDate } : {}),
+                // Har man lavet delopgaver, bliver DE til sagens bygge-to-do fra start.
+                ...(Array.isArray(breakdown) && breakdown.some(s => (s.subTasks || []).length) ? { checklist: breakdown } : {}),
             };
 
             const fields = {
@@ -385,6 +391,19 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                             </div>
                         )}
                     </div>
+
+                    {/* Valgfri delopgaver & timer — bliver til bygge-to-do'en og kan sammenlignes senere. */}
+                    <button type="button" onClick={() => setShowBreakdown(true)}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.borderColor = '#38bdf8'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(14,165,233,0.14)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
+                        style={{ width: '100%', marginTop: '14px', padding: '12px', borderRadius: '12px', border: '1px dashed #cbd5e1', background: '#fff', color: '#334155', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', transition: 'all .15s' }}>
+                        <HardHat size={16} color="#0ea5e9" />
+                        {totalManHours(breakdown) > 0 ? `Delopgaver & timer · ${totalManHours(breakdown)} mandetimer` : 'Delopgaver & timer (valgfrit)'}
+                    </button>
+                    <p style={{ margin: '10px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>
+                        Delopgaver bliver til sagens bygge-to-do, så du senere kan sammenligne estimerede og faktiske timer. Springer du dem over, får du standardlisten.
+                    </p>
+
                     <p style={{ margin: '14px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>
                         Materialer kan du tilføje senere inde på sagen, hvis du får brug for det.
                     </p>
@@ -409,6 +428,16 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                     </p>
                 )}
             </div>
+
+            {showBreakdown && (
+                <WorkBreakdownModal
+                    mode="edit"
+                    steps={breakdown}
+                    onChange={setBreakdown}
+                    onClose={() => setShowBreakdown(false)}
+                    hourlyRate={parseDkNum(hourlyRate) || carpenter?.hourly_rate || carpenter?.raw_data?.hourly_rate || 550}
+                />
+            )}
         </div>
     );
 };
