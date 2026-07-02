@@ -13,7 +13,7 @@ import { Building2, Phone, Mail, Pencil, Trash2, Plus, X, Loader2, Wrench, HardH
  *   - SubcontractorManager: fast administrationssektion (under Team/medarbejdere)
  */
 
-const TRADES = ['Elektriker', 'VVS', 'Maler', 'Murer', 'Kloak / Anlæg', 'Gulv', 'Smed', 'Andet'];
+const TRADES = ['Tømrer', 'Elektriker', 'VVS', 'Maler', 'Murer', 'Kloak / Anlæg', 'Gulv', 'Smed', 'Andet'];
 
 // ---------------------------------------------------------------------------
 // MODAL — opret eller redigér en underleverandør (firma + mester)
