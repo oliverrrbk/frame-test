@@ -19,7 +19,7 @@ const TRADES = ['Elektriker', 'VVS', 'Maler', 'Murer', 'Kloak / Anlæg', 'Gulv',
 // MODAL — opret eller redigér en underleverandør (firma + mester)
 // ---------------------------------------------------------------------------
 export function SubcontractorModal({ open, onClose, companyId, initial = null, onSaved, leadId = null, selectableLeads = null, invitedByCompanyId = null }) {
-    const blank = { company_name: '', trade: '', contact_name: '', contact_phone: '', contact_email: '', cvr: '', address: '', notes: '', workers: [] };
+    const blank = { company_name: '', trade: '', contact_name: '', contact_phone: '', contact_email: '', cvr: '', address: '', zip: '', city: '', notes: '', workers: [] };
     const [form, setForm] = useState(blank);
     const [isSaving, setIsSaving] = useState(false);
     const [pickedLeadId, setPickedLeadId] = useState('');
@@ -36,6 +36,8 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                 contact_email: initial.contact_email || '',
                 cvr: initial.cvr || '',
                 address: initial.address || '',
+                zip: initial.zip || '',
+                city: initial.city || '',
                 notes: initial.notes || '', workers: initial.workers || []
             } : blank);
         }
@@ -227,9 +229,11 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                                 {!leadId && (
                                     <div>
                                         <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '5px' }}>Gæste-login gælder sagen</label>
-                                        <select value={effLeadId} onChange={(e) => setPickedLeadId(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                                            {selectableLeads.map(l => <option key={l.id} value={l.id}>{leadTitleOf(l)}{l.customer_name ? ` · ${l.customer_name}` : ''}</option>)}
-                                        </select>
+                                        <LeadSelect
+                                            value={effLeadId}
+                                            onChange={(id) => setPickedLeadId(id)}
+                                            options={selectableLeads.map(l => ({ id: l.id, label: `${leadTitleOf(l)}${l.customer_name ? ` · ${l.customer_name}` : ''}` }))}
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -255,9 +259,13 @@ export function SubcontractorModal({ open, onClose, companyId, initial = null, o
                             </div>
                         )}
 
-                        <Field label="Firmaadresse">
-                            <input value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="F.eks. Industrivej 4, 8000 Aarhus" style={inputStyle} />
-                        </Field>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>Firmaadresse</span>
+                            <AddressFields
+                                street={form.address} zip={form.zip} city={form.city}
+                                onStreet={(v) => set('address', v)} onZip={(v) => set('zip', v)} onCity={(v) => set('city', v)}
+                            />
+                        </div>
 
                         <Field label="Noter (valgfrit)">
                             <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="F.eks. fast samarbejdspartner på tagprojekter" rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
@@ -440,6 +448,159 @@ function TradeSelect({ value, onChange, options }) {
     );
 }
 
+// Adresse-felter med DAWA-forslag (samme kilde som resten af systemet). Deler
+// adressen op i vej / postnr / by, så firmaadressen bliver rigtig og struktureret.
+function AddressFields({ street, zip, city, onStreet, onZip, onCity }) {
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSug, setShowSug] = useState(false);
+    const debRef = useRef(null);
+    const blurRef = useRef(null);
+
+    const handleStreet = (val) => {
+        onStreet(val);
+        if (debRef.current) clearTimeout(debRef.current);
+        if (!val || val.trim().length < 3) { setSuggestions([]); setShowSug(false); return; }
+        debRef.current = setTimeout(async () => {
+            try {
+                const res = await fetch(`https://api.dataforsyningen.dk/adgangsadresser/autocomplete?q=${encodeURIComponent(val)}&per_side=6`);
+                if (!res.ok) return;
+                const data = await res.json();
+                setSuggestions(Array.isArray(data) ? data : []);
+                setShowSug(true);
+            } catch { /* netværksfejl — brugeren kan skrive manuelt */ }
+        }, 200);
+    };
+
+    const pick = (item) => {
+        const a = item?.adgangsadresse || {};
+        let s = [a.vejnavn, a.husnr].filter(Boolean).join(' ').trim();
+        let p = a.postnr || '';
+        let b = a.postnrnavn || '';
+        if ((!s || !p) && item?.tekst) {
+            const m = item.tekst.match(/^(.*?),\s*(\d{4})\s+(.+)$/);
+            if (m) { s = s || m[1].trim(); p = p || m[2]; b = b || m[3].trim(); }
+        }
+        if (s) onStreet(s);
+        if (p) onZip(p);
+        if (b) onCity(b);
+        setSuggestions([]); setShowSug(false);
+        if (blurRef.current) clearTimeout(blurRef.current);
+    };
+
+    const handleZip = (val) => {
+        const z = val.replace(/[^\d]/g, '').slice(0, 4);
+        onZip(z);
+        if (z.length === 4) {
+            fetch(`https://api.dataforsyningen.dk/postnumre/${z}`)
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(d => { if (d && d.navn) onCity(d.navn); })
+                .catch(() => { /* ukendt postnr — lad brugeren skrive by selv */ });
+        }
+    };
+
+    const subLabel = { fontSize: '0.72rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '5px' };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ position: 'relative' }}>
+                <label style={subLabel}>Vej og nr.</label>
+                <input
+                    value={street}
+                    onChange={(e) => handleStreet(e.target.value)}
+                    onFocus={() => { if (suggestions.length) setShowSug(true); }}
+                    onBlur={() => { blurRef.current = setTimeout(() => setShowSug(false), 150); }}
+                    placeholder="F.eks. Industrivej 4"
+                    style={inputStyle}
+                    autoComplete="off"
+                />
+                {showSug && suggestions.length > 0 && (
+                    <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: '6px', position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 60, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 16px 32px -8px rgba(15, 23, 42, 0.18)', maxHeight: '240px', overflowY: 'auto' }}>
+                        {suggestions.map((item, idx) => (
+                            <li
+                                key={item.tekst || idx}
+                                onMouseDown={(e) => { e.preventDefault(); pick(item); }}
+                                style={{ padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem', color: '#334155' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                            >
+                                {item.tekst}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '14px' }}>
+                <div>
+                    <label style={subLabel}>Postnr.</label>
+                    <input value={zip} onChange={(e) => handleZip(e.target.value)} placeholder="8000" inputMode="numeric" style={inputStyle} />
+                </div>
+                <div>
+                    <label style={subLabel}>By</label>
+                    <input value={city} onChange={(e) => onCity(e.target.value)} placeholder="Aarhus C" style={inputStyle} />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Bison-stil dropdown til at vælge hvilken sag et gæste-login gælder (options: {id, label}).
+function LeadSelect({ value, onChange, options }) {
+    const [open, setOpen] = useState(false);
+    const [hovered, setHovered] = useState(null);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const selectedLabel = options.find(o => String(o.id) === String(value))?.label || '— Vælg sag —';
+
+    return (
+        <div ref={ref} style={{ position: 'relative' }}>
+            <div
+                onClick={() => setOpen(o => !o)}
+                style={{ ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none', borderColor: open ? '#7c3aed' : '#e2e8f0', boxShadow: open ? '0 0 0 3px rgba(124, 58, 237, 0.12)' : 'none' }}
+            >
+                <span style={{ color: value ? '#0f172a' : '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLabel}</span>
+                <ChevronDown size={18} style={{ color: '#94a3b8', flexShrink: 0, transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+            </div>
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                        transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 16px 32px -8px rgba(15, 23, 42, 0.18)', zIndex: 60, overflow: 'hidden', padding: '6px', maxHeight: '240px', overflowY: 'auto' }}
+                    >
+                        {options.length === 0 && (
+                            <div style={{ padding: '10px 14px', fontSize: '0.88rem', color: '#94a3b8' }}>Ingen aktive sager</div>
+                        )}
+                        {options.map(o => {
+                            const selected = String(o.id) === String(value);
+                            const isHover = hovered === o.id;
+                            return (
+                                <div
+                                    key={o.id}
+                                    onClick={() => { onChange(o.id); setOpen(false); }}
+                                    onMouseEnter={() => setHovered(o.id)}
+                                    onMouseLeave={() => setHovered(null)}
+                                    style={{ padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: selected ? 600 : 500, color: selected ? '#6d28d9' : '#334155', background: selected ? '#f5f3ff' : (isHover ? '#f8fafc' : 'transparent'), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', transition: 'background 0.12s' }}
+                                >
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
+                                    {selected && <span style={{ color: '#7c3aed', fontWeight: 700, flexShrink: 0 }}>✓</span>}
+                                </div>
+                            );
+                        })}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
 // ---------------------------------------------------------------------------
 // MANAGER — fast administrationssektion (under Team)
 // ---------------------------------------------------------------------------
@@ -547,7 +708,8 @@ export function SubcontractorManager({ profile, isMobile = false, leadsData = []
                                     </div>
                                 </div>
 
-                                {(sc.contact_name || sc.contact_phone || sc.contact_email || sc.address) && (
+                                {(() => { const fullAddr = [sc.address, [sc.zip, sc.city].filter(Boolean).join(' ')].filter(Boolean).join(', '); return (
+                                (sc.contact_name || sc.contact_phone || sc.contact_email || fullAddr) && (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '10px', borderTop: '1px solid var(--border-light)' }}>
                                         {sc.contact_name && (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -568,13 +730,13 @@ export function SubcontractorManager({ profile, isMobile = false, leadsData = []
                                                 <Mail size={14} style={{ color: '#94a3b8' }} /> {sc.contact_email}
                                             </a>
                                         )}
-                                        {sc.address && (
+                                        {fullAddr && (
                                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                                <MapPin size={14} style={{ color: '#94a3b8', flexShrink: 0, marginTop: '2px' }} /> {sc.address}
+                                                <MapPin size={14} style={{ color: '#94a3b8', flexShrink: 0, marginTop: '2px' }} /> {fullAddr}
                                             </div>
                                         )}
                                     </div>
-                                )}
+                                )); })()}
                             </div>
                         ))}
                     </div>
@@ -628,12 +790,14 @@ export function BeautifulPhoneInput({ value, onChange, placeholder }) {
                 <Phone size={14} />
                 <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>+45</span>
             </div>
-            <input 
-                value={value} 
+            <input
+                value={value}
                 onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9 ]/g, '');
-                    onChange(val);
-                }} 
+                    // Formatér som dansk nummer: 8 cifre i par (12 34 56 78).
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+                    onChange(digits.match(/.{1,2}/g)?.join(' ') || '');
+                }}
+                inputMode="numeric"
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
                 placeholder={placeholder || '12 34 56 78'} 

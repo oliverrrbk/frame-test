@@ -12,11 +12,21 @@ CREATE TABLE IF NOT EXISTS subcontractors (
     contact_phone TEXT,
     contact_email TEXT,
     cvr          TEXT,
+    address      TEXT,                     -- Firmaadresse: vej og nr.
+    zip          TEXT,                     -- Postnr.
+    city         TEXT,                     -- By
+    workers      JSONB DEFAULT '[]'::jsonb, -- Svende/lærlinge (navn, telefon, rolle, e-mail)
     notes        TEXT,
     created_at   TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_subcontractors_company_id ON subcontractors(company_id);
+
+-- Tilføj kolonner på eksisterende tabeller (idempotent — sikkert at køre igen).
+ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS zip TEXT;
+ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE subcontractors ADD COLUMN IF NOT EXISTS workers JSONB DEFAULT '[]'::jsonb;
 
 -- 2. Row Level Security
 ALTER TABLE subcontractors ENABLE ROW LEVEL SECURITY;
