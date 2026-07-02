@@ -104,6 +104,56 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Kendte udbydere: auto-udfylder SMTP/IMAP-server + port og giver skræddersyet
+// hjælp. 'match' bruges til at genkende udbyderen ud fra afsender-mailens domæne.
+const SMTP_PROVIDERS = [
+    {
+        key: 'gmail', name: 'Gmail / Google', emoji: '📮',
+        smtp_host: 'smtp.gmail.com', smtp_port: '587', imap_host: 'imap.gmail.com', imap_port: '993',
+        appPassword: true, url: 'https://myaccount.google.com/apppasswords',
+        steps: [
+            'Slå 2-trins-bekræftelse til på din Google-konto (kræves for app-koder).',
+            'Åbn myaccount.google.com/apppasswords og opret en app-kode.',
+            'Kopiér den 16-cifrede kode ind i feltet "Adgangskode" herunder.',
+        ],
+        match: (d) => /(^|\.)gmail\.com$|googlemail\.com$/.test(d),
+    },
+    {
+        key: 'microsoft', name: 'Microsoft 365 / Outlook', emoji: '📨',
+        smtp_host: 'smtp.office365.com', smtp_port: '587', imap_host: 'outlook.office365.com', imap_port: '993',
+        appPassword: true, url: 'https://account.microsoft.com/security',
+        steps: [
+            'Slå 2-trins-bekræftelse til på din Microsoft-konto.',
+            'Opret en app-adgangskode under Sikkerhed → Avancerede sikkerhedsindstillinger.',
+            'Kopiér app-koden ind i feltet "Adgangskode" herunder.',
+        ],
+        match: (d) => /(outlook\.|hotmail\.|live\.|office365)/.test(d),
+    },
+    {
+        key: 'one', name: 'One.com', emoji: '1️⃣',
+        smtp_host: 'send.one.com', smtp_port: '587', imap_host: 'imap.one.com', imap_port: '993',
+        appPassword: false, match: () => false,
+    },
+    {
+        key: 'simply', name: 'Simply.com', emoji: '💚',
+        smtp_host: 'websmtp.simply.com', smtp_port: '587', imap_host: 'imap.simply.com', imap_port: '993',
+        appPassword: false, match: () => false,
+    },
+    {
+        key: 'dandomain', name: 'DanDomain', emoji: '🇩🇰',
+        smtp_host: 'asmtp.dandomain.dk', smtp_port: '587', imap_host: 'post.dandomain.dk', imap_port: '993',
+        appPassword: false, note: 'Bemærk: DanDomains SMTP-server har et "asmtp"-præfiks (ikke "smtp").',
+        match: () => false,
+    },
+    { key: 'other', name: 'Andet / eget domæne', emoji: '🌐', appPassword: false, match: () => false },
+];
+
+const detectProvider = (email) => {
+    const d = String(email || '').split('@')[1]?.toLowerCase() || '';
+    if (!d) return null;
+    return SMTP_PROVIDERS.find(p => p.match(d)) || null;
+};
+
 const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedIntegration }) => {
     const isExpanded = expandedIntegration === 'smtp';
     const [settings, setSettings] = useState({
@@ -119,6 +169,8 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
     const [isSaving, setIsSaving] = useState(false);
     const [testResult, setTestResult] = useState(null);
     const [isConfigured, setIsConfigured] = useState(false);
+    const [provider, setProvider] = useState('');       // valgt udbyder-key ('' = ingen valgt endnu)
+    const [showAdvanced, setShowAdvanced] = useState(false);  // vis server/port-felter for kendte udbydere
     const [showHelpModal, setShowHelpModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
@@ -139,14 +191,51 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
             if (data?.smtp_settings) {
                 setSettings(data.smtp_settings);
                 setIsConfigured(true);
+                // Genkend udbyderen ud fra den gemte SMTP-server, så vælgeren viser den rigtige.
+                const host = (data.smtp_settings.smtp_host || '').toLowerCase();
+                const found = SMTP_PROVIDERS.find(p => p.key !== 'other' && p.smtp_host === host);
+                setProvider(found ? found.key : (host ? 'other' : ''));
+                if (!found && host) setShowAdvanced(true);
             }
         };
         fetchSettings();
     }, [carpenterProfile?.id]);
 
-    const handleChange = (e) => {
-        setSettings(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    // Vælg udbyder → auto-udfyld server/port (og kopiér mail til brugernavn hvis tomt).
+    const applyProvider = (key) => {
+        setProvider(key);
         setTestResult(null);
+        const p = SMTP_PROVIDERS.find(x => x.key === key);
+        if (p && p.key !== 'other') {
+            setSettings(prev => ({
+                ...prev,
+                smtp_host: p.smtp_host, smtp_port: p.smtp_port,
+                imap_host: p.imap_host, imap_port: p.imap_port,
+                smtp_user: prev.smtp_user || prev.smtp_from_email || '',
+            }));
+            setShowAdvanced(false);
+        } else {
+            setShowAdvanced(true);   // 'Andet': vis felterne, så man kan skrive dem selv
+        }
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setSettings(prev => {
+            const next = { ...prev, [name]: value };
+            // Brugernavn er "ofte din e-mail" → kopiér automatisk fra afsender, så længe
+            // brugeren ikke selv har skrevet noget andet.
+            if (name === 'smtp_from_email' && (!prev.smtp_user || prev.smtp_user === prev.smtp_from_email)) {
+                next.smtp_user = value;
+            }
+            return next;
+        });
+        setTestResult(null);
+        // Genkend Gmail/Outlook automatisk ud fra domænet, hvis der ikke er valgt udbyder endnu.
+        if (name === 'smtp_from_email' && !provider) {
+            const det = detectProvider(value);
+            if (det) applyProvider(det.key);
+        }
     };
 
     const handleTest = async () => {
@@ -262,6 +351,57 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {/* Udbyder-vælger — auto-udfylder server/port */}
+                        <div className="input-group">
+                            <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>Vælg din udbyder</label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                {SMTP_PROVIDERS.map(p => {
+                                    const active = provider === p.key;
+                                    return (
+                                        <button key={p.key} type="button" onClick={() => applyProvider(p.key)}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 14px', borderRadius: '999px', border: active ? '1px solid #db2777' : '1px solid #e2e8f0', background: active ? '#fce7f3' : '#fff', color: active ? '#9d174d' : '#475569', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#f8fafc'; }}
+                                            onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = '#fff'; }}>
+                                            <span>{p.emoji}</span> {p.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <span style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'block' }}>Vi udfylder automatisk server og port for dig.</span>
+                        </div>
+
+                        {/* Provider-specifik hjælp (app-kode vs. normal adgangskode) */}
+                        {provider && (() => {
+                            const p = SMTP_PROVIDERS.find(x => x.key === provider);
+                            if (!p) return null;
+                            if (p.appPassword) {
+                                return (
+                                    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '14px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, color: '#c2410c', fontSize: '0.9rem' }}><AlertTriangle size={16} /> {p.name} kræver en app-kode</div>
+                                        <ol style={{ margin: 0, paddingLeft: '18px', color: '#7c2d12', fontSize: '0.85rem', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            {p.steps.map((s, i) => <li key={i}>{s}</li>)}
+                                        </ol>
+                                        <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 14px', borderRadius: '10px', background: '#db2777', color: '#fff', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none' }}>
+                                            <ExternalLink size={15} /> Åbn app-kode-siden
+                                        </a>
+                                    </div>
+                                );
+                            }
+                            if (p.key === 'other') {
+                                return (
+                                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px 16px', fontSize: '0.85rem', color: '#475569', lineHeight: 1.6 }}>
+                                        Udfyld server og port fra din mailudbyder herunder. Er du i tvivl, så tryk <button type="button" onClick={() => setShowHelpModal(true)} style={{ background: 'none', border: 'none', padding: 0, color: '#db2777', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>Guide til opsætning</button>.
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '14px 16px', fontSize: '0.85rem', color: '#166534', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                    <CheckCircle2 size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                                    <div>Brug din <strong>normale mail-adgangskode</strong> — ingen app-kode nødvendig.{p.note ? ` ${p.note}` : ''}</div>
+                                </div>
+                            );
+                        })()}
+
                         <div className="input-group">
                             <label style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
                                 Afsender E-mail
@@ -309,6 +449,15 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
 
                         </div>
 
+                        {/* Server/port: skjult for kendte udbydere (auto-udfyldt) — kan foldes ud. */}
+                        {provider && provider !== 'other' && (
+                            <button type="button" onClick={() => setShowAdvanced(v => !v)}
+                                style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, color: '#64748b', fontWeight: 700, fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }}>
+                                {showAdvanced ? 'Skjul avanceret' : 'Avanceret (rediger server/port)'}
+                            </button>
+                        )}
+
+                        {(showAdvanced || !provider || provider === 'other') && (<>
                         <div style={{ display: 'flex', gap: '16px' }}>
                             <div className="input-group" style={{ flex: 2 }}>
                                 <label style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
@@ -382,6 +531,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                                 </button>
                             </span>
                         </div>
+                        </>)}
 
                         {testResult && (
                             <div style={{
