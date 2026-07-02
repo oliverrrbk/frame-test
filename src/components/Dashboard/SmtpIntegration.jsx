@@ -272,7 +272,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                                 name="smtp_from_email" 
                                 value={settings.smtp_from_email} 
                                 onChange={handleChange} 
-                                placeholder="fx info@skovbobyg.dk"
+                                placeholder="fx info@firma.dk"
                                 style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '100%', marginTop: '6px' }}
                             />
                             <span style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', display: 'block' }}>Mailen som kunden ser som afsender.</span>

@@ -122,7 +122,7 @@ const Login = ({ setSession, onClose }) => {
                                         <label>E-mail adresse til nulstilling</label>
                                         <input 
                                             type="email" 
-                                            placeholder="tømrer@skovbobyg.dk"
+                                            placeholder="din@firma.dk"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                             required 
@@ -171,7 +171,7 @@ const Login = ({ setSession, onClose }) => {
                                 <label>E-mail adresse</label>
                                 <input 
                                     type="email" 
-                                    placeholder="tømrer@skovbobyg.dk"
+                                    placeholder="din@firma.dk"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required 
