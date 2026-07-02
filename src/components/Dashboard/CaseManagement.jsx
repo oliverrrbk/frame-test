@@ -341,7 +341,7 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
         </div>
     );
 }
-function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setStepToDelete, profile, children }) {
+function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setStepToDelete, onToggleDone, profile, children }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(step.text);
     
@@ -357,7 +357,10 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
     const subs = step.subTasks || [];
     const completedSub = subs.filter(s => s.done).length;
     const totalSub = subs.length;
-    const isAllDone = totalSub > 0 && completedSub === totalSub;
+    // En fase er udført når alle underopgaver er krydset af — ELLER, hvis den slet
+    // ikke har underopgaver, når selve fasen er markeret udført (step.done).
+    const noSubs = totalSub === 0;
+    const isAllDone = noSubs ? !!step.done : (totalSub > 0 && completedSub === totalSub);
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -408,22 +411,27 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
                             <GripVertical size={22} />
                         </div>
                     )}
-                    <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        width: '28px', 
-                        height: '28px', 
-                        borderRadius: '50%', 
-                        backgroundColor: isAllDone ? '#10b981' : '#f1f5f9', 
-                        color: isAllDone ? '#fff' : '#475569', 
-                        fontSize: '0.85rem', 
+                    <div
+                        onClick={noSubs ? (e) => { e.stopPropagation(); onToggleDone && onToggleDone(step.id); } : undefined}
+                        title={noSubs ? (step.done ? 'Fjern flueben' : 'Markér fasen som udført') : undefined}
+                        style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        backgroundColor: isAllDone ? '#10b981' : '#f1f5f9',
+                        color: isAllDone ? '#fff' : '#475569',
+                        fontSize: '0.85rem',
                         fontWeight: 'bold',
                         boxShadow: isAllDone ? '0 2px 8px rgba(16, 185, 129, 0.4)' : 'inset 0 1px 3px rgba(0,0,0,0.05)',
-                        transition: 'all 0.3s',
-                        flexShrink: 0
+                        transition: 'all 0.2s',
+                        flexShrink: 0,
+                        cursor: noSubs ? 'pointer' : 'default',
+                        border: (noSubs && !step.done) ? '2px solid #cbd5e1' : 'none',
                     }}>
-                        {isAllDone ? '✓' : (idx + 1)}
+                        {isAllDone ? '✓' : (noSubs ? '' : (idx + 1))}
                     </div>
                     
                     {isEditing ? (
@@ -479,9 +487,9 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
                         </h5>
                     )}
                     
-                    <span style={{ 
-                        fontSize: '0.8rem', 
-                        color: isAllDone ? '#059669' : '#64748b', 
+                    <span style={{
+                        fontSize: '0.8rem',
+                        color: isAllDone ? '#059669' : '#64748b',
                         marginLeft: '4px',
                         backgroundColor: isAllDone ? '#d1fae5' : '#f1f5f9',
                         padding: '2px 8px',
@@ -489,7 +497,7 @@ function SortableStep({ step, idx, handleToggleExpand, handleEditStepText, setSt
                         fontWeight: '600',
                         flexShrink: 0
                     }}>
-                        {completedSub} / {totalSub}
+                        {noSubs ? (step.done ? 'Udført' : 'Markér udført') : `${completedSub} / ${totalSub}`}
                     </span>
                 </div>
 
@@ -733,6 +741,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     // States til to-do
     const [todoList, setTodoList] = useState([]);
+    // Debounce-gemning af tjeklisten: hurtige klik skal ikke lave ét DB-kald pr. klik
+    // (og prop-refreshet fra vores eget gem må ikke rulle afkrydsningen tilbage).
+    const checklistSaveTimer = useRef(null);
+    const pendingChecklistRef = useRef(null);
+    const lastChecklistEditRef = useRef(0);
     const [newTodoText, setNewTodoText] = useState('');
     const [showHourCompare, setShowHourCompare] = useState(false);
     const [showBreakdownEdit, setShowBreakdownEdit] = useState(false);
@@ -983,6 +996,19 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             loadCaseData();
         }
     }, [selectedCaseIdState, selectedCase]);
+    // Flush et evt. ventende tjekliste-gem når man skifter sag eller lukker, så den
+    // sidste afkrydsning ikke går tabt i debounce-vinduet.
+    useEffect(() => {
+        return () => {
+            if (checklistSaveTimer.current) {
+                clearTimeout(checklistSaveTimer.current);
+                checklistSaveTimer.current = null;
+                const toSave = pendingChecklistRef.current;
+                pendingChecklistRef.current = null;
+                if (toSave) saveCaseDataToDb({ checklist: toSave });
+            }
+        };
+    }, [selectedCaseIdState]);
     const fetchTeam = async () => {
         try {
             const companyId = profile.company_id || profile.id;
@@ -1053,8 +1079,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         setAssignedSubs(Array.isArray(savedSubs) ? savedSubs : []);
 
         // 2. Indlæs To-Do Liste
+        // Hvis brugeren lige har redigeret tjeklisten (afkrydsning m.m.), så BEVAR den
+        // lokale optimistiske liste — ellers ville prop-refreshet fra vores eget gem
+        // (eller et in-flight kald der resolver forsinket) rulle afkrydsningen tilbage.
         const savedTodo = selectedCase.raw_data?.checklist || [];
-        if (savedTodo.length > 0) {
+        const editingChecklist = Date.now() - lastChecklistEditRef.current < 6000 || pendingChecklistRef.current;
+        if (editingChecklist) {
+            // rør ikke todoList — den lokale er sandheden mens man arbejder
+        } else if (savedTodo.length > 0) {
             if (savedTodo.some(t => !t.subTasks)) {
                 const legacyNested = [{
                     id: 'legacy-step-1',
@@ -1278,6 +1310,21 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
 
     // To-Do / Checklist-håndtering
+    // Én fælles commit: opdatér UI øjeblikkeligt (optimistisk) og debounce DB-gemmet,
+    // så hurtige klik føles smooth og ikke racer med prop-refreshet.
+    const commitChecklist = (updated) => {
+        setTodoList(updated);
+        lastChecklistEditRef.current = Date.now();
+        pendingChecklistRef.current = updated;
+        if (checklistSaveTimer.current) clearTimeout(checklistSaveTimer.current);
+        checklistSaveTimer.current = setTimeout(() => {
+            const toSave = pendingChecklistRef.current;
+            pendingChecklistRef.current = null;
+            checklistSaveTimer.current = null;
+            if (toSave) saveCaseDataToDb({ checklist: toSave });
+        }, 600);
+    };
+
     const handleTodoToggle = (mainId, subId) => {
         const updated = todoList.map(step => {
             if (step.id === mainId) {
@@ -1291,8 +1338,13 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             }
             return step;
         });
-        setTodoList(updated);
-        saveCaseDataToDb({ checklist: updated });
+        commitChecklist(updated);
+    };
+
+    // Krydser en HEL fase af (kun relevant når fasen ikke har underopgaver).
+    const handleTogglePhaseDone = (mainId) => {
+        const updated = todoList.map(step => step.id === mainId ? { ...step, done: !step.done } : step);
+        commitChecklist(updated);
     };
 
     const handleAddTodo = (e) => {
@@ -1307,9 +1359,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         };
 
         const updated = [...todoList, newMain];
-        setTodoList(updated);
         setNewTodoText('');
-        saveCaseDataToDb({ checklist: updated });
+        commitChecklist(updated);
         toast.success('Nyt hovedtrin tilføjet!');
     };
 
@@ -1324,8 +1375,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             }
             return step;
         });
-        setTodoList(updated);
-        saveCaseDataToDb({ checklist: updated });
+        commitChecklist(updated);
         toast.success('Underpunkt tilføjet');
     };
 
@@ -1339,16 +1389,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             }
             return step;
         });
-        setTodoList(updated);
-        saveCaseDataToDb({ checklist: updated });
+        commitChecklist(updated);
         toast.success('Underpunkt slettet');
     };
 
     const handleDeleteStep = () => {
         if (!stepToDelete) return;
         const updated = todoList.filter(s => s.id !== stepToDelete.id);
-        setTodoList(updated);
-        saveCaseDataToDb({ checklist: updated });
+        commitChecklist(updated);
         setStepToDelete(null);
         toast.success('Trin slettet');
     };
@@ -1365,17 +1413,15 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             }
             return step;
         });
-        setTodoList(updated);
-        saveCaseDataToDb({ checklist: updated });
+        commitChecklist(updated);
         toast.success('Underpunkt opdateret');
     };
 
     const handleEditStepText = (stepId, newText) => {
-        const updated = todoList.map(step => 
+        const updated = todoList.map(step =>
             step.id === stepId ? { ...step, text: newText } : step
         );
-        setTodoList(updated);
-        saveCaseDataToDb({ checklist: updated });
+        commitChecklist(updated);
         toast.success('Byggetrin opdateret');
     };
 
@@ -3992,6 +4038,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         handleToggleExpand={handleToggleExpand}
                                                         handleEditStepText={handleEditStepText}
                                                         setStepToDelete={setStepToDelete}
+                                                        onToggleDone={handleTogglePhaseDone}
                                                         profile={profile}
                                                     >
                                                         <div style={{ padding: '0 24px 20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
