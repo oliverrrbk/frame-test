@@ -36,6 +36,7 @@ import CalculatorFaqAccordion from './CalculatorFaqAccordion';
 import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import CreateCaseForm from './CreateCaseForm';
+import CustomerLibrary from './CustomerLibrary';
 import { getFeatures } from '../../utils/features';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import MaterialListBuilder from './MaterialListBuilder';
@@ -951,6 +952,10 @@ const Dashboard = () => {
     };
     const [showCreateLeadCancelConfirm, setShowCreateLeadCancelConfirm] = useState(false);
     const [createLeadMode, setCreateLeadMode] = useState(null);
+    // Forudfyldt kunde når man laver et tilbud fra kunde-biblioteket (initialLead-form, uden id → nyt tilbud).
+    const [quotePrefill, setQuotePrefill] = useState(null);
+    // Ryd forudfyldt kunde når opret-modalen lukkes (uanset luk-sti), så en stale kunde ikke hænger ved.
+    useEffect(() => { if (!isCreateLeadModalOpen) setQuotePrefill(null); }, [isCreateLeadModalOpen]);
     // Når en gemt tilbudskladde (selvlavet hurtigt tilbud) åbnes, redigeres den i QuickQuoteBuilder.
     const [editQuoteLead, setEditQuoteLead] = useState(null);
     // Materialeliste-byggeren (Del A): null = lukket; objekt = åben med en (evt. ny) lead.
@@ -2962,8 +2967,14 @@ const Dashboard = () => {
                     )}
 
                     {['admin'].includes(effectiveRole) && (
+                        <button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); setIsMobileMenuOpen(false); }}>
+                            <Users size={20} /> Kunder
+                        </button>
+                    )}
+
+                    {['admin'].includes(effectiveRole) && (
                         <button data-tour="nav-leads" className={activeTab === 'leads' ? 'active' : ''} onClick={() => { setActiveTab('leads'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
-                            <Users size={20} /> Kunder & Leads
+                            <FileText size={20} /> Leads & Tilbud
                             {(() => {
                                 const unreadCount = leadsData.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel' && l.is_read === false).length;
                                 if (unreadCount > 0) {
@@ -3605,6 +3616,35 @@ const Dashboard = () => {
                             </TabErrorBoundary>
                         </div>
                     )}
+                    {activeTab === 'customers' && (
+                        <CustomerLibrary
+                            carpenter={carpenterProfile}
+                            myProfile={myProfile}
+                            leadsData={leadsData}
+                            isMobile={isMobile}
+                            onOpenCase={(leadId) => { setActiveTab('cases'); setSearchQuery(''); setTargetCaseId(leadId); }}
+                            onOpenLead={(lead) => {
+                                setActiveTab('leads');
+                                setLeadFilter(['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(lead?.status) ? 'Bekræftet opgave' : (lead?.status === 'Sendt tilbud' ? 'Sendt tilbud' : 'Tilbudskladder'));
+                                setSearchQuery('');
+                                setSelectedLead(lead);
+                            }}
+                            onCreateQuote={() => { setQuotePrefill(null); setCreateLeadMode(null); setIsCreateLeadModalOpen(true); }}
+                            onCreateQuoteForCustomer={(c) => {
+                                setQuotePrefill({
+                                    customer_id: c.id,
+                                    customer_name: c.name,
+                                    customer_email: c.email || '',
+                                    customer_phone: c.phone || '',
+                                    customer_address: c.address || '',
+                                    raw_data: { customerDetails: { street: c.address || '', zip: c.zip || '', city: c.city || '', customerType: c.customer_type || 'privat', cvr: c.cvr || '' } },
+                                });
+                                setCreateLeadMode('quick');
+                                setIsCreateLeadModalOpen(true);
+                            }}
+                        />
+                    )}
+
                     {activeTab === 'leads' && (
                         <div className="dashboard-workspace leads-overview space-y-8 " style={{ maxWidth: '1200px', margin: '0 auto' }}>
                             {effectiveRole === 'admin' && !isMobile && !showOnboarding && !showSetPassword && !leadsTourDone && shouldShowCoach('leads_tour') && (
@@ -3749,7 +3789,7 @@ const Dashboard = () => {
                                         <>
                                         <button ref={createLeadBtnRef} data-tour="leads-create" className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, padding: '10px 20px', borderRadius: '30px' }}>
                                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                            Opret Ny Kunde
+                                            Nyt tilbud
                                         </button>
                                         {shouldShowCoach('hero_quote') && !heroCoachDismissed && !isCreateLeadModalOpen && !showOnboarding && !showSetPassword && (
                                             <Coachmark
@@ -6256,14 +6296,17 @@ const Dashboard = () => {
                                     carpenter={carpenterProfile}
                                     draftCreator={myProfile}
                                     isMobile={isMobile}
+                                    initialLead={quotePrefill}
                                     onOpenMaterialList={() => openMaterialBuilder(null)}
                                     onCancel={() => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
+                                        setQuotePrefill(null);
                                     }}
                                     onComplete={async (lead) => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
+                                        setQuotePrefill(null);
                                         setActiveTab('leads');
                                         // Kladde → Tilbudskladder-fanen; sendt → Sendt tilbud. Lander på LISTEN.
                                         setLeadFilter(lead?.status === 'Sendt tilbud' ? 'Sendt tilbud' : 'Tilbudskladder');

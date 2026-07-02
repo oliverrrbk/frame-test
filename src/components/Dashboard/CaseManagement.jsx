@@ -1839,16 +1839,22 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const progressPercent = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
     // Beregn tidsbudget overholdelse (inklusive godkendte aftalesedler)
+    // Eget hold (firmaets medarbejdere). Underleverandører/gæster er BEVIDST ikke med her,
+    // så deres timer ALDRIG blander sig med FORBRUG, timebudget eller løn for eget firma.
+    const ownTeamIds = new Set([profile?.id, ...team.map(t => t.id)].filter(Boolean).map(String));
+    const isOwnTeamEntry = (e) => ownTeamIds.has(String(e.employeeId));
+
+    // FORBRUG = kun eget holds timer (mod eget timebudget).
     const totalActualHours = timeEntries
+        .filter(isOwnTeamEntry)
         .filter(item => ['worker', 'apprentice', 'sales', 'guest'].includes(profile?.role) ? item.employeeId === profile.id : true)
         .reduce((sum, item) => sum + item.hours, 0);
 
     // Underleverandør-timer: alt registreret på folk uden for eget hold (mester + svende
-    // via syntetiske id'er, eller en gæst der selv logger). Bruges til den lilla boks +
-    // fakturapris-kontrol pr. underleverandør.
-    const ownTeamIds = new Set([profile?.id, ...team.map(t => t.id)].filter(Boolean).map(String));
+    // via syntetiske id'er, eller en gæst der selv logger). Holdes 100% adskilt fra
+    // FORBRUG/løn — bruges kun til den lilla boks + fakturapris-kontrol pr. underleverandør.
     const subcontractorHours = timeEntries
-        .filter(e => !ownTeamIds.has(String(e.employeeId)))
+        .filter(e => !isOwnTeamEntry(e))
         .reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
     const subcontractorBreakdown = (assignedSubs || []).map(sub => {
         const hours = timeEntries.filter(e => {

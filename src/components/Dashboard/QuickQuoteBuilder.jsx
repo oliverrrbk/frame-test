@@ -14,6 +14,7 @@ import SectionTour from './SectionTour';
 import SmtpIntegration from './SmtpIntegration';
 import WorkBreakdownModal, { totalManHours } from './WorkBreakdownModal';
 import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
+import CustomerPicker from '../ui/CustomerPicker';
 
 // Første-gangs walkthrough af Hurtigt tilbud (kun desktop, kun én gang, altid spring-bar).
 const QUICKQUOTE_TOUR_STEPS = [
@@ -607,6 +608,69 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const [customerType, setCustomerType] = useState(cd0.customerType === 'erhverv' ? 'erhverv' : 'privat');
     const [cvr, setCvr] = useState(cd0.cvr || '');
 
+    // Kunde-bibliotek: vælg en eksisterende kunde → felterne udfyldes automatisk, og
+    // tilbuddet kobles til kunden (leads.customer_id). Manuelt indtastede kunder gemmes
+    // også i biblioteket ved afsendelse/gem (find-eller-opret i save()).
+    const [customersList, setCustomersList] = useState([]);
+    const [linkedCustomerId, setLinkedCustomerId] = useState(initialLead?.customer_id || null);
+    useEffect(() => {
+        if (!carpenter?.id) return;
+        let cancelled = false;
+        supabase.from('customers').select('*').eq('carpenter_id', carpenter.id).order('name', { ascending: true })
+            .then(({ data }) => { if (!cancelled && data) setCustomersList(data); });
+        return () => { cancelled = true; };
+    }, [carpenter?.id]);
+
+    const pickCustomer = (c) => {
+        setLinkedCustomerId(c.id);
+        setCustomer({
+            name: c.name || '',
+            email: c.email || '',
+            phone: c.phone || '',
+            address: c.address || '',
+            zip: c.zip || '',
+            city: c.city || '',
+        });
+        setCustomerType(c.customer_type === 'erhverv' ? 'erhverv' : 'privat');
+        setCvr(c.cvr || '');
+    };
+
+    // Find en matchende kunde i biblioteket (navn + telefon/mail) eller opret en ny.
+    // Returnerer kundens id (eller null hvis der ikke er noget navn at gemme på).
+    const findOrCreateCustomer = async () => {
+        const name = (customer.name || '').trim();
+        if (!name || !carpenter?.id) return null;
+        const phone = (customer.phone || '').trim();
+        const email = (customer.email || '').trim();
+        const contact = phone.toLowerCase() || email.toLowerCase();
+        try {
+            const { data: existing } = await supabase
+                .from('customers').select('id, phone, email')
+                .eq('carpenter_id', carpenter.id).ilike('name', name);
+            if (existing && existing.length) {
+                const match = existing.find(c => !contact || (c.phone || '').toLowerCase() === contact || (c.email || '').toLowerCase() === contact) || existing[0];
+                if (match) return match.id;
+            }
+            const { data: created, error } = await supabase.from('customers').insert([{
+                carpenter_id: carpenter.id,
+                name,
+                email: email || null,
+                phone: phone || null,
+                address: (customer.address || '').trim() || null,
+                zip: (customer.zip || '').trim() || null,
+                city: (customer.city || '').trim() || null,
+                customer_type: customerType,
+                cvr: customerType === 'erhverv' ? ((cvr || '').trim() || null) : null,
+                created_by: draftCreator?.id || null,
+            }]).select('id').single();
+            if (error) throw error;
+            return created?.id || null;
+        } catch (e) {
+            console.warn('Kunde-kobling sprang over:', e);
+            return null;
+        }
+    };
+
     // AI-udfyld: tal frit om kunden + opgaven, så fyldes felterne ud (ren hjælpende hånd).
     const [aiRecording, setAiRecording] = useState(false);
     const [aiProcessing, setAiProcessing] = useState(false);
@@ -1116,6 +1180,10 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     : (initialLead?.raw_data?.checklist || seedChecklist(quoteObj.workLines)),
             };
 
+            // Kobl tilbuddet til en kunde i biblioteket: valgt kunde, eksisterende kobling,
+            // eller find-eller-opret ud fra de indtastede felter (så nye kunder gemmes).
+            const resolvedCustomerId = linkedCustomerId || initialLead?.customer_id || await findOrCreateCustomer();
+
             const fields = {
                 customer_name: customer.name,
                 // En kladde må gerne mangle email/adresse (kræves først ved afsendelse). Brug
@@ -1127,6 +1195,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 price_estimate: `${kr(calc.totalIncVat)} DKK`,
                 quote_token: quoteToken,
                 carpenter_id: carpenter.id,
+                customer_id: resolvedCustomerId,
                 status,
                 raw_data,
             };
@@ -1651,6 +1720,21 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 </div>
                 <div style={editSection} data-tour="qq-customer">
                     <h3 style={editH}><User size={18} color="#0f172a" /> Kunde</h3>
+                    {!isEditing && customersList.length > 0 && (
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={label}>Vælg fra dit kunde-bibliotek</label>
+                            <CustomerPicker
+                                customers={customersList}
+                                value={linkedCustomerId}
+                                onSelect={pickCustomer}
+                                onClear={() => setLinkedCustomerId(null)}
+                                placeholder="Genbrug en eksisterende kunde…"
+                            />
+                            <p style={{ margin: '6px 2px 0', fontSize: '0.78rem', color: '#94a3b8' }}>
+                                Vælg en kunde, så udfyldes felterne automatisk — eller skriv en ny nedenfor (den gemmes i biblioteket).
+                            </p>
+                        </div>
+                    )}
                     {renderCustomerInputs()}
                 </div>
                 <div style={editSection} data-tour="qq-title">

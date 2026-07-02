@@ -334,10 +334,14 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
     // Opsamling af alle registreringer
     const allEntries = useMemo(() => {
         let entries = [];
+        // Kun EGNE medarbejdere hører til i timeseddel/løn. Underleverandør-timer
+        // (syntetiske 'sub:'-id'er eller gæster uden for holdet) må aldrig med i løn.
+        const ownIds = new Set(teamMembers.map(m => String(m.id)));
         // Byggesager (leads)
         (leadsData || []).forEach(lead => {
             const leadEntries = lead.raw_data?.time_entries || [];
             leadEntries.forEach(t => {
+                if (!ownIds.has(String(t.employeeId))) return; // spring underleverandører/gæster over
                 entries.push({
                     ...t,
                     source: 'lead',

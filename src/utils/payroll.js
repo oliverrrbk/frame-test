@@ -161,6 +161,8 @@ export function aggregatePayroll(entries, cfg) {
     const byEmp = {};
     const ensure = (id) => (byEmp[id] = byEmp[id] || { employeeId: id, normalHours: 0, vacationDays: 0, sickDays: 0, otherDays: 0, mileage: 0 });
     entries.forEach(e => {
+        // Underleverandør-timer (syntetiske 'sub:'-id'er) er ALDRIG løn for eget firma.
+        if (String(e.employeeId || '').startsWith('sub:')) return;
         const r = ensure(e.employeeId);
         r.mileage += Number(e.km) || 0;
         if (e.leadId === 'internal') {

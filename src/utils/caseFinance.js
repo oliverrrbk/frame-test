@@ -33,7 +33,12 @@ const getBasePriceInclVat = (lead) => {
     if (rd.is_manual_case) {
         const toIncl = (exVat) => isReverseChargeLead(lead) ? Math.round(exVat) : Math.round(exVat * 1.25);
         if (rd.billing_mode === 'hourly' && Number(rd.hourly_rate) > 0) {
-            const hours = (rd.time_entries || []).reduce((sum, e) => sum + (Number(e.hours) || 0), 0);
+            // Kun eget arbejde faktureres på din timepris — underleverandør-timer
+            // (syntetiske 'sub:'-id'er) er IKKE dit eget firmas timer og tælles ikke med.
+            const hours = (rd.time_entries || []).reduce((sum, e) => {
+                if (String(e.employeeId || '').startsWith('sub:')) return sum;
+                return sum + (Number(e.hours) || 0);
+            }, 0);
             return toIncl(hours * Number(rd.hourly_rate));
         }
         if (rd.billing_mode === 'fixed' && Number(rd.fixed_price_ex_vat) > 0) {

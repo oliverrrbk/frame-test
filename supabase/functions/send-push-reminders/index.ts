@@ -771,7 +771,9 @@ serve(async (req) => {
                 for (const row of rows || []) {
                     const entries = row.raw_data?.time_entries || [];
                     for (const entry of entries) {
-                        if (entry.date === todayStr && entry.employeeId) {
+                        // Underleverandør-timer (syntetiske 'sub:'-id'er) hører ikke til
+                        // eget firmas timeregistrering og må ikke påvirke "mangler timer".
+                        if (entry.date === todayStr && entry.employeeId && !String(entry.employeeId).startsWith('sub:')) {
                             registeredToday.add(String(entry.employeeId));
                         }
                     }
