@@ -868,6 +868,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [subRates, setSubRates] = useState({});          // subId -> timeløn (kr/time ekskl. moms) til fakturapris-kontrol
     const [ownCostRate, setOwnCostRate] = useState('');    // kostpris/time for eget hold (kun til sags-overblik, påvirker ikke løn)
     const [timeDateFilter, setTimeDateFilter] = useState(null);  // null = alle dage, ellers 'YYYY-MM-DD'
+    const [reconcileSub, setReconcileSub] = useState(null);      // {id, company_name} — underleverandør der afstemmes i popup
+    const [reconcilePeriod, setReconcilePeriod] = useState({ from: '', to: '' });  // afstemnings-periode (tom = hele sagen)
+    const [reconcileInvoice, setReconcileInvoice] = useState('');  // modtaget fakturabeløb (inkl. moms) til sammenligning
 
     // States til Mesterens ugentlige medarbejder-tidsstyring
     const [selectedEmployeeForTidslog, setSelectedEmployeeForTidslog] = useState('');
@@ -4421,34 +4424,19 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                                 <Store size={16} /> Underleverandør-forbrug
                                             </div>
-                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#7c3aed', lineHeight: 1.5 }}>Indtast timeløn, så beregnes fakturaprisen — til at sammenligne med den faktura underleverandøren sender.</p>
-                                            {subcontractorBreakdown.map(b => {
-                                                const rate = parseFloat(String(subRates[b.id] ?? '').replace(/\./g, '').replace(',', '.')) || 0;
-                                                const exVat = b.hours * rate;
-                                                const vat = exVat * 0.25;
-                                                return (
-                                                    <div key={b.id} style={{ background: '#fff', border: '1px solid #e9d5ff', borderRadius: '12px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                                                            <strong style={{ color: '#0f172a', fontSize: '0.92rem' }}>{b.company_name}</strong>
-                                                            <span style={{ fontSize: '0.85rem', color: '#7c3aed', fontWeight: 700 }}>{b.hours.toFixed(2)} timer</span>
-                                                        </div>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                                            <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Timeløn (ekskl. moms)</label>
-                                                            <div style={{ position: 'relative' }}>
-                                                                <input inputMode="decimal" value={subRates[b.id] ?? ''} onChange={(e) => setSubRates(prev => ({ ...prev, [b.id]: e.target.value.replace(/[^0-9.,]/g, '') }))} placeholder="Fx 450" style={{ width: '120px', padding: '8px 40px 8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.9rem', outline: 'none' }} />
-                                                                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>kr.</span>
-                                                            </div>
-                                                        </div>
-                                                        {rate > 0 && (
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '8px', fontSize: '0.88rem' }}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>Ekskl. moms</span><span>{Math.round(exVat).toLocaleString('da-DK')} kr.</span></div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>Moms (25%)</span><span>{Math.round(vat).toLocaleString('da-DK')} kr.</span></div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, color: '#7c3aed' }}><span>Inkl. moms</span><span>{Math.round(exVat + vat).toLocaleString('da-DK')} kr.</span></div>
-                                                            </div>
-                                                        )}
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#7c3aed', lineHeight: 1.5 }}>Åbn en underleverandør for at afstemme en (del)faktura — vælg periode, indtast timeløn og se præcis de timer der ligger bag.</p>
+                                            {subcontractorBreakdown.map(b => (
+                                                <div key={b.id} style={{ background: '#fff', border: '1px solid #e9d5ff', borderRadius: '12px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <strong style={{ color: '#0f172a', fontSize: '0.92rem' }}>{b.company_name}</strong>
+                                                        <div style={{ fontSize: '0.82rem', color: '#7c3aed', fontWeight: 700 }}>{b.hours.toFixed(2)} timer i alt på sagen</div>
                                                     </div>
-                                                );
-                                            })}
+                                                    <button type="button" onClick={() => { setReconcileSub({ id: b.id, company_name: b.company_name }); setReconcilePeriod({ from: '', to: '' }); setReconcileInvoice(''); }}
+                                                        style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 14px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 6px 14px rgba(124,58,237,0.22)' }}>
+                                                        <Receipt size={15} /> Afstem faktura
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
 
@@ -4586,6 +4574,117 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         })()}
                                     </div>
                                 </div>
+
+                                {/* POPUP: AFSTEM UNDERLEVERANDØR-FAKTURA (periode + timeløn + sammenlign) */}
+                                {reconcileSub && createPortal((() => {
+                                    const sub = reconcileSub;
+                                    const { from, to } = reconcilePeriod;
+                                    const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                    const now = new Date();
+                                    const setThisMonth = () => setReconcilePeriod({ from: ymd(new Date(now.getFullYear(), now.getMonth(), 1)), to: ymd(new Date(now.getFullYear(), now.getMonth() + 1, 0)) });
+                                    const setLastMonth = () => setReconcilePeriod({ from: ymd(new Date(now.getFullYear(), now.getMonth() - 1, 1)), to: ymd(new Date(now.getFullYear(), now.getMonth(), 0)) });
+                                    const isWhole = !from && !to;
+                                    const entries = timeEntries
+                                        .filter(e => { const p = subPersonFromId(e.employeeId); return p && String(p.subId) === String(sub.id); })
+                                        .filter(e => (!from || e.date >= from) && (!to || e.date <= to))
+                                        .sort((a, b) => new Date(b.date) - new Date(a.date));
+                                    const hours = entries.reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
+                                    const rate = parseFloat(String(subRates[sub.id] ?? '').replace(/\./g, '').replace(',', '.')) || 0;
+                                    const exVat = hours * rate;
+                                    const vat = exVat * 0.25;
+                                    const incVat = exVat + vat;
+                                    const invoiceAmt = parseFloat(String(reconcileInvoice).replace(/\./g, '').replace(',', '.')) || 0;
+                                    const diff = invoiceAmt - incVat;
+                                    const quickBtn = (label, onClick, active) => (
+                                        <button type="button" onClick={onClick} style={{ padding: '7px 12px', borderRadius: '999px', border: active ? '1px solid #7c3aed' : '1px solid #e2e8f0', background: active ? '#f5f3ff' : '#fff', color: active ? '#6d28d9' : '#475569', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>{label}</button>
+                                    );
+                                    return (
+                                        <div onClick={() => setReconcileSub(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                                            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto', background: '#fff', borderRadius: '24px', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Receipt size={20} /></div>
+                                                        <div>
+                                                            <h3 style={{ margin: 0, fontSize: '1.12rem', color: '#0f172a', fontWeight: 700 }}>Afstem faktura</h3>
+                                                            <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>{sub.company_name}</p>
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={() => setReconcileSub(null)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}><X size={18} /></button>
+                                                </div>
+                                                <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                                                    {/* Periode */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Periode</label>
+                                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                            {quickBtn('Hele sagen', () => setReconcilePeriod({ from: '', to: '' }), isWhole)}
+                                                            {quickBtn('Denne måned', setThisMonth, false)}
+                                                            {quickBtn('Sidste måned', setLastMonth, false)}
+                                                        </div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                                            <div>
+                                                                <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Fra</label>
+                                                                <input type="date" value={from} onChange={(e) => setReconcilePeriod(p => ({ ...p, from: e.target.value }))} style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '0.88rem' }} />
+                                                            </div>
+                                                            <div>
+                                                                <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Til</label>
+                                                                <input type="date" value={to} onChange={(e) => setReconcilePeriod(p => ({ ...p, to: e.target.value }))} style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '0.88rem' }} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Timeløn + resultat */}
+                                                    <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '14px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                                            <label style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Timeløn (ekskl. moms)</label>
+                                                            <div style={{ position: 'relative' }}>
+                                                                <input inputMode="decimal" value={subRates[sub.id] ?? ''} onChange={(e) => setSubRates(prev => ({ ...prev, [sub.id]: e.target.value.replace(/[^0-9.,]/g, '') }))} placeholder="Fx 450" style={{ width: '130px', padding: '9px 40px 9px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.9rem', outline: 'none' }} />
+                                                                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>kr.</span>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#475569', borderTop: '1px solid #e9d5ff', paddingTop: '10px' }}><span>Timer i perioden</span><strong style={{ color: '#7c3aed' }}>{hours.toFixed(2)} t</strong></div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', color: '#475569' }}><span>Ekskl. moms</span><span>{Math.round(exVat).toLocaleString('da-DK')} kr.</span></div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', color: '#475569' }}><span>Moms (25%)</span><span>{Math.round(vat).toLocaleString('da-DK')} kr.</span></div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.98rem', fontWeight: 800, color: '#7c3aed' }}><span>Inkl. moms</span><span>{Math.round(incVat).toLocaleString('da-DK')} kr.</span></div>
+                                                    </div>
+
+                                                    {/* Sammenlign med modtaget faktura */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                                            <label style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Fakturabeløb modtaget (inkl. moms)</label>
+                                                            <div style={{ position: 'relative' }}>
+                                                                <input inputMode="decimal" value={reconcileInvoice} onChange={(e) => setReconcileInvoice(e.target.value.replace(/[^0-9.,]/g, ''))} placeholder="Fx 4.219" style={{ width: '130px', padding: '9px 40px 9px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.9rem', outline: 'none' }} />
+                                                                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>kr.</span>
+                                                            </div>
+                                                        </div>
+                                                        {invoiceAmt > 0 && (
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '12px', background: Math.abs(diff) < 1 ? '#ecfdf5' : '#fef2f2', color: Math.abs(diff) < 1 ? '#059669' : '#dc2626', fontWeight: 700, fontSize: '0.9rem' }}>
+                                                                <span>{Math.abs(diff) < 1 ? 'Passer med dine timer' : (diff > 0 ? 'Faktura er højere end dine timer' : 'Faktura er lavere end dine timer')}</span>
+                                                                <span>{diff > 0 ? '+' : ''}{Math.round(diff).toLocaleString('da-DK')} kr.</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* De specifikke timer i perioden */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timer i perioden ({entries.length})</label>
+                                                        {entries.length === 0 ? (
+                                                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic' }}>Ingen registrerede timer{isWhole ? '' : ' i den valgte periode'}.</p>
+                                                        ) : entries.map(e => (
+                                                            <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '10px 12px', border: '1px solid #f1f5f9', borderRadius: '10px', fontSize: '0.85rem' }}>
+                                                                <div style={{ minWidth: 0 }}>
+                                                                    <div style={{ fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.employeeName}</div>
+                                                                    <div style={{ color: '#94a3b8' }}>{new Date(e.date).toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short' })}{e.desc ? ` · ${e.desc}` : ''}</div>
+                                                                </div>
+                                                                <span style={{ flexShrink: 0, fontWeight: 700, color: '#7c3aed' }}>{e.hours} t</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5 }}>Kun til afstemning — påvirker ikke løn, timebudget eller fakturaer.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })(), document.body)}
 
                                 {/* MODAL TIL AT REGISTRERE TIMER MANUELT */}
                                 {isTimeModalOpen && createPortal(
