@@ -46,7 +46,7 @@ import FoundersWelcome from './FoundersWelcome';
 import SectionTour from './SectionTour';
 import MobileInstallGuide from './MobileInstallGuide';
 import CalculatorGuide from './CalculatorGuide';
-import { shouldShowCoach, markCoachSeen } from './coachmarks';
+import { shouldShowCoach, markCoachSeen, hydrateCoachFromProfile } from './coachmarks';
 import { cacheGet, cacheSet } from '../../utils/dataCache';
 import { isOfflineError } from '../../utils/friendlyError';
 import TabErrorBoundary from '../TabErrorBoundary';
@@ -1537,7 +1537,7 @@ const Dashboard = () => {
                 cacheGet(`bf:profile:${userId}`),
                 cacheGet(`bf:team:${userId}`),
             ]);
-            if (profSnap?.myProfile) setMyProfile(profSnap.myProfile);
+            if (profSnap?.myProfile) { setMyProfile(profSnap.myProfile); hydrateCoachFromProfile(profSnap.myProfile); }
             if (profSnap?.companyProfile) setCarpenterProfile(profSnap.companyProfile);
             if (Array.isArray(teamSnap)) setTeamMembers(teamSnap);
             if (matSnap?.materials) setMaterialsData(matSnap.materials);
@@ -1561,6 +1561,10 @@ const Dashboard = () => {
         }
         if (myDbProfile) {
             setMyProfile(myDbProfile);
+            // Onboarding-bobler/rundture huskes PER BRUGER i DB'en (ikke kun i
+            // denne browsers localStorage). Flet brugerens gemte status ind, så
+            // det man har set ikke dukker op igen i en ny browser/enhed.
+            hydrateCoachFromProfile(myDbProfile);
         }
 
         // GÆST: stop her. Gæsten rendres af GuestDashboard (tidlig return i render),
