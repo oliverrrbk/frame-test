@@ -25,6 +25,7 @@ import { friendlyError, isOfflineError } from '../../utils/friendlyError';
 import { enqueueMutation } from '../../utils/mutationQueue';
 import { mutateLeadRawData } from '../../utils/leadRawData';
 import { getChecklistForCategory, buildPhasesChecklist } from '../../utils/checklistGenerator';
+import WorkBreakdownModal, { subManHours } from './WorkBreakdownModal';
 import UserAvatar from '../ui/UserAvatar';
 import SectionTour from './SectionTour';
 import { shouldShowCoach } from './coachmarks';
@@ -298,8 +299,16 @@ function SortableSubTask({ sub, stepId, handleTodoToggle, speakText, handleDelet
                         {sub.text}
                     </span>
                 )}
+                {subManHours(sub) > 0 && (
+                    <span
+                        title={`Estimeret ${sub.estHours} timer × ${Math.max(1, parseInt(sub.crew, 10) || 1)} mand`}
+                        style={{ marginLeft: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', fontWeight: 800, color: '#0369a1', background: '#f0f9ff', border: '1px solid #bae6fd', padding: '3px 9px', borderRadius: '999px', whiteSpace: 'nowrap' }}
+                    >
+                        <Clock size={12} /> {subManHours(sub)} t
+                    </span>
+                )}
             </div>
-            
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginTop: '12px' }}>
                 <AudioPlayerButton text={sub.text} title="Læs op" />
                 
@@ -725,6 +734,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     // States til to-do
     const [todoList, setTodoList] = useState([]);
     const [newTodoText, setNewTodoText] = useState('');
+    const [showHourCompare, setShowHourCompare] = useState(false);
 
     // States til logs
     const [logsList, setLogsList] = useState([]);
@@ -3894,6 +3904,19 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     </div>
                                 )}
 
+                                {/* Sammenlign estimerede vs. faktiske timer pr. delopgave (kun når der er estimater). */}
+                                {(profile?.role !== 'worker' && profile?.role !== 'apprentice')
+                                    && todoList.some(s => (s.subTasks || []).some(t => subManHours(t) > 0)) && (
+                                    <button
+                                        onClick={() => setShowHourCompare(true)}
+                                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(14,165,233,0.18)'; e.currentTarget.style.borderColor = '#38bdf8'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#bae6fd'; }}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', background: 'linear-gradient(180deg, #f0f9ff, #ffffff)', color: '#0369a1', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', transition: 'all .15s' }}
+                                    >
+                                        <TrendingUp size={17} /> Sammenlign timer (estimeret vs. faktisk)
+                                    </button>
+                                )}
+
                                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndGlobal}>
                                     <SortableContext items={todoList.map(s => s.id)} strategy={verticalListSortingStrategy}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -3973,6 +3996,17 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     </form>
                                 )}
                             </div>
+                        )}
+
+                        {/* Sammenlign-timer popup — læse-visning, auto-fordeling fra "done"-delopgaver */}
+                        {showHourCompare && (
+                            <WorkBreakdownModal
+                                mode="compare"
+                                steps={todoList}
+                                onClose={() => setShowHourCompare(false)}
+                                hourlyRate={parseFloat(selectedCase?.raw_data?.calc_data?.hourlyRate) || parseFloat(carpenterProfile?.hourly_rate) || parseFloat(carpenterProfile?.raw_data?.hourly_rate) || 550}
+                                actualHours={totalActualHours}
+                            />
                         )}
 
                         {/* TAB 2: MATERIALER — PDF-først for manuelle tilbud, ellers redigerbar liste */}

@@ -12,6 +12,7 @@ import { listQuoteTemplates, createQuoteTemplate, updateQuoteTemplate, deleteQuo
 import Coachmark from './Coachmark';
 import SectionTour from './SectionTour';
 import SmtpIntegration from './SmtpIntegration';
+import WorkBreakdownModal, { totalManHours } from './WorkBreakdownModal';
 import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
 
 // Første-gangs walkthrough af Hurtigt tilbud (kun desktop, kun én gang, altid spring-bar).
@@ -441,6 +442,10 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const [laborFixed, setLaborFixed] = useState(mq0.laborFixed ? String(mq0.laborFixed) : '');
     const [laborRate, setLaborRate] = useState(String(mq0.laborRate || carpenter?.hourly_rate || carpenter?.raw_data?.hourly_rate || '550'));
     const [laborHours, setLaborHours] = useState(mq0.laborHours ? String(mq0.laborHours) : '');
+    // Valgfri delopgave-opdeling (byggeprocessen) — bliver til sagens bygge-to-do.
+    // Fyldes den ud i timepris-tilstand, STYRER summen af mandetimer tilbuddets timeantal.
+    const [breakdown, setBreakdown] = useState(() => initialLead?.raw_data?.checklist || []);
+    const [showBreakdown, setShowBreakdown] = useState(false);
     // Tillæg + arbejdsbeskrivelse (rich-text)
     const [extras, setExtras] = useState((mq0.extras && mq0.extras.length) ? mq0.extras.map(e => ({ id: uid(), desc: e.desc || '', amount: e.amount != null ? String(e.amount) : '' })) : [{ id: uid(), desc: '', amount: '' }]);
     const [workDescHtml, setWorkDescHtml] = useState(mq0.workHtml || '');
@@ -779,12 +784,12 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         if (!canAutosave.current) return;
         const t = setTimeout(() => {
             try {
-                const snap = { title, materialCost, markup, laborMode, laborFixed, laborRate, laborHours, extras, workDescHtml, customer, emailMessage, validityDays, savedAt: Date.now() };
+                const snap = { title, materialCost, markup, laborMode, laborFixed, laborRate, laborHours, breakdown, extras, workDescHtml, customer, emailMessage, validityDays, savedAt: Date.now() };
                 if (draftHasContent(snap)) window.localStorage.setItem(draftKey, JSON.stringify(snap));
             } catch { /* localStorage kan være fuld/blokeret — ignorér */ }
         }, 600);
         return () => clearTimeout(t);
-    }, [title, materialCost, markup, laborMode, laborFixed, laborRate, laborHours, extras, workDescHtml, customer, emailMessage, validityDays, draftKey]);
+    }, [title, materialCost, markup, laborMode, laborFixed, laborRate, laborHours, breakdown, extras, workDescHtml, customer, emailMessage, validityDays, draftKey]);
 
     // Fortsæt i den gemte kladde: indlæs øjebliksbilledet i alle felter.
     const continueDraft = () => {
@@ -797,6 +802,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             setLaborFixed(d.laborFixed || '');
             setLaborRate(d.laborRate || String(carpenter?.hourly_rate || carpenter?.raw_data?.hourly_rate || '550'));
             setLaborHours(d.laborHours || '');
+            setBreakdown(Array.isArray(d.breakdown) ? d.breakdown : []);
             setExtras((Array.isArray(d.extras) && d.extras.length) ? d.extras.map(e => ({ id: uid(), desc: e.desc || '', amount: e.amount != null ? String(e.amount) : '' })) : [{ id: uid(), desc: '', amount: '' }]);
             setWorkDescHtml(d.workDescHtml || '');
             if (d.customer) setCustomer({ name: '', email: '', phone: '', address: '', zip: '', city: '', ...d.customer });
@@ -821,18 +827,24 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         setRestorePrompt(false);
     };
 
+    // Har brugeren lavet delopgaver med timer, styrer summen af mandetimer (timer × mand)
+    // tilbuddets timeantal i timepris-tilstand — ét facit, ingen dobbelt-indtastning.
+    const breakdownManHours = useMemo(() => totalManHours(breakdown), [breakdown]);
+    const breakdownDrivesHours = laborMode === 'hourly' && breakdownManHours > 0;
+    const effLaborHours = breakdownDrivesHours ? breakdownManHours : num(laborHours);
+
     // ---- Live-beregning ----
     const calc = useMemo(() => {
         const mCost = num(materialCost);
         const mPct = num(markup);
         const materialSell = mCost * (1 + mPct / 100);
-        const laborTotal = laborMode === 'hourly' ? num(laborRate) * num(laborHours) : num(laborFixed);
+        const laborTotal = laborMode === 'hourly' ? num(laborRate) * effLaborHours : num(laborFixed);
         const extrasSum = extras.reduce((s, e) => s + num(e.amount), 0);
         const totalExVat = materialSell + laborTotal + extrasSum;
         const vat = totalExVat * 0.25;
         const totalIncVat = totalExVat + vat;
         return { mCost, mPct, materialSell, laborTotal, extrasSum, totalExVat, vat, totalIncVat };
-    }, [materialCost, markup, laborMode, laborFixed, laborRate, laborHours, extras]);
+    }, [materialCost, markup, laborMode, laborFixed, laborRate, effLaborHours, extras]);
 
     const buildQuoteObj = () => {
     // Normalisér editorens rå HTML til vores faste format (p/h2/h3/ul/ol/li/b/i/u +
@@ -845,7 +857,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         laborMode,
         laborFixed: num(laborFixed),
         laborRate: num(laborRate),
-        laborHours: num(laborHours),
+        laborHours: effLaborHours,
         laborTotal: calc.laborTotal,
         extras: extras.filter(e => num(e.amount) > 0 || (e.desc || '').trim()).map(e => ({ desc: e.desc || 'Tillæg', amount: num(e.amount) })),
         workHtml: workHtmlClean,
@@ -928,7 +940,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 manual_quote: quoteObj,
                 quote_settings: { ...(initialLead?.raw_data?.quote_settings || {}), validityDays: num(validityDays) || 14 },
                 custom_message: emailMessage,
-                calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: num(laborHours), hourlyRate: num(laborRate) },
+                calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: effLaborHours, hourlyRate: num(laborRate) },
                 actual_quote_price: calc.totalExVat,
                 customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city, customerType, cvr: customerType === 'erhverv' ? cvr : '' },
             };
@@ -1083,13 +1095,17 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 quote_settings: nextQuoteSettings,
                 ...(isSendingNow ? { quote_sent_at: new Date().toISOString() } : {}),
                 custom_message: emailMessage,
-                calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: num(laborHours), hourlyRate: num(laborRate) },
+                calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: effLaborHours, hourlyRate: num(laborRate) },
                 actual_quote_price: calc.totalExVat,
                 // Strukturerede kundefelter bevares så de kan genindlæses korrekt ved redigering.
                 customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city, customerType, cvr: customerType === 'erhverv' ? cvr : '' },
                 quote_pdf_url: quotePdfUrl ? `${quotePdfUrl}?t=${Date.now()}` : (initialLead?.raw_data?.quote_pdf_url),
                 material_pdfs: [...savedPdfs, ...materialPdfs],
-                checklist: initialLead?.raw_data?.checklist || seedChecklist(quoteObj.workLines),
+                // Har brugeren lavet delopgaver, bliver DE til bygge-to-do'en. Ellers
+                // bevares en eksisterende liste, og sidste udvej er standard-skabelonen.
+                checklist: (Array.isArray(breakdown) && breakdown.some(s => (s.subTasks || []).length))
+                    ? breakdown
+                    : (initialLead?.raw_data?.checklist || seedChecklist(quoteObj.workLines)),
             };
 
             const fields = {
@@ -1285,7 +1301,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     </div>
                     <div>
                         <label style={label}>Antal timer</label>
-                        <input className="qqb-input" style={input} inputMode="decimal" placeholder="120" value={laborHours} onChange={(e) => setLaborHours(e.target.value)} />
+                        {breakdownDrivesHours ? (
+                            <div style={{ ...input, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', color: '#0f172a', fontWeight: 700 }} title="Styret af dine delopgaver">
+                                {fmtDk(String(breakdownManHours))} t
+                                <span style={{ fontSize: '0.7rem', color: '#0ea5e9', fontWeight: 700 }}>fra delopgaver</span>
+                            </div>
+                        ) : (
+                            <input className="qqb-input" style={input} inputMode="decimal" placeholder="120" value={laborHours} onChange={(e) => setLaborHours(e.target.value)} />
+                        )}
                     </div>
                 </div>
             )}
@@ -1293,6 +1316,17 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 <span style={chipLbl}>Arbejde i alt</span>
                 <span style={{ ...chipVal, color: '#d97706' }}>{kr(calc.laborTotal)} kr</span>
             </div>
+
+            {/* Valgfri delopgave-opdeling (byggeprocessen) — bliver til sagens bygge-to-do. */}
+            <button type="button" onClick={() => setShowBreakdown(true)} className="qqb-ghost" style={{ width: '100%', marginTop: '10px', padding: '12px', borderRadius: '12px', border: '1px dashed #cbd5e1', background: '#fff', color: '#334155', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', transition: 'all .15s' }}>
+                <Hammer size={16} color="#0ea5e9" />
+                {breakdownManHours > 0 ? `Delopgaver & timer · ${fmtDk(String(breakdownManHours))} mandetimer` : 'Delopgaver & timer (valgfrit)'}
+            </button>
+            {breakdownManHours > 0 && (
+                <p style={{ margin: '8px 2px 0', fontSize: '0.76rem', color: '#64748b', lineHeight: 1.4 }}>
+                    {breakdownDrivesHours ? 'Summen styrer tilbuddets timer.' : 'Bruges til planlægning og sammenligning på sagen.'} Følger med som byggeproces (bygge-to-do).
+                </p>
+            )}
         </>
     );
 
@@ -1966,6 +2000,18 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             );
                         })(),
                         document.body
+                    )}
+
+                    {/* Delopgaver & timer — Bison-tabel, styrer tilbuddets timer i timepris-tilstand */}
+                    {showBreakdown && (
+                        <WorkBreakdownModal
+                            mode="edit"
+                            steps={breakdown}
+                            onChange={setBreakdown}
+                            onClose={() => setShowBreakdown(false)}
+                            hourlyRate={num(laborRate)}
+                            onSeedStandard={() => seedChecklist(htmlToPlainLines(sanitizeHtml(workDescHtml)))}
+                        />
                     )}
                 </div>
 
