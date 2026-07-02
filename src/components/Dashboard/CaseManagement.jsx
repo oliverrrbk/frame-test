@@ -866,6 +866,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [timeOverwriteWarning, setTimeOverwriteWarning] = useState(null);
     const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
     const [subRates, setSubRates] = useState({});          // subId -> timeløn (kr/time ekskl. moms) til fakturapris-kontrol
+    const [ownCostRate, setOwnCostRate] = useState('');    // kostpris/time for eget hold (kun til sags-overblik, påvirker ikke løn)
     const [timeDateFilter, setTimeDateFilter] = useState(null);  // null = alle dage, ellers 'YYYY-MM-DD'
 
     // States til Mesterens ugentlige medarbejder-tidsstyring
@@ -1855,6 +1856,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     // FORBRUG/løn — bruges kun til den lilla boks + fakturapris-kontrol pr. underleverandør.
     const subcontractorHours = timeEntries
         .filter(e => !isOwnTeamEntry(e))
+        .reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
+    // Eget holds samlede timer (rolle-uafhængigt) — til det samlede sags-overblik.
+    const ownTeamHours = timeEntries
+        .filter(isOwnTeamEntry)
         .reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
     const subcontractorBreakdown = (assignedSubs || []).map(sub => {
         const hours = timeEntries.filter(e => {
@@ -4446,6 +4451,55 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             })}
                                         </div>
                                     )}
+
+                                    {/* Samlet på sagen: alle timer (eget hold + underleverandører) + kostpris.
+                                        Rent overblik — påvirker ikke løn, budget eller fakturaer. */}
+                                    {!['worker', 'apprentice', 'guest'].includes(simulatedRole || profile?.role) && (ownTeamHours > 0 || subcontractorHours > 0) && (() => {
+                                        const ownRate = parseFloat(String(ownCostRate).replace(/\./g, '').replace(',', '.')) || 0;
+                                        const ownCost = ownTeamHours * ownRate;
+                                        const subCost = subcontractorBreakdown.reduce((s, b) => {
+                                            const r = parseFloat(String(subRates[b.id] ?? '').replace(/\./g, '').replace(',', '.')) || 0;
+                                            return s + b.hours * r;
+                                        }, 0);
+                                        const totalHours = ownTeamHours + subcontractorHours;
+                                        const totalCost = ownCost + subCost;
+                                        const revenueEx = baseTotalPrice ? (isReverseChargeLead(selectedCase) ? baseTotalPrice : baseTotalPrice / 1.25) : 0;
+                                        const margin = revenueEx - totalCost;
+                                        const row = (label, value, opts = {}) => (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: opts.big ? '0.98rem' : '0.9rem', fontWeight: opts.big ? 800 : 500, color: opts.color || '#475569', ...(opts.border ? { borderTop: '1px solid #e2e8f0', paddingTop: '10px', marginTop: '2px' } : {}) }}>
+                                                <span>{label}</span><span>{value}</span>
+                                            </div>
+                                        );
+                                        return (
+                                            <div style={{ background: 'linear-gradient(135deg,#f8fafc,#f5f3ff)', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                    <Activity size={16} style={{ color: '#7c3aed' }} /> Samlet på sagen
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                                                    <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Timer i alt</span>
+                                                    <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a' }}>{totalHours.toFixed(2)} <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>t</span></span>
+                                                </div>
+                                                <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Eget hold {ownTeamHours.toFixed(2)} t · Underleverandører {subcontractorHours.toFixed(2)} t</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                                                    <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Kostpris eget hold (kr/time)</label>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <input inputMode="decimal" value={ownCostRate} onChange={(e) => setOwnCostRate(e.target.value.replace(/[^0-9.,]/g, ''))} placeholder="Fx 350" style={{ width: '120px', padding: '8px 40px 8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.9rem', outline: 'none' }} />
+                                                        <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>kr.</span>
+                                                    </div>
+                                                </div>
+                                                {(ownRate > 0 || subCost > 0) && (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        {ownRate > 0 && row('Eget hold', `${Math.round(ownCost).toLocaleString('da-DK')} kr.`)}
+                                                        {subCost > 0 && row('Underleverandører', `${Math.round(subCost).toLocaleString('da-DK')} kr.`)}
+                                                        {row('Samlet kostpris (ekskl. moms)', `${Math.round(totalCost).toLocaleString('da-DK')} kr.`, { big: true, color: '#0f172a', border: true })}
+                                                        {revenueEx > 0 && row('Sagens pris (ekskl. moms)', `${Math.round(revenueEx).toLocaleString('da-DK')} kr.`)}
+                                                        {revenueEx > 0 && row('Dækningsbidrag', `${Math.round(margin).toLocaleString('da-DK')} kr.`, { big: true, color: margin >= 0 ? '#059669' : '#dc2626' })}
+                                                    </div>
+                                                )}
+                                                <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5 }}>Kun til overblik — påvirker ikke løn, timebudget eller fakturaer.</p>
+                                            </div>
+                                        );
+                                    })()}
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         {(() => {
