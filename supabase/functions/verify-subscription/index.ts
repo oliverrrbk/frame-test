@@ -44,10 +44,20 @@ serve(async (req) => {
             apiVersion: '2023-10-16', httpClient: Stripe.createFetchHttpClient(),
         })
         const subs = await stripe.subscriptions.list({ customer: owner.payment_customer_id, status: 'all', limit: 10 })
-        const hasActive = subs.data.some((s: any) => s.status === 'active' || s.status === 'trialing')
+        // Foretræk et aktivt abonnement; ellers et der stadig er i prøve (kort tilknyttet).
+        const liveSub = subs.data.find((s: any) => s.status === 'active') || subs.data.find((s: any) => s.status === 'trialing')
         const isPastDue = subs.data.some((s: any) => s.status === 'past_due' || s.status === 'unpaid')
 
-        if (hasActive) {
+        if (liveSub) {
+            if (liveSub.status === 'trialing') {
+                // Kort tilknyttet, men stadig i prøve → behold 'trialing' + spejl trial_end.
+                // Der trækkes IKKE endnu; prøve-uret bevares præcist.
+                const trialEndsAt = liveSub.trial_end ? new Date(liveSub.trial_end * 1000).toISOString() : null
+                const update: any = { subscription_status: 'trialing', tier: 'role_based' }
+                if (trialEndsAt) update.trial_ends_at = trialEndsAt
+                await supa.from('carpenters').update(update).eq('id', companyId)
+                return json({ success: true, status: 'trialing', active: true, hasCard: true, trialEndsAt }, corsHeaders)
+            }
             await supa.from('carpenters').update({ subscription_status: 'active', trial_ends_at: null, tier: 'role_based' }).eq('id', companyId)
             return json({ success: true, status: 'active', active: true }, corsHeaders)
         }

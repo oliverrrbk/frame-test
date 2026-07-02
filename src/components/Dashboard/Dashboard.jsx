@@ -1648,9 +1648,11 @@ const Dashboard = () => {
                     ...(metadata.team ? { team: metadata.team } : {}),   // rollebaseret hold (sæder)
                 },
                 // Ny mester/ejer får 30 dages gratis prøve med det samme (kort først ved udløb).
+                // Ankres til brugerens faktiske oprettelse (auth.created_at), så prøve-slut er
+                // konsistent overalt — også hvis profilen først dannes lidt efter signup.
                 ...((!metadata.role || metadata.role === 'admin') ? {
                     subscription_status: 'trialing',
-                    trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                    trial_ends_at: new Date((authUser?.created_at ? new Date(authUser.created_at).getTime() : Date.now()) + 30 * 24 * 60 * 60 * 1000).toISOString(),
                 } : {}),
                 has_completed_onboarding: false,
                 requires_password_change: metadata.role && metadata.role !== 'admin' ? true : false,

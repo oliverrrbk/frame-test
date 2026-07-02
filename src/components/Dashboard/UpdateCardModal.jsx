@@ -79,7 +79,7 @@ function CardForm({ clientSecret, onClose, onSuccess, defaultName, defaultEmail 
     );
 }
 
-export default function UpdateCardModal({ onClose, onSuccess, defaultName, defaultEmail }) {
+export default function UpdateCardModal({ onClose, onSuccess, defaultName, defaultEmail, trialNote }) {
     const [clientSecret, setClientSecret] = useState(null);
     const [loadErr, setLoadErr] = useState('');
 
@@ -127,6 +127,11 @@ export default function UpdateCardModal({ onClose, onSuccess, defaultName, defau
                     ) : (
                         <>
                             <p style={{ margin: '0 0 18px', color: '#64748b', fontSize: '0.88rem', lineHeight: 1.5 }}>Indtast jeres nye kort herunder. Det bliver brugt til jeres næste fornyelse.</p>
+                            {trialNote && (
+                                <div style={{ margin: '0 0 18px', padding: '12px 14px', borderRadius: '10px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.25)', color: '#047857', fontSize: '0.82rem', fontWeight: 600, lineHeight: 1.45 }}>
+                                    ✓ {trialNote}
+                                </div>
+                            )}
                             <Elements stripe={stripePromise} options={{ appearance: { theme: 'stripe' } }}>
                                 <CardForm clientSecret={clientSecret} onClose={onClose} onSuccess={onSuccess} defaultName={defaultName} defaultEmail={defaultEmail} />
                             </Elements>

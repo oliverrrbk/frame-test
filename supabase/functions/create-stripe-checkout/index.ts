@@ -121,17 +121,40 @@ serve(async (req) => {
         await supabaseClient.from('carpenters').update({ payment_customer_id: customerId }).eq('id', carpenter.id);
     }
 
+    // PRØVEPERIODEN BEVARES: kortet må gemmes nu, men der må FØRST trækkes penge på
+    // den oprindelige prøve-slutdato (oprettelse + 30 dage). Vi sender datoen som
+    // Stripe trial_end, så abonnementet står 'trialing' indtil da og først trækker der.
+    const nowMs = Date.now();
+    const createdMs = carpenter.created_at ? new Date(carpenter.created_at).getTime() : nowMs;
+    const trialEndsMs = carpenter.trial_ends_at
+        ? new Date(carpenter.trial_ends_at).getTime()
+        : createdMs + 30 * 24 * 60 * 60 * 1000;
+    // Stripe kræver trial_end mindst ~48 timer ude. Er der reelt prøvetid tilbage, sætter
+    // vi den — ellers lader vi Stripe trække normalt (prøven er så godt som udløbet).
+    const MIN_TRIAL_LEAD_MS = 48 * 60 * 60 * 1000;
+    const useTrial = trialEndsMs > nowMs + MIN_TRIAL_LEAD_MS;
+    const trialEndUnix = Math.floor(trialEndsMs / 1000);
+
+    const subscriptionData: any = { metadata: { target_tier: 'role_based' } };
+    if (useTrial) subscriptionData.trial_end = trialEndUnix;
+
+    // Pæn dansk dato til beskeden på betalingssiden.
+    const chargeDateStr = new Date(trialEndsMs).toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' });
+
     // Opret Checkout Session
     const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
         line_items: lineItems,
         mode: 'subscription',
-        subscription_data: {
-            metadata: {
-                target_tier: 'role_based'
-            }
-        },
+        subscription_data: subscriptionData,
+        // Selv med prøveperiode SKAL kortet gemmes nu (ellers springer Stripe det over).
+        payment_method_collection: 'always',
+        ...(useTrial ? {
+            custom_text: {
+                submit: { message: `Du bliver først trukket d. ${chargeDateStr} — hele din gratis prøveperiode bevares.` },
+            },
+        } : {}),
         automatic_tax: { enabled: true }, // <--- Beder Stripe om at beregne og tillægge dansk moms automatisk
         customer_update: {
             address: 'auto',

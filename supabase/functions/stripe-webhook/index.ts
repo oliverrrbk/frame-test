@@ -86,12 +86,11 @@ serve(async (req) => {
     // Håndter events
     switch (event.type) {
         case 'checkout.session.completed':
-            // Selve session-objektet har ikke abonnementsdetaljer — sæt blot active.
-            // Den efterfølgende subscription.created/updated synker billing-flagene.
-            await supabaseClient.from('carpenters').update({
-                subscription_status: 'active', trial_ends_at: null, tier: 'role_based'
-            }).eq('id', carpenter.id);
-            console.log(`Opdaterede firma ${carpenter.id} til active (checkout)`);
+            // Selve session-objektet har IKKE abonnementsdetaljer (og vi ved ikke om det
+            // er en prøve eller en rigtig trækning). Vi rører derfor hverken status eller
+            // trial_ends_at her — den efterfølgende subscription.created/updated spejler
+            // Stripe korrekt. (Før nulstillede vi prøven her og trak folk for tidligt.)
+            console.log(`checkout.session.completed for ${carpenter.id} — venter på subscription-event`);
             break;
 
         case 'customer.subscription.created':
@@ -100,13 +99,21 @@ serve(async (req) => {
             if (sub.status === 'active' || sub.status === 'trialing') {
                 const targetTier = sub.metadata?.target_tier;
                 const updateData: any = {
-                    subscription_status: 'active',
-                    trial_ends_at: null,
                     raw_data: { ...(carpenter.raw_data || {}), billing: billingFrom(sub) },
                 };
                 if (targetTier) updateData.tier = targetTier;
+                if (sub.status === 'trialing') {
+                    // Kort tilknyttet, men stadig i prøve → behold 'trialing' og spejl
+                    // Stripes trial_end, så prøve-uret er præcist. Der trækkes IKKE endnu.
+                    updateData.subscription_status = 'trialing';
+                    if (sub.trial_end) updateData.trial_ends_at = new Date(sub.trial_end * 1000).toISOString();
+                } else {
+                    // Stripe trækker nu rigtigt → aktivt abonnement, prøven er brugt.
+                    updateData.subscription_status = 'active';
+                    updateData.trial_ends_at = null;
+                }
                 await supabaseClient.from('carpenters').update(updateData).eq('id', carpenter.id);
-                console.log(`Opdaterede firma ${carpenter.id} til active (cancel_at_period_end=${sub.cancel_at_period_end})`);
+                console.log(`Opdaterede firma ${carpenter.id} til ${updateData.subscription_status} (cancel_at_period_end=${sub.cancel_at_period_end})`);
             }
             break;
         }

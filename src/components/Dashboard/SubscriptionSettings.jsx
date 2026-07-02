@@ -72,7 +72,12 @@ const SubscriptionSettings = () => {
             for (let i = 0; i < 4 && !cancelled; i++) {
                 try { await supabase.functions.invoke('verify-subscription'); } catch { /* prøv igen */ }
                 const fresh = await loadSubscriptionData();
-                if (fresh?.subscription_status === 'active') { if (justPaid) setShowWelcome(true); break; }
+                // Færdig når abonnementet enten trækker (active) ELLER kortet er tilknyttet
+                // og vi bevarer prøven (trialing + kunde-id). Sidstnævnte er nu en gyldig,
+                // stabil tilstand — man er ikke trukket, men kortet ligger klar.
+                const done = fresh?.subscription_status === 'active'
+                    || (!!fresh?.payment_customer_id && fresh?.subscription_status === 'trialing');
+                if (done) { if (justPaid) setShowWelcome(true); break; }
                 await new Promise(r => setTimeout(r, 1500));
             }
             if (!cancelled) setVerifying(false);
@@ -283,6 +288,11 @@ const SubscriptionSettings = () => {
     const price = computePrice(teamForPricing(company.raw_data?.team));
     const hasCard = !!company.payment_customer_id;
     const isCanceling = company.subscription_status === 'active' && !!billing?.cancelAtPeriodEnd;
+    // Kort tilknyttet MEN stadig i prøve = intet trukket endnu, første træk falder på trial_ends_at.
+    const cardOnTrial = company.subscription_status === 'trialing' && hasCard;
+    const trialEndFmt = company.trial_ends_at
+        ? new Date(company.trial_ends_at).toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '';
 
     return (
         <div className="space-y-6 animate-fadeIn" style={{ maxWidth: '600px', margin: '0 auto' }}>
@@ -306,10 +316,14 @@ const SubscriptionSettings = () => {
                 <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #10b981', boxShadow: '0 8px 24px rgba(16,185,129,0.10)', padding: '20px 22px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                         <CheckCircle size={20} color="#10b981" />
-                        <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a' }}>Tak fordi I valgte Bison Frame</span>
+                        <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a' }}>{cardOnTrial ? 'Dit kort er tilknyttet' : 'Tak fordi I valgte Bison Frame'}</span>
                     </div>
                     <p style={{ margin: '0 0 16px', color: '#475569', fontSize: '0.95rem', lineHeight: 1.5 }}>
-                        Jeres abonnement er aktivt, og I har fuld adgang til hele systemet. Har I brug for hjælp, så ring til os på <a href="tel:+4540265002" style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}>40 26 50 02</a> — vi sidder klar.
+                        {cardOnTrial ? (
+                            <>Du beholder hele din gratis prøveperiode — vi trækker <strong>først</strong> betaling d. {trialEndFmt}. Du har fuld adgang til hele systemet indtil da. Spørgsmål? Ring til os på <a href="tel:+4540265002" style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}>40 26 50 02</a>.</>
+                        ) : (
+                            <>Jeres abonnement er aktivt, og I har fuld adgang til hele systemet. Har I brug for hjælp, så ring til os på <a href="tel:+4540265002" style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}>40 26 50 02</a> — vi sidder klar.</>
+                        )}
                     </p>
                     <button
                         onClick={() => { try { localStorage.setItem('dashboard_active_tab', 'overview'); } catch { /* ignore */ } window.location.assign('/dashboard'); }}
@@ -341,6 +355,9 @@ const SubscriptionSettings = () => {
                     >
                         {isManaging ? 'Vent venligst...' : 'Tilknyt Firmakort'}
                     </button>
+                    <p style={{ color: '#10b981', margin: '10px 0 0 0', fontSize: '0.8rem', lineHeight: '1.4', fontWeight: 600, textAlign: 'center' }}>
+                        ✓ Du beholder dine fulde {daysLeft} dage — {trialEndFmt ? `vi trækker først d. ${trialEndFmt}` : 'vi trækker først, når prøveperioden udløber'}.
+                    </p>
                 </div>
             )}
 
@@ -550,6 +567,7 @@ const SubscriptionSettings = () => {
                 <UpdateCardModal
                     defaultName={company.owner_name || company.company_name}
                     defaultEmail={company.email}
+                    trialNote={cardOnTrial && trialEndFmt ? `Du er stadig i din gratis prøveperiode — der trækkes først betaling d. ${trialEndFmt}.` : ''}
                     onClose={() => setShowCardModal(false)}
                     onSuccess={() => { setShowCardModal(false); loadSubscriptionData(); }}
                 />
