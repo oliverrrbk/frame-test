@@ -124,6 +124,7 @@ serve(async (req) => {
         const history = newRawData.invoice_history || [];
         
         let wasUpdated = false;
+        let justPaid = false;   // sand hvis en faktura netop skiftede til betalt (→ notifikation)
 
         for (let i = 0; i < history.length; i++) {
             // Tjekker både mod number og string format
@@ -133,6 +134,7 @@ serve(async (req) => {
                     history[i].status = 'paid';
                     history[i].paid_date = new Date().toISOString();
                     wasUpdated = true;
+                    justPaid = true;
                 } else if (history[i].status === 'draft' && !isPaidEvent) {
                     // Hvis det bare var et "booked" event
                     history[i].status = 'booked';
@@ -152,6 +154,19 @@ serve(async (req) => {
                 throw new Error('Databasefejl under opdatering');
             }
             console.log(`Succesfuldt opdateret sag ${targetLead.id} for faktura ${invoiceIdStr}. Ny status satt.`);
+
+            // Faktura netop betalt → send push til mester + kontor. Fejl må ikke vælte webhooken.
+            if (justPaid) {
+                try {
+                    await fetch(`${supabaseUrl}/functions/v1/send-push-reminders`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseServiceKey}` },
+                        body: JSON.stringify({ type: 'invoice_paid', lead_id: targetLead.id, invoice_id: invoiceIdStr }),
+                    });
+                } catch (pushErr) {
+                    console.error('Faktura-betalt push fejlede:', pushErr);
+                }
+            }
         } else {
             console.log(`Ingen opdatering nødvendig for faktura ${invoiceIdStr} på sag ${targetLead.id}.`);
         }

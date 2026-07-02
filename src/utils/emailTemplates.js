@@ -562,6 +562,48 @@ export const getCustomerOfferRevokedTemplate = (customerName, carpenter, customM
     return getBaseTemplate(`Tilbud trukket tilbage${caseNumber ? ` (Sag ${caseNumber})` : ''}`, content, 'Dit tidligere tilbud er ikke længere gældende.', carpenter);
 };
 
+// Venlig opfølgning på et sendt, endnu ikke bekræftet tilbud. Bruges af "Send
+// opfølgningsmail"-knappen. daysLeft = antal dage til tilbuddet udløber (kan være null).
+export const getCustomerFollowUpTemplate = (customerName, quoteUrl, categoryName, carpenter, daysLeft = null, caseNumber = null, customMessage = null) => {
+    const signatureName = getCarpenterSenderName(carpenter);
+    const phone = carpenter?.phone || '';
+    const email = carpenter?.email || '';
+
+    const expiryLine = (typeof daysLeft === 'number' && daysLeft > 0)
+        ? `Jeg kan se, at du endnu ikke har bekræftet tilbuddet${categoryName ? ` på <strong>${categoryName}</strong>` : ''}. Det udløber om <strong>${daysLeft} ${daysLeft === 1 ? 'dag' : 'dage'}</strong>.`
+        : `Jeg kan se, at du endnu ikke har bekræftet tilbuddet${categoryName ? ` på <strong>${categoryName}</strong>` : ''}.`;
+
+    const introHtml = (customMessage && String(customMessage).trim())
+        ? String(customMessage).trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+        : `${expiryLine} Er det stadig aktuelt, eller er der noget, du er i tvivl om, så er vi klar til at hjælpe — svar blot på denne mail.`;
+
+    const contactHtml = (phone || email) ? `
+        <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 24px;">
+            Du er også velkommen til at kontakte os${phone ? ` på <a href="tel:${phone}" style="color: #2563eb; text-decoration: none;">${phone}</a>` : ''}${email ? `${phone ? ' eller' : ' på'} <a href="mailto:${email}" style="color: #2563eb; text-decoration: none;">${email}</a>` : ''}.
+        </p>` : '';
+
+    const content = `
+        <div style="text-align: center; margin-bottom: 32px;">
+            <h2 style="margin: 0; color: #0f172a; font-size: 24px;">En hurtig opfølgning</h2>
+        </div>
+
+        <p style="color: #334155;">Hej ${customerName},</p>
+        <p style="color: #334155; line-height: 1.6;">${introHtml}</p>
+
+        ${quoteUrl ? `<div style="text-align: center; margin: 32px 0;">
+            <a href="${quoteUrl}" style="${buttonStyle}">Se og bekræft tilbud her</a>
+        </div>` : ''}
+
+        ${contactHtml}
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
+
+        <p style="color: #334155; margin-bottom: 0;">Med venlig hilsen,</p>
+        <p style="color: #0f172a; font-weight: 600; margin-top: 4px;">${signatureName}</p>
+    `;
+    return getBaseTemplate(`Opfølgning på dit tilbud${caseNumber ? ` (Sag ${caseNumber})` : ''}`, content, 'En hurtig opfølgning på dit tilbud.', carpenter);
+};
+
 export const getCustomerOfferAcceptedTemplate = (customerName, categoryName, carpenter, quoteUrl, caseNumber = null) => {
     const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
     const signatureName = getCarpenterSenderName(carpenter);

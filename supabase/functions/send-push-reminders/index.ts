@@ -200,6 +200,20 @@ async function getRecipientsForEvent(supabaseClient: any, companyId: string, eve
     return [...new Set(recipientIds)];
 }
 
+// Modtagere for sags-/faktura-/tilbudshændelser: ejeren (mester) + firmaets admins
+// og bogholdere. Samme mønster som lead_notification og den lokale getPlanners.
+async function getOwnerAndAdmins(supabaseClient: any, ownerId: string) {
+    const ids = [String(ownerId)];
+    const { data: team } = await supabaseClient
+        .from("carpenters")
+        .select("id, role")
+        .eq("company_id", ownerId);
+    for (const m of team || []) {
+        if (["admin", "accountant"].includes(m.role)) ids.push(String(m.id));
+    }
+    return [...new Set(ids)];
+}
+
 serve(async (req) => {
     const stats: ReminderStats = {
         sentCount: 0,
@@ -537,6 +551,129 @@ serve(async (req) => {
             });
         }
 
+        // A1. Faktura betalt — fyres af accounting-webhooks når en faktura markeres betalt.
+        if (type === "invoice_paid") {
+            const leadId = bodyData?.lead_id;
+            const invoiceId = bodyData?.invoice_id;
+            if (!leadId || !invoiceId) {
+                return new Response(JSON.stringify({ error: "Missing lead_id/invoice_id", ...stats }), {
+                    headers: { "Content-Type": "application/json" }, status: 400
+                });
+            }
+            const { data: lead } = await supabaseClient
+                .from("leads")
+                .select("id, customer_name, project_category, carpenter_id")
+                .eq("id", leadId)
+                .single();
+            if (!lead?.carpenter_id) {
+                return new Response(JSON.stringify({ success: true, message: "No lead/carpenter", ...stats }), {
+                    headers: { "Content-Type": "application/json" }, status: 200
+                });
+            }
+            const recipients = await getOwnerAndAdmins(supabaseClient, String(lead.carpenter_id));
+            for (const userId of recipients) {
+                await sendToUser(supabaseClient, stats, {
+                    userId,
+                    type: "invoice_paid",
+                    relatedId: String(invoiceId),
+                    slot: `invoice-paid-${invoiceId}`,
+                    payload: {
+                        title: "Faktura betalt 🎉",
+                        body: `Fakturaen på ${lead.project_category || 'sagen'}${lead.customer_name ? ` fra ${lead.customer_name}` : ''} er betalt.`,
+                        url: `/dashboard?leadId=${lead.id}`
+                    }
+                });
+            }
+            return new Response(JSON.stringify({ success: true, ...stats }), {
+                headers: { "Content-Type": "application/json" }, status: 200
+            });
+        }
+
+        // A3. Ekstraarbejde godkendt — fyres af DB-trigger når en aftaleseddel bekræftes.
+        if (type === "agreement_confirmed") {
+            const leadId = bodyData?.lead_id;
+            const agreementId = bodyData?.agreement_id;
+            if (!leadId || !agreementId) {
+                return new Response(JSON.stringify({ error: "Missing lead_id/agreement_id", ...stats }), {
+                    headers: { "Content-Type": "application/json" }, status: 400
+                });
+            }
+            const { data: lead } = await supabaseClient
+                .from("leads")
+                .select("id, customer_name, carpenter_id, raw_data")
+                .eq("id", leadId)
+                .single();
+            if (!lead?.carpenter_id) {
+                return new Response(JSON.stringify({ success: true, message: "No lead/carpenter", ...stats }), {
+                    headers: { "Content-Type": "application/json" }, status: 200
+                });
+            }
+            const agr = (lead.raw_data?.extra_agreements || []).find((a: any) => String(a.id) === String(agreementId));
+            const title = agr?.title || "ekstraarbejde";
+            let amountText = "";
+            if (agr) {
+                if (agr.priceType === "fast_pris" && Number(agr.amount) > 0) {
+                    amountText = ` (+${Number(agr.amount).toLocaleString("da-DK")} kr.)`;
+                } else if (agr.priceType === "efter_regning") {
+                    amountText = " (efter regning)";
+                }
+            }
+            const recipients = await getOwnerAndAdmins(supabaseClient, String(lead.carpenter_id));
+            for (const userId of recipients) {
+                await sendToUser(supabaseClient, stats, {
+                    userId,
+                    type: "agreement_confirmed",
+                    relatedId: String(agreementId),
+                    slot: `agreement-${agreementId}`,
+                    payload: {
+                        title: "Ekstraarbejde godkendt ✅",
+                        body: `${lead.customer_name || 'Kunden'} godkendte aftalesedlen "${title}"${amountText}.`,
+                        url: `/dashboard?leadId=${lead.id}`
+                    }
+                });
+            }
+            return new Response(JSON.stringify({ success: true, ...stats }), {
+                headers: { "Content-Type": "application/json" }, status: 200
+            });
+        }
+
+        // A4. Kunde har åbnet tilbud — fyres af DB-trigger første gang opened_at sættes.
+        if (type === "quote_opened") {
+            const leadId = bodyData?.lead_id;
+            if (!leadId) {
+                return new Response(JSON.stringify({ error: "Missing lead_id", ...stats }), {
+                    headers: { "Content-Type": "application/json" }, status: 400
+                });
+            }
+            const { data: lead } = await supabaseClient
+                .from("leads")
+                .select("id, customer_name, project_category, carpenter_id")
+                .eq("id", leadId)
+                .single();
+            if (!lead?.carpenter_id) {
+                return new Response(JSON.stringify({ success: true, message: "No lead/carpenter", ...stats }), {
+                    headers: { "Content-Type": "application/json" }, status: 200
+                });
+            }
+            const recipients = await getOwnerAndAdmins(supabaseClient, String(lead.carpenter_id));
+            for (const userId of recipients) {
+                await sendToUser(supabaseClient, stats, {
+                    userId,
+                    type: "quote_opened",
+                    relatedId: String(lead.id),
+                    slot: `quote-opened-${lead.id}`,
+                    payload: {
+                        title: "Kunden har åbnet dit tilbud 👀",
+                        body: `${lead.customer_name || 'Kunden'} har lige åbnet tilbuddet på ${lead.project_category || 'projektet'}.`,
+                        url: `/dashboard?leadId=${lead.id}`
+                    }
+                });
+            }
+            return new Response(JSON.stringify({ success: true, ...stats }), {
+                headers: { "Content-Type": "application/json" }, status: 200
+            });
+        }
+
         const now = new Date();
         const todayStr = getLocalDate(now);
         const tomorrowStr = addDays(todayStr, 1);
@@ -783,6 +920,84 @@ serve(async (req) => {
                             });
                         }
                     }
+                }
+            }
+        }
+
+        // A2. Faktura forfalden (én gang) — dagligt kl. 9. Fakturaer gemmes i
+        //     raw_data.invoice_history; forfald = due_date, eller (fallback) fakturadato + 14 dage.
+        if ((type === "all" && hour === 9) || type === "invoice_overdue") {
+            const DAY_MS = 86400000;
+            const { data: leads } = await supabaseClient
+                .from("leads")
+                .select("id, customer_name, project_category, carpenter_id, raw_data");
+
+            for (const lead of leads || []) {
+                if (!lead.carpenter_id) continue;
+                const history = lead.raw_data?.invoice_history || [];
+                const overdueInvoices = history.filter((inv: any) => {
+                    if (inv.status !== "booked") return false; // kun sendt/bogført, ikke betalt/kladde
+                    const dueStr = inv.due_date || (inv.date ? new Date(new Date(inv.date).getTime() + 14 * DAY_MS).toISOString() : null);
+                    if (!dueStr) return false;
+                    return getLocalDate(new Date(dueStr)) < todayStr;
+                });
+                if (overdueInvoices.length === 0) continue;
+
+                const recipients = await getOwnerAndAdmins(supabaseClient, String(lead.carpenter_id));
+                for (const inv of overdueInvoices) {
+                    const amountText = Number(inv.amount) > 0 ? ` på ${Number(inv.amount).toLocaleString("da-DK")} kr.` : "";
+                    for (const userId of recipients) {
+                        await sendToUser(supabaseClient, stats, {
+                            userId,
+                            type: "invoice_overdue",
+                            relatedId: String(inv.id),
+                            slot: `invoice-overdue-${inv.id}`,
+                            payload: {
+                                title: "Faktura forfalden",
+                                body: `Fakturaen${amountText}${lead.customer_name ? ` til ${lead.customer_name}` : ""} er forfalden og endnu ikke betalt.`,
+                                url: `/dashboard?leadId=${lead.id}`
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        // A5. Tilbud udløber snart (4–5 dage før) — dagligt kl. 9. Kun sendte, ubekræftede tilbud.
+        if ((type === "all" && hour === 9) || type === "quote_expiring") {
+            const DAY_MS = 86400000;
+            const { data: leads } = await supabaseClient
+                .from("leads")
+                .select("id, customer_name, project_category, carpenter_id, created_at, raw_data")
+                .eq("status", "Sendt tilbud");
+
+            for (const lead of leads || []) {
+                if (!lead.carpenter_id) continue;
+                const settings = lead.raw_data?.quote_settings || {};
+                const validityDays = Number(settings.validityDays) || 14;
+                const validUntil = settings.validUntil ? new Date(settings.validUntil) : null;
+                const sentAt = lead.raw_data?.quote_sent_at ? new Date(lead.raw_data.quote_sent_at) : (lead.created_at ? new Date(lead.created_at) : null);
+                let expiresAt: Date | null = null;
+                if (validUntil && !isNaN(validUntil.getTime())) expiresAt = validUntil;
+                else if (sentAt && !isNaN(sentAt.getTime())) expiresAt = new Date(sentAt.getTime() + validityDays * DAY_MS);
+                if (!expiresAt) continue;
+
+                const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / DAY_MS);
+                if (daysLeft < 1 || daysLeft > 5) continue;
+
+                const recipients = await getOwnerAndAdmins(supabaseClient, String(lead.carpenter_id));
+                for (const userId of recipients) {
+                    await sendToUser(supabaseClient, stats, {
+                        userId,
+                        type: "quote_expiring",
+                        relatedId: String(lead.id),
+                        slot: `quote-expiring-${lead.id}`,
+                        payload: {
+                            title: "Tilbud udløber snart",
+                            body: `Tilbuddet${lead.customer_name ? ` til ${lead.customer_name}` : ""} udløber om ${daysLeft} ${daysLeft === 1 ? "dag" : "dage"} — de har ikke bekræftet endnu. Følg op?`,
+                            url: `/dashboard?leadId=${lead.id}`
+                        }
+                    });
                 }
             }
         }

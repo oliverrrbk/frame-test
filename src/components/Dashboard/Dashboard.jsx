@@ -9,7 +9,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { QUESTIONS, initialCategories } from '../Wizard/questionsConfig';
 import Wizard from '../Wizard/Wizard';
-import { getFeedbackTemplate, getCustomerOfferSentTemplate, getCustomerRequestReceivedTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
+import { getFeedbackTemplate, getCustomerOfferSentTemplate, getCustomerRequestReceivedTemplate, getCarpenterSenderName, getCustomerFollowUpTemplate } from '../../utils/emailTemplates';
 import { generateHumanQuoteText } from '../../utils/quoteTextGenerator';
 import { parseBreakdownToExplanation } from '../../utils/explanationGenerator';
 import { generateTaskDescription } from '../../utils/taskDescription';
@@ -722,6 +722,8 @@ const Dashboard = () => {
     const [selectedLead, setSelectedLead] = useState(null);
     const [extendLead, setExtendLead] = useState(null);   // lead hvis tilbud forlænges
     const [isExtending, setIsExtending] = useState(false);
+    const [followUpLead, setFollowUpLead] = useState(null);   // lead til opfølgningsmail-preview
+    const [followUpSending, setFollowUpSending] = useState(false);
     const [isCustomerChoicesOpen, setIsCustomerChoicesOpen] = useState(false);
     const [isPriceBasisOpen, setIsPriceBasisOpen] = useState(false);
     const [isMaterialListOpen, setIsMaterialListOpen] = useState(false);
@@ -2076,10 +2078,15 @@ const Dashboard = () => {
             : (action === 'book_and_send' ? 'booked' : 'draft');
 
         const history = currentRawData.invoice_history || [];
+        const nowIso = new Date().toISOString();
+        // Forfaldsdato = netto 14 dage fra fakturadato. Bruges til "faktura forfalden"-
+        // notifikationen; kan gøres konfigurerbar pr. firma senere.
+        const dueIso = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
         history.push({
             id: invoiceId,
             amount: totalAmountToBill || 0,
-            date: new Date().toISOString(),
+            date: nowIso,
+            due_date: dueIso,
             system,
             status
         });
@@ -2685,6 +2692,8 @@ const Dashboard = () => {
     
     const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const effectiveRole = simulatedRole || myProfile?.role || 'admin';
+    // Kun mester + kontor + projektleder må oprette sager/tilbud — ikke svend/lærling.
+    const canCreateCase = !['worker', 'apprentice'].includes(effectiveRole);
     // Branche-baserede funktioner (kun tømrer = beregner/materialer). Læser FIRMAETS type.
     const features = getFeatures(carpenterProfile?.business_type);
 
@@ -3421,7 +3430,7 @@ const Dashboard = () => {
                                 setActiveTab={setActiveTab}
                                 setSelectedLead={setSelectedLead}
                                 setTargetCaseId={setTargetCaseId}
-                                onCreateQuote={() => setIsCreateLeadModalOpen(true)}
+                                onCreateQuote={canCreateCase ? () => setIsCreateLeadModalOpen(true) : undefined}
                             />
                             </Suspense>
                         )
@@ -3730,7 +3739,7 @@ const Dashboard = () => {
                                             </div>
                                         )}
                                     </div>
-                                    {leadFilter !== 'Bekræftet opgave' && leadFilter !== 'Afsluttet opgave' && (
+                                    {canCreateCase && leadFilter !== 'Bekræftet opgave' && leadFilter !== 'Afsluttet opgave' && (
                                         <>
                                         <button ref={createLeadBtnRef} data-tour="leads-create" className="btn-primary" onClick={() => setIsCreateLeadModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, padding: '10px 20px', borderRadius: '30px' }}>
                                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -4119,6 +4128,14 @@ const Dashboard = () => {
                                                     style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', background: '#eff6ff', border: '1px solid #e8e6e1', color: '#1d4ed8', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
                                                 >
                                                     <Globe size={18} /> Kopiér Web-Link
+                                                </button>
+                                            )}
+                                            {selectedLead.status === 'Sendt tilbud' && selectedLead.customer_email && selectedLead.customer_email !== 'Ukendt' && (
+                                                <button
+                                                    onClick={() => setFollowUpLead(selectedLead)}
+                                                    style={{ flex: '1 1 140px', padding: '12px', borderRadius: '10px', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#6d28d9', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                >
+                                                    <Mail size={18} /> Send opfølgningsmail
                                                 </button>
                                             )}
                                         </div>
@@ -6014,6 +6031,59 @@ const Dashboard = () => {
                     />
                 )}
             </AnimatePresence>
+
+            {/* Opfølgningsmail-preview på sendte tilbud */}
+            {followUpLead && createPortal((() => {
+                const daysLeft = computeQuoteExpiry(followUpLead)?.daysLeft ?? null;
+                const quoteUrl = `${window.location.origin}/${carpenterProfile?.slug || 't'}/tilbud/${followUpLead.quote_token || followUpLead.id}`;
+                const categoryName = categoryNames[followUpLead.project_category] || followUpLead.project_category || '';
+                const html = getCustomerFollowUpTemplate(followUpLead.customer_name, quoteUrl, categoryName, carpenterProfile, daysLeft, followUpLead.case_number || String(followUpLead.id).substring(0, 8));
+                const sendFollowUp = async () => {
+                    setFollowUpSending(true);
+                    try {
+                        const { sendEmail } = await import('../../utils/sendEmail');
+                        const res = await sendEmail({
+                            to: followUpLead.customer_email,
+                            subject: `Opfølgning på dit tilbud${categoryName ? ` – ${categoryName}` : ''}`,
+                            html,
+                            fromName: getCarpenterSenderName(carpenterProfile),
+                            replyTo: carpenterProfile?.email || undefined,
+                        });
+                        if (res?.success) {
+                            toast.success('Opfølgningsmail sendt!');
+                            setFollowUpLead(null);
+                        } else {
+                            toast.error(res?.error || 'Kunne ikke sende mailen.');
+                        }
+                    } catch (e) {
+                        toast.error('Kunne ikke sende mailen.');
+                    } finally {
+                        setFollowUpSending(false);
+                    }
+                };
+                return (
+                    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px' }} onClick={() => { if (!followUpSending) setFollowUpLead(null); }}>
+                        <div style={{ backgroundColor: '#fff', borderRadius: '20px', width: '100%', maxWidth: '640px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e8e6e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}><Mail size={20} color="#6d28d9" /> Opfølgningsmail</h2>
+                                <button onClick={() => { if (!followUpSending) setFollowUpLead(null); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
+                            </div>
+                            <div style={{ padding: '16px 24px', color: '#64748b', fontSize: '0.9rem', borderBottom: '1px solid #f1f5f9' }}>
+                                Til <strong style={{ color: '#0f172a' }}>{followUpLead.customer_name}</strong> ({followUpLead.customer_email}){typeof daysLeft === 'number' && daysLeft > 0 ? ` · udløber om ${daysLeft} ${daysLeft === 1 ? 'dag' : 'dage'}` : ''}
+                            </div>
+                            <div style={{ overflowY: 'auto', flex: 1, background: '#f8fafc', padding: '16px' }}>
+                                <iframe title="Preview" srcDoc={html} style={{ width: '100%', minHeight: '420px', border: '1px solid #e8e6e1', borderRadius: '12px', background: '#fff' }} />
+                            </div>
+                            <div style={{ padding: '16px 24px', borderTop: '1px solid #e8e6e1', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                                <button onClick={() => { if (!followUpSending) setFollowUpLead(null); }} disabled={followUpSending} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, cursor: followUpSending ? 'wait' : 'pointer' }}>Fortryd</button>
+                                <button onClick={sendFollowUp} disabled={followUpSending} style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: '#6d28d9', color: '#fff', fontWeight: 800, cursor: followUpSending ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Mail size={16} /> {followUpSending ? 'Sender…' : 'Send mail'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })(), document.body)}
 
             {/* Feedback Modal Portal */}
             {isFeedbackModalOpen && createPortal(

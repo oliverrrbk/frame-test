@@ -122,6 +122,8 @@ DECLARE
     v_msg_exists boolean;
     v_added_workers jsonb;
     v_added_pms jsonb;
+    v_new_agr jsonb;
+    v_agr_confirmed boolean;
 BEGIN
     -- Retrieve service role key from cron job command dynamically to avoid hardcoding secrets
     SELECT substring(command from 'Bearer ([^\"]+)') INTO service_role_key 
@@ -216,6 +218,51 @@ BEGIN
                 );
             END IF;
         END IF;
+    END IF;
+
+    -- 4. Kunde har åbnet tilbuddet (kun første åbning: opened_at går null → tid)
+    IF TG_OP = 'UPDATE' AND OLD.opened_at IS NULL AND NEW.opened_at IS NOT NULL THEN
+        PERFORM net.http_post(
+            url := 'https://zjbjupovlgwlrvojusnr.supabase.co/functions/v1/send-push-reminders',
+            body := jsonb_build_object(
+                'type', 'quote_opened',
+                'lead_id', NEW.id
+            ),
+            headers := jsonb_build_object(
+                'Content-Type', 'application/json',
+                'Authorization', 'Bearer ' || COALESCE(service_role_key, '')
+            )
+        );
+    END IF;
+
+    -- 5. Aftaleseddel (ekstraarbejde) bekræftet af kunde: et element i extra_agreements
+    --    skifter til 'bekraeftet'/'Godkendt', og var ikke bekræftet i forvejen.
+    IF TG_OP = 'UPDATE' AND COALESCE(NEW.raw_data->'extra_agreements', '[]'::jsonb) IS DISTINCT FROM COALESCE(OLD.raw_data->'extra_agreements', '[]'::jsonb) THEN
+        FOR v_new_agr IN SELECT * FROM jsonb_array_elements(COALESCE(NEW.raw_data->'extra_agreements', '[]'::jsonb))
+        LOOP
+            IF (v_new_agr->>'status') IN ('bekraeftet', 'Godkendt') THEN
+                SELECT EXISTS (
+                    SELECT 1 FROM jsonb_array_elements(COALESCE(OLD.raw_data->'extra_agreements', '[]'::jsonb)) AS oe
+                    WHERE oe->>'id' = v_new_agr->>'id'
+                      AND (oe->>'status') IN ('bekraeftet', 'Godkendt')
+                ) INTO v_agr_confirmed;
+
+                IF NOT v_agr_confirmed THEN
+                    PERFORM net.http_post(
+                        url := 'https://zjbjupovlgwlrvojusnr.supabase.co/functions/v1/send-push-reminders',
+                        body := jsonb_build_object(
+                            'type', 'agreement_confirmed',
+                            'lead_id', NEW.id,
+                            'agreement_id', v_new_agr->>'id'
+                        ),
+                        headers := jsonb_build_object(
+                            'Content-Type', 'application/json',
+                            'Authorization', 'Bearer ' || COALESCE(service_role_key, '')
+                        )
+                    );
+                END IF;
+            END IF;
+        END LOOP;
     END IF;
 
     RETURN NEW;
