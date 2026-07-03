@@ -606,6 +606,21 @@ function CustomerDetailModal({ customer: c, leads, stats, isMobile, onClose, onE
     const [busyDel, setBusyDel] = useState(false);
     const isBiz = c.customer_type === 'erhverv';
 
+    // Mobil: fold kunde-info sammen når man scroller, så faner + overblik får
+    // hele skærmen. Hysterese undgår flimmer. Desktop rører vi ikke.
+    const scrollRef = useRef(null);
+    const tickingRef = useRef(false);
+    const [collapsed, setCollapsed] = useState(false);
+    const handleScroll = () => {
+        if (!isMobile || tickingRef.current) return;
+        tickingRef.current = true;
+        requestAnimationFrame(() => {
+            const st = scrollRef.current?.scrollTop || 0;
+            setCollapsed(prev => (!prev && st > 64) ? true : (prev && st < 24) ? false : prev);
+            tickingRef.current = false;
+        });
+    };
+
     const cases = leads.filter(l => CASE_STATUSES.includes(l.status));
     const quotes = leads.filter(l => QUOTE_STATUSES.includes(l.status || 'Ny forespørgsel'));
 
@@ -640,18 +655,83 @@ function CustomerDetailModal({ customer: c, leads, stats, isMobile, onClose, onE
     const lightChip = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 13px', borderRadius: '999px', background: '#fff', border: '1px solid #e2e8f0', color: '#475569', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', transition: 'border-color .18s, transform .18s' };
     const chipHover = (e, on) => { e.currentTarget.style.borderColor = on ? '#bfdbfe' : '#e2e8f0'; e.currentTarget.style.transform = on ? 'translateY(-1px)' : 'none'; };
 
+    // Kunde-info (avatar + navn + chips + handlinger) — genbruges i både desktop-
+    // header og den sammenklappelige mobil-header.
+    const infoContent = (
+        <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                    <CustomerAvatar customer={c} size={isMobile ? 48 : 56} radius={16} />
+                    <div style={{ minWidth: 0 }}>
+                        <h3 style={{ margin: 0, fontSize: isMobile ? '1.15rem' : '1.35rem', fontWeight: 800, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</h3>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#64748b', fontWeight: 700, marginTop: '4px', padding: '2px 10px', borderRadius: '999px', background: isBiz ? '#eef2ff' : '#eff6ff' }}>
+                            {isBiz ? <Building2 size={13} /> : <User size={13} />}
+                            {isBiz ? 'Erhvervskunde' : 'Privatkunde'}{c.cvr ? ` · CVR ${c.cvr}` : ''}
+                        </div>
+                    </div>
+                </div>
+                {!isMobile && (
+                    <button onClick={onClose} aria-label="Luk" style={{ width: '38px', height: '38px', borderRadius: '50%', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexShrink: 0, transition: 'all .18s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#64748b'; }}
+                    ><X size={19} /></button>
+                )}
+            </div>
+
+            {(c.phone || c.email || c.address || c.city) && (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px' }}>
+                    {c.phone && <a href={`tel:${c.phone}`} style={lightChip} onMouseEnter={(e) => chipHover(e, true)} onMouseLeave={(e) => chipHover(e, false)}><Phone size={13} color="#2563eb" /> {c.phone}</a>}
+                    {c.email && <a href={`mailto:${c.email}`} style={lightChip} onMouseEnter={(e) => chipHover(e, true)} onMouseLeave={(e) => chipHover(e, false)}><Mail size={13} color="#2563eb" /> {c.email}</a>}
+                    {(c.address || c.city) && <span style={lightChip}><MapPin size={13} color="#2563eb" /> {[c.address, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}</span>}
+                </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '18px', flexWrap: 'wrap' }}>
+                <button onClick={() => { onCreateQuoteForCustomer && onCreateQuoteForCustomer(c); onClose(); }}
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', flex: isMobile ? '1 1 100%' : '0 0 auto', padding: '11px 18px', borderRadius: '13px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', boxShadow: '0 4px 14px rgba(37,99,235,0.30)', transition: 'transform .18s, box-shadow .18s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 22px rgba(37,99,235,0.40)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(37,99,235,0.30)'; }}>
+                    <FileText size={16} /> Lav tilbud til {c.name.split(' ')[0]}
+                </button>
+                <button onClick={onEdit} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', flex: isMobile ? '1 1 0' : '0 0 auto', padding: '11px 16px', borderRadius: '13px', border: '1px solid #e2e8f0', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: '#fff', color: '#334155', transition: 'all .18s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
+                    <Pencil size={15} /> Rediger
+                </button>
+                <button onClick={() => setConfirmDel(true)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', flex: isMobile ? '1 1 0' : '0 0 auto', padding: '11px 16px', borderRadius: '13px', border: '1px solid #fecaca', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: '#fff', color: '#dc2626', transition: 'all .18s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.borderColor = '#fca5a5'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#fecaca'; }}>
+                    <Trash2 size={15} /> Slet
+                </button>
+            </div>
+        </>
+    );
+
+    const tabButtons = tabs.map(t => {
+        const active = tab === t.key;
+        const Icon = t.icon;
+        return (
+            <button key={t.key} onClick={() => setTab(t.key)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '11px 16px', border: 'none', borderBottom: `2.5px solid ${active ? '#2563eb' : 'transparent'}`, background: 'transparent', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', color: active ? '#1d4ed8' : '#64748b' }}>
+                <Icon size={16} /> {t.label}
+            </button>
+        );
+    });
+
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000040, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '0' : '20px' }} onClick={onClose}>
             <motion.div
+                ref={scrollRef}
+                onScroll={handleScroll}
                 initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.2 }}
                 onClick={(e) => e.stopPropagation()}
                 style={{ background: '#f8fafc', borderRadius: isMobile ? '0' : '24px', width: '100%', maxWidth: '920px', maxHeight: isMobile ? '100dvh' : '92vh', height: isMobile ? '100dvh' : 'auto', overflowY: 'auto', boxShadow: '0 30px 80px rgba(15,23,42,0.3)' }}
             >
-                {/* Header — let glas i Bison-stil */}
-                <div style={{ position: 'sticky', top: 0, zIndex: 3, background: 'linear-gradient(160deg, #ffffff, #f1f5f9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: isMobile ? 'max(16px, calc(env(safe-area-inset-top) + 10px)) 16px 16px' : '24px 28px 20px', borderBottom: '1px solid #e2e8f0', borderRadius: isMobile ? '0' : '24px 24px 0 0' }}>
-                    {/* Mobil-topbar: ← tilbage · navn · X */}
-                    {isMobile && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                {isMobile ? (
+                    /* Mobil: ét sticky-område — topbar + sammenklappelig info + faner */
+                    <div style={{ position: 'sticky', top: 0, zIndex: 3, background: 'linear-gradient(160deg, #ffffff, #f1f5f9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+                        {/* Topbar: ← tilbage · navn · X (altid synlig) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: 'max(14px, calc(env(safe-area-inset-top) + 8px)) 16px 12px' }}>
                             <button onClick={onClose} aria-label="Tilbage" style={{ width: '42px', height: '42px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155', flexShrink: 0 }}>
                                 <ChevronLeft size={22} />
                             </button>
@@ -660,70 +740,30 @@ function CustomerDetailModal({ customer: c, leads, stats, isMobile, onClose, onE
                                 <X size={22} />
                             </button>
                         </div>
-                    )}
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                            <CustomerAvatar customer={c} size={isMobile ? 48 : 56} radius={16} />
-                            <div style={{ minWidth: 0 }}>
-                                <h3 style={{ margin: 0, fontSize: isMobile ? '1.15rem' : '1.35rem', fontWeight: 800, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</h3>
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#64748b', fontWeight: 700, marginTop: '4px', padding: '2px 10px', borderRadius: '999px', background: isBiz ? '#eef2ff' : '#eff6ff' }}>
-                                    {isBiz ? <Building2 size={13} /> : <User size={13} />}
-                                    {isBiz ? 'Erhvervskunde' : 'Privatkunde'}{c.cvr ? ` · CVR ${c.cvr}` : ''}
-                                </div>
-                            </div>
+                        {/* Sammenklappelig kunde-info */}
+                        <div style={{ maxHeight: collapsed ? 0 : '520px', opacity: collapsed ? 0 : 1, overflow: 'hidden', pointerEvents: collapsed ? 'none' : 'auto', paddingLeft: '16px', paddingRight: '16px', paddingBottom: collapsed ? 0 : '16px', transition: 'max-height .28s ease, opacity .2s ease, padding .28s ease' }}>
+                            {infoContent}
                         </div>
-                        {!isMobile && (
-                            <button onClick={onClose} aria-label="Luk" style={{ width: '38px', height: '38px', borderRadius: '50%', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexShrink: 0, transition: 'all .18s' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#64748b'; }}
-                            ><X size={19} /></button>
-                        )}
-                    </div>
 
-                    {/* Kontakt-chips */}
-                    {(c.phone || c.email || c.address || c.city) && (
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px' }}>
-                            {c.phone && <a href={`tel:${c.phone}`} style={lightChip} onMouseEnter={(e) => chipHover(e, true)} onMouseLeave={(e) => chipHover(e, false)}><Phone size={13} color="#2563eb" /> {c.phone}</a>}
-                            {c.email && <a href={`mailto:${c.email}`} style={lightChip} onMouseEnter={(e) => chipHover(e, true)} onMouseLeave={(e) => chipHover(e, false)}><Mail size={13} color="#2563eb" /> {c.email}</a>}
-                            {(c.address || c.city) && <span style={lightChip}><MapPin size={13} color="#2563eb" /> {[c.address, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}</span>}
+                        {/* Faner */}
+                        <div style={{ display: 'flex', gap: '6px', padding: '10px 16px 0', borderBottom: '1px solid #e2e8f0' }}>
+                            {tabButtons}
                         </div>
-                    )}
-
-                    {/* Handlinger */}
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '18px', flexWrap: 'wrap' }}>
-                        <button onClick={() => { onCreateQuoteForCustomer && onCreateQuoteForCustomer(c); onClose(); }}
-                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', flex: isMobile ? '1 1 100%' : '0 0 auto', padding: '11px 18px', borderRadius: '13px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', boxShadow: '0 4px 14px rgba(37,99,235,0.30)', transition: 'transform .18s, box-shadow .18s' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 22px rgba(37,99,235,0.40)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(37,99,235,0.30)'; }}>
-                            <FileText size={16} /> Lav tilbud til {c.name.split(' ')[0]}
-                        </button>
-                        <button onClick={onEdit} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', flex: isMobile ? '1 1 0' : '0 0 auto', padding: '11px 16px', borderRadius: '13px', border: '1px solid #e2e8f0', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: '#fff', color: '#334155', transition: 'all .18s' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
-                            <Pencil size={15} /> Rediger
-                        </button>
-                        <button onClick={() => setConfirmDel(true)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', flex: isMobile ? '1 1 0' : '0 0 auto', padding: '11px 16px', borderRadius: '13px', border: '1px solid #fecaca', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: '#fff', color: '#dc2626', transition: 'all .18s' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.borderColor = '#fca5a5'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#fecaca'; }}>
-                            <Trash2 size={15} /> Slet
-                        </button>
                     </div>
-                </div>
+                ) : (
+                    <>
+                        {/* Header — let glas i Bison-stil */}
+                        <div style={{ position: 'sticky', top: 0, zIndex: 3, background: 'linear-gradient(160deg, #ffffff, #f1f5f9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '24px 28px 20px', borderBottom: '1px solid #e2e8f0', borderRadius: '24px 24px 0 0' }}>
+                            {infoContent}
+                        </div>
 
-                {/* Faner */}
-                <div style={{ display: 'flex', gap: '6px', padding: '14px 20px 0', background: '#f8fafc', position: 'sticky', top: isMobile ? '0' : undefined, borderBottom: '1px solid #e2e8f0' }}>
-                    {tabs.map(t => {
-                        const active = tab === t.key;
-                        const Icon = t.icon;
-                        return (
-                            <button key={t.key} onClick={() => setTab(t.key)}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '11px 16px', border: 'none', borderBottom: `2.5px solid ${active ? '#2563eb' : 'transparent'}`, background: 'transparent', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', color: active ? '#1d4ed8' : '#64748b' }}>
-                                <Icon size={16} /> {t.label}
-                            </button>
-                        );
-                    })}
-                </div>
+                        {/* Faner */}
+                        <div style={{ display: 'flex', gap: '6px', padding: '14px 20px 0', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            {tabButtons}
+                        </div>
+                    </>
+                )}
 
                 <div style={{ padding: '20px' }}>
                     {tab === 'overblik' && (
