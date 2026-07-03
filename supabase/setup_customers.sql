@@ -38,10 +38,14 @@ CREATE TABLE IF NOT EXISTS public.customers (
     customer_type text NOT NULL DEFAULT 'privat',   -- 'privat' | 'erhverv'
     cvr           text,
     notes         text,
+    logo_url      text,                              -- logo/billede pr. kunde (avatars-bucket)
     created_by    uuid,                              -- hvem oprettede kunden
     created_at    timestamptz NOT NULL DEFAULT now(),
     updated_at    timestamptz NOT NULL DEFAULT now()
 );
+
+-- Idempotent for eksisterende installationer (tabellen fandtes før logo_url):
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS logo_url text;
 
 CREATE INDEX IF NOT EXISTS idx_customers_carpenter ON public.customers(carpenter_id);
 -- Hurtig søgning på navn pr. firma (biblioteket + kundevælger i tilbud)

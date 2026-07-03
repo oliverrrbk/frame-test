@@ -721,6 +721,9 @@ const Dashboard = () => {
     const [leadFilter, setLeadFilter] = useState('Tilbudskladder');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLead, setSelectedLead] = useState(null);
+    // Kunde man skal vende tilbage til når man lukker et tilbud/en sag åbnet
+    // inde fra en kunde ("luk tilbud → tilbage på kunden").
+    const [customerReturnId, setCustomerReturnId] = useState(null);
     const [extendLead, setExtendLead] = useState(null);   // lead hvis tilbud forlænges
     const [isExtending, setIsExtending] = useState(false);
     const [followUpLead, setFollowUpLead] = useState(null);   // lead til opfølgningsmail-preview
@@ -808,6 +811,16 @@ const Dashboard = () => {
         }
         return () => { document.body.style.overflow = ''; };
     }, [selectedLead]);
+
+    // Luk tilbud åbnet inde fra en kunde → hop tilbage til Kunder-fanen, der
+    // så genåbner kundekortet (via autoOpenDetailId på CustomerLibrary).
+    // Kun fra leads-fanen: en sag åbner på 'cases' (selectedLead er null der) og
+    // må ikke bounce tilbage med det samme.
+    useEffect(() => {
+        if (!selectedLead && customerReturnId && activeTab === 'leads') {
+            setActiveTab('customers');
+        }
+    }, [selectedLead, customerReturnId, activeTab]);
 
     // Håndter åbning af specifik opgave via URL fra e-mail (deep linking)
     useEffect(() => {
@@ -2802,7 +2815,7 @@ const Dashboard = () => {
             case 'leads':
                 return { title: 'Kunder & Forespørgsler', desc: 'Her styrer du dine kunder hele vejen — fra forespørgsel til færdig opgave.' };
             case 'map':
-                return { title: 'Geografisk Overblik', desc: 'Se dine leads og nuværende forespørgsler direkte på Danmarkskortet.' };
+                return { title: 'Geografisk Overblik', desc: 'Se dine tilbud og nuværende forespørgsler direkte på Danmarkskortet.' };
             case 'materials':
                 return { title: 'Standard Indkøbspriser (Ekskl. moms DKK)', desc: 'Disse priser danner grundlag for materialeberegningen. Din valgte system-avance lægges oveni.' };
             case 'settings':
@@ -2827,7 +2840,7 @@ const Dashboard = () => {
     const mobileTabHeaders = {
         leads: {
             icon: Users,
-            title: 'Kunder & Leads',
+            title: 'Tilbud & Forespørgsler',
             desc: 'Styr forespørgsler, tilbud og bekræftede opgaver fra mobilen.'
         },
         settings: {
@@ -2974,7 +2987,7 @@ const Dashboard = () => {
 
                     {['admin'].includes(effectiveRole) && (
                         <button data-tour="nav-leads" className={activeTab === 'leads' ? 'active' : ''} onClick={() => { setActiveTab('leads'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
-                            <FileText size={20} /> Leads & Tilbud
+                            <FileText size={20} /> Tilbud & Forespørgsler
                             {(() => {
                                 const unreadCount = leadsData.filter(l => (l.status || 'Ny forespørgsel') === 'Ny forespørgsel' && l.is_read === false).length;
                                 if (unreadCount > 0) {
@@ -3622,8 +3635,11 @@ const Dashboard = () => {
                             myProfile={myProfile}
                             leadsData={leadsData}
                             isMobile={isMobile}
-                            onOpenCase={(leadId) => { setActiveTab('cases'); setSearchQuery(''); setTargetCaseId(leadId); }}
-                            onOpenLead={(lead) => {
+                            autoOpenDetailId={customerReturnId}
+                            onAutoOpenConsumed={() => setCustomerReturnId(null)}
+                            onOpenCase={(leadId, customer) => { if (customer?.id) setCustomerReturnId(customer.id); setActiveTab('cases'); setSearchQuery(''); setTargetCaseId(leadId); }}
+                            onOpenLead={(lead, customer) => {
+                                if (customer?.id) setCustomerReturnId(customer.id);
                                 setActiveTab('leads');
                                 setLeadFilter(['Bekræftet opgave', 'Sæt i bero', 'Historik', 'Afbrudt Sag'].includes(lead?.status) ? 'Bekræftet opgave' : (lead?.status === 'Sendt tilbud' ? 'Sendt tilbud' : 'Tilbudskladder'));
                                 setSearchQuery('');
