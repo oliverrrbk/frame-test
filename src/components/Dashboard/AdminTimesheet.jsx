@@ -8,7 +8,7 @@ import { isWeekendOrHoliday } from '../../utils/holidays';
 import PayrollControls from './PayrollControls';
 import {
     fetchPayrollSettings, isDateLocked, formatDa, currentPeriod, getEffectiveLockedUntil, getConfig,
-    lastCompletedPeriodRange, aggregatePayroll, buildSummaryCSV, buildLonartCSV, downloadCSV, toDateKey
+    lastCompletedPeriodRange, aggregatePayroll, buildSummaryCSV, buildLonartCSV, buildDanlonCSV, downloadCSV, toDateKey
 } from '../../utils/payroll';
 import { mutateTimeEntries } from '../../utils/timeEntries';
 import { getRoleLabel } from '../../utils/roles';
@@ -183,6 +183,9 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
     const [exportMenuOpen, setExportMenuOpen] = useState(false);
     const [isStamdataModalOpen, setIsStamdataModalOpen] = useState(false);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    // Format for lønfilen: 'danlon' = Danløn/Salary.dk-format (klar til import),
+    // 'lonart' = generisk lønart-fil med firmaets egne koder (alle andre systemer).
+    const [payFormat, setPayFormat] = useState('danlon');
     const exportMenuRef = useRef(null);
     const payrollCompanyId = profile?.company_id || profile?.id;
     const lockedUntil = getEffectiveLockedUntil(payrollSettings);
@@ -644,7 +647,16 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
         const cfg = getConfig(payrollSettings);
         const periodLabel = `${start} – ${end}`;
         
-        if (format === 'lonart') {
+        if (format === 'danlon') {
+            // Firmaets eget CVR (ejerens kort), ikke nødvendigvis den der er logget ind.
+            const cvr = teamMembers.find(m => m.id === payrollCompanyId)?.cvr || profile?.cvr || '';
+            if (!String(cvr).replace(/\D/g, '')) {
+                toast.error('Udfyld firmaets CVR under Konto-indstillinger, før du henter Danløn/Salary.dk-filen.');
+                return;
+            }
+            downloadCSV(`Loneksport_danlon_${start}_${end}.csv`, buildDanlonCSV(rows, cvr, cfg.lonart));
+            toast.success(`Danløn/Salary.dk-fil hentet for ${formatDa(start)} – ${formatDa(end)}.`);
+        } else if (format === 'lonart') {
             downloadCSV(`Loneksport_lonart_${start}_${end}.csv`, buildLonartCSV(rows, cfg.lonart, periodLabel));
             toast.success(`Lønfil hentet for ${formatDa(start)} – ${formatDa(end)}.`);
         } else if (format === 'summary') {
@@ -1920,6 +1932,26 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     
+                                    {/* Format-vælger — komplementerer den eksisterende lønfil; vælg system én gang, samme knap henter */}
+                                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '10px 12px' }}>
+                                        <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600, marginBottom: '6px' }}>Hvilket lønsystem bruger I?</div>
+                                        <div style={{ display: 'flex', gap: '6px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '4px' }}>
+                                            {[
+                                                { key: 'danlon', label: 'Danløn / Salary.dk', sub: 'klar til import' },
+                                                { key: 'lonart', label: 'Andet lønsystem', sub: 'standard lønart-fil' },
+                                            ].map(opt => {
+                                                const active = payFormat === opt.key;
+                                                return (
+                                                    <button key={opt.key} type="button" onClick={() => setPayFormat(opt.key)}
+                                                        style={{ flex: 1, textAlign: 'center', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', border: active ? '1px solid #bfdbfe' : '1px solid transparent', background: active ? '#fff' : 'transparent', boxShadow: active ? '0 2px 6px rgba(15,23,42,0.08)' : 'none', transition: 'all 0.15s' }}>
+                                                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: active ? '#1d4ed8' : '#64748b' }}>{opt.label}</div>
+                                                        <div style={{ fontSize: '0.66rem', color: active ? '#3b82f6' : '#94a3b8', marginTop: '1px' }}>{opt.sub}</div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
                                     {/* 1. Primær lønfil */}
                                     <div 
                                         onMouseEnter={e => {
@@ -1946,13 +1978,13 @@ export default function AdminTimesheet({ leadsData, profile, onDataChange }) {
                                     >
                                         <div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>1. Lønfil til Lønsystem (Zenegy / Dataløn)</strong>
+                                                <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>1. Lønfil til lønsystem</strong>
                                                 <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#1d4ed8', background: '#dbeafe', border: '1px solid #bfdbfe', padding: '1px 6px', borderRadius: '999px', textTransform: 'uppercase' }}>Anbefalet</span>
                                             </div>
-                                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>Transaktionsfil med lønarter klar til direkte import.</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>{payFormat === 'danlon' ? 'Klar til direkte import i Danløn og Salary.dk.' : 'Med jeres egne lønart-koder — til alle andre lønsystemer.'}</div>
                                         </div>
                                         <button 
-                                            onClick={() => triggerDownload('lonart', data)}
+                                            onClick={() => triggerDownload(payFormat === 'danlon' ? 'danlon' : 'lonart', data)}
                                             disabled={data.rows.length === 0}
                                             style={{ 
                                                 display: 'flex', 

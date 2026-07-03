@@ -210,6 +210,44 @@ export function buildLonartCSV(rows, lonart, periodLabel) {
     return lines.join('\n');
 }
 
+// Antal i Danløn-formatet. Danske lønsystemer bruger komma som decimaltegn.
+// ⚠️ Dette er DET ENE sted talformatet skal rettes, hvis en rigtig testimport i
+// Danløn/Salary.dk viser at de kræver et andet format (fx punktum, eller
+// hundrededele uden separator). Isoleret med vilje.
+function danlonQty(n) {
+    return String(Math.round((Number(n) || 0) * 100) / 100).replace('.', ',');
+}
+
+// Danløn-format transaktionsfil — importérbar direkte i BÅDE Danløn og Salary.dk
+// (Salary.dk understøtter Danløns filformat). Ingen API nødvendig.
+//
+// Kolonner (semikolon-separeret, ÉN linje pr. lønart pr. medarbejder, INGEN header):
+//   CVR;lønnummer;lønart;enheder;sats;beløb
+// For timer/dage/km udfyldes kun ENHEDER — sats og beløb står tomme, fordi
+// satsen holdes på lønarten inde i selve lønsystemet (matcher vores data, hvor
+// vi ikke gemmer timeløn pr. medarbejder).
+//
+// ⚠️ Talformat + nøjagtig kolonneopbygning bør bekræftes med én testimport i
+// Danløn og Salary.dk, før det meldes bredt ud til kunderne — se danlonQty().
+export function buildDanlonCSV(rows, cvr, lonart) {
+    const cvrDigits = String(cvr ?? '').replace(/\D/g, ''); // kun cifre
+    const lines = [];
+    const push = (nr, code, qty) => {
+        // Kun gyldige lønnumre og positive mængder — ellers kan lønsystemet ikke bruge linjen.
+        if (code && isValidLonnummer(nr) && Number(qty) > 0) {
+            lines.push([cvrDigits, nr, code, danlonQty(qty), '', ''].join(';'));
+        }
+    };
+    rows.forEach(r => {
+        push(r.lonnummer, lonart.normal, r.normalHours);
+        push(r.lonnummer, lonart.vacation, r.vacation);
+        push(r.lonnummer, lonart.sick, r.sick);
+        push(r.lonnummer, lonart.other_absence, r.other);
+        push(r.lonnummer, lonart.mileage, r.mileage);
+    });
+    return lines.join('\n');
+}
+
 // Hjælper: trigger download af en CSV-streng.
 export function downloadCSV(filename, csv) {
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
