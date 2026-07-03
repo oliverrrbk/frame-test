@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Users, FileText, Briefcase } from 'lucide-react';
-import { Preview } from './SystemWheelPreviews';
+import { Home, Users, FileText, Briefcase, Calendar, MessageSquare, MapPin, Wallet, Link as LinkIcon, PenTool, HardHat } from 'lucide-react';
+import { Preview, LOOP_MS } from './SystemWheelPreviews';
 
 // Accent-paletter der matcher resten af Bison Frame
 const ACCENTS = {
@@ -31,21 +31,67 @@ const FEATURES = [
         id: 'cases', icon: Briefcase, accent: 'green', title: 'Sager & Ordrestyring',
         desc: 'Fuld styring af opgaver — fremdrift, timer, hold og materialer.',
     },
+    {
+        id: 'calendar', icon: Calendar, accent: 'blue', title: 'Kalender',
+        desc: 'Planlæg sager og aftaler — træk bekræftede opgaver ind i kalenderen.',
+    },
+    {
+        id: 'chat', icon: MessageSquare, accent: 'orange', title: 'Intern Chat',
+        desc: 'Skriv med dine folk og på hver sag — beskeder, billeder og fælles tråde.',
+    },
+    {
+        id: 'finance', icon: Wallet, accent: 'green', title: 'Økonomi & Faktura',
+        desc: 'Overblik over cashflow — fakturér åbne sager direkte til dit regnskab.',
+    },
+    {
+        id: 'payroll', icon: FileText, accent: 'indigo', title: 'Løn & Timer',
+        desc: 'Medarbejdernes timer og kørsel — ét klik til færdig lønfil.',
+    },
+    {
+        id: 'map', icon: MapPin, accent: 'green', title: 'Kortvisning',
+        desc: 'Se alle dine tilbud og opgaver direkte på Danmarkskortet.',
+    },
+    {
+        id: 'drawings', icon: PenTool, accent: 'blue', title: 'Skitser & Tegninger',
+        desc: 'Tegn skitser direkte i appen, eller upload arkitekttegninger.',
+    },
+    {
+        id: 'integrations', icon: LinkIcon, accent: 'blue', title: 'Integrationer',
+        desc: 'Forbind e-conomic, Dinero og din egen mail — let overførsel.',
+    },
+    {
+        id: 'team', icon: HardHat, accent: 'orange', title: 'Team & Medarbejdere',
+        desc: 'Tilføj svende og underentreprenører — rollestyret adgang.',
+    },
 ];
 
 
 export default function SystemWheel() {
     const [active, setActive] = useState('overview');
+    const [paused, setPaused] = useState(false);
     const activeFeature = FEATURES.find(f => f.id === active) || FEATURES[0];
 
     const count = FEATURES.length;
     const R = 168; // ring-radius i px
 
+    // Auto-rotation: efter ét fuldt demo-loop hopper hjulet videre til næste modul,
+    // medmindre musen peger på hjulet (så bliver den, hvor brugeren peger).
+    useEffect(() => {
+        if (paused) return;
+        const dur = (LOOP_MS[active] || 8000) + 600;
+        const idx = FEATURES.findIndex(f => f.id === active);
+        const nextId = FEATURES[(idx + 1) % FEATURES.length].id;
+        const t = setTimeout(() => setActive(nextId), dur);
+        return () => clearTimeout(t);
+    }, [active, paused]);
+
     return (
         <div className="flex flex-col lg:flex-row items-center lg:items-center justify-center gap-12 lg:gap-10">
 
             {/* ─── HJULET (desktop) ─────────────────────────────── */}
-            <div className="hidden lg:block relative w-[440px] h-[440px] shrink-0">
+            <div className="hidden lg:block relative w-[440px] h-[440px] shrink-0"
+                onMouseEnter={() => setPaused(true)}
+                onMouseLeave={() => setPaused(false)}>
                 {/* Roterende, dekorativ prikket ring — giver "hjul"-følelsen uden at flytte klik-mål */}
                 <motion.div
                     animate={{ rotate: 360 }}
@@ -72,7 +118,7 @@ export default function SystemWheel() {
                         <React.Fragment key={f.id}>
                             {/* Eger */}
                             <div
-                                className={`absolute origin-left h-px transition-colors duration-300 ${isActive ? 'bg-slate-300 dark:bg-slate-600' : 'bg-slate-200/70 dark:bg-slate-800/70'}`}
+                                className={`absolute origin-left transition-all duration-300 ${isActive ? 'h-[2px] bg-blue-400/70 dark:bg-blue-500/60' : 'h-px bg-slate-200/70 dark:bg-slate-800/70'}`}
                                 style={{ width: R, left: '50%', top: '50%', transform: `rotate(${deg}deg)` }}
                             />
                             {/* Node */}
@@ -87,7 +133,7 @@ export default function SystemWheel() {
                                     transition={{ duration: 4 + i * 0.3, repeat: Infinity, ease: 'easeInOut' }}
                                     whileHover={{ scale: 1.14 }}
                                     whileTap={{ scale: 0.96 }}
-                                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 border ${ACCENTS[f.accent]} ${isActive ? 'shadow-lg ring-2 ring-offset-2 ring-offset-surface ring-slate-300 dark:ring-slate-600 border-transparent' : 'shadow-sm border-slate-100 dark:border-slate-800 hover:shadow-md'}`}
+                                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 border ${ACCENTS[f.accent]} ${isActive ? 'shadow-[0_8px_24px_-4px_rgba(37,99,235,0.35)] ring-2 ring-offset-2 ring-offset-surface ring-blue-500 dark:ring-blue-400 border-transparent' : 'shadow-sm border-slate-100 dark:border-slate-800 hover:shadow-md'}`}
                                     aria-label={f.title}
                                 >
                                     <Icon size={26} />
