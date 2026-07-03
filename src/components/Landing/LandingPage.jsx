@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
 import TopNavBar from './TopNavBar';
-import { X, Check, Compass, Calculator, Send, ArrowRight, ArrowLeft, Heart, Star } from 'lucide-react';
+import { X, Check, Compass, Calculator, Send, ArrowRight, ArrowLeft, Heart, Star, Clock, Users, Wallet, FileText } from 'lucide-react';
 import { TheInfiniteGrid } from '../ui/the-infinite-grid';
 import { AnimatedTestimonials } from '../ui/animated-testimonials';
 import { StaggerTestimonials } from '../ui/stagger-testimonials';
@@ -44,6 +44,92 @@ const LandingPage = ({ setSession }) => {
                 <div className="mt-16 md:mt-28 mb-12 md:mb-16">
                     <StaggerTestimonials />
                 </div>
+
+                {/* Breadth Section — "Meget mere end en tilbudsberegner" */}
+                <section className="max-w-[1440px] mx-auto px-8 pt-[clamp(2rem,4vw,4rem)] pb-[clamp(3rem,6vw,5rem)] relative z-10 font-body">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        className="inline-flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-600 dark:text-slate-300 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-slate-200/50 dark:border-slate-700/50"
+                    >
+                        <span className="w-2 h-2 rounded-full bg-orange-600 dark:bg-orange-400"></span>
+                        Hele værktøjskassen
+                    </motion.div>
+                    <motion.h2
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        style={{ WebkitTransform: "translateZ(0)", willChange: "transform, opacity" }}
+                        className="font-headline text-[clamp(2rem,4vw,3.5rem)] font-bold tracking-tight mb-4 text-slate-900 dark:text-slate-100"
+                    >
+                        Meget mere end en tilbudsberegner
+                    </motion.h2>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                        viewport={{ once: true }}
+                        className="text-slate-500 dark:text-slate-400 text-[clamp(1.125rem,2vw,1.25rem)] max-w-2xl leading-relaxed mb-[clamp(3rem,6vw,4rem)]"
+                    >
+                        Tilbuddene er kun starten. Frame samler hele hverdagen ét sted — så du bruger tiden på håndværket i stedet for papirarbejdet.
+                    </motion.p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                        {[
+                            {
+                                icon: FileText,
+                                color: "text-blue-600 dark:text-blue-400",
+                                glow: "bg-blue-600/5 group-hover:bg-blue-600/10",
+                                title: "Tilbud på stedet",
+                                text: "Lav professionelle, brandede PDF-tilbud mens du står ude hos kunden. Kørsel og slid er regnet med automatisk.",
+                            },
+                            {
+                                icon: Clock,
+                                color: "text-slate-600 dark:text-slate-400",
+                                glow: "bg-slate-600/5 group-hover:bg-slate-600/10",
+                                title: "Timeregistrering uden bøvl",
+                                text: "Timerne for dig og dine folk registreres nemt og lander på den rigtige sag. Simpelt og overskueligt — helt uden bøvl.",
+                            },
+                            {
+                                icon: Users,
+                                color: "text-orange-600 dark:text-orange-400",
+                                glow: "bg-orange-600/5 group-hover:bg-orange-600/10",
+                                title: "Styr på kunder og sager",
+                                text: "Alle dine kunder, tilbud og igangværende sager samlet ét sted — på både mobil og computer. Ét simpelt overblik, der giver ro i maven.",
+                            },
+                            {
+                                icon: Wallet,
+                                color: "text-emerald-600 dark:text-emerald-400",
+                                glow: "bg-emerald-600/5 group-hover:bg-emerald-600/10",
+                                title: "Løn uden hovedpine",
+                                text: "De registrerede timer gør lønnen enkel og overskuelig — og spiller let sammen med dit lønsystem.",
+                            },
+                        ].map((card, idx) => (
+                            <motion.div
+                                key={card.title}
+                                whileHover={{ y: -5 }}
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 * (idx + 1) }}
+                                viewport={{ once: true }}
+                                style={{ WebkitTransform: "translateZ(0)", willChange: "transform", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
+                                className="bg-white dark:bg-slate-900 rounded-[2rem] p-10 flex flex-col h-full shadow-sm hover:shadow-md transition-all duration-500 border border-slate-100 dark:border-slate-800 relative overflow-hidden group"
+                            >
+                                <div className={`absolute top-0 right-0 w-32 h-32 ${card.glow} rounded-full blur-[40px] transition-all pointer-events-none`}></div>
+                                <div className="mb-6 flex items-center gap-3 relative z-10">
+                                    <div className={card.color}>
+                                        <card.icon size={28} />
+                                    </div>
+                                    <h3 className="text-[clamp(1.125rem,1.5vw,1.25rem)] font-bold text-slate-900 dark:text-slate-100">{card.title}</h3>
+                                </div>
+                                <p className="text-slate-500 dark:text-slate-400 leading-relaxed flex-grow relative z-10">
+                                    {card.text}
+                                </p>
+                            </motion.div>
+                        ))}
+                    </div>
+                </section>
 
                 {/* Process Section (New Comparison Design) */}
                 <section className="max-w-[1440px] mx-auto px-8 pt-[clamp(1rem,2vw,2rem)] pb-[clamp(4rem,8vw,8rem)] relative z-10 font-body">
@@ -194,6 +280,9 @@ const LandingPage = ({ setSession }) => {
                         <span className="font-bold text-xl text-slate-700 dark:text-slate-300">e-conomic</span>
                         <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Dinero</span>
                     </div>
+                    <p className="text-sm text-slate-400 dark:text-slate-500 mt-8 text-center max-w-md">
+                        … og spiller let sammen med dit lønsystem, så lønnen ikke bliver en hovedpine.
+                    </p>
                 </section>
 
                 {/* Final CTA */}
@@ -214,8 +303,9 @@ const LandingPage = ({ setSession }) => {
                         <motion.div style={{ opacity: glowOpacity }} className="absolute top-[-50%] left-[-10%] w-[60%] h-[150%] bg-blue-600/5 blur-[100px] rounded-full pointer-events-none"></motion.div>
                         
                         <div className="flex flex-col gap-4 relative z-10 max-w-xl text-center md:text-left">
+                            <span className="text-[0.75rem] font-bold uppercase tracking-widest text-slate-400 block dark:text-slate-500">Helt uden binding</span>
                             <h2 className="text-[clamp(2.5rem,4vw,3.5rem)] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
-                                Klar til at optimere din forretning?
+                                Se selv, om det kan gøre din hverdag lettere.
                             </h2>
                         </div>
                         
