@@ -14,7 +14,7 @@
 //   [{ id, text, isExpanded, subTasks: [{ id, text, done, estHours?, crew? }] }]
 // Felterne estHours + crew er valgfrie og bagudkompatible.
 // ============================================================================
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ListChecks, Plus, Trash2, Users, Clock, Wand2, Scale } from 'lucide-react';
 
@@ -41,12 +41,18 @@ export default function WorkBreakdownModal({
     hourlyRate = 550,
     actualHours = 0,
     onSeedStandard,
+    onToggle,
 }) {
     const rate = num(hourlyRate) || 550;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(steps || [])));
 
     // Skriv ændringer op til forælderen med det samme, så totaler bag popup'en følger med.
     const commit = (next) => { setLocal(next); onChange?.(next); };
+
+    // I compare-mode ejer forælderen data (fx afkrydsning via onToggle) — hold den
+    // lokale kopi synkron med steps, så flueben opdateres live i visningen.
+    useEffect(() => { if (mode === 'compare') setLocal(steps || []); }, [steps, mode]);
 
     // ---- edit-handlers ----
     const setSub = (stepId, subId, patch) => commit(local.map(s => s.id !== stepId ? s : {
@@ -74,19 +80,19 @@ export default function WorkBreakdownModal({
     const isEmpty = local.length === 0 || local.every(s => (s.subTasks || []).length === 0);
 
     return createPortal(
-        <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000040, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '18px' }}>
-            <div onClick={(e) => e.stopPropagation()} className="wbm-card" style={{ width: '100%', maxWidth: '760px', maxHeight: '92vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: '24px', boxShadow: '0 30px 70px -15px rgba(15,23,42,0.45)', overflow: 'hidden' }}>
+        <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000040, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'center', padding: isMobile ? 0 : '18px' }}>
+            <div onClick={(e) => e.stopPropagation()} className="wbm-card" style={{ width: '100%', maxWidth: isMobile ? '100%' : '760px', height: isMobile ? '100dvh' : undefined, maxHeight: isMobile ? '100dvh' : '92vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: isMobile ? 0 : '24px', boxShadow: '0 30px 70px -15px rgba(15,23,42,0.45)', overflow: 'hidden' }}>
                 <style>{WBM_CSS}</style>
 
                 {/* Header — let glas-tone */}
-                <div style={{ padding: '22px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', background: 'linear-gradient(180deg, rgba(248,250,252,0.9), rgba(255,255,255,0.9))', backdropFilter: 'blur(6px)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '13px' }}>
-                        <div style={{ width: '46px', height: '46px', borderRadius: '13px', background: isEdit ? 'linear-gradient(135deg, #1a1a1a, #0f172a)' : 'linear-gradient(135deg, #0ea5e9, #2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 22px -8px rgba(15,23,42,0.5)' }}>
-                            {isEdit ? <ListChecks size={23} /> : <Scale size={23} />}
+                <div style={{ padding: isMobile ? 'calc(14px + env(safe-area-inset-top)) 18px 14px' : '22px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', borderBottom: '1px solid #f1f5f9', background: 'linear-gradient(180deg, rgba(248,250,252,0.9), rgba(255,255,255,0.9))', backdropFilter: 'blur(6px)', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '11px' : '13px', minWidth: 0 }}>
+                        <div style={{ width: isMobile ? '40px' : '46px', height: isMobile ? '40px' : '46px', flexShrink: 0, borderRadius: '13px', background: isEdit ? 'linear-gradient(135deg, #1a1a1a, #0f172a)' : 'linear-gradient(135deg, #0ea5e9, #2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 22px -8px rgba(15,23,42,0.5)' }}>
+                            {isEdit ? <ListChecks size={isMobile ? 20 : 23} /> : <Scale size={isMobile ? 20 : 23} />}
                         </div>
-                        <div>
-                            <h3 style={{ margin: 0, fontSize: '1.16rem', fontWeight: 800, color: '#0f172a' }}>{isEdit ? 'Delopgaver & timer' : 'Sammenlign timer'}</h3>
-                            <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#64748b' }}>{isEdit ? 'Estimér timer og antal mand pr. delopgave' : 'Estimeret vs. faktisk forbrug pr. delopgave'}</p>
+                        <div style={{ minWidth: 0 }}>
+                            <h3 style={{ margin: 0, fontSize: isMobile ? '1.05rem' : '1.16rem', fontWeight: 800, color: '#0f172a' }}>{isEdit ? 'Delopgaver & timer' : 'Sammenlign timer'}</h3>
+                            <p style={{ margin: '2px 0 0', fontSize: isMobile ? '0.78rem' : '0.82rem', color: '#64748b' }}>{isEdit ? 'Estimér timer og antal mand pr. delopgave' : 'Estimeret vs. faktisk forbrug pr. delopgave'}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="wbm-x" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '11px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}>
@@ -95,7 +101,7 @@ export default function WorkBreakdownModal({
                 </div>
 
                 {/* Krop */}
-                <div style={{ padding: '20px 26px', overflowY: 'auto', flex: 1 }}>
+                <div style={{ padding: isMobile ? '16px 16px' : '20px 26px', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', flex: 1 }}>
                     {isEmpty && isEdit && (
                         <div style={{ textAlign: 'center', padding: '26px 16px 22px' }}>
                             <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: '0.92rem', lineHeight: 1.5 }}>
@@ -120,13 +126,16 @@ export default function WorkBreakdownModal({
                         return (
                             <div key={step.id} style={{ marginBottom: '18px' }}>
                                 {/* Etape-hoved */}
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '10px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
-                                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#0f172a', flexShrink: 0 }} />
-                                        <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.97rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{step.text}</span>
+                                <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', gap: '9px', minWidth: 0, flex: 1 }}>
+                                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#0f172a', flexShrink: 0, marginTop: isMobile ? '7px' : 0 }} />
+                                        <div style={{ minWidth: 0 }}>
+                                            <span style={{ display: 'block', fontWeight: 800, color: '#0f172a', fontSize: '0.97rem', ...(isMobile ? { wordBreak: 'break-word' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{step.text}</span>
+                                            {isMobile && <span style={{ display: 'inline-block', marginTop: '5px', fontSize: '0.74rem', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '3px 9px', borderRadius: '999px' }}>{fmtH(stepMan)} mandetimer</span>}
+                                        </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '3px 9px', borderRadius: '999px' }}>{fmtH(stepMan)} mandetimer</span>
+                                        {!isMobile && <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '3px 9px', borderRadius: '999px' }}>{fmtH(stepMan)} mandetimer</span>}
                                         {isEdit && (
                                             <button onClick={() => delStep(step.id)} className="wbm-icon" title="Slet etape" style={iconBtn}><Trash2 size={15} /></button>
                                         )}
@@ -139,21 +148,27 @@ export default function WorkBreakdownModal({
                                         const man = subManHours(sub);
                                         const act = actualFor(sub);
                                         const diff = act == null ? null : act - man;
+                                        const canToggle = mode === 'compare' && typeof onToggle === 'function';
                                         return (
-                                            <div key={sub.id} className="wbm-row" style={rowStyle}>
+                                            <div key={sub.id} className="wbm-row" style={{ ...rowStyle, ...(isMobile ? { flexDirection: 'column', alignItems: 'stretch', gap: '10px' } : null) }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                                                     {mode === 'compare' && (
-                                                        <span style={{ width: '18px', height: '18px', borderRadius: '5px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: sub.done ? '#10b981' : '#fff', border: sub.done ? 'none' : '2px solid #cbd5e1', color: '#fff', fontSize: '0.7rem', fontWeight: 800 }}>{sub.done ? '✓' : ''}</span>
+                                                        <span
+                                                            onClick={canToggle ? () => onToggle(step.id, sub.id) : undefined}
+                                                            role={canToggle ? 'button' : undefined}
+                                                            title={canToggle ? 'Markér som færdig' : undefined}
+                                                            style={{ width: isMobile ? '24px' : '18px', height: isMobile ? '24px' : '18px', borderRadius: '6px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: sub.done ? '#10b981' : '#fff', border: sub.done ? 'none' : '2px solid #cbd5e1', color: '#fff', fontSize: isMobile ? '0.85rem' : '0.7rem', fontWeight: 800, cursor: canToggle ? 'pointer' : 'default' }}
+                                                        >{sub.done ? '✓' : ''}</span>
                                                     )}
                                                     {isEdit ? (
-                                                        <input value={sub.text} onChange={(e) => setSub(step.id, sub.id, { text: e.target.value })} className="wbm-input" style={{ ...inp, flex: 1, minWidth: 0 }} placeholder="Delopgave…" />
+                                                        <input value={sub.text} onChange={(e) => setSub(step.id, sub.id, { text: e.target.value })} className="wbm-input" style={{ ...inp, flex: 1, minWidth: 0, fontSize: isMobile ? '0.95rem' : '0.9rem' }} placeholder="Delopgave…" />
                                                     ) : (
-                                                        <span style={{ fontSize: '0.9rem', color: sub.done ? '#64748b' : '#1e293b', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.text}</span>
+                                                        <span style={{ fontSize: '0.9rem', color: sub.done ? '#64748b' : '#1e293b', fontWeight: 600, ...(isMobile ? { wordBreak: 'break-word' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{sub.text}</span>
                                                     )}
                                                 </div>
 
                                                 {isEdit ? (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, ...(isMobile ? { justifyContent: 'space-between' } : null) }}>
                                                         {/* Timer */}
                                                         <div style={fieldWrap} title="Estimerede timer">
                                                             <Clock size={13} color="#94a3b8" />
@@ -163,14 +178,14 @@ export default function WorkBreakdownModal({
                                                         {/* Mand-stepper */}
                                                         <Stepper value={Math.max(1, parseInt(sub.crew, 10) || 1)} onChange={(v) => setSub(step.id, sub.id, { crew: v })} />
                                                         {/* Mandetimer + pris */}
-                                                        <div style={{ minWidth: '92px', textAlign: 'right' }}>
+                                                        <div style={{ minWidth: isMobile ? 'auto' : '92px', textAlign: 'right' }}>
                                                             <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a' }}>{fmtH(man)} t</div>
                                                             <div style={{ fontSize: '0.72rem', color: '#d97706', fontWeight: 700 }}>{fmtKr(man * rate)} kr</div>
                                                         </div>
                                                         <button onClick={() => delSub(step.id, sub.id)} className="wbm-icon" title="Slet" style={iconBtn}><Trash2 size={14} /></button>
                                                     </div>
                                                 ) : (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0, ...(isMobile ? { justifyContent: 'space-between', paddingLeft: '34px' } : null) }}>
                                                         <Metric label="Estimeret" value={`${fmtH(man)} t`} sub={man ? `${fmtH(num(sub.estHours))}t × ${Math.max(1, parseInt(sub.crew,10)||1)}` : null} />
                                                         <Metric label="Faktisk" value={act == null ? '—' : `${fmtH(act)} t`} muted={act == null} />
                                                         <div style={{ minWidth: '74px', textAlign: 'right' }}>
@@ -196,7 +211,7 @@ export default function WorkBreakdownModal({
                 </div>
 
                 {/* Footer — totaler */}
-                <div style={{ padding: '18px 26px', borderTop: '1px solid #f1f5f9', background: 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,250,252,0.95))', backdropFilter: 'blur(6px)' }}>
+                <div style={{ padding: isMobile ? '14px 18px calc(14px + env(safe-area-inset-bottom))' : '18px 26px', borderTop: '1px solid #f1f5f9', background: 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,250,252,0.95))', backdropFilter: 'blur(6px)', flexShrink: 0 }}>
                     {isEdit ? (
                         <>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>

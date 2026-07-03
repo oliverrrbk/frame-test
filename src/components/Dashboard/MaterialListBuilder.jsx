@@ -528,29 +528,44 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
             )}
 
             {/* Bundbjælke */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', padding: isMobile ? '12px 16px' : '14px 22px', paddingBottom: isMobile ? 'calc(12px + env(safe-area-inset-bottom))' : undefined, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)', borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
-                <div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Varer på listen</div>
-                    <div style={{ fontSize: isMobile ? '1.4rem' : '1.7rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>{filledItems.length}</div>
-                    {savedState !== 'idle' && (
-                        <div style={{ marginTop: '3px', fontSize: '0.72rem', fontWeight: 600, color: savedState === 'saved' ? '#10b981' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            {savedState === 'saving'
-                                ? <><span className="mlb-spin" style={{ width: '10px', height: '10px', border: '2px solid #cbd5e1', borderTopColor: '#64748b', borderRadius: '50%', display: 'inline-block' }} /> Gemmer…</>
-                                : <>✓ Gemt</>}
-                        </div>
-                    )}
-                </div>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', flexWrap: isMobile ? 'nowrap' : 'wrap', gap: isMobile ? '10px' : '12px', padding: isMobile ? '10px 14px' : '14px 22px', paddingBottom: isMobile ? 'calc(8px + env(safe-area-inset-bottom))' : undefined, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)', borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
+                {isMobile ? (
+                    /* Kompakt tæller på én linje, så knapperne får plads */
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#64748b' }}>Varer på listen</span>
+                        <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{filledItems.length}</span>
+                        {savedState !== 'idle' && (
+                            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: savedState === 'saved' ? '#10b981' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                {savedState === 'saving'
+                                    ? <><span className="mlb-spin" style={{ width: '10px', height: '10px', border: '2px solid #cbd5e1', borderTopColor: '#64748b', borderRadius: '50%', display: 'inline-block' }} /> Gemmer…</>
+                                    : <>✓ Gemt</>}
+                            </span>
+                        )}
+                    </div>
+                ) : (
+                    <div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Varer på listen</div>
+                        <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>{filledItems.length}</div>
+                        {savedState !== 'idle' && (
+                            <div style={{ marginTop: '3px', fontSize: '0.72rem', fontWeight: 600, color: savedState === 'saved' ? '#10b981' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                {savedState === 'saving'
+                                    ? <><span className="mlb-spin" style={{ width: '10px', height: '10px', border: '2px solid #cbd5e1', borderTopColor: '#64748b', borderRadius: '50%', display: 'inline-block' }} /> Gemmer…</>
+                                    : <>✓ Gemt</>}
+                            </div>
+                        )}
+                    </div>
+                )}
+                <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', flexWrap: isMobile ? 'nowrap' : 'wrap' }}>
                     {isEditing && (
-                        <button className="mlb-ghost" disabled={busy} onClick={del} title="Slet" style={{ padding: '14px 18px', borderRadius: '12px', border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all .15s' }}>
-                            <Trash2 size={18} /> Slet
+                        <button className="mlb-ghost" disabled={busy} onClick={del} title="Slet" style={{ padding: isMobile ? '11px' : '14px 18px', borderRadius: '12px', border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all .15s', flexShrink: 0 }}>
+                            <Trash2 size={18} /> {!isMobile && 'Slet'}
                         </button>
                     )}
-                    <button className="mlb-ghost" disabled={busy} onClick={() => save(false)} style={{ padding: '14px 22px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all .15s' }}>
+                    <button className="mlb-ghost" disabled={busy} onClick={() => save(false)} style={{ flex: isMobile ? 1 : undefined, padding: isMobile ? '11px 12px' : '14px 22px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 700, fontSize: isMobile ? '0.9rem' : undefined, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all .15s' }}>
                         <Save size={18} /> Gem liste
                     </button>
-                    <button className="mlb-send" disabled={busy} onClick={requestSend} style={{ padding: '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
-                        <Send size={18} /> {busy ? 'Sender…' : 'Send til leverandør'}
+                    <button className="mlb-send" disabled={busy} onClick={requestSend} style={{ flex: isMobile ? 1 : undefined, padding: isMobile ? '11px 12px' : '14px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: isMobile ? '0.9rem' : undefined, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
+                        <Send size={18} /> {busy ? 'Sender…' : (isMobile ? 'Send' : 'Send til leverandør')}
                     </button>
                 </div>
             </div>

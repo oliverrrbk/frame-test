@@ -4125,6 +4125,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             <WorkBreakdownModal
                                 mode="compare"
                                 steps={todoList}
+                                onToggle={handleTodoToggle}
                                 onClose={() => setShowHourCompare(false)}
                                 hourlyRate={parseFloat(selectedCase?.raw_data?.calc_data?.hourlyRate) || parseFloat(selectedCase?.raw_data?.hourly_rate) || parseFloat(carpenterProfile?.hourly_rate) || parseFloat(carpenterProfile?.raw_data?.hourly_rate) || 550}
                                 actualHours={totalActualHours}

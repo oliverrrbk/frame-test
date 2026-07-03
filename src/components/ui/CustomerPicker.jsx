@@ -25,6 +25,7 @@ export default function CustomerPicker({ customers = [], value = null, onSelect,
     const inputRef = useRef(null);
     const [pos, setPos] = useState(null);
     const selected = customers.find(c => c.id === value) || null;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     useLayoutEffect(() => {
         if (!open) return;
@@ -50,8 +51,9 @@ export default function CustomerPicker({ customers = [], value = null, onSelect,
 
     useEffect(() => {
         if (!open) return;
-        // Fokus søgefeltet når den åbner
-        const t = setTimeout(() => inputRef.current?.focus(), 30);
+        // Fokus søgefeltet når den åbner — men ikke på mobil, hvor tastaturet
+        // ellers popper op og dækker/klemmer listen, så man ikke kan rulle.
+        const t = isMobile ? null : setTimeout(() => inputRef.current?.focus(), 30);
         const onDoc = (e) => {
             if (btnRef.current?.contains(e.target) || popRef.current?.contains(e.target)) return;
             setOpen(false);
@@ -130,7 +132,7 @@ export default function CustomerPicker({ customers = [], value = null, onSelect,
                         />
                     </div>
 
-                    <div style={{ overflowY: 'auto', flex: 1 }}>
+                    <div style={{ overflowY: 'auto', flex: 1, WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', touchAction: 'pan-y' }}>
                         {filtered.length === 0 && (
                             <div style={{ padding: '14px', color: '#94a3b8', fontSize: '.9rem', textAlign: 'center' }}>
                                 {customers.length === 0 ? 'Ingen kunder endnu' : 'Ingen match'}

@@ -1727,7 +1727,12 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                 customers={customersList}
                                 value={linkedCustomerId}
                                 onSelect={pickCustomer}
-                                onClear={() => setLinkedCustomerId(null)}
+                                onClear={() => {
+                                    setLinkedCustomerId(null);
+                                    setCustomer({ name: '', email: '', phone: '', address: '', zip: '', city: '' });
+                                    setCustomerType('privat');
+                                    setCvr('');
+                                }}
                                 placeholder="Genbrug en eksisterende kunde…"
                             />
                             <p style={{ margin: '6px 2px 0', fontSize: '0.78rem', color: '#94a3b8' }}>
