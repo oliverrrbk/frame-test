@@ -13,13 +13,16 @@
 //   • Cross-origin (Supabase, /api/*, Google Maps, OpenAI) -> RØRES IKKE,
 //     går altid direkte på nettet. Intet API-svar caches nogensinde.
 
-const CACHE = 'bison-frame-v2';
+const CACHE = 'bison-frame-v3';
 // Separat cache til Supabase Storage-billeder (logo, portræt, avatarer, skitse-
 // miniaturer). Holdes adskilt fra app-skallen, så den kan have sit eget loft/oprydning.
 const IMG_CACHE = 'bison-frame-img-v1';
-// Design/skrifter fra CDN (Tailwind + Google Fonts). Egen cache, så appen har styling
-// ved gentagne åbninger OG offline — uden at vente på fremmede servere ved hvert load.
-const CDN_CACHE = 'bison-frame-cdn-v1';
+// Design/skrifter fra CDN (Tailwind + Google Fonts). Egen cache som OFFLINE-fallback.
+// v2: skiftet til network-first (se fetch-handleren). Bumpet fra v1, så en evt.
+// tidligere fejl-cachet Tailwind-kopi slettes ved activate — ellers ville et ødelagt
+// svar blive serveret for evigt, Tailwind aldrig anvendes, og et uploadet profilfoto
+// kunne renderes i fuld størrelse hen over menuen (reload/log-ud hjalp ikke).
+const CDN_CACHE = 'bison-frame-cdn-v2';
 const CORE_ASSETS = ['/', '/index.html', '/manifest.json', '/logo.png', '/favicon.svg'];
 
 // Er dette en Supabase Storage-billedanmodning? (offentlige filer på et andet domæne)
@@ -86,23 +89,23 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Design/skrifter fra CDN (Tailwind + Google Fonts): cache-first + baggrunds-opdatering,
-    // så appen har styling ved gentagne åbninger og offline — uden at vente på fremmede
-    // servere. URL'erne er stabile (uden hash), så baggrunds-opdateringen henter nye versioner.
+    // Design/skrifter fra CDN (Tailwind + Google Fonts): NETWORK-FIRST med cache kun som
+    // offline-fallback. Bevidst IKKE cache-first: hvis netværket én gang giver et tomt/
+    // ødelagt svar (firewall, adblock, flaky CDN), ville cache-first servere det for evigt,
+    // Tailwind ville aldrig anvendes, og layoutet ville knække (fx et profilfoto i fuld
+    // størrelse). Network-first selv-healer: online hentes altid en frisk kopi; kun uden
+    // net falder vi tilbage på den seneste GODE kopi.
     if (isStyleCdn(url)) {
         event.respondWith(
             caches.open(CDN_CACHE).then((cache) =>
-                cache.match(request).then((cached) => {
-                    const network = fetch(request)
-                        .then((resp) => {
-                            if (resp && (resp.ok || resp.type === 'opaque')) {
-                                cache.put(request, resp.clone()).catch(() => {});
-                            }
-                            return resp;
-                        })
-                        .catch(() => cached);
-                    return cached || network;
-                })
+                fetch(request)
+                    .then((resp) => {
+                        if (resp && (resp.ok || resp.type === 'opaque')) {
+                            cache.put(request, resp.clone()).catch(() => {});
+                        }
+                        return resp;
+                    })
+                    .catch(() => cache.match(request))
             )
         );
         return;

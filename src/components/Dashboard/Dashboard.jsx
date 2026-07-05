@@ -3268,9 +3268,15 @@ const Dashboard = () => {
                                     {myProfile?.role === 'sales' ? 'Projektleder' : myProfile?.role === 'accountant' ? 'Bogholder' : myProfile?.role === 'worker' ? 'Tømrersvend' : myProfile?.role === 'apprentice' ? 'Tømrerlærling' : myProfile?.role === 'admin' && myProfile?.email === 'team@bisoncompany.dk' ? 'Bizon Admin' : 'Mester'}
                                 </span>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-300 dark:border-slate-600">
+                            {/* HÅRD størrelse via inline styles — må ALDRIG afhænge af Tailwind-CDN'en.
+                                Hvis Tailwind ikke er indlæst, ville w-10/h-10/overflow-hidden mangle, og et
+                                stort uploadet profilfoto ville så renderes i fuld opløsning hen over menuen. */}
+                            <div
+                                className="rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-300 dark:border-slate-600"
+                                style={{ width: '40px', height: '40px', minWidth: '40px', flexShrink: 0, borderRadius: '9999px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
                                 {myProfile?.avatar_url ? (
-                                    <img src={myProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                    <img src={myProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                                 ) : (
                                     <span className="text-slate-500 font-bold text-sm">
                                         {(myProfile?.owner_name || myProfile?.company_name || 'T')?.charAt(0).toUpperCase()}

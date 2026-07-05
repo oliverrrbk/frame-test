@@ -646,6 +646,29 @@ p {
     border: 2px solid var(--border);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   SIKKERHEDSNET — layout-værn der IKKE afhænger af Tailwind-CDN'en.
+   cdn.tailwindcss.com kan være langsom/blokeret (firewall/adblock) eller
+   fejl-cachet. Uden Tailwind mister utility-klasser (fx w-10 h-10 på
+   profil-avataren) deres størrelse, og et stort uploadet profilfoto kan
+   så renderes i fuld opløsning hen over menuen. Reglerne herunder ligger
+   i den BUNDLEDE css (index.css) og indlæses ALTID — så det kan ikke ske.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Standard-reset: intet billede må være bredere end sin beholder. */
+img { max-width: 100%; }
+
+/* Ingen fane/topbar må kunne dække sidemenuen: klip vandret overløb. */
+.dashboard-main,
+.dashboard-content { overflow-x: hidden; }
+
+/* Profil-avataren i topbaren får hård, Tailwind-uafhængig størrelse + klip. */
+.dashboard-topbar .user-profile img {
+    max-width: 40px;
+    max-height: 40px;
+    object-fit: cover;
+}
+
 .user-info {
     display: flex;
     flex-direction: column;
