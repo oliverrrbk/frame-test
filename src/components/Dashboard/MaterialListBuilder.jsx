@@ -59,11 +59,17 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
     const [busy, setBusy] = useState(false);
     const [showSendConfirm, setShowSendConfirm] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
     // Den aktuelle lead (kan blive oprettet ved første "Gem liste" på en ny liste) — styrer
     // om efterfølgende gem/send opdaterer samme sag, og om "Slet" vises.
     const [leadState, setLeadState] = useState(initialLead);
     const isEditing = !!leadState?.id;
+    // Bruges kun til at vælge den rigtige tekst i slet-bekræftelsen (den endelige
+    // beslutning tages i `del` ud fra frisk DB-data). En standalone-kladde uden andre
+    // lister slettes helt; ellers fjernes kun denne ene liste fra sagen.
+    const otherListItemCount = (leadState?.raw_data?.material_list || []).filter(m => (m.listId || 'default') !== listId).length;
+    const willDeleteWholeDraft = leadState?.status === 'Tilbudskladder' && otherListItemCount === 0;
     // 'idle' | 'saving' | 'saved' — vises ved bundbjælken så "Gem liste" giver tydelig kvittering.
     const [savedState, setSavedState] = useState('idle');
 
@@ -307,14 +313,49 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
         setShowSendConfirm(true);
     };
 
+    // BUGFIX: "Slet" må ALDRIG slette hele sagen, når man kun sletter én materialeliste
+    // inde på en rigtig sag. Materialelister bor i leads.raw_data (ikke egne rækker), så
+    // vi fjerner kun DENNE lists varer + meta og bevarer sagen. Kun hvis dette er en
+    // standalone materialeliste-kladde (byggerens egen 'Tilbudskladder') UDEN andet
+    // indhold, sletter vi hele kladden — ellers ville vi efterlade en tom spøgelses-sag.
     const del = async () => {
         if (!leadState?.id) { onCancel && onCancel(); return; }
         setBusy(true);
         try {
-            const { error } = await supabase.rpc('soft_delete_lead', { p_lead_id: leadState.id });
+            // Hent seneste raw_data + status, så beslutningen bygger på DB-sandheden.
+            const { data: latest } = await supabase
+                .from('leads').select('raw_data, status').eq('id', leadState.id).single();
+            const rd = latest?.raw_data || leadState.raw_data || {};
+            const currentStatus = latest?.status || leadState.status;
+
+            const remainingItems = (rd.material_list || []).filter(m => (m.listId || 'default') !== listId);
+            const remainingMeta = (rd.material_lists_meta || []).filter(l => l.id !== listId);
+            const isStandaloneDraft = currentStatus === 'Tilbudskladder';
+
+            // Ren standalone-kladde uden andre lister → slet hele kladden (uændret adfærd).
+            if (isStandaloneDraft && remainingItems.length === 0) {
+                const { error } = await supabase.rpc('soft_delete_lead', { p_lead_id: leadState.id });
+                if (error) throw error;
+                toast.success('Materialeliste-kladden er slettet.');
+                if (onDeleted) onDeleted(leadState.id); else if (onCancel) onCancel();
+                return;
+            }
+
+            // Liste inde på en rigtig sag → fjern KUN denne liste; sagen bevares.
+            const updatedRawData = {
+                ...rd,
+                material_list: remainingItems,
+                material_lists_meta: remainingMeta,
+                // Tom for varer → markér bevidst ryddet, så beregnerens forslag ikke genskabes.
+                ...(remainingItems.length === 0 ? { material_list_cleared: true } : {}),
+            };
+            const { error } = await supabase.from('leads').update({ raw_data: updatedRawData }).eq('id', leadState.id);
             if (error) throw error;
-            toast.success('Materialelisten er slettet.');
-            if (onDeleted) onDeleted(leadState.id); else if (onCancel) onCancel();
+
+            const updatedLead = { ...leadState, raw_data: updatedRawData };
+            toast.success('Materiallisten blev slettet.');
+            if (onSaved) onSaved(updatedLead);
+            if (onCancel) onCancel();
         } catch (e) {
             toast.error(friendlyError(e, 'Kunne ikke slette. Prøv igen.'));
         } finally { setBusy(false); }
@@ -557,7 +598,7 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
                 )}
                 <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', flexWrap: isMobile ? 'nowrap' : 'wrap' }}>
                     {isEditing && (
-                        <button className="mlb-ghost" disabled={busy} onClick={del} title="Slet" style={{ padding: isMobile ? '11px' : '14px 18px', borderRadius: '12px', border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all .15s', flexShrink: 0 }}>
+                        <button className="mlb-ghost" disabled={busy} onClick={() => setShowDeleteConfirm(true)} title={willDeleteWholeDraft ? 'Slet kladde' : 'Slet denne materialeliste'} style={{ padding: isMobile ? '11px' : '14px 18px', borderRadius: '12px', border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all .15s', flexShrink: 0 }}>
                             <Trash2 size={18} /> {!isMobile && 'Slet'}
                         </button>
                     )}
@@ -620,6 +661,32 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
                             <button className="mlb-cancel" onClick={() => setShowClearConfirm(false)} style={{ flex: 1, padding: '14px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>Fortryd</button>
                             <button className="mlb-danger" onClick={clearAllItems} style={{ flex: 1.4, padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(220,38,38,0.32)' }}>
                                 <Trash2 size={17} /> Ja, slet alle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteConfirm && (
+                <div className="mlb-overlay" onClick={() => setShowDeleteConfirm(false)} style={{ position: 'fixed', inset: 0, zIndex: 100080, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                    <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(460px, 100%)', background: 'linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.94))', borderRadius: 24, padding: '32px 28px 24px', boxShadow: '0 30px 80px rgba(15,23,42,0.45), inset 0 1px 0 rgba(255,255,255,0.9)', border: '1px solid rgba(255,255,255,0.6)', animation: 'mlbConfirmPop .3s cubic-bezier(.34,1.56,.64,1) both' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '22px' }}>
+                            <div className="mlb-dangericon" style={{ width: 66, height: 66, borderRadius: '50%', background: 'linear-gradient(145deg,#fee2e2,#fecaca)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
+                                <Trash2 size={28} color="#dc2626" />
+                            </div>
+                            <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                                {willDeleteWholeDraft ? 'Slet materialeliste-kladde?' : 'Slet denne materialeliste?'}
+                            </h2>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem', lineHeight: 1.55 }}>
+                                {willDeleteWholeDraft
+                                    ? 'Denne kladde indeholder kun denne ene liste og bliver slettet helt. Det kan ikke fortrydes.'
+                                    : 'Kun denne materialeliste fjernes. Selve sagen og alt andet indhold bevares.'}
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                            <button className="mlb-cancel" onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1, padding: '14px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>Fortryd</button>
+                            <button className="mlb-danger" disabled={busy} onClick={() => { setShowDeleteConfirm(false); del(); }} style={{ flex: 1.4, padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(145deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(220,38,38,0.32)' }}>
+                                <Trash2 size={17} /> {willDeleteWholeDraft ? 'Ja, slet kladden' : 'Ja, slet listen'}
                             </button>
                         </div>
                     </div>

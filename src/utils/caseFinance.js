@@ -61,6 +61,18 @@ const getBasePriceInclVat = (lead) => {
     return parseInt(firstPricePart.replace(/[^0-9]/g, '')) || 0;
 };
 
+// Materialebilag (kostpris) der faktureres til kunden PÅ TIMEPRIS-sager (efter regning).
+// Beløbene indtastes EKSKL. moms; momsen lægges på her ved visning. På FAST PRIS er
+// materialer indeholdt i prisen og lægges IKKE oveni (returnerer 0). Matcher InvoiceEditor.
+const getBillableMaterialsInclVat = (lead) => {
+    const rd = lead?.raw_data || {};
+    if (!(rd.is_manual_case && rd.billing_mode === 'hourly')) return 0;
+    const exVat = (rd.supplier_invoices || [])
+        .filter(inv => inv.category === 'Materialer' || !inv.category)
+        .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+    return isReverseChargeLead(lead) ? Math.round(exVat) : Math.round(exVat * 1.25);
+};
+
 // Ekstrapris fra logbog (ændringsordrer) + bekræftede aftalesedler (inkl. moms).
 const getExtraPriceInclVat = (lead) => {
     const rd = lead?.raw_data || {};
@@ -85,7 +97,8 @@ export function computeCaseFinance(lead) {
     const vatRate = isReverseChargeLead(lead) ? 0 : 0.25;
 
     const extraPriceInclVat = getExtraPriceInclVat(lead);
-    const caseTotalInclVat = getBasePriceInclVat(lead) + extraPriceInclVat;
+    const materialsInclVat = getBillableMaterialsInclVat(lead);
+    const caseTotalInclVat = getBasePriceInclVat(lead) + extraPriceInclVat + materialsInclVat;
 
     // invoiced_amount gemmes ekskl. moms → gang op til inkl. moms for at matche totalen.
     const invoicedExVat = Number(rd.invoiced_amount || 0);
@@ -110,6 +123,7 @@ export function computeCaseFinance(lead) {
         vatRate,
         caseTotalInclVat,
         extraPriceInclVat,
+        materialsInclVat,
         invoicedExVat,
         invoicedInclVat,
         remainingInclVat,

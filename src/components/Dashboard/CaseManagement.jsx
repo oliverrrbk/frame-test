@@ -658,6 +658,60 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         || (casesTourActive && selectedCaseIdState === CASES_DEMO_ID ? CASES_DEMO_CASE : null);
     const [stepToDelete, setStepToDelete] = useState(null);
 
+    // Redigering af sagsnummeret (kun mester/kontor) — så gamle sager kan føres over med
+    // deres oprindelige nummer. Tomt felt bevarer det nuværende nummer.
+    const [editingCaseNumber, setEditingCaseNumber] = useState(false);
+    const [caseNumberDraft, setCaseNumberDraft] = useState('');
+    const [savingCaseNumber, setSavingCaseNumber] = useState(false);
+    const canEditCaseNumber = !['worker', 'apprentice', 'sales', 'guest'].includes(profile?.role);
+
+    const beginEditCaseNumber = () => {
+        setCaseNumberDraft(String(selectedCase?.case_number || ''));
+        setEditingCaseNumber(true);
+    };
+
+    const saveCaseNumber = async () => {
+        if (savingCaseNumber || !selectedCase?.id) return;
+        const digits = String(caseNumberDraft).replace(/[^\d]/g, '');
+        const num = digits ? parseInt(digits, 10) : null;
+        if (!num || num < 1) { toast.error('Sagsnummeret skal være et positivt tal.'); return; }
+        if (num === selectedCase.case_number) { setEditingCaseNumber(false); return; }
+
+        setSavingCaseNumber(true);
+        try {
+            // Findes nummeret allerede i firmaet? (venlig besked frem for rå constraint-fejl)
+            const { data: dup } = await supabase
+                .from('leads').select('id')
+                .eq('carpenter_id', selectedCase.carpenter_id)
+                .eq('case_number', num)
+                .neq('id', selectedCase.id)
+                .limit(1);
+            if (dup && dup.length) {
+                toast.error(`Sagsnummer ${num} findes allerede — vælg et andet.`);
+                setSavingCaseNumber(false);
+                return;
+            }
+
+            const { error } = await supabase.from('leads').update({ case_number: num }).eq('id', selectedCase.id);
+            if (error) {
+                if (error.code === '23505' || /case_number/i.test(error.message || '')) {
+                    toast.error(`Sagsnummer ${num} findes allerede — vælg et andet.`);
+                    setSavingCaseNumber(false);
+                    return;
+                }
+                throw error;
+            }
+
+            if (onUpdateLead) onUpdateLead({ ...selectedCase, case_number: num });
+            setEditingCaseNumber(false);
+            toast.success(`Sagsnummeret er ændret til ${num}.`);
+        } catch (e) {
+            toast.error(friendlyError(e, 'Kunne ikke ændre sagsnummeret. Prøv igen.'));
+        } finally {
+            setSavingCaseNumber(false);
+        }
+    };
+
     const [activeSubTab, setActiveSubTab] = useState(['worker', 'apprentice', 'sales'].includes(profile?.role) ? 'timesheet' : 'todo'); // 'todo', 'materials', 'logs', 'timesheet', 'finance'
     const tabContentRef = useRef(null);
 
@@ -3079,8 +3133,41 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     </div>
                                 </div>
                             )}
-                            <h3 style={{ margin: '0 0 6px 0', fontSize: '1.3rem', fontWeight: 'bold', color: '#1a1a1a' }}>
-                                Sag {selectedCase.case_number || String(selectedCase.id).substring(0,8)} - {selectedCase.raw_data?.project_title || selectedCase.project_category}
+                            <h3 style={{ margin: '0 0 6px 0', fontSize: '1.3rem', fontWeight: 'bold', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                {editingCaseNumber ? (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                        Sag
+                                        <input
+                                            autoFocus
+                                            value={caseNumberDraft}
+                                            onChange={(e) => setCaseNumberDraft(e.target.value.replace(/[^\d]/g, ''))}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') saveCaseNumber(); if (e.key === 'Escape') setEditingCaseNumber(false); }}
+                                            inputMode="numeric"
+                                            style={{ width: '110px', padding: '4px 10px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', outline: 'none' }}
+                                            placeholder="Nummer"
+                                        />
+                                        <button onClick={saveCaseNumber} disabled={savingCaseNumber} title="Gem sagsnummer"
+                                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '10px', border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', cursor: savingCaseNumber ? 'wait' : 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}>
+                                            {savingCaseNumber ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                        </button>
+                                        <button onClick={() => setEditingCaseNumber(false)} disabled={savingCaseNumber} title="Annullér"
+                                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', cursor: 'pointer' }}>
+                                            <X size={16} />
+                                        </button>
+                                    </span>
+                                ) : (
+                                    <>
+                                        Sag {selectedCase.case_number || String(selectedCase.id).substring(0,8)} - {selectedCase.raw_data?.project_title || selectedCase.project_category}
+                                        {canEditCaseNumber && selectedCase.case_number && selectedCase.id !== CASES_DEMO_ID && (
+                                            <button onClick={beginEditCaseNumber} title="Ret sagsnummer"
+                                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', cursor: 'pointer', transition: 'all .15s' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.color = '#2563eb'; e.currentTarget.style.borderColor = '#bfdbfe'; e.currentTarget.style.background = '#eff6ff'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; }}>
+                                                <Edit2 size={15} />
+                                            </button>
+                                        )}
+                                    </>
+                                )}
                             </h3>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '0.9rem' }}>
                                 <MapPin size={14} style={{ color: '#94a3b8' }} /> <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCase.customer_address || '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'} onClick={(e) => e.stopPropagation()}>{selectedCase.customer_address || 'Adresse ikke angivet'}</a> 

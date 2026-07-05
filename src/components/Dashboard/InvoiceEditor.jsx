@@ -64,7 +64,19 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
     const basePrice = isManualCase
         ? Math.round(manualBaseExVat * vatMult)
         : (lead.finance?.caseTotal || 0) - extraPrice;
-    const totalToBill = basePrice + extraPrice;
+
+    // Materialer på TIMEPRIS-sager (efter regning): materialebilagene lægges oveni
+    // fakturaen til KOSTPRIS (indtastet EKSKL. moms). Momsen lægges på til sidst sammen
+    // med resten. På FAST PRIS er materialer indeholdt i prisen og lægges IKKE oveni.
+    const isHourlyBilling = isManualCase && lead.raw_data?.billing_mode === 'hourly';
+    const billableMaterialsExVat = isHourlyBilling
+        ? (supplierInvoices || [])
+            .filter(inv => inv.category === 'Materialer' || !inv.category)
+            .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0)
+        : 0;
+    const materialsInclVat = Math.round(billableMaterialsExVat * vatMult);
+
+    const totalToBill = basePrice + extraPrice + materialsInclVat;
 
     const invoiced = isManualCase
         ? Math.round((Number(lead.raw_data?.invoiced_amount) || 0) * vatMult)
@@ -98,6 +110,8 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
         } else {
             invoiceLines.push({ description: baseLineDescription, priceExVat: (basePrice / (isReverseCharge ? 1 : 1.25)) });
             if (extraPrice > 0) invoiceLines.push({ description: 'Ekstra Aftalesedler', priceExVat: (extraPrice / (isReverseCharge ? 1 : 1.25)) });
+            // Timepris: materialer faktureres til kostpris (allerede ekskl. moms).
+            if (billableMaterialsExVat > 0) invoiceLines.push({ description: 'Materialer', priceExVat: billableMaterialsExVat });
             if (invoiced > 0) invoiceLines.push({ description: 'Tidligere Aconto betalt', priceExVat: -(invoiced / (isReverseCharge ? 1 : 1.25)) });
         }
 
@@ -426,6 +440,18 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                 </div>
                             )}
 
+                            {billableMaterialsExVat > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1rem' }}>Materialer</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Materialebilag (kostpris) — lægges oveni på timepris-sager</div>
+                                    </div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#10b981' }}>
+                                        + {materialsInclVat.toLocaleString('da-DK')} kr.
+                                    </div>
+                                </div>
+                            )}
+
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: '2px dashed #e2e8f0', marginTop: '8px' }}>
                                 <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.1rem' }}>Samlet Opgavesum {isReverseCharge ? 'ekskl.' : 'inkl.'} moms</div>
                                 <div style={{ fontWeight: '800', fontSize: '1.2rem', color: '#0f172a' }}>
@@ -679,6 +705,12 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                                             <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{(extraPrice / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
                                                         </div>
                                                     )}
+                                                    {billableMaterialsExVat > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
+                                                            <span style={{ color: '#475569' }}>Materialer</span>
+                                                            <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{billableMaterialsExVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                                        </div>
+                                                    )}
                                                     {invoiced > 0 && (
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
                                                             <span style={{ color: '#475569' }}>Allerede faktureret</span>
@@ -779,6 +811,17 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                                             </td>
                                                             <td style={{ padding: '20px 0', textAlign: 'right', fontWeight: 'bold', color: '#0f172a' }}>
                                                                 {(extraPrice / (isReverseCharge ? 1 : 1.25)).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                    {billableMaterialsExVat > 0 && (
+                                                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                            <td style={{ padding: '20px 0' }}>
+                                                                <div style={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>Materialer</div>
+                                                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Materialebilag (kostpris)</div>
+                                                            </td>
+                                                            <td style={{ padding: '20px 0', textAlign: 'right', fontWeight: 'bold', color: '#0f172a' }}>
+                                                                {billableMaterialsExVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
                                                             </td>
                                                         </tr>
                                                     )}

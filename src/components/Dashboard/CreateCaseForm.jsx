@@ -39,6 +39,8 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
     const [customersList, setCustomersList] = useState(initialCustomer ? [initialCustomer] : []);
     const [linkedCustomerId, setLinkedCustomerId] = useState(initialCustomer?.id || null);
     const [title, setTitle] = useState('');
+    // Valgfrit selvvalgt sagsnummer. Blankt → systemet vælger automatisk næste nummer.
+    const [caseNumber, setCaseNumber] = useState('');
     const [description, setDescription] = useState('');
     const [startDate, setStartDate] = useState('');
     const [billingMode, setBillingMode] = useState('hourly');
@@ -219,8 +221,32 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
     const save = async () => {
         if (!canSave || busy) return;
         if (!carpenter?.id) { toast.error('Mangler firma-profil. Prøv at genindlæse.'); return; }
+
+        // Valgfrit selvvalgt sagsnummer: kun cifre, skal være et positivt tal.
+        const manualCaseNumber = String(caseNumber).replace(/[^\d]/g, '');
+        const caseNumberInt = manualCaseNumber ? parseInt(manualCaseNumber, 10) : null;
+        if (manualCaseNumber && (!caseNumberInt || caseNumberInt < 1)) {
+            toast.error('Sagsnummeret skal være et positivt tal.');
+            return;
+        }
+
         setBusy(true);
         try {
+            // Har man selv valgt et nummer: tjek at det ikke allerede findes i firmaet
+            // (venlig besked frem for en rå databasefejl — constraint'en fanger racet).
+            if (caseNumberInt) {
+                const { data: dup } = await supabase
+                    .from('leads').select('id')
+                    .eq('carpenter_id', carpenter.id)
+                    .eq('case_number', caseNumberInt)
+                    .limit(1);
+                if (dup && dup.length) {
+                    toast.error(`Sagsnummer ${caseNumberInt} findes allerede — vælg et andet.`);
+                    setBusy(false);
+                    return;
+                }
+            }
+
             const nowIso = new Date().toISOString();
             const fullAddress = [customer.address, [customer.zip, customer.city].filter(Boolean).join(' ')]
                 .filter(Boolean).join(', ').trim();
@@ -269,13 +295,24 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                 price_estimate: '',
                 carpenter_id: carpenter.id,
                 ...(resolvedCustomerId ? { customer_id: resolvedCustomerId } : {}),
+                // Selvvalgt sagsnummer med → brug det; ellers udelades feltet, så
+                // databasen automatisk tildeler firmaets næste nummer.
+                ...(caseNumberInt ? { case_number: caseNumberInt } : {}),
                 status: 'Bekræftet opgave',
                 accepted_at: nowIso,
                 raw_data,
             };
 
             const { data: lead, error } = await supabase.from('leads').insert([fields]).select().single();
-            if (error) throw error;
+            if (error) {
+                // Race på et selvvalgt nummer → venlig besked frem for rå constraint-fejl.
+                if (caseNumberInt && (error.code === '23505' || /case_number/i.test(error.message || ''))) {
+                    toast.error(`Sagsnummer ${caseNumberInt} findes allerede — vælg et andet.`);
+                    setBusy(false);
+                    return;
+                }
+                throw error;
+            }
 
             toast.success('Sagen er oprettet! 🛠️');
             onComplete && onComplete(lead);
@@ -408,9 +445,16 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                         <Briefcase size={18} color="#10b981" /> Sagen
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div>
-                            <label style={labelStyle}>Hvad er opgaven?</label>
-                            <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Fx Tilbygning, timepris" />
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: '14px' }}>
+                            <div>
+                                <label style={labelStyle}>Hvad er opgaven?</label>
+                                <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Fx Tilbygning, timepris" />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Sagsnummer <span style={{ fontWeight: 400, color: '#94a3b8' }}>(valgfrit)</span></label>
+                                <input style={inputStyle} value={caseNumber} onChange={(e) => setCaseNumber(e.target.value.replace(/[^\d]/g, ''))} placeholder="Vælges automatisk" inputMode="numeric" />
+                                <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Lad stå tomt, så vælger systemet næste nummer. Skriv dit eget for at føre en gammel sag over.</p>
+                            </div>
                         </div>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '6px' }}>
