@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { HardHat, User, MapPin, Briefcase, Save, Building2, Clock, Mic, MicOff, Loader2 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { friendlyError } from '../../utils/friendlyError';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import WorkBreakdownModal, { totalManHours } from './WorkBreakdownModal';
+import CustomerPicker from '../ui/CustomerPicker';
 
 // Dansk telefon-formatering (+45 XX XX XX XX) — samme mønster som i QuickQuoteBuilder/wizarden.
 const formatDkPhone = (raw) => {
@@ -21,10 +22,22 @@ const formatDkPhone = (raw) => {
 // fakturerer bagefter. Laver en lead direkte i status 'Bekræftet opgave', så den
 // med det samme dukker op i Sager & Ordrestyring med tidsregistrering + fakturering.
 // Materialer er bevidst udeladt — de kan tilføjes senere inde på sagen.
-const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, onComplete }) => {
-    const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '', zip: '', city: '' });
-    const [customerType, setCustomerType] = useState('privat');
-    const [cvr, setCvr] = useState('');
+const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, onComplete, initialCustomer = null }) => {
+    const [customer, setCustomer] = useState({
+        name: initialCustomer?.name || '',
+        email: initialCustomer?.email || '',
+        phone: initialCustomer?.phone || '',
+        address: initialCustomer?.address || '',
+        zip: initialCustomer?.zip || '',
+        city: initialCustomer?.city || '',
+    });
+    const [customerType, setCustomerType] = useState(initialCustomer?.customer_type === 'erhverv' ? 'erhverv' : 'privat');
+    const [cvr, setCvr] = useState(initialCustomer?.cvr || '');
+    // Kunde-bibliotek: vælg en eksisterende kunde → felterne udfyldes og sagen kobles
+    // til kunden (leads.customer_id). Manuelt indtastede kunder gemmes også i biblioteket
+    // ved oprettelse (find-eller-opret i save()) — samme mønster som Hurtigt tilbud.
+    const [customersList, setCustomersList] = useState(initialCustomer ? [initialCustomer] : []);
+    const [linkedCustomerId, setLinkedCustomerId] = useState(initialCustomer?.id || null);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [startDate, setStartDate] = useState('');
@@ -47,6 +60,74 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
     const addrBlurRef = useRef(null);
 
     const setC = (patch) => setCustomer((prev) => ({ ...prev, ...patch }));
+
+    // Hent kundebiblioteket (samme kald som Hurtigt tilbud) — bruges af kundevælgeren.
+    useEffect(() => {
+        if (!carpenter?.id) return;
+        let cancelled = false;
+        supabase.from('customers').select('*').eq('carpenter_id', carpenter.id).order('name', { ascending: true })
+            .then(({ data }) => { if (!cancelled && data) setCustomersList(data); });
+        return () => { cancelled = true; };
+    }, [carpenter?.id]);
+
+    // Vælg en eksisterende kunde → udfyld felterne og kobl sagen til kunden.
+    const pickCustomer = (c) => {
+        setLinkedCustomerId(c.id);
+        setCustomer({
+            name: c.name || '',
+            email: c.email || '',
+            phone: c.phone || '',
+            address: c.address || '',
+            zip: c.zip || '',
+            city: c.city || '',
+        });
+        setCustomerType(c.customer_type === 'erhverv' ? 'erhverv' : 'privat');
+        setCvr(c.cvr || '');
+    };
+
+    // Ryd valget igen → tom formular (man kan så skrive en ny kunde).
+    const clearLinkedCustomer = () => {
+        setLinkedCustomerId(null);
+        setCustomer({ name: '', email: '', phone: '', address: '', zip: '', city: '' });
+        setCvr('');
+    };
+
+    // Find en matchende kunde i biblioteket (navn + telefon/mail) eller opret en ny.
+    // Returnerer kundens id (eller null hvis der ikke er noget navn at gemme på).
+    // Samme logik som QuickQuoteBuilder, så sager og tilbud kobler ens.
+    const findOrCreateCustomer = async () => {
+        const name = (customer.name || '').trim();
+        if (!name || !carpenter?.id) return null;
+        const phone = (customer.phone || '').trim();
+        const email = (customer.email || '').trim();
+        const contact = phone.toLowerCase() || email.toLowerCase();
+        try {
+            const { data: existing } = await supabase
+                .from('customers').select('id, phone, email')
+                .eq('carpenter_id', carpenter.id).ilike('name', name);
+            if (existing && existing.length) {
+                const match = existing.find(c => !contact || (c.phone || '').toLowerCase() === contact || (c.email || '').toLowerCase() === contact) || existing[0];
+                if (match) return match.id;
+            }
+            const { data: created, error } = await supabase.from('customers').insert([{
+                carpenter_id: carpenter.id,
+                name,
+                email: email || null,
+                phone: phone || null,
+                address: (customer.address || '').trim() || null,
+                zip: (customer.zip || '').trim() || null,
+                city: (customer.city || '').trim() || null,
+                customer_type: customerType,
+                cvr: customerType === 'erhverv' ? ((cvr || '').trim() || null) : null,
+                created_by: draftCreator?.id || null,
+            }]).select('id').single();
+            if (error) throw error;
+            return created?.id || null;
+        } catch (e) {
+            console.warn('Kunde-kobling sprang over:', e);
+            return null;
+        }
+    };
 
     // Indtaling af opgavebeskrivelsen — samme fagterm-korrektion som aftalesedlen
     // (WHISPER_PROMPT + FAGTERM_CORRECTION_PROMPT fra fagtermer.js via mode 'transcribe').
@@ -144,6 +225,10 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
             const fullAddress = [customer.address, [customer.zip, customer.city].filter(Boolean).join(' ')]
                 .filter(Boolean).join(', ').trim();
 
+            // Kobl sagen til en kunde i biblioteket: valgt kunde bruges direkte, ellers
+            // find-eller-opret på det indtastede (så en ny kunde lander i kundedatabasen).
+            const resolvedCustomerId = linkedCustomerId || await findOrCreateCustomer();
+
             // En medarbejder, der opretter sagen, sættes på holdet, så han kan se den (RLS).
             // Mester ser den altid via carpenter_id, så ejeren tilføjes ikke (overflødigt).
             const ownerId = carpenter?.company_id || carpenter?.id;
@@ -183,6 +268,7 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                 project_category: title.trim() || 'Sag uden tilbud',
                 price_estimate: '',
                 carpenter_id: carpenter.id,
+                ...(resolvedCustomerId ? { customer_id: resolvedCustomerId } : {}),
                 status: 'Bekræftet opgave',
                 accepted_at: nowIso,
                 raw_data,
@@ -221,6 +307,24 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                     <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 16px', fontSize: '1.05rem', color: '#0f172a' }}>
                         <User size={18} color="#10b981" /> Kunde
                     </h3>
+
+                    {/* Kundevælger — vælg fra biblioteket, så felterne udfyldes og sagen
+                        kobles til kunden. Vises kun når man HAR kunder (ellers bare felterne). */}
+                    {customersList.length > 0 && (
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={labelStyle}>Vælg fra kundebiblioteket <span style={{ fontWeight: 400, color: '#94a3b8' }}>(valgfrit)</span></label>
+                            <CustomerPicker
+                                customers={customersList}
+                                value={linkedCustomerId}
+                                onSelect={pickCustomer}
+                                onClear={clearLinkedCustomer}
+                                placeholder="Vælg eksisterende kunde…"
+                            />
+                            <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                                Vælg en kunde, så udfyldes felterne automatisk — eller skriv en ny nedenfor, så oprettes den i kundebiblioteket sammen med sagen.
+                            </p>
+                        </div>
+                    )}
 
                     {/* Privat / Erhverv */}
                     <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '10px', padding: '4px', gap: '4px', marginBottom: '16px' }}>

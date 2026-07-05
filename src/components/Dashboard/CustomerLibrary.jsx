@@ -75,7 +75,7 @@ function CustomerAvatar({ customer: c, size = 44, radius = 13 }) {
     );
 }
 
-export default function CustomerLibrary({ carpenter, myProfile, leadsData = [], isMobile = false, onOpenCase, onOpenLead, onCreateQuote, onCreateQuoteForCustomer, autoOpenDetailId, onAutoOpenConsumed }) {
+export default function CustomerLibrary({ carpenter, myProfile, leadsData = [], isMobile = false, onOpenCase, onOpenLead, onCreateQuote, onCreateQuoteForCustomer, onCreateCase, onCreateCaseForCustomer, autoOpenDetailId, onAutoOpenConsumed }) {
     const companyId = carpenter?.id;
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -201,6 +201,17 @@ export default function CustomerLibrary({ carpenter, myProfile, leadsData = [], 
         e.currentTarget.style.transform = on ? 'translateY(-2px)' : 'none';
         e.currentTarget.style.boxShadow = on ? '0 8px 22px rgba(37,99,235,0.42)' : '0 4px 14px rgba(37,99,235,0.32)';
     };
+    // Grøn variant til "Opret sag" — sag = grøn, tilbud = blå (matcher sag-formularen).
+    const greenBtn = {
+        display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '11px 20px',
+        borderRadius: '14px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem',
+        background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff',
+        boxShadow: '0 4px 14px rgba(16,185,129,0.32)', transition: 'transform .18s, box-shadow .18s',
+    };
+    const onGreenHover = (e, on) => {
+        e.currentTarget.style.transform = on ? 'translateY(-2px)' : 'none';
+        e.currentTarget.style.boxShadow = on ? '0 8px 22px rgba(16,185,129,0.42)' : '0 4px 14px rgba(16,185,129,0.32)';
+    };
 
     return (
         <div className="dashboard-workspace space-y-8" style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -227,6 +238,11 @@ export default function CustomerLibrary({ carpenter, myProfile, leadsData = [], 
                             onMouseEnter={(e) => onBlueHover(e, true)} onMouseLeave={(e) => onBlueHover(e, false)}
                         >
                             <FileText size={18} /> Lav tilbud
+                        </button>
+                        <button style={greenBtn} onClick={() => onCreateCase && onCreateCase()}
+                            onMouseEnter={(e) => onGreenHover(e, true)} onMouseLeave={(e) => onGreenHover(e, false)}
+                        >
+                            <Briefcase size={18} /> Opret sag
                         </button>
                     </div>
                 </div>
@@ -304,6 +320,7 @@ export default function CustomerLibrary({ carpenter, myProfile, leadsData = [], 
                     onOpenCase={onOpenCase}
                     onOpenLead={onOpenLead}
                     onCreateQuoteForCustomer={onCreateQuoteForCustomer}
+                    onCreateCaseForCustomer={onCreateCaseForCustomer}
                 />,
                 document.body
             )}
@@ -600,7 +617,7 @@ function CustomerFormModal({ customer, companyId, createdBy, isMobile, onClose, 
 // ---------------------------------------------------------------------------
 // Kunde-detalje — overblik + tilbud + sager + klik-gennem
 // ---------------------------------------------------------------------------
-function CustomerDetailModal({ customer: c, leads, stats, isMobile, onClose, onEdit, onDeleted, onOpenCase, onOpenLead, onCreateQuoteForCustomer }) {
+function CustomerDetailModal({ customer: c, leads, stats, isMobile, onClose, onEdit, onDeleted, onOpenCase, onOpenLead, onCreateQuoteForCustomer, onCreateCaseForCustomer }) {
     const [tab, setTab] = useState('overblik');
     const [confirmDel, setConfirmDel] = useState(false);
     const [busyDel, setBusyDel] = useState(false);
@@ -692,6 +709,12 @@ function CustomerDetailModal({ customer: c, leads, stats, isMobile, onClose, onE
                     onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 22px rgba(37,99,235,0.40)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(37,99,235,0.30)'; }}>
                     <FileText size={16} /> Lav tilbud til {c.name.split(' ')[0]}
+                </button>
+                <button onClick={() => { onCreateCaseForCustomer && onCreateCaseForCustomer(c); onClose(); }}
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', flex: isMobile ? '1 1 100%' : '0 0 auto', padding: '11px 18px', borderRadius: '13px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', boxShadow: '0 4px 14px rgba(16,185,129,0.30)', transition: 'transform .18s, box-shadow .18s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 22px rgba(16,185,129,0.40)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(16,185,129,0.30)'; }}>
+                    <Briefcase size={16} /> Opret sag
                 </button>
                 <button onClick={onEdit} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', flex: isMobile ? '1 1 0' : '0 0 auto', padding: '11px 16px', borderRadius: '13px', border: '1px solid #e2e8f0', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: '#fff', color: '#334155', transition: 'all .18s' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; }}

@@ -967,8 +967,10 @@ const Dashboard = () => {
     const [createLeadMode, setCreateLeadMode] = useState(null);
     // Forudfyldt kunde når man laver et tilbud fra kunde-biblioteket (initialLead-form, uden id → nyt tilbud).
     const [quotePrefill, setQuotePrefill] = useState(null);
+    // Forudfyldt kunde når man opretter en sag fra kunde-biblioteket (hele kunde-objektet → CreateCaseForm.initialCustomer).
+    const [casePrefill, setCasePrefill] = useState(null);
     // Ryd forudfyldt kunde når opret-modalen lukkes (uanset luk-sti), så en stale kunde ikke hænger ved.
-    useEffect(() => { if (!isCreateLeadModalOpen) setQuotePrefill(null); }, [isCreateLeadModalOpen]);
+    useEffect(() => { if (!isCreateLeadModalOpen) { setQuotePrefill(null); setCasePrefill(null); } }, [isCreateLeadModalOpen]);
     // Når en gemt tilbudskladde (selvlavet hurtigt tilbud) åbnes, redigeres den i QuickQuoteBuilder.
     const [editQuoteLead, setEditQuoteLead] = useState(null);
     // Materialeliste-byggeren (Del A): null = lukket; objekt = åben med en (evt. ny) lead.
@@ -3562,7 +3564,7 @@ const Dashboard = () => {
                                 }}
                                 onUpdateLead={(updated) => applyLocalLeadUpdate(updated)}
                                 onCreateQuote={() => setIsCreateLeadModalOpen(true)}
-                                onCreateCase={() => { setCreateLeadMode('case'); setIsCreateLeadModalOpen(true); }}
+                                onCreateCase={() => { setCasePrefill(null); setCreateLeadMode('case'); setIsCreateLeadModalOpen(true); }}
                                 onOpenMaterialBuilder={(lead, opts) => openMaterialBuilder(lead, opts)}
                             />
                         </div>
@@ -3656,6 +3658,13 @@ const Dashboard = () => {
                                     raw_data: { customerDetails: { street: c.address || '', zip: c.zip || '', city: c.city || '', customerType: c.customer_type || 'privat', cvr: c.cvr || '' } },
                                 });
                                 setCreateLeadMode('quick');
+                                setIsCreateLeadModalOpen(true);
+                            }}
+                            onCreateCase={() => { setCasePrefill(null); setCreateLeadMode('case'); setIsCreateLeadModalOpen(true); }}
+                            onCreateCaseForCustomer={(c) => {
+                                // Hele kunde-objektet med → CreateCaseForm prefiller felterne og kobler sagen.
+                                setCasePrefill(c);
+                                setCreateLeadMode('case');
                                 setIsCreateLeadModalOpen(true);
                             }}
                         />
@@ -6258,7 +6267,7 @@ const Dashboard = () => {
                 }}>
                     <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: isMobile ? '0' : '20px', width: '100%', maxWidth: isMobile ? '100%' : '1000px', height: isMobile ? '100dvh' : 'auto', maxHeight: isMobile ? '100dvh' : '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => {
-                    if (createLeadMode === 'custom' || createLeadMode === 'classic' || createLeadMode === 'quick') {
+                    if (createLeadMode === 'custom' || createLeadMode === 'classic' || createLeadMode === 'quick' || createLeadMode === 'case') {
                         setShowCreateLeadCancelConfirm(true);
                         return;
                     }
@@ -6344,13 +6353,16 @@ const Dashboard = () => {
                                     carpenter={carpenterProfile}
                                     draftCreator={myProfile}
                                     isMobile={isMobile}
+                                    initialCustomer={casePrefill}
                                     onCancel={() => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
+                                        setCasePrefill(null);
                                     }}
                                     onComplete={async (lead) => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
+                                        setCasePrefill(null);
                                         // Sagen er allerede aktiv → land i Sager & Ordrestyring og åbn den.
                                         setActiveTab('cases');
                                         setSearchQuery('');
