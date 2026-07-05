@@ -17,12 +17,23 @@ const CACHE = 'bison-frame-v2';
 // Separat cache til Supabase Storage-billeder (logo, portræt, avatarer, skitse-
 // miniaturer). Holdes adskilt fra app-skallen, så den kan have sit eget loft/oprydning.
 const IMG_CACHE = 'bison-frame-img-v1';
+// Design/skrifter fra CDN (Tailwind + Google Fonts). Egen cache, så appen har styling
+// ved gentagne åbninger OG offline — uden at vente på fremmede servere ved hvert load.
+const CDN_CACHE = 'bison-frame-cdn-v1';
 const CORE_ASSETS = ['/', '/index.html', '/manifest.json', '/logo.png', '/favicon.svg'];
 
 // Er dette en Supabase Storage-billedanmodning? (offentlige filer på et andet domæne)
 // Vi cacher dem, så logo/portræt/avatar/skitser stadig kan vises uden net.
 function isStorageImage(url) {
     return url.pathname.includes('/storage/v1/object/public/');
+}
+
+// Er dette design/skrifter fra CDN? (Tailwind + Google Fonts) — nødvendige for at
+// appen ser rigtig ud, men ligger på fremmede domæner, så vi cacher dem selv.
+function isStyleCdn(url) {
+    return url.hostname === 'cdn.tailwindcss.com'
+        || url.hostname === 'fonts.googleapis.com'
+        || url.hostname === 'fonts.gstatic.com';
 }
 
 // ---- Install: precache app-skallen (best-effort, så install aldrig fejler) ----
@@ -38,7 +49,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
-            Promise.all(keys.filter((k) => k !== CACHE && k !== IMG_CACHE).map((k) => caches.delete(k)))
+            Promise.all(keys.filter((k) => k !== CACHE && k !== IMG_CACHE && k !== CDN_CACHE).map((k) => caches.delete(k)))
         ).then(() => self.clients.claim())
     );
 });
@@ -59,6 +70,28 @@ self.addEventListener('fetch', (event) => {
     if (isStorageImage(url)) {
         event.respondWith(
             caches.open(IMG_CACHE).then((cache) =>
+                cache.match(request).then((cached) => {
+                    const network = fetch(request)
+                        .then((resp) => {
+                            if (resp && (resp.ok || resp.type === 'opaque')) {
+                                cache.put(request, resp.clone()).catch(() => {});
+                            }
+                            return resp;
+                        })
+                        .catch(() => cached);
+                    return cached || network;
+                })
+            )
+        );
+        return;
+    }
+
+    // Design/skrifter fra CDN (Tailwind + Google Fonts): cache-first + baggrunds-opdatering,
+    // så appen har styling ved gentagne åbninger og offline — uden at vente på fremmede
+    // servere. URL'erne er stabile (uden hash), så baggrunds-opdateringen henter nye versioner.
+    if (isStyleCdn(url)) {
+        event.respondWith(
+            caches.open(CDN_CACHE).then((cache) =>
                 cache.match(request).then((cached) => {
                     const network = fetch(request)
                         .then((resp) => {

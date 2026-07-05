@@ -112,20 +112,25 @@ const PublicWizardPage = () => {
   useEffect(() => {
     const fetchCarpenter = async () => {
       if (!slug) return;
-      let { data } = await supabase.rpc('get_public_carpenter_by_slug', { slug_val: slug });
-      if (!data) {
-        // Fallback hvis RPC ikke er oprettet endnu (sikrer at beregneren aldrig går ned)
-        const fb = await supabase.from('carpenters').select('*').eq('slug', slug).single();
-        data = fb.data;
-      }
-      if (data) {
-        if (data.is_active === false) {
-           setIsError('suspended');
-        } else {
-           setCarpenterData(data);
+      try {
+        let { data } = await supabase.rpc('get_public_carpenter_by_slug', { slug_val: slug });
+        if (!data) {
+          // Fallback hvis RPC ikke er oprettet endnu (sikrer at beregneren aldrig går ned)
+          const fb = await supabase.from('carpenters').select('*').eq('slug', slug).single();
+          data = fb.data;
         }
-      } else {
-        setIsError('not_found');
+        if (data) {
+          if (data.is_active === false) {
+             setIsError('suspended');
+          } else {
+             setCarpenterData(data);
+          }
+        } else {
+          setIsError('not_found');
+        }
+      } catch {
+        // Dårligt net / timeout: vis en pæn fejl med prøv-igen i stedet for at hænge på "Leder efter…".
+        setIsError('network');
       }
     };
     // For at fange hvis dev/brugeren glemmer slug'en på bare / forsiden:
@@ -137,6 +142,16 @@ const PublicWizardPage = () => {
       <div style={{textAlign: 'center', padding: '100px', background: '#f8fafc', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
           <h2 style={{color: '#ef4444'}}>Konto Suspenderet</h2>
           <p className="text-muted" style={{maxWidth: '500px'}}>Denne tømrers overslags-portal er midlertidigt lukket. For adgang bedes virksomheden kontakte Bison Frame.</p>
+      </div>
+  );
+
+  if (isError === 'network') return (
+      <div style={{textAlign: 'center', padding: '100px', background: '#f8fafc', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '18px'}}>
+          <div>
+            <h2>Kunne ikke indlæse</h2>
+            <p className="text-muted" style={{maxWidth: '500px'}}>Der er problemer med forbindelsen lige nu. Tjek dit internet og prøv igen.</p>
+          </div>
+          <button onClick={() => window.location.reload()} style={{padding: '12px 24px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 700, background: '#111827', color: '#fff'}}>Prøv igen</button>
       </div>
   );
 
@@ -319,21 +334,28 @@ function App() {
   // så @react-google-maps ikke hentes på marketing/login.
 
   useEffect(() => {
-    // Tjek nuværende session ved start for at sikre gyldighed
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setIsInitializing(false);
-    });
+    let released = false;
+    const release = () => { if (!released) { released = true; setIsInitializing(false); } };
+
+    // Sikkerheds-timer: uanset hvad slipper vi splash'en hurtigt og bruger den session,
+    // der allerede er læst fra localStorage ovenfor. getSession/onAuthStateChange retter
+    // til bagefter, når/hvis nettet svarer. Så appen HÆNGER ALDRIG på dårligt/manglende net.
+    const safety = setTimeout(release, 2500);
+
+    // Tjek nuværende session ved start for at sikre gyldighed.
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => { setSession(session); release(); })
+      .catch(() => { release(); });   // dårligt net: behold gemt session, gå videre i stedet for at hænge
 
     // Lyt efter login/logout begivenheder
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setIsInitializing(false);
+      release();
     });
 
-    return () => subscription.unsubscribe();
+    return () => { clearTimeout(safety); subscription.unsubscribe(); };
   }, []);
 
   // Offline-kø: registrér handlere og tøm køen automatisk, når nettet er tilbage.

@@ -10,8 +10,10 @@
 export function isOfflineError(err) {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
     const msg = (err?.message || String(err || '')).toLowerCase();
-    return err?.name === 'TypeError'
-        || /failed to fetch|networkerror|network request failed|network|fetch|load failed/.test(msg);
+    // Timeout/afbrudt (vores fail-fast-fetch loft) behandles som manglende forbindelse,
+    // så UI'et falder tilbage på gemte data / offline-kø i stedet for at fejle hårdt.
+    return err?.name === 'TypeError' || err?.name === 'AbortError' || err?.name === 'TimeoutError'
+        || /failed to fetch|networkerror|network request failed|network|fetch|load failed|timeout|timed out|aborted/.test(msg);
 }
 
 export function friendlyError(err, fallback = 'Noget gik galt. Prøv igen.') {

@@ -8,15 +8,18 @@ export default defineConfig({
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
-        // Del tunge biblioteker i separate, cachebare bidder (funktion-form pga. rolldown).
+        // Del kun de biblioteker i faste vendor-bidder, som RENT FAKTISK bruges tidligt
+        // (react-runtime + supabase + framer-motion til rute-overgange). De tunge,
+        // rute-specifikke libs (grafer, PDF, kort) grupperes bevidst IKKE: manuel
+        // gruppering tvinger hele biblioteket ind i én chunk, så entry — der kun bruger
+        // et enkelt lille symbol derfra — trækker hele klumpen (~1 MB) ned på login.
+        // Lader vi rolldown splitte dem selv, tree-shakes de og havner i de lazy
+        // dashboard-chunks, hvor de først hentes når man faktisk bruger dem.
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
           if (id.includes('react-router')) return 'vendor-react';
           if (id.includes('/react-dom/') || id.includes('/react/') || id.includes('/scheduler/')) return 'vendor-react';
           if (id.includes('@supabase')) return 'vendor-supabase';
-          if (id.includes('recharts') || id.includes('/d3-') || id.includes('victory')) return 'vendor-charts';
-          if (id.includes('jspdf') || id.includes('html2canvas')) return 'vendor-pdf';
-          if (id.includes('@react-google-maps')) return 'vendor-maps';
           if (id.includes('framer-motion')) return 'vendor-motion';
         },
       },
