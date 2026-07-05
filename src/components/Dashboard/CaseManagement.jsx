@@ -4701,17 +4701,22 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             const role = simulatedRole || profile?.role;
                                             const canSeeAll = !['worker', 'apprentice', 'guest'].includes(role);
 
-                                            // Fire overblik pr. sag. Vises KUN når mere end ét er relevant (essentielt):
-                                            // Dine timer altid; Firma når andre end dig har timer; Underleverandør når
-                                            // der er underlev.-timer; Samlet når både firma OG underlev. har timer.
+                                            // Fire overblik pr. sag. Fanerne vises ud fra hvad der er SAT OP på sagen
+                                            // (ikke kun om der er timer endnu):
+                                            //  • Dine timer: altid.
+                                            //  • Firma: der er svende/ansatte på sagen (eller andre end dig har timer) —
+                                            //    skjules når du arbejder alene (så den ikke bare gentager "Dine timer").
+                                            //  • Underleverandør + Samlet: der er koblet en underleverandør på sagen.
                                             const myH = timeEntries.filter(e => e.employeeId === profile?.id).reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
                                             const companyH = totalActualHours;
                                             const subH = subcontractorHours;
+                                            const firmOthersOnCase = (assignedWorkers?.length > 0) || ((companyH - myH) > 0.001);
+                                            const subOnCase = (assignedSubs?.length > 0) || subH > 0;
                                             const scopeTabs = [
                                                 { key: 'mine', label: 'Dine timer', hours: myH, color: '#10b981' },
-                                                { key: 'company', label: 'Firma', hours: companyH, color: '#3b82f6', show: (companyH - myH) > 0.001 },
-                                                { key: 'sub', label: 'Underleverandør', hours: subH, color: '#7c3aed', show: subH > 0 },
-                                                { key: 'all', label: 'Samlet', hours: companyH + subH, color: '#0f172a', show: subH > 0 && companyH > 0 },
+                                                { key: 'company', label: 'Firma', hours: companyH, color: '#3b82f6', show: firmOthersOnCase },
+                                                { key: 'sub', label: 'Underleverandør', hours: subH, color: '#7c3aed', show: subOnCase },
+                                                { key: 'all', label: 'Samlet', hours: companyH + subH, color: '#0f172a', show: subOnCase },
                                             ].filter(t => t.show === undefined ? true : t.show);
                                             const showScopeTabs = canSeeAll && scopeTabs.length > 1;
                                             const activeScope = scopeTabs.some(t => t.key === timeScope) ? timeScope : 'all';
