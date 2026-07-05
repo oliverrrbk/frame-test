@@ -322,6 +322,31 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         return absences;
     }, [teamMembers, myProfile, selectedEmployeeIds, isManager]);
 
+    // 2b. Registrerede arbejdstimer pr. dag (fra Timeregistrering) — så man på sin egen
+    //     kalender kan se hvad dagene FAKTISK gik med, og på hvilken sag. Fravær (Ferie/
+    //     Sygdom/Skole) er bevidst udeladt her (vises separat som fravær ovenfor).
+    const registeredHoursByDay = useMemo(() => {
+        const byDay = {}; // 'YYYY-MM-DD' -> { total, byCase: { leadId: { label, name, hours } } }
+        const wantAll = selectedEmployeeIds.includes('all');
+        const wants = (id) => wantAll || selectedEmployeeIds.includes(String(id));
+        (leadsData || []).forEach(lead => {
+            (lead.raw_data?.time_entries || []).forEach(e => {
+                if (e.absenceType || !e.date) return;
+                if (!wants(e.employeeId)) return;
+                const hrs = parseFloat(e.hours) || 0;
+                if (hrs <= 0) return;
+                const dayKey = String(e.date).slice(0, 10);
+                const leadKey = String(lead.id);
+                const label = lead.case_number ? `Sag ${lead.case_number}` : (lead.customer_name || 'Sag');
+                if (!byDay[dayKey]) byDay[dayKey] = { total: 0, byCase: {} };
+                byDay[dayKey].total += hrs;
+                if (!byDay[dayKey].byCase[leadKey]) byDay[dayKey].byCase[leadKey] = { label, name: lead.customer_name || '', hours: 0 };
+                byDay[dayKey].byCase[leadKey].hours += hrs;
+            });
+        });
+        return byDay;
+    }, [leadsData, selectedEmployeeIds]);
+
     // 3. Kalenderaftaler (Møder & Leveringer)
     const calendarEvents = useMemo(() => {
         const events = carpenterProfile?.raw_data?.calendar_events || [];
@@ -424,7 +449,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             events = events.filter(e => e.title?.toLowerCase().includes(term) || e.type?.toLowerCase().includes(term));
         }
 
-        return { isHoliday, leads, absences, events };
+        const registered = registeredHoursByDay[dateStr] || null;
+
+        return { isHoliday, leads, absences, events, registered };
     };
 
     const goToToday = () => {
@@ -1533,7 +1560,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         const day = idx + 1;
                         const checkDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
                         const isToday = new Date().getDate() === day && new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
-                        const { isHoliday, leads, absences, events } = getItemsForDay(checkDate);
+                        const { isHoliday, leads, absences, events, registered } = getItemsForDay(checkDate);
 
                         return (
                             <div
@@ -1630,6 +1657,17 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                             </div>
                                         );
                                     })}
+
+                                    {/* REGISTREREDE TIMER (hvad dagen faktisk gik med, og på hvilken sag) */}
+                                    {registered && registered.total > 0 && (
+                                        <div
+                                            onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: Object.values(registered.byCase).map(c => `${c.label}: ${c.hours.toFixed(2)} t`).join('  ·  ') }); }}
+                                            onMouseLeave={() => setHoverTooltip(null)}
+                                            style={{ background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: '8px', padding: '4px 8px', fontSize: '0.7rem', fontWeight: 800, color: '#0e7490', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        >
+                                            <Clock size={12} /> {registered.total.toFixed(2)} t registreret
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );

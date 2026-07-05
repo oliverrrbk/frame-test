@@ -87,7 +87,7 @@ afløser/supplerer hinanden.
 | `supabase/add_lead_push_trigger.sql` | **Kanonisk** version af `protect_lead_sensitive_fields()` (med anon-accept) **+** `tr_on_lead_push_notify` (push ved godkendt/forespørgsel/tildeling/besked) | **Kør EFTER field_guard** |
 | `setup_payroll_lock_guard.sql` | `effective_payroll_lock()` + `enforce_payroll_lock` (server-side lønlås) | |
 | `setup_leads_price_masking.sql` | `get_visible_leads()` (skjul priser for svende/lærlinge) | |
-| `setup_editable_case_number.sql` | **Redigerbart sagsnummer.** Dropper den globale `case_number`-DEFAULT + `UNIQUE(case_number)`, skifter til `UNIQUE(carpenter_id, case_number)` (unikt PR. FIRMA) og tilføjer `trg_assign_lead_case_number` (auto = firmaets eget max+1 når feltet er tomt). Så kan tømreren selv skrive/rette sagsnummer for at føre gamle sager over; blankt felt vælger næste automatisk. **Kør EFTER `add_case_number.sql`.** | Idempotent |
+| `setup_editable_case_number.sql` | **Redigerbart sagsnummer + smart tæller.** Dropper den globale `case_number`-DEFAULT + `UNIQUE(case_number)`, skifter til `UNIQUE(carpenter_id, case_number)` (unikt PR. FIRMA). Tilføjer `case_number_pointer`-tabel + `trg_assign_lead_case_number` (BEFORE INSERT: næste ledige fra tælleren, springer optagne over) + `trg_bump_case_number_pointer_ins/upd` (flytter tælleren til sat-nummer+1 ved oprettelse OG redigering — så ret man en sag til 20, bliver næste 21). Blankt felt vælger næste automatisk. **Kør EFTER `add_case_number.sql`.** | Idempotent |
 
 ### 6) Indeks (ydelse — kan køres når som helst)
 | Fil | Formål |

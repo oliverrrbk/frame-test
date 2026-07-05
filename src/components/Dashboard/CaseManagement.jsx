@@ -805,6 +805,51 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [showBreakdownEdit, setShowBreakdownEdit] = useState(false);
     const editBreakdownRef = useRef(null); // seneste redigerede delopgaver, gemmes ved luk
 
+    // Sagsindstillinger: redigér afregning/timepris (også 0 = kun timer) + afsat timer efter oprettelse.
+    const [showCaseSettings, setShowCaseSettings] = useState(false);
+    const [csBillingMode, setCsBillingMode] = useState('hourly');
+    const [csHourlyRate, setCsHourlyRate] = useState('');
+    const [csFixedPrice, setCsFixedPrice] = useState('');
+    const [csAllocatedHours, setCsAllocatedHours] = useState('');
+    const [savingCaseSettings, setSavingCaseSettings] = useState(false);
+
+    const openCaseSettings = () => {
+        const rd = selectedCase?.raw_data || {};
+        setCsBillingMode(rd.billing_mode || 'hourly');
+        setCsHourlyRate(rd.hourly_rate != null ? String(rd.hourly_rate) : '');
+        setCsFixedPrice(rd.fixed_price_ex_vat != null ? String(rd.fixed_price_ex_vat) : '');
+        setCsAllocatedHours(rd.allocated_hours > 0 ? String(rd.allocated_hours) : '');
+        setShowCaseSettings(true);
+    };
+
+    const saveCaseSettings = async () => {
+        if (savingCaseSettings || !selectedCase?.id) return;
+        setSavingCaseSettings(true);
+        try {
+            // Dansk talformat → tal (tillad 0). Tomt = 0.
+            const parseNum = (v) => { const n = parseFloat(String(v ?? '').replace(/\./g, '').replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+            const patch = {};
+            // Afregning/timepris giver kun mening for manuelle sager (tilbudssager styres af tilbuddet).
+            if (selectedCase?.raw_data?.is_manual_case) {
+                patch.billing_mode = csBillingMode;
+                if (csBillingMode === 'hourly') {
+                    patch.hourly_rate = parseNum(csHourlyRate); // 0 = kun styr på timer, ingen pris
+                } else {
+                    patch.fixed_price_ex_vat = parseNum(csFixedPrice);
+                }
+            }
+            const alloc = parseNum(csAllocatedHours);
+            patch.allocated_hours = alloc > 0 ? alloc : 0; // 0 = intet timebudget (vis kun brugte timer)
+            await saveCaseDataToDb(patch);
+            setShowCaseSettings(false);
+            toast.success('Sagsindstillinger gemt.');
+        } catch (e) {
+            toast.error(friendlyError(e, 'Kunne ikke gemme sagsindstillinger. Prøv igen.'));
+        } finally {
+            setSavingCaseSettings(false);
+        }
+    };
+
     // States til logs
     const [logsList, setLogsList] = useState([]);
     const [newLogText, setNewLogText] = useState('');
@@ -934,6 +979,9 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
     const [subRates, setSubRates] = useState({});          // subId -> timeløn (kr/time ekskl. moms) til fakturapris-kontrol
     const [timeDateFilter, setTimeDateFilter] = useState(null);  // null = alle dage, ellers 'YYYY-MM-DD'
+    // Time-overblik pr. sag: 'mine' (dine) | 'company' (firma) | 'sub' (underlev.) | 'all' (samlet).
+    // Fanerne vises kun når mere end ét overblik er relevant (se timesheet-fanen).
+    const [timeScope, setTimeScope] = useState('all');
     const [reconcileSub, setReconcileSub] = useState(null);      // {id, company_name} — underleverandør der afstemmes i popup
     const [reconcilePeriod, setReconcilePeriod] = useState({ from: '', to: '' });  // afstemnings-periode (tom = hele sagen)
     const [reconcileInvoice, setReconcileInvoice] = useState('');  // modtaget fakturabeløb (inkl. moms) til sammenligning
@@ -1967,12 +2015,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         return { id: sub.id, company_name: sub.company_name, hours };
     }).filter(b => b.hours > 0);
 
-    const baseBudgetedHours = parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) || 40;
-    // Selvlavede tilbud har ikke et beregnet timeestimat — vis kun de FAKTISKE timer.
-    const isManualCase = !!selectedCase?.raw_data?.is_manual_quote;
-    // Reelt timebudget = sagen har et faktisk beregnet time-estimat (ikke standard-40
-    // og ikke et selvlavet tilbud). Ellers vises kun brugte timer, intet "tilbage"/budget.
-    const hasHourBudget = !isManualCase && (parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) > 0);
+    // Timebudget (nævneren i "brugt / afsat"): brug et bevidst sat "afsat timer"-tal
+    // (allocated_hours) hvis det findes, ellers beregnerens estimat. ALDRIG et
+    // spøgelses-40 — findes intet af delene, vises KUN de faktiske timer (0 når ingen).
+    const allocatedHours = parseFloat(selectedCase?.raw_data?.allocated_hours) || 0;
+    const estimateHours = parseFloat(selectedCase?.raw_data?.calc_data?.laborHours) || 0;
+    const baseBudgetedHours = allocatedHours > 0 ? allocatedHours : estimateHours;
+    // Reelt timebudget = der findes enten et afsat-tal eller et beregnet estimat (>0).
+    const hasHourBudget = baseBudgetedHours > 0;
     const getBasePrice = (lead) => {
         if (!lead) return 0;
         const rd = lead.raw_data || {};
@@ -2194,8 +2244,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         const todos = c.raw_data?.checklist || [];
         const comp = todos.filter(t => t.done).length;
         const pct = todos.length > 0 ? Math.round((comp / todos.length) * 100) : 0;
-        const hrs = (c.raw_data?.time_entries || []).reduce((sum, item) => sum + item.hours, 0);
-        const estHrs = parseFloat(c.raw_data?.calc_data?.laborHours) || 40;
+        const hrs = (c.raw_data?.time_entries || []).reduce((sum, item) => sum + (item.hours || 0), 0);
+        // Budget-nævner: bevidst "afsat timer" (allocated_hours) ELLER beregnerens estimat.
+        // INTET spøgelses-40 — findes der intet budget, viser vi kun de brugte timer.
+        const estHrs = parseFloat(c.raw_data?.allocated_hours) || parseFloat(c.raw_data?.calc_data?.laborHours) || 0;
+        const cardHasBudget = estHrs > 0;
 
         // Status-farver (delt mellem desktop- og mobil-varianten)
         const statusStyle = c.status === 'Sæt i bero'
@@ -2205,8 +2258,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             : c.status === 'Afbrudt Sag'
             ? { label: 'Tabt / Afvist', bg: '#fef2f2', color: '#dc2626', border: '#fca5a5' }
             : { label: 'Aktiv Sag', bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
-        const overtime = !c.raw_data?.is_manual_quote && hrs > estHrs;
-        const timeLabel = `${hrs} t${c.raw_data?.is_manual_quote ? '' : ` / ${estHrs} t`}`;
+        const overtime = cardHasBudget && hrs > estHrs;
+        const timeLabel = `${hrs} t${cardHasBudget ? ` / ${estHrs} t` : ''}`;
 
         // --- MOBIL: kompakt, skimbart kort ---
         if (isMobile) {
@@ -2341,8 +2394,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                 {/* Time status */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#6b7280', borderTop: '1px solid #f1f1ef', paddingTop: '12px', marginBottom: '12px' }}>
                     <span>Timer registreret:</span>
-                    <strong style={{ color: (!c.raw_data?.is_manual_quote && hrs > estHrs) ? '#ef4444' : '#1e293b' }}>
-                        {hrs} t{c.raw_data?.is_manual_quote ? '' : ` / ${estHrs} t`}
+                    <strong style={{ color: (cardHasBudget && hrs > estHrs) ? '#ef4444' : '#1e293b' }}>
+                        {hrs} t{cardHasBudget ? ` / ${estHrs} t` : ''}
                     </strong>
                 </div>
 
@@ -4098,6 +4151,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         >
                                             <Edit2 size={16} /> Redigér delopgaver & timer
                                         </button>
+                                        <button
+                                            onClick={openCaseSettings}
+                                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(15,23,42,0.12)'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                                            style={{ flex: '1 1 220px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', padding: '12px', borderRadius: '12px', border: '1px dashed #cbd5e1', background: '#fff', color: '#334155', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', transition: 'all .15s' }}
+                                        >
+                                            <Settings size={16} /> Afregning & afsat tid
+                                        </button>
                                         {todoList.some(s => (s.subTasks || []).some(t => subManHours(t) > 0)) && (
                                             <button
                                                 onClick={() => setShowHourCompare(true)}
@@ -4217,6 +4278,71 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 hourlyRate={parseFloat(selectedCase?.raw_data?.calc_data?.hourlyRate) || parseFloat(selectedCase?.raw_data?.hourly_rate) || parseFloat(carpenterProfile?.hourly_rate) || parseFloat(carpenterProfile?.raw_data?.hourly_rate) || 550}
                                 actualHours={totalActualHours}
                             />
+                        )}
+
+                        {/* Sagsindstillinger: redigér afregning/timepris (0 = kun timer) + afsat timer */}
+                        {showCaseSettings && createPortal(
+                            <div onClick={() => !savingCaseSettings && setShowCaseSettings(false)} style={{ position: 'fixed', inset: 0, zIndex: 100080, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                                <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(460px, 100%)', maxHeight: '92vh', overflowY: 'auto', background: 'linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.95))', borderRadius: 24, padding: '28px 26px 22px', boxShadow: '0 30px 80px rgba(15,23,42,0.45), inset 0 1px 0 rgba(255,255,255,0.9)', border: '1px solid rgba(255,255,255,0.6)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+                                        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(16,185,129,0.12)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Settings size={22} /></div>
+                                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Afregning & afsat tid</h2>
+                                    </div>
+
+                                    {selectedCase?.raw_data?.is_manual_case && (
+                                        <>
+                                            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Afregning</label>
+                                            <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '10px', padding: '4px', gap: '4px', width: '100%', marginBottom: '16px' }}>
+                                                {[{ k: 'hourly', t: 'Timepris', Icon: Clock }, { k: 'fixed', t: 'Fast pris', Icon: DollarSign }].map(({ k, t, Icon }) => (
+                                                    <button key={k} type="button" onClick={() => setCsBillingMode(k)}
+                                                        style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: csBillingMode === k ? '#fff' : 'transparent', color: csBillingMode === k ? '#0f172a' : '#64748b', boxShadow: csBillingMode === k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
+                                                        <Icon size={15} /> {t}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {csBillingMode === 'hourly' ? (
+                                                <div style={{ marginBottom: '16px' }}>
+                                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Timepris <span style={{ fontWeight: 400, color: '#94a3b8' }}>(ekskl. moms)</span></label>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <input value={csHourlyRate} onChange={(e) => setCsHourlyRate(e.target.value.replace(/[^\d.,]/g, ''))} placeholder="Fx 550" inputMode="decimal"
+                                                            style={{ width: '100%', padding: '12px 70px 12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', background: '#fff', color: '#0f172a' }} />
+                                                        <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>kr/time</span>
+                                                    </div>
+                                                    <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Sæt til <strong>0</strong>, hvis du kun vil holde styr på dine timer uden at der regnes en pris.</p>
+                                                </div>
+                                            ) : (
+                                                <div style={{ marginBottom: '16px' }}>
+                                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Fast pris <span style={{ fontWeight: 400, color: '#94a3b8' }}>(ekskl. moms)</span></label>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <input value={csFixedPrice} onChange={(e) => setCsFixedPrice(e.target.value.replace(/[^\d.,]/g, ''))} placeholder="Fx 45.000" inputMode="decimal"
+                                                            style={{ width: '100%', padding: '12px 42px 12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', background: '#fff', color: '#0f172a' }} />
+                                                        <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>kr.</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Afsat tid til sagen <span style={{ fontWeight: 400, color: '#94a3b8' }}>(valgfrit)</span></label>
+                                    <div style={{ position: 'relative' }}>
+                                        <input value={csAllocatedHours} onChange={(e) => setCsAllocatedHours(e.target.value.replace(/[^\d.,]/g, ''))} placeholder="Fx 40" inputMode="decimal"
+                                            style={{ width: '100%', padding: '12px 55px 12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', background: '#fff', color: '#0f172a' }} />
+                                        <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>timer</span>
+                                    </div>
+                                    <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Antal timer du har sat af til projektet overordnet — så du kan se "brugt / afsat". Lad stå tomt, så vises kun de brugte timer.</p>
+
+                                    <div style={{ display: 'flex', gap: 12, marginTop: '22px' }}>
+                                        <button type="button" onClick={() => setShowCaseSettings(false)} disabled={savingCaseSettings}
+                                            style={{ flex: 1, padding: '13px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>Annullér</button>
+                                        <button type="button" onClick={saveCaseSettings} disabled={savingCaseSettings}
+                                            style={{ flex: 1.4, padding: '13px', borderRadius: 12, border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: savingCaseSettings ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
+                                            <Save size={17} /> {savingCaseSettings ? 'Gemmer…' : 'Gem'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>,
+                            document.body
                         )}
 
                         {/* TAB 2: MATERIALER — PDF-først for manuelle tilbud, ellers redigerbar liste */}
@@ -4574,13 +4700,47 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         {(() => {
                                             const role = simulatedRole || profile?.role;
                                             const canSeeAll = !['worker', 'apprentice', 'guest'].includes(role);
-                                            let entries = canSeeAll ? timeEntries : timeEntries.filter(e => e.employeeId === profile?.id);
+
+                                            // Fire overblik pr. sag. Vises KUN når mere end ét er relevant (essentielt):
+                                            // Dine timer altid; Firma når andre end dig har timer; Underleverandør når
+                                            // der er underlev.-timer; Samlet når både firma OG underlev. har timer.
+                                            const myH = timeEntries.filter(e => e.employeeId === profile?.id).reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
+                                            const companyH = totalActualHours;
+                                            const subH = subcontractorHours;
+                                            const scopeTabs = [
+                                                { key: 'mine', label: 'Dine timer', hours: myH, color: '#10b981' },
+                                                { key: 'company', label: 'Firma', hours: companyH, color: '#3b82f6', show: (companyH - myH) > 0.001 },
+                                                { key: 'sub', label: 'Underleverandør', hours: subH, color: '#7c3aed', show: subH > 0 },
+                                                { key: 'all', label: 'Samlet', hours: companyH + subH, color: '#0f172a', show: subH > 0 && companyH > 0 },
+                                            ].filter(t => t.show === undefined ? true : t.show);
+                                            const showScopeTabs = canSeeAll && scopeTabs.length > 1;
+                                            const activeScope = scopeTabs.some(t => t.key === timeScope) ? timeScope : 'all';
+
+                                            let entries;
+                                            if (!canSeeAll || activeScope === 'mine') entries = timeEntries.filter(e => e.employeeId === profile?.id);
+                                            else if (activeScope === 'company') entries = timeEntries.filter(isOwnTeamEntry);
+                                            else if (activeScope === 'sub') entries = timeEntries.filter(e => !isOwnTeamEntry(e));
+                                            else entries = timeEntries;
                                             if (timeDateFilter) entries = entries.filter(e => e.date === timeDateFilter);
                                             const byDate = {};
                                             entries.forEach(e => { (byDate[e.date] = byDate[e.date] || []).push(e); });
                                             const dates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a));
                                             return (
                                                 <>
+                                                    {showScopeTabs && (
+                                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '6px', marginBottom: '4px' }}>
+                                                            {scopeTabs.map(t => {
+                                                                const active = t.key === activeScope;
+                                                                return (
+                                                                    <button key={t.key} type="button" onClick={() => setTimeScope(t.key)}
+                                                                        style={{ flex: '1 1 auto', minWidth: 'fit-content', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: active ? '#fff' : 'transparent', boxShadow: active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all .15s' }}>
+                                                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: active ? t.color : '#64748b' }}>{t.label}</span>
+                                                                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: active ? '#0f172a' : '#94a3b8' }}>{t.hours.toFixed(2)} t</span>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
                                                     {timeEntries.length > 0 && (
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '4px' }}>
                                                             <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} /> Vælg dag</label>
