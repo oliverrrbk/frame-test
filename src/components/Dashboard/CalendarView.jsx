@@ -929,7 +929,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             const ids = [...(lead.raw_data?.assigned_workers || []), ...(lead.raw_data?.assigned_pm || [])].map(String);
             return ids.includes(myId) || isManager;
         });
-        const hasAny = myEvents.length > 0 || myAbsences.length > 0 || myLeads.length > 0 || dayItems.isHoliday;
+        const hasAny = myEvents.length > 0 || myAbsences.length > 0 || myLeads.length > 0 || dayItems.isHoliday || (dayItems.registered?.total > 0);
 
         return (
             <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -970,6 +970,20 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 {dayItems.isHoliday && (
                     <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '4px solid #94a3b8', borderRadius: '16px', padding: '14px 16px', fontWeight: 800, color: '#475569' }}>
                         Helligdag
+                    </div>
+                )}
+
+                {dayItems.registered && dayItems.registered.total > 0 && (
+                    <div style={{ background: '#ecfeff', border: '1px solid #a5f3fc', borderLeft: '4px solid #06b6d4', borderRadius: '16px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0e7490', fontWeight: 800, fontSize: '0.95rem' }}>
+                            <Clock size={18} /> {dayItems.registered.total.toFixed(2)} timer registreret
+                        </div>
+                        {Object.values(dayItems.registered.byCase).map((c, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#475569' }}>
+                                <span>{c.label}{c.name ? ` · ${c.name}` : ''}</span>
+                                <strong style={{ color: '#0e7490' }}>{c.hours.toFixed(2)} t</strong>
+                            </div>
+                        ))}
                     </div>
                 )}
 
@@ -1295,9 +1309,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             </div>
 
                             {(() => {
-                                const { events, absences, leads, isHoliday } = getItemsForDay(selectedMobileDate);
-                                const hasAny = events.length > 0 || absences.length > 0 || leads.length > 0 || isHoliday;
-                                
+                                const { events, absences, leads, isHoliday, registered } = getItemsForDay(selectedMobileDate);
+                                const hasAny = events.length > 0 || absences.length > 0 || leads.length > 0 || isHoliday || (registered?.total > 0);
+
                                 return (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         {!hasAny && (
@@ -1305,7 +1319,21 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                                 <p style={{ margin: 0, color: '#94a3b8', fontSize: '1rem' }}>Ingen planlagte aktiviteter</p>
                                             </div>
                                         )}
-                                        
+
+                                        {registered && registered.total > 0 && (
+                                            <div style={{ background: '#ecfeff', borderLeft: '4px solid #06b6d4', padding: '12px 16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0e7490', fontWeight: 800, fontSize: '0.95rem' }}>
+                                                    <Clock size={18} /> {registered.total.toFixed(2)} timer registreret
+                                                </div>
+                                                {Object.values(registered.byCase).map((c, i) => (
+                                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#475569' }}>
+                                                        <span>{c.label}{c.name ? ` · ${c.name}` : ''}</span>
+                                                        <strong style={{ color: '#0e7490' }}>{c.hours.toFixed(2)} t</strong>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
                                         {isHoliday && (
                                             <div style={{ background: '#f1f5f9', borderLeft: '4px solid #94a3b8', padding: '12px 16px', borderRadius: '12px', fontWeight: 'bold', color: '#475569' }}>
                                                 Helligdag

@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { computeCaseFinance } from '../../utils/caseFinance';
+import { cacheGet, cacheSet } from '../../utils/dataCache';
 import {
     Search, Plus, User, Building2, Phone, Mail, MapPin, FileText, Briefcase,
     Wallet, Pencil, Trash2, X, ChevronRight, ChevronLeft, Users as UsersIcon,
@@ -86,7 +87,21 @@ export default function CustomerLibrary({ carpenter, myProfile, leadsData = [], 
 
     const fetchCustomers = useCallback(async () => {
         if (!companyId) return;
-        setLoading(true);
+        const cacheKey = `bf:customers:${companyId}`;
+
+        // Offline-først: vis straks de cachede kunder (hvis nogen), så biblioteket
+        // virker uden internet. Hentes derefter friskt og gemmes igen i cachen.
+        let hadCache = false;
+        try {
+            const cached = await cacheGet(cacheKey);
+            if (Array.isArray(cached) && cached.length) {
+                setCustomers(cached);
+                setLoading(false);
+                hadCache = true;
+            }
+        } catch { /* cache-miss — hent fra nettet */ }
+
+        if (!hadCache) setLoading(true);
         const { data, error } = await supabase
             .from('customers')
             .select('*')
@@ -94,9 +109,11 @@ export default function CustomerLibrary({ carpenter, myProfile, leadsData = [], 
             .order('name', { ascending: true });
         if (error) {
             console.error('Kunne ikke hente kunder:', error);
-            toast.error('Kunne ikke hente kunder.');
+            // Uden forbindelse beholder vi de cachede kunder frem for at tømme listen.
+            if (!hadCache) toast.error('Kunne ikke hente kunder.');
         } else {
             setCustomers(data || []);
+            try { await cacheSet(cacheKey, data || []); } catch { /* cachen er best-effort */ }
         }
         setLoading(false);
     }, [companyId]);

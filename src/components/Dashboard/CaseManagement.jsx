@@ -2759,6 +2759,11 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                             <button onClick={() => { setShowActionSheet(false); setIsDailyMessageOpen(true); }} style={{ padding: '16px', background: '#f8fafc', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#0f172a', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <MessageCircle size={20} color="#3b82f6" /> Dagens Besked
                                             </button>
+                                            {canEditCaseNumber && selectedCase.case_number && selectedCase.id !== CASES_DEMO_ID && (
+                                                <button onClick={() => { setShowActionSheet(false); beginEditCaseNumber(); }} style={{ padding: '16px', background: '#f8fafc', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#0f172a', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <Edit2 size={20} color="#3b82f6" /> Ret sagsnummer
+                                                </button>
+                                            )}
                                             {['admin', 'accountant', 'boss', 'sales'].includes(profile?.role) && (
                                                 <button onClick={() => { setShowActionSheet(false); onOpenInvoice && onOpenInvoice(selectedCase.id); }} style={{ padding: '16px', background: '#f8fafc', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#0f172a', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <DollarSign size={20} color="#10b981" /> Opret Faktura
@@ -4338,6 +4343,33 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         <button type="button" onClick={saveCaseSettings} disabled={savingCaseSettings}
                                             style={{ flex: 1.4, padding: '13px', borderRadius: 12, border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: savingCaseSettings ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
                                             <Save size={17} /> {savingCaseSettings ? 'Gemmer…' : 'Gem'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>,
+                            document.body
+                        )}
+
+                        {/* Ret sagsnummer på MOBIL (desktop redigeres inline i headeren) */}
+                        {editingCaseNumber && isMobile && createPortal(
+                            <div onClick={() => !savingCaseNumber && setEditingCaseNumber(false)} style={{ position: 'fixed', inset: 0, zIndex: 100080, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                                <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(400px, 100%)', background: 'linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.95))', borderRadius: 24, padding: '26px 24px 20px', boxShadow: '0 30px 80px rgba(15,23,42,0.45)' }}>
+                                    <h2 style={{ margin: '0 0 16px', fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Ret sagsnummer</h2>
+                                    <input
+                                        autoFocus
+                                        value={caseNumberDraft}
+                                        onChange={(e) => setCaseNumberDraft(e.target.value.replace(/[^\d]/g, ''))}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') saveCaseNumber(); }}
+                                        inputMode="numeric"
+                                        placeholder="Nummer"
+                                        style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', outline: 'none', boxSizing: 'border-box' }}
+                                    />
+                                    <div style={{ display: 'flex', gap: 12, marginTop: '20px' }}>
+                                        <button type="button" onClick={() => setEditingCaseNumber(false)} disabled={savingCaseNumber}
+                                            style={{ flex: 1, padding: '13px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>Annullér</button>
+                                        <button type="button" onClick={saveCaseNumber} disabled={savingCaseNumber}
+                                            style={{ flex: 1.4, padding: '13px', borderRadius: 12, border: 'none', background: 'linear-gradient(145deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: savingCaseNumber ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
+                                            <Save size={17} /> {savingCaseNumber ? 'Gemmer…' : 'Gem'}
                                         </button>
                                     </div>
                                 </div>
