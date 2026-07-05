@@ -5,6 +5,51 @@ export const config = {
     runtime: 'edge'
 };
 
+// Verificér kalderens Supabase-JWT (edge-runtime → ingen node-req; brug auth REST).
+// Uden dette var funktionen en åben OpenAI-proxy (uautoriseret omkostnings-misbrug).
+async function verifyUser(req) {
+    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+    const token = authHeader.slice(7);
+    const url = process.env.VITE_SUPABASE_URL;
+    const anon = process.env.VITE_SUPABASE_ANON_KEY;
+    if (!url || !anon) return null;
+    try {
+        const r = await fetch(`${url}/auth/v1/user`, {
+            headers: { apikey: anon, Authorization: `Bearer ${token}` }
+        });
+        if (!r.ok) return null;
+        const u = await r.json();
+        return u?.id ? u : null;
+    } catch {
+        return null;
+    }
+}
+
+// Letvægts rate-limit pr. bruger via Upstash (no-op'er hvis Upstash ikke er sat op).
+async function rateLimitEdge(userId, limit = 120, windowSec = 3600) {
+    const URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (!URL || !TOKEN) return true;
+    try {
+        const key = `rl:process-voice:${userId}`;
+        const res = await fetch(`${URL}/pipeline`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify([['INCR', key], ['EXPIRE', key, String(windowSec), 'NX']])
+        });
+        if (!res.ok) return true;
+        const data = await res.json();
+        const count = Array.isArray(data) ? Number(data[0]?.result) : 0;
+        return !Number.isFinite(count) || count <= limit;
+    } catch {
+        return true;
+    }
+}
+
+const jsonError = (msg, status) =>
+    new Response(JSON.stringify({ error: msg }), { status, headers: { 'Content-Type': 'application/json' } });
+
 // Transskribér lyd med den bedste tilgængelige model + dansk fag-ordliste som hint.
 // Prøver gpt-4o-transcribe (mest præcis) og falder tilbage til whisper-1, så det
 // altid virker — også hvis den nye model ikke er slået til på kontoen.
@@ -178,6 +223,11 @@ export default async function handler(req) {
     if (req.method !== 'POST') {
         return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
     }
+
+    // Kræv en gyldig, indlogget bruger + rate-limit (lukker den åbne OpenAI-proxy).
+    const user = await verifyUser(req);
+    if (!user) return jsonError('Ikke autoriseret', 401);
+    if (!(await rateLimitEdge(user.id))) return jsonError('For mange forespørgsler. Prøv igen om lidt.', 429);
 
     try {
         const formData = await req.formData();

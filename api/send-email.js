@@ -1,4 +1,5 @@
 import { applyCors } from './_cors.js';
+import { rateLimit } from './_ratelimit.js';
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
@@ -60,7 +61,7 @@ async function saveToSentFolder({ smtpSettings, rawMessage }) {
         connectionTimeout: 8000,
         greetingTimeout: 5000,
         socketTimeout: 10000,
-        tls: { rejectUnauthorized: false },
+        tls: { rejectUnauthorized: true },
     });
 
     try {
@@ -107,6 +108,13 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // Misbrugs-værn: max 60 mails per IP per time (no-op'er hvis Upstash ikke er sat op).
+    const rl = await rateLimit(req, { limit: 60, windowSec: 3600, suffix: 'send-email' });
+    if (!rl.ok) {
+        if (rl.retryAfter) res.setHeader('Retry-After', String(rl.retryAfter));
+        return res.status(429).json({ error: 'For mange forespørgsler. Prøv igen om lidt.' });
+    }
+
     try {
         const { to, subject, html, fromName, replyTo, attachments, quoteToken } = req.body;
 
@@ -147,51 +155,70 @@ export default async function handler(req, res) {
             validAttachments = attachments.map(att => ({ filename: att.filename, content: att.content }));
         }
 
-        // Tjek for SMTP credentials
-        let smtpSettings = null;
+        // AUTORISATION: kun en indlogget tømrer eller en gyldig quote_token må sende mail.
+        // (Uden dette var endpointet et åbent mail-relay fra vores eget domæne.)
         const supabaseUrl = process.env.VITE_SUPABASE_URL;
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-        try {
-            const authHeader = req.headers.authorization;
-            let targetCarpenterId = null;
+        let targetCarpenterId = null;
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            // Afsenderen er logget ind som tømrer
+            const token = authHeader.replace('Bearer ', '');
+            const supabaseAnon = createClient(supabaseUrl, process.env.VITE_SUPABASE_ANON_KEY);
+            const { data: { user } } = await supabaseAnon.auth.getUser(token);
+            if (user) targetCarpenterId = user.id;
+        } else if (quoteToken) {
+            // Afsenderen er en kunde der godkender et tilbud (via quote_token)
+            const { data: leadData } = await supabaseAdmin
+                .from('leads')
+                .select('carpenter_id')
+                .eq('quote_token', quoteToken)
+                .single();
+            if (leadData?.carpenter_id) targetCarpenterId = leadData.carpenter_id;
+        }
 
-            if (authHeader) {
-                // Afsenderen er logget ind som tømrer
-                const token = authHeader.replace('Bearer ', '');
-                const supabaseAnon = createClient(supabaseUrl, process.env.VITE_SUPABASE_ANON_KEY);
-                const { data: { user } } = await supabaseAnon.auth.getUser(token);
-                if (user) {
-                    targetCarpenterId = user.id;
-                }
-            } else if (quoteToken) {
-                // Afsenderen er en kunde der godkender et tilbud (via quote_token)
-                const { data: leadData } = await supabaseAdmin
-                    .from('leads')
-                    .select('carpenter_id')
-                    .eq('quote_token', quoteToken)
-                    .single();
-                
-                if (leadData?.carpenter_id) {
-                    targetCarpenterId = leadData.carpenter_id;
+        if (!targetCarpenterId) {
+            // Anonym afsender (offentlig wizard-notifikation). Tillad KUN hvis mailen
+            // involverer en REGISTRERET tømrer (to ELLER replyTo) — så endpointet ikke
+            // er et frit relay til vilkårlige modtagere. Anonyme sends bruger altid
+            // Resend-fallbacken (aldrig en tømrers egen SMTP).
+            const candidates = [to, replyTo].filter(Boolean).map(e => String(e).toLowerCase());
+            let carpenterMatch = false;
+            if (candidates.length) {
+                try {
+                    const { data: match } = await supabaseAdmin
+                        .from('carpenters')
+                        .select('id')
+                        .or(candidates.map(e => `email.ilike.${e}`).join(','))
+                        .limit(1);
+                    carpenterMatch = Array.isArray(match) && match.length > 0;
+                } catch (e) {
+                    console.error('Kunne ikke validere afsender-kontekst:', e);
                 }
             }
+            if (!carpenterMatch) {
+                return res.status(401).json({ error: 'Ikke autoriseret til at sende mail.' });
+            }
+        }
 
-            if (targetCarpenterId) {
+        // Slå tømrerens egen SMTP-opsætning op (kun for indloggede/token — fejler blødt → Resend).
+        let smtpSettings = null;
+        if (targetCarpenterId) {
+            try {
                 const { data: secrets } = await supabaseAdmin
                     .from('carpenter_secrets')
                     .select('smtp_settings')
                     .eq('carpenter_id', targetCarpenterId)
                     .single();
-
                 if (secrets?.smtp_settings?.smtp_host && secrets?.smtp_settings?.smtp_user) {
                     smtpSettings = secrets.smtp_settings;
                 }
+            } catch (e) {
+                console.error('Fejl ved opslag af SMTP indstillinger:', e);
+                // Fortsæt med Resend fallback
             }
-        } catch (e) {
-            console.error('Fejl ved opslag af SMTP indstillinger:', e);
-            // Forsæt med Resend fallback
         }
 
         const senderName = fromName ? `${fromName} <info@bisonframe.dk>` : 'Bison Frame <info@bisonframe.dk>';
@@ -207,7 +234,7 @@ export default async function handler(req, res) {
                     pass: smtpSettings.smtp_pass,
                 },
                 tls: {
-                    rejectUnauthorized: false
+                    rejectUnauthorized: true
                 }
             });
 
@@ -285,6 +312,6 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, data, provider: 'resend' });
     } catch (error) {
         console.error('Email sending error:', error);
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: 'Kunne ikke sende mail. Prøv igen senere.' });
     }
 }

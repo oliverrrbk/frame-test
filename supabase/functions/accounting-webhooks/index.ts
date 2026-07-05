@@ -22,8 +22,16 @@ serve(async (req) => {
         // auto-"betalt": kun HVIS ACCOUNTING_WEBHOOK_SECRET er sat i miljøet kræves
         // den. Sæt den + tilføj ?secret=... (eller header x-webhook-secret) på
         // webhook-URL'en hos Dinero/e-conomic for at låse endpointet helt.
+        // SIKKERHED: delt hemmelighed er OBLIGATORISK (fail-closed). Uden den kunne
+        // hvem som helst POSTe et falsk "faktura betalt"-event på tværs af firmaer.
+        // Sæt ACCOUNTING_WEBHOOK_SECRET i miljøet + tilføj ?secret=... (eller header
+        // x-webhook-secret) på webhook-URL'en hos Dinero/e-conomic.
         const expectedSecret = Deno.env.get('ACCOUNTING_WEBHOOK_SECRET') || '';
-        if (expectedSecret) {
+        if (!expectedSecret) {
+            console.error('[accounting-webhooks] ACCOUNTING_WEBHOOK_SECRET er ikke sat — afviser (fail-closed).');
+            return new Response(JSON.stringify({ error: 'server misconfigured' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 503 })
+        }
+        {
             const provided = url.searchParams.get('secret') || req.headers.get('x-webhook-secret') || '';
             // Konstant-tids-sammenligning (undgår timing-orakel på hemmeligheden).
             const a = new TextEncoder().encode(provided);
@@ -34,8 +42,6 @@ serve(async (req) => {
                 console.warn(`[accounting-webhooks] Afvist: forkert/manglende hemmelighed (source=${source}).`);
                 return new Response(JSON.stringify({ error: 'unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
             }
-        } else {
-            console.warn('[accounting-webhooks] ADVARSEL: kører UDEN delt hemmelighed — endpointet er uautentificeret. Sæt ACCOUNTING_WEBHOOK_SECRET for at sikre det.');
         }
 
         let bodyText = "";
@@ -71,6 +77,11 @@ serve(async (req) => {
             // Generisk faldback
             invoiceIdStr = String(payload.id || payload.invoiceId || payload.invoice_id || payload.Data?.Id || '');
         }
+
+        // SIKKERHED: fakturanumre er tal eller korte alfanumeriske koder. Fjern alt
+        // andet, så en payload ikke kan bryde ud af PostgREST-.or()-filteret nedenfor
+        // (filter-injektion, der ellers kunne udvide match-sættet på tværs af firmaer).
+        invoiceIdStr = invoiceIdStr.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
 
         // Tjek om eventet overhovedet er en "betaling" eller "bogføring"
         // Vi betragter det primært for at markere "betalt".

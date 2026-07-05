@@ -223,11 +223,23 @@ serve(async (req) => {
     };
 
     try {
-        const authHeader = req.headers.get("Authorization");
+        // SIKKERHED: KUN server-kald (cron, DB-trigger, accounting-webhooks) med
+        // service-role-nøglen må kalde denne funktion. Uden dette kunne enhver
+        // indlogget bruger sende falske "Bison Frame"-push til vilkårlige brugere.
+        const authHeader = req.headers.get("Authorization") || "";
         const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-
-        if (!authHeader || !authHeader.includes(serviceRoleKey)) {
-            console.log("WARNING: Request without valid service role key");
+        const provided = authHeader.replace(/^Bearer\s+/i, "");
+        const enc = new TextEncoder();
+        const a = enc.encode(provided);
+        const b = enc.encode(serviceRoleKey);
+        let diff = a.length ^ b.length;
+        for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
+        if (!serviceRoleKey || diff !== 0) {
+            console.warn("send-push-reminders: afvist kald uden gyldig service-role-nøgle.");
+            return new Response(JSON.stringify({ error: "unauthorized" }), {
+                headers: { "Content-Type": "application/json" },
+                status: 401
+            });
         }
 
         const supabaseClient = createClient(

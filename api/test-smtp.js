@@ -33,7 +33,7 @@ async function testImapConnection({ imap_host, imap_port, smtp_host, smtp_user, 
         connectionTimeout: 8000,
         greetingTimeout: 5000,
         socketTimeout: 10000,
-        tls: { rejectUnauthorized: false },
+        tls: { rejectUnauthorized: true },
     });
 
     try {
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
                 pass: smtp_pass,
             },
             tls: {
-                rejectUnauthorized: false // Sikrer stabilitet for almindelige danske hosts
+                rejectUnauthorized: true // Valider server-certifikat (undgå MITM af mail-login)
             }
         });
 

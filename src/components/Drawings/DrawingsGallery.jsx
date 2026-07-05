@@ -319,9 +319,12 @@ const DrawingsGallery = ({ leadId = null, myProfile = null }) => {
                                 ) : drawing.type === 'tldraw' && drawing.image_url ? (
                                     <img src={drawing.image_url} alt="Skitse Thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : drawing.type === 'tldraw' && drawing.document_data?.thumbnail_svg ? (
-                                    <div 
-                                        style={{ width: '100%', height: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        dangerouslySetInnerHTML={{ __html: drawing.document_data.thumbnail_svg }} 
+                                    // SVG vises via <img> data-URI: browseren kører ALDRIG scripts i
+                                    // en SVG hentet som billede → ingen stored-XSS fra en gemt tegning.
+                                    <img
+                                        src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(drawing.document_data.thumbnail_svg)}`}
+                                        alt="Skitse Thumbnail"
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '16px' }}
                                     />
                                 ) : (
                                     <div style={{ background: 'white', padding: '20px', borderRadius: '50%', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>

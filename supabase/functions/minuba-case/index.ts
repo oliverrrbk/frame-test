@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
 
 import { corsHeadersFor } from "../_shared/cors.ts"
+import { resolveOwnCompanyId, ownCompanyOrWarn } from "../_shared/companyGuard.ts"
 
 serve(async (req) => {
   const corsHeaders = corsHeadersFor(req)
@@ -31,7 +32,10 @@ serve(async (req) => {
 
     let finalApiKey = api_key;
 
-    const targetCarpenterId = lead.carpenter_id || user.id;
+    // SIKKERHED: firma-id udledes server-side fra kalderen — klientens lead.carpenter_id
+    // bruges IKKE til at vælge nøgle (forhindrer brug af et andet firmas Minuba-nøgle).
+    const ownCompanyId = await resolveOwnCompanyId(supabaseClient, user.id)
+    const targetCarpenterId = ownCompanyOrWarn(lead.carpenter_id, ownCompanyId, 'minuba-case')
     const { data: profile } = await supabaseClient
       .from('carpenter_secrets')
       .select('minuba_api_key')

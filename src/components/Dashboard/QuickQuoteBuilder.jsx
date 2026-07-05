@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useLoadScript, Autocomplete } from '@react-google-maps/api';
 import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic, Files, Bold, Italic, Underline, List, ListOrdered, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight, Table as TableIcon, ChevronLeft, Eye } from 'lucide-react';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
-import { supabase } from '../../supabaseClient';
+import { supabase, authHeaders } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { friendlyError } from '../../utils/friendlyError';
 import { buildQuotePdf } from '../../utils/quotePdf';
@@ -717,7 +717,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 fd.append('audio', blob, 'voice.webm');
                 fd.append('mode', 'quickfill');
                 try {
-                    const res = await fetch('/api/process-voice', { method: 'POST', body: fd });
+                    const res = await fetch('/api/process-voice', { method: 'POST', headers: await authHeaders(), body: fd });
                     if (!res.ok) throw new Error('Netværksfejl');
                     const r = await res.json();
                     if (r.error) throw new Error(r.error);

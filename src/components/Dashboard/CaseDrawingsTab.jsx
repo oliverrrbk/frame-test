@@ -452,9 +452,12 @@ export default function CaseDrawingsTab({ selectedCase, profile, isMobile = fals
                     ) : !isUpload && d.image_url ? (
                         <img src={d.image_url} alt="Skitse Thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : !isUpload && d.document_data?.thumbnail_svg ? (
-                        <div 
-                            style={{ width: '100%', height: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            dangerouslySetInnerHTML={{ __html: d.document_data.thumbnail_svg }} 
+                        // SVG vises via <img> data-URI: browseren kører ALDRIG scripts i
+                        // en SVG hentet som billede → ingen stored-XSS fra en gemt tegning.
+                        <img
+                            src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(d.document_data.thumbnail_svg)}`}
+                            alt="Skitse Thumbnail"
+                            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '12px' }}
                         />
                     ) : (
                         <div style={{ background: 'white', padding: '16px', borderRadius: '50%', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>

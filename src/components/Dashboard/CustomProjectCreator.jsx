@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, Loader2, Save, X, Plus, Search, Trash2, Cpu, FileText } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
+import { supabase, authHeaders } from '../../supabaseClient';
 import { MATERIAL_INDEX } from '../../prices';
 import { enrichPhasesWithStandardMaterials } from '../../utils/enrichMaterials';
 import toast from 'react-hot-toast';
@@ -233,6 +233,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
                     try {
                         const response = await fetch('/api/process-voice', {
                             method: 'POST',
+                            headers: await authHeaders(),
                             body: formData
                         });
 
@@ -281,6 +282,7 @@ const CustomProjectCreator = ({ carpenter, onComplete, onCancel, draftCreator = 
         try {
             const response = await fetch('/api/process-voice', {
                 method: 'POST',
+                headers: await authHeaders(),
                 body: formData
             });
 

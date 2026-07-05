@@ -78,21 +78,27 @@ export default async function handler(req, res) {
         }
 
         // CRM-webhook (samme som ved normal signup), så konverteringer også lander i CRM.
-        try {
-            await fetch('https://www.bisoncrm.dk/api/webhooks/frame-signup', {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer bf_sec_8f92a4c10e39b7d6a5f4c3e2d1', 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    companyName,
-                    contactName: prof.owner_name || '',
-                    email: prof.email || caller.email || '',
-                    phone: phone || prof.phone || '',
-                    product: 'Bison Frame (konverteret gæst)',
-                    price: 249,
-                }),
-            });
-        } catch (hookErr) {
-            console.error('CRM-webhook fejlede:', hookErr);
+        // Token fra server-env (CRM_WEBHOOK_TOKEN) — aldrig hardkodet.
+        const crmToken = process.env.CRM_WEBHOOK_TOKEN;
+        if (crmToken) {
+            try {
+                await fetch('https://www.bisoncrm.dk/api/webhooks/frame-signup', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${crmToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        companyName,
+                        contactName: prof.owner_name || '',
+                        email: prof.email || caller.email || '',
+                        phone: phone || prof.phone || '',
+                        product: 'Bison Frame (konverteret gæst)',
+                        price: 249,
+                    }),
+                });
+            } catch (hookErr) {
+                console.error('CRM-webhook fejlede:', hookErr);
+            }
+        } else {
+            console.warn('CRM_WEBHOOK_TOKEN ikke sat — CRM-webhook sprunget over.');
         }
 
         return res.status(200).json({ success: true, slug });

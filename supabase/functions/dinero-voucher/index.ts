@@ -81,6 +81,16 @@ serve(async (req) => {
       const bytes = Uint8Array.from(atob(m[2]), c => c.charCodeAt(0))
       blob = new Blob([bytes], { type: m[1] })
     } else if (filePath) {
+      // SIKKERHED: verificér at bilaget hører til kalderens eget firma, før vi henter
+      // det (service-role omgår storage-RLS). Filnavn: bilag_<lead.id>_<ts>.<ext>.
+      const leadIdMatch = String(filePath).match(/bilag_(\d+)_/)
+      if (!leadIdMatch) throw new Error("Ugyldig bilagssti.")
+      const { data: ownLead } = await supabaseClient
+        .from('leads').select('carpenter_id').eq('id', leadIdMatch[1]).single()
+      const leadCompany = ownLead ? await resolveOwnCompanyId(supabaseClient, ownLead.carpenter_id) : null
+      if (!ownLead || String(leadCompany) !== String(targetCarpenterId)) {
+        throw new Error("Bilaget hører ikke til dit firma.")
+      }
       const { data: dl, error: dlErr } = await supabaseClient.storage.from('bilag').download(filePath)
       if (dlErr) throw new Error("Kunne ikke hente bilagsfil fra storage: " + dlErr.message)
       blob = dl

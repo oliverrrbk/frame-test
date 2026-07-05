@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
 
 import { corsHeadersFor } from "../_shared/cors.ts"
+import { resolveOwnCompanyId, ownCompanyOrWarn } from "../_shared/companyGuard.ts"
 
 serve(async (req) => {
   const corsHeaders = corsHeadersFor(req)
@@ -31,8 +32,11 @@ serve(async (req) => {
 
     let finalApiKey = api_key;
 
-    // Hent altid API nøglen via backend for at undgå at frontend RLS blokerer medarbejdere
-    const targetCarpenterId = lead.carpenter_id || user.id;
+    // Hent altid API nøglen via backend for at undgå at frontend RLS blokerer medarbejdere.
+    // SIKKERHED: firma-id udledes server-side — klientens lead.carpenter_id bruges IKKE
+    // til at vælge nøgle (forhindrer brug af et andet firmas Ordrestyring-nøgle).
+    const ownCompanyId = await resolveOwnCompanyId(supabaseClient, user.id)
+    const targetCarpenterId = ownCompanyOrWarn(lead.carpenter_id, ownCompanyId, 'ordrestyring-case')
     const { data: profile, error: dbError } = await supabaseClient
       .from('carpenter_secrets')
       .select('ordrestyring_api_key')
@@ -167,7 +171,6 @@ serve(async (req) => {
     let publicCaseNumber = caseData.case_number || caseData.id;
     let caseId = publicCaseNumber || "Ukendt ID";
     let internalId = null;
-    let casesListDebug = null;
 
     if (publicCaseNumber) {
         let retries = 3;
@@ -202,8 +205,6 @@ serve(async (req) => {
                 
                 if (getRes.ok) {
                     const graphqlData = await getRes.json();
-                    casesListDebug = graphqlData;
-                    
                     const items = graphqlData?.data?.cases?.items || [];
 
                     if (items.length > 0) {
@@ -231,15 +232,14 @@ serve(async (req) => {
         }
     }
 
+    // Returnér KUN det frontenden skal bruge. Vi returnerer IKKE casesList/fullCaseData/
+    // locationHeader (kunne lække hele kontoens sagsliste + rå integrations-data).
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: "Sag oprettet i Ordrestyring!",
         caseId: String(caseId),
-        fullCaseData: caseData,
-        internalId: internalId,
-        locationHeader: locationHeader,
-        casesList: casesListDebug
+        internalId: internalId
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )

@@ -97,7 +97,7 @@ serve(async (req) => {
             // Brugeren findes sandsynligvis allerede (fx fra et tidligere mislykket
             // forsøg via Vercel-ruten, hvor login'et blev lavet men rækken ikke).
             // Søg den frem (gennem flere sider for en sikkerheds skyld) og genbrug den.
-            let existing: { id: string } | undefined
+            let existing: { id: string; user_metadata?: Record<string, unknown> } | undefined
             for (let page = 1; page <= 10 && !existing; page++) {
                 const list = await admin.auth.admin.listUsers({ page, perPage: 200 })
                 const users = list.data?.users || []
@@ -106,7 +106,21 @@ serve(async (req) => {
             }
             if (!existing) return json({ error: `Kunne ikke oprette login: ${created.error.message}` }, 400)
             userId = existing.id
-            // Sørg for at en evt. gammel adgangskode/metadata bringes i orden igen.
+
+            // SIKKERHED: genbrug KUN et eksisterende login hvis det allerede hører til
+            // DETTE firma (gen-invitation efter en tidligere fejl). Ellers ville en Mester
+            // kunne "invitere" en fremmed e-mail og dermed NULSTILLE offerets adgangskode
+            // + flytte dem ind i sit eget firma (kontoovertagelse). Vi nægter i stedet.
+            const { data: existingCarp } = await admin
+                .from('carpenters').select('id, company_id').eq('id', userId).maybeSingle()
+            const belongsHere = existingCarp
+                ? String(existingCarp.company_id || existingCarp.id) === String(companyId)
+                : String((existing.user_metadata as Record<string, unknown>)?.company_id || '') === String(companyId)
+            if (!belongsHere) {
+                return json({ error: 'E-mailen er allerede i brug af en anden konto. Vælg en anden e-mail.' }, 409)
+            }
+
+            // Kun nu (bekræftet: hører til dette firma) er det trygt at nulstille login'et.
             await admin.auth.admin.updateUserById(userId, {
                 password: finalPassword,
                 email_confirm: true,

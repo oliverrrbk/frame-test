@@ -5,6 +5,7 @@
 // kan genbruges (fx i log-modalen "Skriv status fra pladsen").
 import { useState, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { authHeaders } from '../supabaseClient';
 
 // options:
 //   mode: 'transcribe' (standard) → onResult kaldes med den rene tekst (string).
@@ -49,7 +50,7 @@ export function useVoiceDictation(onResult, options = {}) {
                 formData.append('mode', mode);
 
                 try {
-                    const response = await fetch('/api/process-voice', { method: 'POST', body: formData });
+                    const response = await fetch('/api/process-voice', { method: 'POST', headers: await authHeaders(), body: formData });
                     if (!response.ok) throw new Error('Netværksfejl ved transskribering');
                     const result = await response.json();
                     if (result.error) throw new Error(result.error);

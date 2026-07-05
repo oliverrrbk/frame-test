@@ -74,6 +74,7 @@ afløser/supplerer hinanden.
 | `setup_rls_hardening.sql` | `trg_protect_carpenter_cols` (bloker selv-eskalering) + `my_company_id()` |
 | `setup_rls_carpenters_hardening.sql` | Stram læseadgang til `carpenters` |
 | `setup_security_hardening_2.sql` | carpenter_secrets, bilag-bucket, tegninger |
+| `setup_security_hardening_3.sql` | **Sikkerhedsaudit-hærdning (juli 2026).** 10 idempotente blokke: (1) `trg_protect_carpenter_cols` på BÅDE INSERT+UPDATE (var kun UPDATE + manglede på live), (2-3) RLS på `materials`/`settings` (anon-læs, ejer-skriv), (4) `profiles` view→security_invoker / tabel→RLS, (5) leads: anon-UPDATE-policy → `TO anon` + `trg_protect_lead_customer_identity` (frys quote_token/kunde-felter mod ikke-ejere) + `trg_guard_lead_insert`, (6) `sanitize_carpenter` fjerner også calendar_events/team/hr_notes, (7) avatars-bucket kun ejer, (8) `mutate_calendar_events` menige må kun slette EGNE, (9) chat tråd/deltager INSERT firma-scopet, (10) drop gamle `*_api_key`-kolonner. **Kør SIDST.** Se `REMEDIATION.md` for env-vars + manuelle skridt der hører til. |
 | `setup_assigned_pm_rls_fix.sql` | Tilføj `assigned_pm` til leads SELECT/UPDATE-policy |
 | `supabase/widen_leads_access_confirmed.sql` | **Udvid leads SELECT/UPDATE: alle i firmaet kan se/føre timer på BEKRÆFTEDE sager** (selvbetjent — ingen manuel tildeling). Kør EFTER `setup_assigned_pm_rls_fix.sql` (overskriver dens SELECT/UPDATE-policy). Skrivning er fortsat hærdet af `protect_lead_sensitive_fields()` |
 | `supabase/add_anonymous_update_policy.sql` | Tillad anonym kunde at acceptere via token |

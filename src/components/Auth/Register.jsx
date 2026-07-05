@@ -333,40 +333,25 @@ const Register = ({ setSession }) => {
             // under oprettelsen her. Dashboard.jsx aflæser user_metadata og bygger profilen perfekt, 
             // næste gang man lander på appen (sikkert), selv hvis man ventede på en email confirmation.
             
-            // Send notifikation til Mads (Admin)
-            import('../../utils/sendEmail').then(({ sendEmail }) => {
-                import('../../utils/emailTemplates').then(({ getAdminNewSignupTemplate }) => {
-                    sendEmail({
-                        to: 'mbc@bisoncompany.dk',
-                        subject: `Ny Tømrer: ${companyName}`,
-                        html: getAdminNewSignupTemplate(companyName, cvr, ownerName, email, phone),
-                        fromName: 'Bison Frame System'
-                    }).catch(err => console.error("Fejl ved admin mail:", err));
-                });
-            });
-
-            // Webhook kald til CRM systemet
+            // Signup-notifikation (admin-mail + CRM-webhook) — kører server-side, så
+            // CRM-tokenet aldrig ligger i browser-bundlen. Best-effort.
             try {
-                const price = teamPrice.total;
                 const productName = `Bison Frame (rollebaseret · ${teamPrice.heads} bruger${teamPrice.heads > 1 ? 'e' : ''})`;
-
-                fetch('https://www.bisoncrm.dk/api/webhooks/frame-signup', {
+                fetch('/api/crm-signup', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer bf_sec_8f92a4c10e39b7d6a5f4c3e2d1',
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        companyName: companyName,
+                        companyName,
                         contactName: ownerName,
-                        email: email,
-                        phone: phone,
+                        email,
+                        phone,
+                        cvr,
                         product: productName,
-                        price: price
+                        price: teamPrice.total
                     })
-                }).catch(err => console.error('Fejl ved CRM webhook:', err));
+                }).catch(err => console.error('Fejl ved signup-notifikation:', err));
             } catch (err) {
-                console.error('Fejl ved CRM webhook try/catch:', err);
+                console.error('Fejl ved signup-notifikation try/catch:', err);
             }
             
             if (data.session) {
