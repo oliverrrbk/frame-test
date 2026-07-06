@@ -108,10 +108,19 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
         }
     }, [targetInvoiceCaseId, financeData, clearTargetInvoiceCase]);
 
-    const filteredPending = financeData.pendingCases.filter(c => 
+    const filteredPending = financeData.pendingCases.filter(c =>
         (c.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (c.project_category || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    // Fuldt fakturerede sager (inkl. manuelt registrerede) — vises med flueben nedenunder,
+    // så en sag ikke bare "forsvinder" fra listen, når den er faktureret.
+    const filteredCompleted = financeData.completedCases.filter(c =>
+        c.finance.invoiced > 0 &&
+        ((c.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+         (c.project_category || '').toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    const wasManuallyInvoiced = (c) => (c.raw_data?.invoice_history || []).some(inv => inv.system === 'manual' || inv.status === 'manual');
 
     return (
         <div className="dashboard-workspace finance-overview" style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
@@ -346,6 +355,53 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
                         </div>
                         )}
                     </div>
+
+                    {/* FULDT FAKTUREREDE SAGER — flueben-listen: her lander sagerne, når hele
+                        beløbet er faktureret (via Dinero/e-conomic ELLER registreret manuelt). */}
+                    {filteredCompleted.length > 0 && (
+                        <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                            <div style={{ padding: isMobile ? '18px 16px' : '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <CheckCircle2 size={20} />
+                                </div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a', fontWeight: 'bold' }}>Fuldt fakturerede sager</h3>
+                                    <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#64748b' }}>Hele beløbet er faktureret — intet udestår</p>
+                                </div>
+                            </div>
+                            <div style={{ padding: isMobile ? '12px 16px 16px' : '12px 24px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {filteredCompleted.map(c => (
+                                    <div key={c.id} onClick={() => { if (onOpenCase) onOpenCase(c.id); }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', padding: '14px 16px', background: '#f8fffb', border: '1px solid #d1fae5', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.15s' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#6ee7b7'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#d1fae5'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                    >
+                                        <CheckCircle2 size={20} color="#10b981" style={{ flexShrink: 0 }} />
+                                        <div style={{ flex: 1, minWidth: '160px' }}>
+                                            <div style={{ fontWeight: 'bold', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                <span>Sag {c.case_number || String(c.id).substring(0, 8)} - {c.project_category}</span>
+                                                {wasManuallyInvoiced(c) && (
+                                                    <span style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 'bold' }}>Registreret manuelt (udenom)</span>
+                                                )}
+                                            </div>
+                                            <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '2px' }}>{c.customer_name}</div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: '0.7rem', color: '#059669', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>Faktureret</div>
+                                            <div style={{ fontWeight: 800, color: '#047857' }}>{c.finance.invoiced.toLocaleString('da-DK')} kr.</div>
+                                        </div>
+                                        <button onClick={(e) => { e.stopPropagation(); setActiveInvoiceCase(c); }}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#fff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '9px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                                        >
+                                            Se historik <ArrowRight size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Afslutning: forklarer flowet + at det er tomt nu (ingen bekræftede sager) */}
                     {showFinanceEnd && createPortal(
