@@ -163,7 +163,7 @@ export default function PricingPage({ setSession }) {
             <main className="flex-grow flex flex-col items-center justify-start w-full px-6 md:px-12 pt-16 pb-24 z-10 relative">
 
                 {/* Hero */}
-                <section className="w-full max-w-4xl flex flex-col items-start gap-6 mt-12 mb-[clamp(4rem,8vw,6rem)] relative z-10">
+                <section className="w-full max-w-4xl mx-auto flex flex-col items-center text-center gap-6 mt-12 mb-[clamp(4rem,8vw,6rem)] relative z-10">
                     <div className="absolute -top-20 -left-48 md:-left-64 w-[500px] h-[500px] bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-[120px] pointer-events-none z-[-1]"></div>
                     <div className="absolute top-24 -right-12 md:-right-32 w-[400px] h-[400px] bg-orange-500/10 dark:bg-orange-400/10 rounded-full blur-[120px] pointer-events-none z-[-1]"></div>
 
@@ -184,8 +184,8 @@ export default function PricingPage({ setSession }) {
                     </motion.p>
                 </section>
 
-                {/* Grundplaner + tillæg */}
-                <section className="w-full max-w-[1180px] grid grid-cols-1 lg:grid-cols-3 gap-6 mb-[clamp(3rem,6vw,4.5rem)] relative z-10 items-stretch">
+                {/* Grundplaner — kun Solo + Hold, centreret over beregneren */}
+                <section className="w-full max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 mb-[clamp(3rem,6vw,4.5rem)] relative z-10 items-stretch">
                     {PLAN_CARDS.map((card, idx) => (
                         <motion.div key={card.id} whileHover={{ y: -6 }}
                             initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
@@ -220,46 +220,58 @@ export default function PricingPage({ setSession }) {
                             <div className="relative z-10 text-[0.82rem] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5">{card.note}</div>
                         </motion.div>
                     ))}
-
-                    {/* Tillæg pr. ekstra bruger — gennemsigtig trappe */}
-                    <motion.div whileHover={{ y: -6 }}
-                        initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.24, duration: 0.5 }} viewport={{ once: true, margin: '-50px' }}
-                        className="bg-white dark:bg-slate-900 rounded-[1.7rem] p-7 flex flex-col gap-4 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-100 dark:border-slate-800">
-                        <div className="absolute top-0 right-0 p-5 opacity-[0.05] dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100">
-                            <CardIcon type="hammer" size={72} />
-                        </div>
-                        <div className="flex flex-col gap-1.5 relative z-10">
-                            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Ekstra brugere</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Oven på Hold — pris pr. bruger fra nr. 4.</p>
-                        </div>
-
-                        <div className="flex flex-col gap-2 relative z-10 flex-grow">
-                            <div className="grid grid-cols-[1fr_auto] gap-x-3 text-[0.62rem] font-extrabold tracking-wider uppercase text-slate-400 dark:text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-800">
-                                <span>Rolle</span>
-                                <span className="text-right tabular-nums">4–10 · 11–50 · 51+</span>
-                            </div>
-                            {EXTRA_TIERS.map(t => (
-                                <div key={t.role} className="grid grid-cols-[1fr_auto] gap-x-3 items-center py-1.5">
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="font-bold text-[0.9rem] text-slate-900 dark:text-slate-100">{t.role}</span>
-                                        <span className="text-[0.72rem] text-slate-400 truncate">{t.sub}</span>
-                                    </div>
-                                    <span className="text-right font-bold tabular-nums text-slate-700 dark:text-slate-200 text-[0.9rem] whitespace-nowrap">
-                                        {t.steps[0]} <span className="text-slate-300 dark:text-slate-600">·</span> {t.steps[1]} <span className="text-slate-300 dark:text-slate-600">·</span> {t.steps[2]}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="relative z-10 text-[0.82rem] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5">
-                            Prisen pr. bruger falder automatisk efter bruger nr. 10 og nr. 50 — uanset rolle.
-                        </div>
-                    </motion.div>
                 </section>
 
                 {/* Beregner */}
                 <TeamCalculator onStart={startTrial} />
+
+                {/* Ekstra brugere — forklaring UNDER beregneren */}
+                <section className="w-full max-w-[1180px] mx-auto mb-[clamp(6rem,10vw,8rem)] relative z-10">
+                    <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }} viewport={{ once: true, margin: '-60px' }}
+                        className="bg-white dark:bg-slate-900 rounded-[1.9rem] border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-[clamp(1.5rem,3.5vw,2.6rem)]">
+                        <div className="flex items-start gap-3 mb-6">
+                            <span className="w-10 h-10 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 flex items-center justify-center shrink-0"><Hammer size={20} /></span>
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Ekstra brugere</h2>
+                                <p className="text-slate-500 dark:text-slate-400 text-[0.95rem] mt-1 max-w-[62ch]">Er I mere end 3 på holdet, betaler du kun for dem, du har med — pris pr. bruger fra nr. 4, efter rolle. Og jo flere I bliver, jo billigere bliver hver ekstra bruger.</p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                            {/* Header (kun desktop) */}
+                            <div className="hidden sm:grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-800/60 text-[0.68rem] font-extrabold tracking-wider uppercase text-slate-400 dark:text-slate-500">
+                                <span>Rolle</span>
+                                <span className="text-right">Bruger 4–10</span>
+                                <span className="text-right">11–50</span>
+                                <span className="text-right">51+</span>
+                            </div>
+                            {EXTRA_TIERS.map((t, i) => (
+                                <div key={t.role} className={`px-5 py-4 transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40 ${i > 0 ? 'border-t border-slate-100 dark:border-slate-800' : ''}`}>
+                                    <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[1.6fr_1fr_1fr_1fr] sm:items-center sm:gap-3">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-slate-900 dark:text-slate-100">{t.role}</span>
+                                            <span className="text-[0.78rem] text-slate-400">{t.sub}</span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3 sm:contents">
+                                            {t.steps.map((price, si) => (
+                                                <div key={si} className="text-left sm:text-right">
+                                                    <span className="sm:hidden block text-[0.6rem] font-bold uppercase tracking-wider text-slate-400 mb-0.5">{['4–10', '11–50', '51+'][si]}</span>
+                                                    <span className={`font-bold tabular-nums ${si === 0 ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-400'}`}>{price}<span className="text-[0.7rem] font-semibold text-slate-400"> kr</span></span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <p className="text-[0.85rem] text-slate-500 dark:text-slate-400 mt-4 flex items-start gap-2">
+                            <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" strokeWidth={2.6} />
+                            De 3 første brugere er inkluderet i Hold. Prisen pr. ekstra bruger falder automatisk efter bruger nr. 10 og nr. 50 — uanset rolle.
+                        </p>
+                    </motion.div>
+                </section>
 
                 {/* Integration Value Proposition */}
                 <section className="w-full max-w-4xl mx-auto mb-[clamp(6rem,10vw,8rem)] relative z-10">
