@@ -28,13 +28,28 @@ const ResetPassword = () => {
 
             // 1) Supabase lægger fejl direkte i URL'en når linket er opbrugt/udløbet
             //    (fx #error=access_denied&error_code=otp_expired) — typisk fordi en
-            //    mail-scanner (Gmail flagger mailen som "farlig") har åbnet engangs-linket.
+            //    mail-scanner (Gmail) har åbnet engangs-linket før brugeren.
             if (hashParams.get('error') || searchParams.get('error')) {
                 markExpired();
                 return;
             }
 
-            // 2) PKCE-flow: linket har ?code=... som skal byttes til en session.
+            // 2) token_hash-flow (anbefalet): linket peger på VORES domæne med en
+            //    token_hash, der først indløses her i browseren via verifyOtp. En
+            //    mail-scanner der blot henter siden udløser ikke JS'et → opbruger
+            //    IKKE tokenet. Dette er fixet mod Gmails link-forscanning.
+            const tokenHash = searchParams.get('token_hash');
+            if (tokenHash) {
+                const { error } = await supabase.auth.verifyOtp({
+                    type: searchParams.get('type') || 'recovery',
+                    token_hash: tokenHash,
+                });
+                if (cancelled) return;
+                error ? markExpired() : markReady();
+                return;
+            }
+
+            // 3) PKCE-flow: linket har ?code=... som skal byttes til en session.
             const code = searchParams.get('code');
             if (code) {
                 const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -43,13 +58,13 @@ const ResetPassword = () => {
                 return;
             }
 
-            // 3) Implicit-flow: Supabase parser selv #access_token og sætter sessionen.
+            // 4) Implicit-flow: Supabase parser selv #access_token og sætter sessionen.
             if (hash.includes('access_token')) {
                 markReady();
                 return;
             }
 
-            // 4) Intet token i URL'en — er brugeren allerede logget ind (recovery-session)?
+            // 5) Intet token i URL'en — er brugeren allerede logget ind (recovery-session)?
             const { data: { session } } = await supabase.auth.getSession();
             if (cancelled) return;
             session ? markReady() : markExpired();
