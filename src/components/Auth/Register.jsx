@@ -83,7 +83,7 @@ const TeamHelpPopup = ({ open, onClose }) => {
             icon: <HardHat size={18} />,
             color: 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/15',
             title: 'Ekstra brugere fra nr. 4',
-            body: `Kontor ${PRICES.kontor[0]} · svend ${PRICES.svend[0]} · lærling ${PRICES.laer[0]} kr/md pr. plads. Prisen falder ved bruger 11 og 51.`,
+            body: `Kontor ${PRICES.kontor[0]} · svend ${PRICES.svend[0]} · lærling ${PRICES.laer[0]} kr/md pr. plads. Prisen falder efter bruger 10 og 50.`,
         },
     ];
 
@@ -133,7 +133,7 @@ const TeamHelpPopup = ({ open, onClose }) => {
                     <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-3.5 flex items-start gap-2.5">
                         <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" strokeWidth={2.5} />
                         <p className="text-[12.5px] text-emerald-800 dark:text-emerald-200 leading-relaxed">
-                            <strong>30 dage gratis — helt uden kort.</strong> Prøv hele holdet af i en hel måned. Bliver I mange, falder prisen pr. bruger automatisk ved bruger 11 og 51.
+                            <strong>30 dage gratis — helt uden kort.</strong> Prøv hele holdet af i en måned — du bliver ikke trukket for noget, og din konto forbliver aktiv. Bliver I mange, falder prisen pr. bruger automatisk efter bruger 10 og 50.
                         </p>
                     </div>
                 </div>
@@ -660,7 +660,7 @@ const Register = ({ setSession }) => {
                                 </div>
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
                                     {teamPrice.plan === 'hold'
-                                        ? <>Du er på <b>Hold</b> — timeregistrering med og {teamPrice.usedIncluded} brugere inkluderet. Pris pr. ekstra bruger falder ved nr. 11 og 51.</>
+                                        ? <>Du er på <b>Hold</b> — timeregistrering med og {teamPrice.usedIncluded} brugere inkluderet. Pris pr. ekstra bruger falder efter nr. 10 og 50.</>
                                         : <>Du er på <b>Solo</b> — uden timeregistrering. Tilføj bare én mere, så er du på Hold (timeregistrering med + 2 ekstra brugere inkluderet).</>}
                                 </p>
                             </div>

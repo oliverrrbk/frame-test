@@ -443,7 +443,7 @@ const SubscriptionSettings = () => {
 
                     {price.plan === 'hold' && (
                         <div style={{ marginTop: '12px', fontSize: '0.82rem', color: '#64748b', background: '#fff', border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '10px 12px' }}>
-                            Prisen pr. ekstra bruger falder automatisk ved bruger nr. 11 og nr. 51 — uanset rolle.
+                            Prisen pr. ekstra bruger falder automatisk efter bruger nr. 10 og nr. 50 — uanset rolle.
                         </div>
                     )}
                     {price.plan === 'legacy' && (

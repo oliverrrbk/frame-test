@@ -15,7 +15,7 @@ const PLAN_CARDS = [
         price: '390', per: 'kr/md',
         features: [
             'Hele systemet — tilbud, ordrestyring, tegneprogram, økonomi & faktura',
-            'Økonomisk overblik + let samspil med dit lønsystem',
+            'Fuldt økonomisk overblik over din forretning',
             'Gratis hjælp til opstart — vi følger dig hele vejen',
         ],
         note: '1 bruger · uden timeregistrering (du er jo alene)',
@@ -26,14 +26,14 @@ const PLAN_CARDS = [
         features: [
             'Alt i Solo — plus timeregistrering',
             '3 brugere inkl. (mester + 2)',
-            "Timer i marken der bliver til løn",
+            'Timer i marken der bliver til løn — let samspil med dit lønsystem',
             'Gratis hjælp til opstart',
         ],
         note: 'Flere med? Tilføj brugere til fast pris — se herunder',
     },
 ];
 
-// Tillæg pr. ekstra bruger (fra bruger nr. 4). Prisen falder ved bruger 11 og 51.
+// Tillæg pr. ekstra bruger (fra bruger nr. 4). Prisen falder efter bruger 10 og 50.
 const EXTRA_TIERS = [
     { role: 'Kontor', sub: 'Projektleder · bogholder · ekstra mester', steps: [149, 119, 99] },
     { role: 'Svend', sub: 'Ude på pladsen', steps: [129, 99, 79] },
@@ -117,13 +117,13 @@ function TeamCalculator({ onStart }) {
                         </div>
                     ) : (
                         <div className="flex items-center gap-2 text-[0.84rem] text-emerald-800 dark:text-emerald-300/90 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-2xl px-4 py-3">
-                            <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={2.6} /> Timeregistrering er med · prisen falder ved bruger 11 og 51
+                            <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={2.6} /> Timeregistrering er med · prisen falder efter bruger 10 og 50
                         </div>
                     )}
 
                     <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-2xl px-4 py-3">
-                        <div className="flex items-center gap-2 text-[0.7rem] font-extrabold tracking-widest uppercase text-emerald-700 dark:text-emerald-400 mb-0.5"><CheckCircle2 size={14} strokeWidth={3} /> Gratis den første måned</div>
-                        <p className="text-[0.86rem] text-emerald-800 dark:text-emerald-300/90 m-0">Du betaler først om 30 dage — og du skal ikke indtaste kort nu.</p>
+                        <div className="flex items-center gap-2 text-[0.7rem] font-extrabold tracking-widest uppercase text-emerald-700 dark:text-emerald-400 mb-0.5"><CheckCircle2 size={14} strokeWidth={3} /> 30 dage gratis — uden risiko</div>
+                        <p className="text-[0.86rem] text-emerald-800 dark:text-emerald-300/90 m-0">Du bliver ikke trukket for noget, og du behøver ikke indtaste kort. Din konto forbliver aktiv — du kan logge ind igen når som helst.</p>
                     </div>
 
                     <button onClick={() => onStart(team)} className="flex items-center justify-center gap-2 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-2xl py-4 text-base font-extrabold shadow-[0_14px_30px_rgba(15,23,42,0.18)] hover:-translate-y-0.5 transition-transform">
@@ -253,7 +253,7 @@ export default function PricingPage({ setSession }) {
                         </div>
 
                         <div className="relative z-10 text-[0.82rem] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5">
-                            Prisen pr. bruger falder automatisk ved bruger nr. 11 og nr. 51 — uanset rolle.
+                            Prisen pr. bruger falder automatisk efter bruger nr. 10 og nr. 50 — uanset rolle.
                         </div>
                     </motion.div>
                 </section>
@@ -289,7 +289,7 @@ export default function PricingPage({ setSession }) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
                         {[
                             ['01.', 'Hvad er forskellen på Solo og Hold?', 'Solo er 390 kr/md for dig alene — hele systemet, men uden timeregistrering. Hold er 890 kr/md og giver 3 brugere (dig + 2) samt timeregistrering. Så snart du har mere end én bruger, er du på Hold.'],
-                            ['02.', 'Hvad koster en ekstra bruger?', 'Fra bruger nr. 4 betaler du pr. bruger: kontor (projektleder/bogholder) 149, svend 129 og lærling 79 kr/md. Prisen falder automatisk ved bruger nr. 11 og igen ved nr. 51 — uanset rolle.'],
+                            ['02.', 'Hvad koster en ekstra bruger?', 'Fra bruger nr. 4 betaler du pr. bruger: kontor (projektleder/bogholder) 149, svend 129 og lærling 79 kr/md. Prisen falder automatisk efter bruger nr. 10 og igen efter nr. 50 — uanset rolle.'],
                             ['03.', 'Hvad sker der efter de 30 dage?', 'Du prøver alt gratis i 30 dage uden at indtaste kort. Når prøven slutter, beder vi om betalingskort — vil du ikke fortsætte, sker der ingenting.'],
                             ['04.', 'Kan jeg tilføje og fjerne folk løbende?', 'Ja. Tilføjer du en medarbejder, lægges prisen oven på fra næste regning (prorateret). Stopper en, fjerner du sædet og betaler ikke for det næste måned. Prisen er gennemsigtig hele vejen — også for store hold.'],
                         ].map(([num, q, a], i) => (
