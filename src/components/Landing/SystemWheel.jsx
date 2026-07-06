@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Users, FileText, Briefcase, Calendar, MessageSquare, MapPin, Wallet, Link as LinkIcon, PenTool, HardHat } from 'lucide-react';
+import { Home, Users, FileText, Briefcase, Calendar, MessageSquare, MapPin, Wallet, Link as LinkIcon, PenTool, HardHat, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Preview, LOOP_MS } from './SystemWheelPreviews';
+import { MobilePreview, MOBILE_LOOP_MS } from './SystemWheelMobilePreviews';
+
+// Er vi på desktop (lg og op)? Styrer hvilket loop-tempo + hvilken preview der vises.
+function useIsDesktop() {
+    const [isDesktop, setIsDesktop] = useState(() =>
+        typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : true
+    );
+    useEffect(() => {
+        const mq = window.matchMedia('(min-width: 1024px)');
+        const on = (e) => setIsDesktop(e.matches);
+        mq.addEventListener('change', on);
+        return () => mq.removeEventListener('change', on);
+    }, []);
+    return isDesktop;
+}
 
 // Accent-paletter der matcher resten af Bison Frame
 const ACCENTS = {
@@ -66,24 +81,53 @@ const FEATURES = [
 ];
 
 
+// Fremdrifts-ring: fyldes lineært over loop-varigheden og nulstilles ved modulskift
+// (visualiserer at hjulet snart hopper videre). `restartKey` genstarter animationen.
+function LoopRing({ size, stroke = 2.5, restartKey, duration, paused, className }) {
+    const r = (size - stroke) / 2;
+    const circ = 2 * Math.PI * r;
+    return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={className} style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeOpacity="0.1" strokeWidth={stroke} />
+            {!paused && (
+                <motion.circle
+                    key={restartKey}
+                    cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round"
+                    strokeDasharray={circ}
+                    initial={{ strokeDashoffset: circ }}
+                    animate={{ strokeDashoffset: 0 }}
+                    transition={{ duration: duration / 1000, ease: 'linear' }}
+                />
+            )}
+        </svg>
+    );
+}
+
 export default function SystemWheel() {
     const [active, setActive] = useState('overview');
     const [paused, setPaused] = useState(false);
+    const isDesktop = useIsDesktop();
     const activeFeature = FEATURES.find(f => f.id === active) || FEATURES[0];
+    const activeIdx = FEATURES.findIndex(f => f.id === active);
 
     const count = FEATURES.length;
-    const R = 168; // ring-radius i px
+    const R = 168; // ring-radius i px (desktop)
+
+    const goto = (dir) => {
+        const n = (activeIdx + dir + count) % count;
+        setActive(FEATURES[n].id);
+    };
 
     // Auto-rotation: efter ét fuldt demo-loop hopper hjulet videre til næste modul,
-    // medmindre musen peger på hjulet (så bliver den, hvor brugeren peger).
+    // medmindre brugeren peger/holder på hjulet. Loop-tempoet følger den viste
+    // preview (mobil-demoerne er kortere end desktop-demoerne).
+    const loopMs = ((isDesktop ? LOOP_MS : MOBILE_LOOP_MS)[active] || 7000) + 600;
     useEffect(() => {
         if (paused) return;
-        const dur = (LOOP_MS[active] || 8000) + 600;
-        const idx = FEATURES.findIndex(f => f.id === active);
-        const nextId = FEATURES[(idx + 1) % FEATURES.length].id;
-        const t = setTimeout(() => setActive(nextId), dur);
+        const nextId = FEATURES[(activeIdx + 1) % count].id;
+        const t = setTimeout(() => setActive(nextId), loopMs);
         return () => clearTimeout(t);
-    }, [active, paused]);
+    }, [active, paused, loopMs, activeIdx, count]);
 
     return (
         <div className="flex flex-col lg:flex-row items-center lg:items-center justify-center gap-12 lg:gap-10">
@@ -145,6 +189,7 @@ export default function SystemWheel() {
 
                 {/* Center — viser det aktive moduls titel + beskrivelse (skifter når man hopper) */}
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56">
+                    <LoopRing size={240} stroke={3} restartKey={active} duration={loopMs} paused={paused} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 dark:text-blue-400 pointer-events-none" />
                     <div className="w-full h-full rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col items-center justify-center text-center px-7 relative overflow-hidden">
                         <div className="absolute inset-0 rounded-full bg-blue-600/5 blur-xl pointer-events-none"></div>
                         <AnimatePresence mode="wait">
@@ -164,28 +209,19 @@ export default function SystemWheel() {
                 </div>
             </div>
 
-            {/* ─── CHIPS (mobil/tablet) ─────────────────────────── */}
-            <div className="grid grid-cols-2 gap-3 w-full lg:hidden">
-                {FEATURES.map((f) => {
-                    const Icon = f.icon;
-                    const isActive = f.id === active;
-                    return (
-                        <button
-                            key={f.id}
-                            onClick={() => setActive(f.id)}
-                            className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all duration-300 ${isActive ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 shadow-md' : 'bg-white/60 dark:bg-slate-900/60 border-slate-100 dark:border-slate-800'}`}
-                        >
-                            <span className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${ACCENTS[f.accent]}`}>
-                                <Icon size={18} />
-                            </span>
-                            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">{f.title}</span>
-                        </button>
-                    );
-                })}
-            </div>
+            {/* ─── KOMPAKT HJUL (mobil/tablet) ──────────────────── */}
+            <MobileWheel
+                active={active}
+                setActive={setActive}
+                activeFeature={activeFeature}
+                setPaused={setPaused}
+                goto={goto}
+                loopMs={loopMs}
+                paused={paused}
+            />
 
-            {/* ─── DETALJE-PANEL — kun selve frame-vinduet ─────────── */}
-            <div className="w-full lg:flex-1">
+            {/* ─── DETALJE-PANEL: desktop-mockup (lg+) vs. telefon (mobil) ─── */}
+            <div className="hidden lg:block w-full lg:flex-1">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeFeature.id}
@@ -197,6 +233,122 @@ export default function SystemWheel() {
                         <Preview id={activeFeature.id} />
                     </motion.div>
                 </AnimatePresence>
+            </div>
+
+            <div className="lg:hidden w-full">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={activeFeature.id}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -16 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <MobilePreview id={activeFeature.id} />
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+        </div>
+    );
+}
+
+// ── Kompakt hjul til mobil/tablet: mindre ring med 12 noder + centrum-titel ──
+function MobileWheel({ active, setActive, activeFeature, setPaused, goto, loopMs, paused }) {
+    const count = FEATURES.length;
+    const R = 118; // mindre ring-radius på mobil
+
+    return (
+        <div className="lg:hidden w-full flex flex-col items-center gap-4">
+            <div
+                className="relative w-[290px] h-[290px] shrink-0"
+                onTouchStart={() => setPaused(true)}
+                onTouchEnd={() => setPaused(false)}
+            >
+                {/* Roterende dekorative ringe */}
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 70, repeat: Infinity, ease: 'linear' }}
+                    className="absolute rounded-full border border-dashed border-slate-200 dark:border-slate-800"
+                    style={{ width: R * 2, height: R * 2, left: '50%', top: '50%', marginLeft: -R, marginTop: -R }}
+                />
+                <motion.div
+                    animate={{ rotate: -360 }}
+                    transition={{ duration: 120, repeat: Infinity, ease: 'linear' }}
+                    className="absolute rounded-full border border-slate-100 dark:border-slate-800/60"
+                    style={{ width: R * 2 + 32, height: R * 2 + 32, left: '50%', top: '50%', marginLeft: -(R + 16), marginTop: -(R + 16) }}
+                />
+
+                {/* Noder */}
+                {FEATURES.map((f, i) => {
+                    const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
+                    const x = Math.cos(angle) * R;
+                    const y = Math.sin(angle) * R;
+                    const isActive = f.id === active;
+                    const Icon = f.icon;
+                    return (
+                        <div
+                            key={f.id}
+                            className="absolute"
+                            style={{ left: '50%', top: '50%', transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))` }}
+                        >
+                            <motion.button
+                                onClick={() => setActive(f.id)}
+                                whileTap={{ scale: 0.9 }}
+                                animate={{ scale: isActive ? 1.12 : 1 }}
+                                transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                                className={`w-11 h-11 rounded-full flex items-center justify-center border transition-colors duration-300 ${ACCENTS[f.accent]} ${isActive ? 'shadow-[0_6px_18px_-4px_rgba(37,99,235,0.4)] ring-2 ring-offset-2 ring-offset-surface ring-blue-500 dark:ring-blue-400 border-transparent' : 'shadow-sm border-slate-100 dark:border-slate-800'}`}
+                                aria-label={f.title}
+                            >
+                                <Icon size={18} />
+                            </motion.button>
+                        </div>
+                    );
+                })}
+
+                {/* Centrum — aktivt modul */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[132px] h-[132px]">
+                    <LoopRing size={144} stroke={3} restartKey={active} duration={loopMs} paused={paused} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 dark:text-blue-400 pointer-events-none" />
+                    <div className="w-full h-full rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col items-center justify-center text-center px-4 relative overflow-hidden">
+                        <div className="absolute inset-0 rounded-full bg-blue-600/5 blur-xl pointer-events-none" />
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeFeature.id}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.22 }}
+                                className="relative z-10 flex flex-col items-center"
+                            >
+                                <span className={`w-9 h-9 rounded-full flex items-center justify-center mb-1.5 ${ACCENTS[activeFeature.accent]}`}>
+                                    <activeFeature.icon size={18} />
+                                </span>
+                                <div className="text-[0.82rem] font-extrabold tracking-tight text-slate-900 dark:text-slate-100 leading-tight px-1">{activeFeature.title}</div>
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
+                </div>
+            </div>
+
+            {/* Frem/tilbage + beskrivelse — så det er tydeligt man kan bladre */}
+            <div className="flex items-center gap-3 w-full max-w-[300px]">
+                <button onClick={() => goto(-1)} aria-label="Forrige modul" className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 shrink-0 shadow-sm active:scale-90 transition-transform">
+                    <ChevronLeft size={18} />
+                </button>
+                <AnimatePresence mode="wait">
+                    <motion.p
+                        key={activeFeature.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex-1 text-center text-[0.72rem] leading-snug text-slate-500 dark:text-slate-400 min-h-[2.2em] flex items-center justify-center"
+                    >
+                        {activeFeature.desc}
+                    </motion.p>
+                </AnimatePresence>
+                <button onClick={() => goto(1)} aria-label="Næste modul" className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 shrink-0 shadow-sm active:scale-90 transition-transform">
+                    <ChevronRight size={18} />
+                </button>
             </div>
         </div>
     );

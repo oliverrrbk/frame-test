@@ -1886,25 +1886,28 @@ button:focus-visible {
         font-size: 0.95rem !important;
     }
     
-    /* 4. Wizard Step Headers & Avatar */
+    /* 4. Wizard Step Headers & Avatar — kompakt vandret på mobil, så både
+          tømrer-præsentationen OG de første kategori-kort ses over folden. */
     .header-with-avatar {
-        flex-direction: column-reverse !important;
-        text-align: center !important;
-        gap: 16px !important;
-        padding: 20px !important;
-        margin-bottom: 24px !important;
+        flex-direction: row-reverse !important;
+        align-items: center !important;
+        text-align: left !important;
+        gap: 14px !important;
+        padding: 16px !important;
+        margin-bottom: 20px !important;
     }
     .header-avatar img {
-        width: 80px !important;
-        height: 80px !important;
+        width: 60px !important;
+        height: 60px !important;
         border-width: 3px !important;
     }
     .header-text h2 {
-        font-size: 1.5rem !important;
+        font-size: 1.2rem !important;
+        margin-bottom: 4px !important;
     }
     .header-text p {
-        font-size: 0.95rem !important;
-        margin-inline: auto !important;
+        font-size: 0.9rem !important;
+        margin-inline: 0 !important;
     }
     
     /* 5. Kategori- og Materiale-kort (Flot 2-kolonners layout på mobil) */

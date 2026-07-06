@@ -1,12 +1,73 @@
-import React, { useRef, useState } from "react";
-import { 
-  motion, 
-  useMotionValue, 
-  useMotionTemplate, 
+import React, { useRef, useState, useEffect } from "react";
+import {
+  motion,
+  useMotionValue,
+  useMotionTemplate,
   useAnimationFrame,
   AnimatePresence
 } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { FileText, Clock, Users, Wallet, CalendarDays, Package, Calculator } from "lucide-react";
+
+// Feature-bånd i heroen: viser at Frame er meget mere end en beregner.
+// Chipsene popper staggered ind, og den "aktive" chip cykler roligt igennem —
+// glas-look med hover, jf. Bison Frame-designkravene.
+const HERO_FEATURES = [
+  { icon: FileText,     label: "Tilbud på stedet" },
+  { icon: Clock,        label: "Timeregistrering" },
+  { icon: Users,        label: "Kunder & sager" },
+  { icon: Wallet,       label: "Løn" },
+  { icon: CalendarDays, label: "Kalender" },
+  { icon: Package,      label: "Materialelister" },
+  { icon: Calculator,   label: "Regnskab" },
+];
+
+const HeroFeatureTicker = () => {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setActive((i) => (i + 1) % HERO_FEATURES.length);
+    }, 1800);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className="flex flex-wrap justify-center gap-2.5 pt-6 max-w-3xl mx-auto pointer-events-auto"
+    >
+      {HERO_FEATURES.map((f, idx) => {
+        const isActive = idx === active;
+        return (
+          <motion.div
+            key={f.label}
+            initial={{ opacity: 0, scale: 0.85, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 + idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
+            whileHover={{ y: -3, scale: 1.04 }}
+            style={{ WebkitTransform: "translateZ(0)" }}
+            className={`group flex items-center gap-2 rounded-full pl-3 pr-4 py-2 text-sm font-semibold backdrop-blur-md border transition-all duration-500 cursor-default select-none ${
+              isActive
+                ? "bg-white/90 dark:bg-slate-800/90 border-orange-500/40 text-slate-900 dark:text-slate-100 shadow-[0_8px_30px_-8px_rgba(234,88,12,0.45)]"
+                : "bg-white/40 dark:bg-slate-900/40 border-white/40 dark:border-slate-700/40 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-white/70 dark:hover:bg-slate-800/70"
+            }`}
+          >
+            <f.icon
+              size={16}
+              className={`transition-colors duration-500 ${
+                isActive ? "text-orange-600 dark:text-orange-400" : "text-slate-400 dark:text-slate-500 group-hover:text-orange-500"
+              }`}
+            />
+            {f.label}
+          </motion.div>
+        );
+      })}
+    </motion.div>
+  );
+};
 
 export const TheInfiniteGrid = () => {
   const navigate = useNavigate();
@@ -102,6 +163,8 @@ export const TheInfiniteGrid = () => {
             </motion.button>
           </div>
         </motion.div>
+
+        <HeroFeatureTicker />
       </div>
     </section>
   );

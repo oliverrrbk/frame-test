@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
 import Stripe from 'https://esm.sh/stripe@14.10.0?target=deno'
+import { bookStripeIncomeToEconomic } from "../_shared/bisonEconomicVoucher.ts"
 
 serve(async (req) => {
   const signature = req.headers.get('Stripe-Signature');
@@ -133,6 +134,100 @@ serve(async (req) => {
             }).eq('id', carpenter.id);
             console.log(`Opdaterede firma ${carpenter.id} til past_due`);
             break;
+
+        case 'invoice.paid': {
+            // AUTOMATISK BOGFØRING i Bisons EGET e-conomic. Kører helt isoleret:
+            // en fejl her må ALDRIG vælte webhooken eller påvirke abonnements-status.
+            // Derfor try/catch der aldrig kaster videre.
+            try {
+                const invObj = event.data.object as any;
+                if ((invObj.amount_paid ?? 0) <= 0) {
+                    console.log(`invoice.paid ${invObj.id}: beløb 0 (prøve/rabat) — intet at bogføre`);
+                    break;
+                }
+
+                // Dobbelt-spærre: reservér fakturaen i stripe_bookings FØR vi bogfører.
+                // Findes den allerede (23505) → allerede bogført, drop stille.
+                const { error: bookDup } = await supabaseClient
+                    .from('stripe_bookings')
+                    .insert({
+                        stripe_invoice_id: invObj.id,
+                        stripe_number: invObj.number ?? null,
+                        customer_id: customerId,
+                        carpenter_id: carpenter.id,
+                        currency: invObj.currency,
+                        status: 'pending',
+                    });
+                if (bookDup) {
+                    if (bookDup.code === '23505') {
+                        console.log(`Faktura ${invObj.id} allerede bogført, springer over.`);
+                        break;
+                    }
+                    // Kan ikke reservere (fx tabel mangler) → bogfør ikke (undgå dubletter).
+                    console.warn('Kunne ikke reservere stripe_bookings-række (tjek tabellen findes):', bookDup.message);
+                    break;
+                }
+
+                // Hent fakturaen igen med gebyret (balance_transaction) foldet ud.
+                const full: any = await stripe.invoices.retrieve(invObj.id, {
+                    expand: ['charge.balance_transaction'],
+                });
+                const bt = full.charge && typeof full.charge === 'object' ? full.charge.balance_transaction : null;
+
+                const gross = (full.amount_paid ?? full.total ?? 0) / 100;
+                const vat = (full.tax ?? 0) / 100;
+                const fee = bt && typeof bt === 'object' ? (bt.fee ?? 0) / 100 : 0;
+
+                const paidTs = full.status_transitions?.paid_at ?? full.created ?? Math.floor(event.created);
+                const date = new Date(paidTs * 1000).toISOString().split('T')[0];
+                const company = (carpenter.raw_data as any)?.company_name
+                    || full.customer_name || full.customer_email || customerId;
+                const description = `Frame-abonnement — ${company}`;
+
+                // Hent Stripe-fakturaens PDF som bilag (uden auth-header — den er direkte hentbar).
+                let pdfBytes: Uint8Array | null = null;
+                if (full.invoice_pdf) {
+                    try {
+                        const pdfRes = await fetch(full.invoice_pdf);
+                        if (pdfRes.ok) pdfBytes = new Uint8Array(await pdfRes.arrayBuffer());
+                    } catch (e) {
+                        console.warn('Kunne ikke hente Stripe-PDF:', (e as Error).message);
+                    }
+                }
+
+                const result = await bookStripeIncomeToEconomic({
+                    invoiceId: full.id,
+                    number: full.number ?? null,
+                    description,
+                    date,
+                    currency: full.currency,
+                    gross, vat, fee,
+                    pdfBytes,
+                    pdfName: `stripe_${full.number || full.id}.pdf`,
+                });
+
+                await supabaseClient.from('stripe_bookings').update({
+                    status: 'booked',
+                    gross, vat, fee,
+                    voucher_number: result.voucherNumber ? String(result.voucherNumber) : null,
+                    accounting_year: result.accountingYear,
+                    booked_at: new Date(paidTs * 1000).toISOString(),
+                    error: result.attachmentUploaded ? null : `Bilag oprettet, PDF ikke vedhæftet: ${result.attachmentError || 'ukendt'}`,
+                }).eq('stripe_invoice_id', full.id);
+
+                console.log(`Bogført faktura ${full.id} i Bison e-conomic (bilagsnr ${result.voucherNumber}, PDF vedhæftet: ${result.attachmentUploaded})`);
+            } catch (bookErr) {
+                // Bogføringen fejlede — marker rækken så den kan bogføres manuelt.
+                const invId = (event.data.object as any)?.id;
+                console.error(`Automatisk bogføring fejlede for faktura ${invId}:`, (bookErr as Error).message);
+                if (invId) {
+                    await supabaseClient.from('stripe_bookings')
+                        .update({ status: 'error', error: (bookErr as Error).message })
+                        .eq('stripe_invoice_id', invId);
+                }
+            }
+            break;
+        }
     }
 
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' }, status: 200 })

@@ -4,12 +4,26 @@ import { useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
 import TopNavBar from './TopNavBar';
-import { X, Check, Compass, Calculator, Send, ArrowRight, ArrowLeft, Heart, Star, Clock, Users, Wallet, FileText } from 'lucide-react';
+import { X, Check, Compass, Calculator, Send, ArrowRight, ArrowLeft, Heart, Star, Clock, Users, Wallet, FileText, ShieldCheck, MapPin, Unlock, Headset, WifiOff, Hammer, StickyNote, Table2, Receipt, PenLine, Layers } from 'lucide-react';
 import { TheInfiniteGrid } from '../ui/the-infinite-grid';
 import { AnimatedTestimonials } from '../ui/animated-testimonials';
 import { StaggerTestimonials } from '../ui/stagger-testimonials';
 import Lenis from 'lenis';
 import PageTransition from '../ui/PageTransition';
+
+// Slå til når vi har rigtige tømrer-anmeldelser. false = vis tillids-båndet i stedet.
+// (StaggerTestimonials-komponenten bevares urørt, så vi bare kan tænde den igen.)
+const SHOW_TESTIMONIALS = false;
+
+// Ærlige løfter der bygger tillid indtil rigtige anmeldelser er på plads.
+const TRUST_POINTS = [
+    { icon: Hammer,      title: "Lavet med tømrere",   text: "Bygget hånd i hånd med rigtige tømrere — ikke af folk der aldrig har stået på en plads." },
+    { icon: MapPin,      title: "Dansk system",         text: "Dansk sprog, danske regler og dansk support. Ingen oversat halvbagt software." },
+    { icon: ShieldCheck, title: "Data i EU",            text: "Dine og dine kunders data ligger sikkert i EU efter GDPR. Ikke til salg." },
+    { icon: Unlock,      title: "Ingen binding",        text: "Prøv gratis i en måned. Sig op med et klik — vi holder ikke på dig med kontrakter." },
+    { icon: WifiOff,     title: "Virker på pladsen",    text: "Lav tilbud og registrér timer selvom mobilnettet er væk. Alt synker når du er online igen." },
+    { icon: Headset,     title: "Rigtige mennesker",    text: "Support fra folk der forstår faget — ikke en chatbot der sender dig i ring." },
+];
 
 const LandingPage = ({ setSession }) => {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -41,9 +55,56 @@ const LandingPage = ({ setSession }) => {
                 {/* Hero Section */}
                 <TheInfiniteGrid />
 
-                <div className="mt-16 md:mt-28 mb-12 md:mb-16">
-                    <StaggerTestimonials />
-                </div>
+                {SHOW_TESTIMONIALS ? (
+                    <div className="mt-16 md:mt-28 mb-12 md:mb-16">
+                        <StaggerTestimonials />
+                    </div>
+                ) : (
+                    /* Tillids-bånd — vises indtil rigtige anmeldelser er på plads (SHOW_TESTIMONIALS). */
+                    <section className="max-w-[1440px] mx-auto px-8 mt-16 md:mt-28 mb-12 md:mb-16 relative z-10 font-body">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            className="text-center max-w-2xl mx-auto mb-14"
+                        >
+                            <div className="inline-flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-600 dark:text-slate-300 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-slate-200/50 dark:border-slate-700/50">
+                                <span className="w-2 h-2 rounded-full bg-orange-600 dark:bg-orange-400"></span>
+                                Bygget på tillid
+                            </div>
+                            <h2 className="font-headline text-[clamp(1.75rem,3.5vw,3rem)] font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                                Skabt sammen med rigtige tømrere
+                            </h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-[clamp(1.05rem,2vw,1.2rem)] leading-relaxed mt-4">
+                                Vi er nye — og ærlige om det. Derfor lover vi det, der faktisk betyder noget, mens de første tømrere prøver Frame af.
+                            </p>
+                        </motion.div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                            {TRUST_POINTS.map((point, idx) => (
+                                <motion.div
+                                    key={point.title}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.06 * idx }}
+                                    viewport={{ once: true, margin: "-40px" }}
+                                    whileHover={{ y: -4 }}
+                                    style={{ WebkitTransform: "translateZ(0)" }}
+                                    className="group relative overflow-hidden rounded-[1.5rem] p-7 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/60 shadow-sm hover:shadow-lg transition-all duration-500"
+                                >
+                                    <div className="absolute -top-8 -right-8 w-28 h-28 bg-orange-500/5 group-hover:bg-orange-500/10 rounded-full blur-2xl transition-all pointer-events-none"></div>
+                                    <div className="relative z-10 flex items-center gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500">
+                                            <point.icon size={20} />
+                                        </div>
+                                        <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{point.title}</h3>
+                                    </div>
+                                    <p className="relative z-10 text-slate-500 dark:text-slate-400 leading-relaxed text-[0.95rem]">{point.text}</p>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </section>
+                )}
 
                 {/* Breadth Section — "Meget mere end en tilbudsberegner" */}
                 <section className="max-w-[1440px] mx-auto px-8 pt-[clamp(2rem,4vw,4rem)] pb-[clamp(3rem,6vw,5rem)] relative z-10 font-body">
@@ -140,20 +201,20 @@ const LandingPage = ({ setSession }) => {
                         style={{ WebkitTransform: "translateZ(0)", willChange: "transform, opacity" }}
                         className="font-headline text-[clamp(2rem,4vw,3.5rem)] font-bold tracking-tight mb-4 text-center text-slate-900 dark:text-slate-100"
                     >
-                        Professionalisme gør forskellen
+                        Fra fem systemer til ét
                     </motion.h2>
-                    <motion.p 
+                    <motion.p
                         initial={{ opacity: 0 }}
                         whileInView={{ opacity: 1 }}
                         transition={{ delay: 0.1 }}
                         viewport={{ once: true }}
-                        className="text-slate-500 text-[clamp(1.125rem,2vw,1.25rem)] text-center mb-[clamp(4rem,8vw,6rem)]"
+                        className="text-slate-500 text-[clamp(1.125rem,2vw,1.25rem)] text-center mb-[clamp(4rem,8vw,6rem)] max-w-2xl mx-auto"
                     >
-                        Lad ikke et uprofessionelt tilbud koste dig opgaven.
+                        Et program til tilbud, en app til timer, Excel til overblik, en kuglepen i lommen … Frame samler det hele ét sted.
                     </motion.p>
 
                     <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-28 items-stretch">
-                        {/* The Messy Way */}
+                        {/* The Messy Way — for mange systemer */}
                         <div className="rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col p-8 md:p-14 items-center text-center h-full">
                             {/* Title Area */}
                             <div className="flex items-center gap-3 mb-auto text-slate-500 font-bold tracking-widest text-sm h-8">
@@ -163,24 +224,37 @@ const LandingPage = ({ setSession }) => {
                                 DEN GAMLE MÅDE
                             </div>
 
-                            {/* Center Visual */}
+                            {/* Center Visual — spredte, uforbundne systemer */}
                             <div className="flex-1 w-full flex items-center justify-center py-12">
-                                <div className="bg-white dark:bg-slate-950 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 rotate-[-2deg] font-mono text-slate-400 dark:text-slate-500 text-sm text-left w-full max-w-[280px] italic leading-loose">
-                                    ~ 12m træværk ... 8000kr?<br/>
-                                    Arbejdsløn - 3 dage måske?<br/>
-                                    Total: 30000-35000kr ca.
+                                <div className="relative w-full max-w-[300px] h-[190px]">
+                                    {[
+                                        { icon: FileText,   label: "Tilbudsprogram", cls: "top-0 left-2 -rotate-6" },
+                                        { icon: Clock,       label: "Timer-app",      cls: "top-4 right-0 rotate-6" },
+                                        { icon: Table2,      label: "Excel-ark",      cls: "top-[42%] left-1/2 -translate-x-1/2 -rotate-3" },
+                                        { icon: Receipt,     label: "Regnskab",       cls: "bottom-2 left-0 rotate-3" },
+                                        { icon: StickyNote,  label: "Gul lap",        cls: "bottom-0 right-4 -rotate-6" },
+                                    ].map((item) => (
+                                        <div
+                                            key={item.label}
+                                            className={`absolute flex items-center gap-2 bg-white dark:bg-slate-950 rounded-lg px-3 py-2 shadow-sm border border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500 text-xs font-medium ${item.cls}`}
+                                        >
+                                            <item.icon size={15} className="shrink-0" />
+                                            {item.label}
+                                        </div>
+                                    ))}
+                                    <PenLine size={22} className="absolute bottom-8 left-6 text-slate-300 dark:text-slate-700 rotate-[24deg]" />
                                 </div>
                             </div>
 
                             {/* Bottom Text */}
                             <div className="flex flex-col gap-5 text-slate-500 dark:text-slate-400 font-medium mt-auto h-[120px] justify-end">
-                                <p>Håndskrevne noter på papir</p>
-                                <p>Meget upræcise overslag</p>
-                                <p>Du mister lynhurtigt tillid</p>
+                                <p>Fem systemer der ikke taler sammen</p>
+                                <p>Du registrerer lidt her og lidt der</p>
+                                <p>Overblikket forsvinder i rodet</p>
                             </div>
                         </div>
 
-                        {/* The Blueprint Way */}
+                        {/* The Blueprint Way — alt samlet ét sted */}
                         <div className="rounded-[2rem] bg-surface-container-high text-on-surface flex flex-col p-8 md:p-14 items-center text-center shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] h-full relative overflow-hidden">
                             {/* Title Area */}
                             <div className="flex items-center gap-3 mb-auto font-bold tracking-widest text-sm h-8 relative z-10">
@@ -190,33 +264,39 @@ const LandingPage = ({ setSession }) => {
                                 BISON FRAME MÅDEN
                             </div>
 
-                            {/* Center Visual */}
+                            {/* Center Visual — ét samlet system */}
                             <div className="flex-1 w-full flex items-center justify-center py-12 relative z-10">
-                                <div className="bg-white dark:bg-slate-950 rounded-xl py-6 px-8 shadow-xl text-sm text-left w-full max-w-[340px] border border-slate-100 dark:border-slate-700">
-                                    <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
-                                        <span className="font-bold text-[10px] tracking-widest uppercase text-slate-900 dark:text-slate-300">Specificeret Tilbud</span>
-                                        <span className="text-blue-500/50 dark:text-blue-400/50 text-xs font-mono font-medium">#Q-2024-88</span>
+                                <div className="bg-white dark:bg-slate-950 rounded-2xl py-5 px-6 shadow-xl w-full max-w-[340px] border border-slate-100 dark:border-slate-700">
+                                    <div className="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
+                                        <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 flex items-center justify-center shrink-0">
+                                            <Layers size={16} />
+                                        </div>
+                                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100">Bison Frame</span>
+                                        <span className="ml-auto text-[10px] font-bold tracking-widest uppercase text-emerald-600 dark:text-emerald-400">Alt samlet</span>
                                     </div>
-                                    <div className="flex justify-between items-center mb-4">
-                                        <span className="text-slate-600 dark:text-slate-400 font-medium text-xs">Premium Egetræsbrædder</span>
-                                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">16.500,00 kr.</span>
-                                    </div>
-                                    <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-5 mb-5">
-                                        <span className="text-slate-600 dark:text-slate-400 font-medium text-xs">Faglært arbejdskraft (32t)</span>
-                                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">14.400,00 kr.</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">Samlet Overslag</span>
-                                        <span className="font-black text-blue-600 dark:text-blue-400 text-base">30.900,00 kr.</span>
+                                    <div className="grid grid-cols-2 gap-2.5 text-left">
+                                        {[
+                                            { icon: FileText, label: "Tilbud" },
+                                            { icon: Clock,    label: "Timer" },
+                                            { icon: Users,    label: "Kunder & sager" },
+                                            { icon: Wallet,   label: "Løn" },
+                                            { icon: Calculator, label: "Beregner" },
+                                            { icon: Receipt,  label: "Regnskab" },
+                                        ].map((item) => (
+                                            <div key={item.label} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                <item.icon size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                                                {item.label}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Bottom Text */}
                             <div className="flex flex-col gap-5 text-slate-600 dark:text-slate-400 font-medium mt-auto h-[120px] justify-end relative z-10">
-                                <p>Detaljerede, brandede PDF tilbud</p>
-                                <p>Indbygget kørsel og slid.</p>
-                                <p>Sendt til kunden prompte</p>
+                                <p>Ét system til hele hverdagen</p>
+                                <p>Registrér én gang — det hænger sammen</p>
+                                <p>Fuldt overblik på mobil og computer</p>
                             </div>
                         </div>
                     </div>
