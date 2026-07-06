@@ -1,3 +1,10 @@
+/* Tailwind bygges ind i bundlen (erstatter cdn.tailwindcss.com — se tailwind.config.js).
+   base+components ligger FØRST; @tailwind utilities står ALLERNEDERST i filen, så
+   utility-klasser vinder over temaet ved lige specificitet — samme kaskade som da
+   CDN'et injicerede sit <style> sidst i <head>. */
+@tailwind base;
+@tailwind components;
+
 /* ═══════════════════════════════════════════════════════════════
    BISON FRAME — Premium Dashboard Theme
    Inspired by SugarCRM's warm, spacious, card-based aesthetic
@@ -3604,3 +3611,6 @@ button:focus-visible {
 body.drawing-board-open .case-bottom-nav {
     display: none !important;
 }
+
+/* Sidst i filen med vilje — utilities skal vinde over alt ovenfor (CDN-æra-kaskade). */
+@tailwind utilities;

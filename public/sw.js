@@ -13,7 +13,9 @@
 //   • Cross-origin (Supabase, /api/*, Google Maps, OpenAI) -> RØRES IKKE,
 //     går altid direkte på nettet. Intet API-svar caches nogensinde.
 
-const CACHE = 'bison-frame-v3';
+// v4: Tailwind flyttet fra CDN ind i build'et — bump rydder alle gamle caches,
+// så ingen enhed hænger fast i en skal/asset fra CDN-æraen.
+const CACHE = 'bison-frame-v4';
 // Separat cache til Supabase Storage-billeder (logo, portræt, avatarer, skitse-
 // miniaturer). Holdes adskilt fra app-skallen, så den kan have sit eget loft/oprydning.
 const IMG_CACHE = 'bison-frame-img-v1';
