@@ -108,6 +108,18 @@ const FinanceOverview = ({ cases, onOpenCase, carpenterProfile, onSendToAccounti
         }
     }, [targetInvoiceCaseId, financeData, clearTargetInvoiceCase]);
 
+    // Hold den åbne faktura-editor i sync med friske data: når sagen opdateres
+    // (markér betalt, annullér, manuel registrering), genberegnes finance-tallene
+    // og editoren viser dem med det samme — før krævede det en reload af siden,
+    // fordi activeInvoiceCase var et gammelt snapshot.
+    React.useEffect(() => {
+        setActiveInvoiceCase(prev => {
+            if (!prev || prev.id === FINANCE_DEMO_ID) return prev;
+            const all = [...financeData.pendingCases, ...financeData.completedCases];
+            return all.find(c => c.id === prev.id) || prev;
+        });
+    }, [financeData]);
+
     const filteredPending = financeData.pendingCases.filter(c =>
         (c.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (c.project_category || '').toLowerCase().includes(searchTerm.toLowerCase())
