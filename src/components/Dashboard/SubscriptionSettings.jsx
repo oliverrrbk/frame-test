@@ -3,28 +3,14 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { CreditCard, FileText, CheckCircle, AlertTriangle, Calendar, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { computePrice, formatKr } from '../../utils/pricing';
+import { computePrice, formatKr, planLabel } from '../../utils/pricing';
 import UpdateCardModal from './UpdateCardModal';
 
 const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
-// Normalisér firmaets gemte hold til pricing.js-formen { mester, pl, bog, svend, laer }.
-// raw_data.team kan være gemt i to former:
-//   - fra oprettelse/beregner:  { mester, pl, bog, svend, laer }
-//   - fra sync-subscription-seats: { mester, kontor, felt }
-// Begge mappes korrekt: kontor -> pl, felt -> svend (mester er altid 1 sæde).
-const teamForPricing = (rawTeam = {}) => {
-    if ('kontor' in rawTeam || 'felt' in rawTeam) {
-        return { mester: 1, pl: Number(rawTeam.kontor) || 0, bog: 0, svend: Number(rawTeam.felt) || 0, laer: 0 };
-    }
-    return {
-        mester: Math.max(1, Number(rawTeam.mester) || 1),
-        pl: Number(rawTeam.pl) || 0,
-        bog: Number(rawTeam.bog) || 0,
-        svend: Number(rawTeam.svend) || 0,
-        laer: Number(rawTeam.laer) || 0,
-    };
-};
+// computePrice/normalizeTeam håndterer selv alle gemte hold-former
+// ({mester,pl,bog,svend,laer}, {mester,kontor,svend,laer} og ældre {mester,kontor,felt}),
+// så raw_data.team sendes direkte ind.
 
 // Opsigelses-grunde (churn-feedback). Ét klik — så vi altid får en grund.
 const CANCEL_REASONS = [
@@ -285,7 +271,9 @@ const SubscriptionSettings = () => {
     }
 
     // Din månedlige pris — udregnet fra firmaets faktiske hold (samme facit som prissiden).
-    const price = computePrice(teamForPricing(company.raw_data?.team));
+    // Grandfathered konti (Tobias) beholder deres faste grundpris via legacy-flaget.
+    const legacy = !!company.raw_data?.legacy_pricing?.locked;
+    const price = computePrice(company.raw_data?.team || {}, { legacy });
     const hasCard = !!company.payment_customer_id;
     const isCanceling = company.subscription_status === 'active' && !!billing?.cancelAtPeriodEnd;
     // Kort tilknyttet MEN stadig i prøve = intet trukket endnu, første træk falder på trial_ends_at.
@@ -440,22 +428,27 @@ const SubscriptionSettings = () => {
                         <span style={{ color: '#64748b', fontSize: '0.95rem', fontWeight: 600 }}>kr / md · eks. moms</span>
                     </div>
                     <div style={{ color: isCanceling ? '#b45309' : '#64748b', fontSize: '0.85rem', marginTop: '6px' }}>
-                        {price.heads} bruger{price.heads > 1 ? 'e' : ''} · {isCanceling ? `aktiv til ${fmtDate(billing?.periodEnd)} — fornyes ikke` : 'fornyes automatisk hver måned'}
+                        <b style={{ color: '#334155' }}>{planLabel(price.plan)}</b> · {price.heads} bruger{price.heads > 1 ? 'e' : ''} · {isCanceling ? `aktiv til ${fmtDate(billing?.periodEnd)} — fornyes ikke` : 'fornyes automatisk hver måned'}
                     </div>
 
                     {/* Opdeling pr. rolle */}
                     <div style={{ marginTop: '14px', background: '#f8fafc', border: '1px solid #eef2f6', borderRadius: '12px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
                         {price.lines.map((l) => (
                             <div key={l.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#475569' }}>
-                                <span>{l.label} ({l.count})</span>
-                                <b style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatKr(l.amount)} kr</b>
+                                <span>{l.isBase ? `${l.label} · ${l.count} bruger${l.count > 1 ? 'e' : ''} inkl.` : `${l.label} (${l.count})`}</span>
+                                <b style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{l.amount > 0 ? `${formatKr(l.amount)} kr` : 'inkl.'}</b>
                             </div>
                         ))}
                     </div>
 
-                    {price.isEnterprise && (
+                    {price.plan === 'hold' && (
                         <div style={{ marginTop: '12px', fontSize: '0.82rem', color: '#64748b', background: '#fff', border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '10px 12px' }}>
-                            Over 40 brugere? Så laver vi en fast entreprisepris til jer — <a href="mailto:kontakt@bisonframe.dk" style={{ color: '#2563eb', fontWeight: 700 }}>kontakt os</a>.
+                            Prisen pr. ekstra bruger falder automatisk ved bruger nr. 11 og nr. 51 — uanset rolle.
+                        </div>
+                    )}
+                    {price.plan === 'legacy' && (
+                        <div style={{ marginTop: '12px', fontSize: '0.82rem', color: '#64748b', background: '#fff', border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '10px 12px' }}>
+                            I har jeres faste grundpris på {formatKr(price.base)} kr/md. Tillæg pr. ekstra bruger følger de gældende satser.
                         </div>
                     )}
                 </div>

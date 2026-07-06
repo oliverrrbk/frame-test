@@ -119,21 +119,35 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
 
     // Rolig, ærlig omkostnings-forklaring ved invitation (ikke sælgende — bare gennemsigtig).
     const KONTOR_BILLING_ROLES = ['admin', 'boss', 'sales', 'lead', 'pm', 'accountant'];
-    const FELT_BILLING_ROLES = ['worker', 'apprentice'];
+    const SVEND_BILLING_ROLES = ['worker'];
+    const LAER_BILLING_ROLES = ['apprentice'];
+    // Grandfathered konti (Tobias) beholder deres faste grundpris — send med til pris-beregningen.
+    const legacyPricing = !!profile?.raw_data?.legacy_pricing?.locked;
+    // Byg pris-holdet {mester,pl,bog,svend,laer} ud fra medarbejder-listen.
+    const teamFromMembers = (members) => ({
+        mester: 1,
+        pl: members.filter(m => KONTOR_BILLING_ROLES.includes(m.role)).length,
+        bog: 0,
+        svend: members.filter(m => SVEND_BILLING_ROLES.includes(m.role)).length,
+        laer: members.filter(m => LAER_BILLING_ROLES.includes(m.role)).length,
+    });
     // Dagens dato fanges én gang (ren beregning af proration-andel for resten af måneden).
     const [today] = useState(() => {
         const d = new Date();
         return { dom: d.getDate(), dim: new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() };
     });
     const inviteSeatInfo = () => {
-        const kontor = team.filter(m => KONTOR_BILLING_ROLES.includes(m.role)).length;
-        const felt = team.filter(m => FELT_BILLING_ROLES.includes(m.role)).length;
-        const current = { mester: 1, pl: kontor, bog: 0, svend: felt, laer: 0 };
-        const roleKey = FELT_BILLING_ROLES.includes(inviteData.role) ? 'svend' : 'pl';
-        const monthly = priceForAddingRole(current, roleKey);
+        const current = teamFromMembers(team);
+        const opts = { legacy: legacyPricing };
+        const roleKey = SVEND_BILLING_ROLES.includes(inviteData.role) ? 'svend'
+            : LAER_BILLING_ROLES.includes(inviteData.role) ? 'laer' : 'pl';
+        const monthly = priceForAddingRole(current, roleKey, opts);
+        // Bliver dette den 2. bruger, rykker man fra Solo op på Hold (timeregistrering + 2 pladser inkl.).
+        const isHoldUpgrade = computePrice(current, opts).plan === 'solo'
+            && computePrice({ ...current, [roleKey]: (current[roleKey] || 0) + 1 }, opts).plan === 'hold';
         const remainingDays = Math.max(1, today.dim - today.dom + 1);
         const proratedNow = Math.round(monthly * (remainingDays / today.dim));
-        return { status: profile.subscription_status, monthly, remainingDays, proratedNow };
+        return { status: profile.subscription_status, monthly, remainingDays, proratedNow, isHoldUpgrade };
     };
 
     const doRoleChange = async (member, newRole) => {
@@ -186,9 +200,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
 
             // Vis en rolig bekræftelse med den NYE fremtidige pris (kun for betalende/prøve;
             // exempt-konti betaler ikke pr. bruger, så de får en simpel besked).
-            const kontor = remaining.filter(m => KONTOR_BILLING_ROLES.includes(m.role)).length;
-            const felt = remaining.filter(m => FELT_BILLING_ROLES.includes(m.role)).length;
-            const newMonthly = computePrice({ mester: 1, pl: kontor, bog: 0, svend: felt, laer: 0 }).total;
+            const newMonthly = computePrice(teamFromMembers(remaining), { legacy: legacyPricing }).total;
             setPriceChange({ name: removed.owner_name || 'Medarbejderen', newMonthly, status: profile.subscription_status });
         } catch (err) {
             toast.error(err.message);
@@ -591,6 +603,11 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                             {(() => {
                                 const info = inviteSeatInfo();
                                 const boxStyle = { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 14px' };
+                                const holdNote = info.isHoldUpgrade ? (
+                                    <div style={{ marginTop: '8px', fontSize: '0.78rem', color: '#2563eb', fontWeight: 600, lineHeight: 1.4 }}>
+                                        Du rykker op på Hold — timeregistrering følger med, og 2 pladser er inkluderet.
+                                    </div>
+                                ) : null;
                                 if (info.status === 'exempt') {
                                     return (
                                         <div style={{ ...boxStyle, fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -600,8 +617,11 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                 }
                                 if (info.status !== 'active') {
                                     return (
-                                        <div style={{ ...boxStyle, fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <DollarSign size={15} style={{ flexShrink: 0, opacity: 0.7 }} /> Gratis i prøveperioden — derefter <b style={{ color: 'var(--text-primary)' }}>+{formatKr(info.monthly)} kr/md</b>.
+                                        <div style={{ ...boxStyle, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <DollarSign size={15} style={{ flexShrink: 0, opacity: 0.7 }} /> Gratis i prøveperioden — derefter <b style={{ color: 'var(--text-primary)' }}>+{formatKr(info.monthly)} kr/md</b>.
+                                            </div>
+                                            {holdNote}
                                         </div>
                                     );
                                 }
@@ -618,6 +638,7 @@ const TeamManagement = ({ profile, leadsData = [] }) => {
                                             <span>Fra næste måned</span>
                                             <b style={{ color: '#0f172a', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>+{formatKr(info.monthly)} kr/md</b>
                                         </div>
+                                        {holdNote}
                                         <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '9px', paddingTop: '8px', fontSize: '0.78rem', color: '#94a3b8' }}>
                                             Begge dele samles på din næste regning · ekskl. moms
                                         </div>

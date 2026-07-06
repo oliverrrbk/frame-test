@@ -14,9 +14,17 @@ import { corsHeadersFor } from "../_shared/cors.ts"
 // - Idempotent: regner altid hele holdet på ny, så den er sikker at kalde gentagne gange.
 // ============================================================================
 
-const KONTOR_ROLES = ['admin', 'boss', 'sales', 'lead', 'pm', 'accountant']; // fuld adgang (149)
-const FELT_ROLES = ['worker', 'apprentice'];                                  // app-adgang (99)
-const VOLUME_FROM = 11;
+const KONTOR_ROLES = ['admin', 'boss', 'sales', 'lead', 'pm', 'accountant']; // fuld adgang (kontor)
+const SVEND_ROLES = ['worker'];        // svend (app-adgang, timer)
+const LAER_ROLES = ['apprentice'];     // lærling (app-adgang, mindre brug)
+const HOLD_INCLUDED = 3;               // Hold dækker de første 3 brugere (mester + 2)
+const TIER_BREAKS = [10, 50];          // trin skifter efter samlet bruger 10 og 50
+const STRIPE_KEY: Record<string, string[]> = {
+    kontor: ['KONTOR', 'KONTOR_11', 'KONTOR_51'],
+    svend: ['SVEND', 'SVEND_11', 'SVEND_51'],
+    laer: ['LAERLING', 'LAERLING_11', 'LAERLING_51'],
+};
+const tierForPosition = (pos: number) => (pos <= TIER_BREAKS[0] ? 0 : pos <= TIER_BREAKS[1] ? 1 : 2);
 
 serve(async (req) => {
     const corsHeaders = corsHeadersFor(req)
@@ -52,10 +60,11 @@ serve(async (req) => {
 
         const activeMembers = (members || []).filter(m => m.is_active !== false)
         const kontorSeats = activeMembers.filter(m => KONTOR_ROLES.includes(m.role)).length
-        const feltSeats = activeMembers.filter(m => FELT_ROLES.includes(m.role)).length
+        const svendSeats = activeMembers.filter(m => SVEND_ROLES.includes(m.role)).length
+        const laerSeats = activeMembers.filter(m => LAER_ROLES.includes(m.role)).length
 
         // Gem det udledte hold på profilen (så det altid afspejler virkeligheden).
-        const team = { mester: 1, kontor: kontorSeats, felt: feltSeats }
+        const team = { mester: 1, kontor: kontorSeats, svend: svendSeats, laer: laerSeats }
         await supabaseClient.from('carpenters')
             .update({ raw_data: { ...(owner.raw_data || {}), team } }).eq('id', companyId)
 
@@ -68,21 +77,45 @@ serve(async (req) => {
             apiVersion: '2023-10-16', httpClient: Stripe.createFetchHttpClient(),
         })
 
-        // Ønskede sæder → Stripe price-id'er.
-        const PRICE = {
+        // NY PRISMODEL (kanonisk spec: src/utils/pricing.js). Grundplan (Solo/Hold, eller
+        // MESTER=249 hvis grandfathered) + tillæg pr. ekstra bruger efter samlet position.
+        const PRICE: Record<string, string | undefined> = {
+            SOLO: Deno.env.get('STRIPE_PRICE_SOLO'),
+            HOLD: Deno.env.get('STRIPE_PRICE_HOLD'),
             MESTER: Deno.env.get('STRIPE_PRICE_MESTER'),
             KONTOR: Deno.env.get('STRIPE_PRICE_KONTOR'),
-            KONTOR_VOLUME: Deno.env.get('STRIPE_PRICE_KONTOR_11'),
-            FELT: Deno.env.get('STRIPE_PRICE_FELT'),
-            FELT_VOLUME: Deno.env.get('STRIPE_PRICE_FELT_11'),
+            KONTOR_11: Deno.env.get('STRIPE_PRICE_KONTOR_11'),
+            KONTOR_51: Deno.env.get('STRIPE_PRICE_KONTOR_51'),
+            SVEND: Deno.env.get('STRIPE_PRICE_SVEND'),
+            SVEND_11: Deno.env.get('STRIPE_PRICE_SVEND_11'),
+            SVEND_51: Deno.env.get('STRIPE_PRICE_SVEND_51'),
+            LAERLING: Deno.env.get('STRIPE_PRICE_LAERLING'),
+            LAERLING_11: Deno.env.get('STRIPE_PRICE_LAERLING_11'),
+            LAERLING_51: Deno.env.get('STRIPE_PRICE_LAERLING_51'),
         }
-        const split = (n: number) => ({ std: Math.min(n, VOLUME_FROM - 1), vol: Math.max(n - (VOLUME_FROM - 1), 0) })
-        const k = split(kontorSeats), f = split(feltSeats)
-        const desired: { price: string; quantity: number }[] = [{ price: PRICE.MESTER as string, quantity: 1 }]
-        if (k.std > 0) desired.push({ price: PRICE.KONTOR as string, quantity: k.std })
-        if (k.vol > 0) desired.push({ price: PRICE.KONTOR_VOLUME as string, quantity: k.vol })
-        if (f.std > 0) desired.push({ price: PRICE.FELT as string, quantity: f.std })
-        if (f.vol > 0) desired.push({ price: PRICE.FELT_VOLUME as string, quantity: f.vol })
+        const legacy = !!(owner.raw_data && owner.raw_data.legacy_pricing && owner.raw_data.legacy_pricing.locked)
+        const heads = 1 + kontorSeats + svendSeats + laerSeats
+        let baseKey: string, included: number
+        if (legacy) { baseKey = 'MESTER'; included = 1 }
+        else if (heads <= 1) { baseKey = 'SOLO'; included = 1 }
+        else { baseKey = 'HOLD'; included = HOLD_INCLUDED }
+
+        const roleOrder: string[] = []
+        for (let i = 0; i < kontorSeats; i++) roleOrder.push('kontor')
+        for (let i = 0; i < svendSeats; i++) roleOrder.push('svend')
+        for (let i = 0; i < laerSeats; i++) roleOrder.push('laer')
+        const bucket: Record<string, number> = {}
+        roleOrder.forEach((role, idx) => {
+            const position = idx + 2
+            if (position <= included) return
+            const key = STRIPE_KEY[role][tierForPosition(position)]
+            bucket[key] = (bucket[key] || 0) + 1
+        })
+        const desired: { price: string; quantity: number }[] = [{ price: PRICE[baseKey] as string, quantity: 1 }]
+        for (const [key, quantity] of Object.entries(bucket)) desired.push({ price: PRICE[key] as string, quantity })
+        if (desired.some((d) => !d.price)) {
+            return json({ success: false, error: 'Mangler en eller flere STRIPE_PRICE_* secrets i Supabase.', team }, corsHeaders)
+        }
 
         // Find det aktive abonnement.
         const subs = await stripe.subscriptions.list({ customer: owner.payment_customer_id, status: 'active', limit: 1 })

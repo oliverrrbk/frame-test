@@ -55,38 +55,68 @@ serve(async (req) => {
         console.log("Ingen gyldig body fundet (standard fallback bruges)");
     }
 
-    // ROLLEBASERET PRISMODEL — byg line-items ud fra firmaets hold (carpenter.raw_data.team).
-    // 1 Mester (fast) + Kontor-sæder (149→119 fra nr. 11) + Felt-sæder (99→79 fra nr. 11).
+    // NY PRISMODEL (juli 2026) — byg line-items ud fra firmaets hold (carpenter.raw_data.team).
+    // KANONISK SPEC: src/utils/pricing.js (holdes i sync med denne beregning).
+    //   Solo 390 (1 bruger) / Hold 890 (3 inkl.) + tillæg pr. ekstra bruger,
+    //   pr. rolle, efter SAMLET bruger-position (trin skifter efter bruger 10 og 50).
+    //   Grandfathered (raw_data.legacy_pricing.locked): 249 grundpris (MESTER-price),
+    //   ingen inkl. ekstra-pladser, men tillæg på de nye satser.
     const PRICE_IDS: Record<string, string | undefined> = {
-        MESTER: Deno.env.get('STRIPE_PRICE_MESTER'),
+        SOLO: Deno.env.get('STRIPE_PRICE_SOLO'),
+        HOLD: Deno.env.get('STRIPE_PRICE_HOLD'),
+        MESTER: Deno.env.get('STRIPE_PRICE_MESTER'), // 249 — kun grandfathered grundpris
         KONTOR: Deno.env.get('STRIPE_PRICE_KONTOR'),
-        KONTOR_VOLUME: Deno.env.get('STRIPE_PRICE_KONTOR_11'),
-        FELT: Deno.env.get('STRIPE_PRICE_FELT'),
-        FELT_VOLUME: Deno.env.get('STRIPE_PRICE_FELT_11'),
+        KONTOR_11: Deno.env.get('STRIPE_PRICE_KONTOR_11'),
+        KONTOR_51: Deno.env.get('STRIPE_PRICE_KONTOR_51'),
+        SVEND: Deno.env.get('STRIPE_PRICE_SVEND'),
+        SVEND_11: Deno.env.get('STRIPE_PRICE_SVEND_11'),
+        SVEND_51: Deno.env.get('STRIPE_PRICE_SVEND_51'),
+        LAERLING: Deno.env.get('STRIPE_PRICE_LAERLING'),
+        LAERLING_11: Deno.env.get('STRIPE_PRICE_LAERLING_11'),
+        LAERLING_51: Deno.env.get('STRIPE_PRICE_LAERLING_51'),
     };
-    const VOLUME_FROM = 11;
-    const rawTeam = (carpenter.raw_data && carpenter.raw_data.team) || {};
-    const team = {
-        mester: Math.max(1, Number(rawTeam.mester) || 1),
-        pl: Number(rawTeam.pl) || 0,
-        bog: Number(rawTeam.bog) || 0,
-        svend: Number(rawTeam.svend) || 0,
-        laer: Number(rawTeam.laer) || 0,
+    const HOLD_INCLUDED = 3;
+    const TIER_BREAKS = [10, 50];
+    const STRIPE_KEY: Record<string, string[]> = {
+        kontor: ['KONTOR', 'KONTOR_11', 'KONTOR_51'],
+        svend: ['SVEND', 'SVEND_11', 'SVEND_51'],
+        laer: ['LAERLING', 'LAERLING_11', 'LAERLING_51'],
     };
-    // Holdet kan være gemt i to former: {mester,pl,bog,svend,laer} (fra oprettelse)
-    // eller {mester,kontor,felt} (skrevet af seat-sync). Vi læser BEGGE, så beløbet
-    // altid er korrekt — også efter man har tilføjet/fjernet folk.
-    const kontorSeats = (team.mester - 1) + team.pl + team.bog + (Number(rawTeam.kontor) || 0);
-    const feltSeats = team.svend + team.laer + (Number(rawTeam.felt) || 0);
-    const split = (n: number) => ({ std: Math.min(n, VOLUME_FROM - 1), vol: Math.max(n - (VOLUME_FROM - 1), 0) });
-    const k = split(kontorSeats);
-    const f = split(feltSeats);
+    const tierForPosition = (pos: number) => (pos <= TIER_BREAKS[0] ? 0 : pos <= TIER_BREAKS[1] ? 1 : 2);
 
-    const lineItems: { price: string; quantity: number }[] = [{ price: PRICE_IDS.MESTER as string, quantity: 1 }];
-    if (k.std > 0) lineItems.push({ price: PRICE_IDS.KONTOR as string, quantity: k.std });
-    if (k.vol > 0) lineItems.push({ price: PRICE_IDS.KONTOR_VOLUME as string, quantity: k.vol });
-    if (f.std > 0) lineItems.push({ price: PRICE_IDS.FELT as string, quantity: f.std });
-    if (f.vol > 0) lineItems.push({ price: PRICE_IDS.FELT_VOLUME as string, quantity: f.vol });
+    const rawTeam = (carpenter.raw_data && carpenter.raw_data.team) || {};
+    const legacy = !!(carpenter.raw_data && carpenter.raw_data.legacy_pricing && carpenter.raw_data.legacy_pricing.locked);
+    const nn = (v: unknown) => Math.max(0, Math.floor(Number(v) || 0));
+    // Holdet kan være gemt i flere former: {mester,pl,bog,svend,laer} (oprettelse),
+    // {mester,kontor,svend,laer} (ny seat-sync) eller {mester,kontor,felt} (ældre). Læs alle.
+    const mesterInput = Math.max(1, nn(rawTeam.mester));
+    const kontorSeats = rawTeam.kontor != null ? nn(rawTeam.kontor) : (mesterInput - 1) + nn(rawTeam.pl) + nn(rawTeam.bog);
+    const svendSeats = rawTeam.svend != null ? nn(rawTeam.svend) : nn(rawTeam.felt);
+    const laerSeats = nn(rawTeam.laer);
+    const heads = 1 + kontorSeats + svendSeats + laerSeats;
+
+    let baseKey: string, included: number;
+    if (legacy) { baseKey = 'MESTER'; included = 1; }
+    else if (heads <= 1) { baseKey = 'SOLO'; included = 1; }
+    else { baseKey = 'HOLD'; included = HOLD_INCLUDED; }
+
+    const roleOrder: string[] = [];
+    for (let i = 0; i < kontorSeats; i++) roleOrder.push('kontor');
+    for (let i = 0; i < svendSeats; i++) roleOrder.push('svend');
+    for (let i = 0; i < laerSeats; i++) roleOrder.push('laer');
+
+    const bucket: Record<string, number> = {};
+    roleOrder.forEach((role, idx) => {
+        const position = idx + 2;             // idx 0 → samlet position 2
+        if (position <= included) return;     // gratis (dækket af grundplan)
+        const key = STRIPE_KEY[role][tierForPosition(position)];
+        bucket[key] = (bucket[key] || 0) + 1;
+    });
+
+    const lineItems: { price: string; quantity: number }[] = [{ price: PRICE_IDS[baseKey] as string, quantity: 1 }];
+    for (const [key, quantity] of Object.entries(bucket)) {
+        lineItems.push({ price: PRICE_IDS[key] as string, quantity });
+    }
     if (lineItems.some((li) => !li.price)) {
         throw new Error("Mangler en eller flere STRIPE_PRICE_* secrets i Supabase.");
     }

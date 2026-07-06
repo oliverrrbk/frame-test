@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
-import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus, ChevronDown, HelpCircle, X, Briefcase, HardHat, Gift } from 'lucide-react';
+import { Wrench, UserPlus, Building, FileText, Mail, Lock, User, Phone, MapPin, CheckSquare, Square, CheckCircle2, ArrowRight, ArrowLeft, Plus, Minus, ChevronDown, HelpCircle, X, HardHat, Gift } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { computePrice, formatKr, normalizeTeam, PRICES, VOLUME_FROM } from '../../utils/pricing';
+import { computePrice, formatKr, normalizeTeam, PRICES } from '../../utils/pricing';
 import { BUSINESS_TYPES, ENABLED_SIGNUP_TRADES, signupTradeOptions } from '../../utils/features';
 
 // Lækker Bison Frame-dropdown til branchevalg (erstatter den grimme native select).
@@ -68,22 +68,22 @@ const TeamHelpPopup = ({ open, onClose }) => {
 
     const rows = [
         {
-            icon: <CheckCircle2 size={18} />,
+            icon: <User size={18} />,
             color: 'text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800',
-            title: '1 mester er din grundplads',
-            body: `Du starter altid med dig selv som mester for ${formatKr(PRICES.mester)} kr/md. Det er hele dit system — sager, tilbud, kunder og økonomi.`,
+            title: `Solo: ${formatKr(PRICES.solo)} kr/md`,
+            body: 'Dig alene — hele systemet med sager, tilbud, kunder og økonomi. Uden timeregistrering (du er jo alene).',
         },
         {
-            icon: <Briefcase size={18} />,
+            icon: <UserPlus size={18} />,
             color: 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/15',
-            title: `Kontor: ${formatKr(PRICES.kontor)} kr/md pr. plads`,
-            body: 'Ekstra mestre, projektledere og bogholdere — fuld adgang fra computeren. Du tilføjer kun dem, du faktisk har brug for.',
+            title: `Hold: ${formatKr(PRICES.hold)} kr/md`,
+            body: 'Dig + 2 brugere inkluderet, og timeregistrering følger med. Så snart I er mere end én, er I på Hold.',
         },
         {
             icon: <HardHat size={18} />,
             color: 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/15',
-            title: `Felt: ${formatKr(PRICES.felt)} kr/md pr. plads`,
-            body: 'Svende og lærlinge — app på telefonen til timer, billeder og tjeklister ude på sagen.',
+            title: 'Ekstra brugere fra nr. 4',
+            body: `Kontor ${PRICES.kontor[0]} · svend ${PRICES.svend[0]} · lærling ${PRICES.laer[0]} kr/md pr. plads. Prisen falder ved bruger 11 og 51.`,
         },
     ];
 
@@ -133,7 +133,7 @@ const TeamHelpPopup = ({ open, onClose }) => {
                     <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-3.5 flex items-start gap-2.5">
                         <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" strokeWidth={2.5} />
                         <p className="text-[12.5px] text-emerald-800 dark:text-emerald-200 leading-relaxed">
-                            <strong>30 dage gratis — helt uden kort.</strong> Prøv hele holdet af i en hel måned. Bliver I mange, falder prisen automatisk fra den {VOLUME_FROM}. plads i hver rolle.
+                            <strong>30 dage gratis — helt uden kort.</strong> Prøv hele holdet af i en hel måned. Bliver I mange, falder prisen pr. bruger automatisk ved bruger 11 og 51.
                         </p>
                     </div>
                 </div>
@@ -625,15 +625,15 @@ const Register = ({ setSession }) => {
                                         <CheckCircle2 size={12} /> Intet kort påkrævet
                                     </span>
                                 </div>
-                                <p className="text-[11px] text-slate-400 dark:text-slate-500 -mt-1 ml-1">Du starter som 1 mester (249 kr). Tilføj resten her — eller byg holdet på prissiden først.</p>
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 -mt-1 ml-1">Alene? Så er du på Solo (390 kr). Tilføj én mere og kom på Hold (890 kr · 3 brugere inkl. + timeregistrering).</p>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     {[
-                                        { key: 'mester', label: 'Mestre', hint: '1 inkl. (249) · ekstra 149', min: 1 },
+                                        { key: 'mester', label: 'Mestre', hint: '1 inkl. · ekstra 149', min: 1 },
                                         { key: 'pl', label: 'Projektledere', hint: '149 kr · kontor', min: 0 },
                                         { key: 'bog', label: 'Bogholdere', hint: '149 kr · kontor', min: 0 },
-                                        { key: 'svend', label: 'Svende', hint: '99 kr · felt', min: 0 },
-                                        { key: 'laer', label: 'Lærlinge', hint: '99 kr · felt', min: 0 },
+                                        { key: 'svend', label: 'Svende', hint: '129 kr', min: 0 },
+                                        { key: 'laer', label: 'Lærlinge', hint: '79 kr', min: 0 },
                                     ].map(r => (
                                         <div key={r.key} className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl px-3.5 py-2.5">
                                             <div className="flex flex-col">
@@ -655,12 +655,14 @@ const Register = ({ setSession }) => {
                                         <span className="text-2xl font-black text-slate-900 dark:text-slate-100 tabular-nums leading-tight">{formatKr(teamPrice.total)}</span>
                                     </div>
                                     <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-500/30 rounded-lg px-3 py-2 inline-flex items-center gap-1.5">
-                                        <CheckCircle2 size={14} strokeWidth={3} /> Gratis i 30 dage · {teamPrice.heads} bruger{teamPrice.heads > 1 ? 'e' : ''}
+                                        <CheckCircle2 size={14} strokeWidth={3} /> {teamPrice.plan === 'hold' ? 'Hold' : 'Solo'} · {teamPrice.heads} bruger{teamPrice.heads > 1 ? 'e' : ''}
                                     </span>
                                 </div>
-                                {teamPrice.isEnterprise && (
-                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">Over 40 ansatte? Vi laver en fast entreprisepris — skriv til <a href="mailto:kontakt@bisonframe.dk" className="text-blue-600 dark:text-blue-400 font-bold">kontakt@bisonframe.dk</a>.</p>
-                                )}
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+                                    {teamPrice.plan === 'hold'
+                                        ? <>Du er på <b>Hold</b> — timeregistrering med og {teamPrice.usedIncluded} brugere inkluderet. Pris pr. ekstra bruger falder ved nr. 11 og 51.</>
+                                        : <>Du er på <b>Solo</b> — uden timeregistrering. Tilføj bare én mere, så er du på Hold (timeregistrering med + 2 ekstra brugere inkluderet).</>}
+                                </p>
                             </div>
 
                             <TeamHelpPopup open={showTeamHelp} onClose={() => setShowTeamHelp(false)} />

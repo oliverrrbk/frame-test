@@ -5,42 +5,45 @@ import Login from '../Auth/Login';
 import Footer from './Footer';
 import TopNavBar from './TopNavBar';
 import PageTransition from '../ui/PageTransition';
-import { User, Users, Hammer, Building2, CheckCircle2, ArrowRight, Plus, Minus, Calculator } from 'lucide-react';
+import { User, Users, Hammer, CheckCircle2, ArrowRight, Plus, Minus, Calculator, Clock } from 'lucide-react';
 import { computePrice, formatKr } from '../../utils/pricing';
 
-// Rolle-kort (rollebaseret prismodel). Mester 249 · Kontor 149→119 · Felt 99→79 · Entreprise (over 40).
-const ROLE_CARDS = [
+// Ny prismodel (juli 2026): to grundplaner + gennemsigtige tillæg pr. ekstra bruger.
+const PLAN_CARDS = [
     {
-        id: 'mester', name: 'Mester', sub: 'Dig der ejer butikken — bruger 1.', icon: 'user',
-        price: '249', per: 'kr/md',
-        features: ['Hele systemet — tilbud, ordrestyring, tegneprogram, økonomi & faktura', 'Økonomisk overblik + let samspil med dit lønsystem', 'Hold styr på hele din forretning og dine ansatte', 'Gratis hjælp til opstart — vi følger dig hele vejen, til du mestrer det'],
-        note: 'Fast grundpris · altid din første bruger',
+        id: 'solo', name: 'Solo', sub: 'Dig, der er alene om det.', icon: 'user',
+        price: '390', per: 'kr/md',
+        features: [
+            'Hele systemet — tilbud, ordrestyring, tegneprogram, økonomi & faktura',
+            'Økonomisk overblik + let samspil med dit lønsystem',
+            'Gratis hjælp til opstart — vi følger dig hele vejen',
+        ],
+        note: '1 bruger · uden timeregistrering (du er jo alene)',
     },
     {
-        id: 'kontor', name: 'Kontor', sub: 'Projektleder · bogholder · ekstra mester.', icon: 'users',
-        price: '149', per: 'kr/md pr. bruger',
-        features: ['Tilbud, sager & fakturering', 'Styr på økonomi & lønkørsel'],
-        note: '↓ 119 kr/md fra bruger nr. 11',
+        id: 'hold', name: 'Hold', sub: 'Dig og dit hold.', icon: 'users', featured: true,
+        price: '890', per: 'kr/md',
+        features: [
+            'Alt i Solo — plus timeregistrering',
+            '3 brugere inkl. (mester + 2)',
+            "Timer i marken der bliver til løn",
+            'Gratis hjælp til opstart',
+        ],
+        note: 'Flere med? Tilføj brugere til fast pris — se herunder',
     },
-    {
-        id: 'felt', name: 'Felt', sub: 'Svend · lærling — ude på pladsen.', icon: 'hammer',
-        price: '99', per: 'kr/md pr. bruger',
-        features: ['Timer, opgaver & materialer', "App'en i marken — timer der bliver til løn"],
-        note: '↓ 79 kr/md fra bruger nr. 11',
-    },
-    {
-        id: 'enterprise', name: 'Entreprise', sub: 'Til den større tømrervirksomhed.', icon: 'building',
-        price: 'Fast pris', per: '',
-        features: ['Over 40 ansatte', 'Fast aftalt månedspris + onboarding'],
-        contact: true,
-    },
+];
+
+// Tillæg pr. ekstra bruger (fra bruger nr. 4). Prisen falder ved bruger 11 og 51.
+const EXTRA_TIERS = [
+    { role: 'Kontor', sub: 'Projektleder · bogholder · ekstra mester', steps: [149, 119, 99] },
+    { role: 'Svend', sub: 'Ude på pladsen', steps: [129, 99, 79] },
+    { role: 'Lærling', sub: 'Mindre brug end en svend', steps: [79, 59, 49] },
 ];
 
 const CardIcon = ({ type, size = 80, strokeWidth = 1 }) => {
     if (type === 'user') return <User size={size} strokeWidth={strokeWidth} />;
-    if (type === 'users') return <Users size={size} strokeWidth={strokeWidth} />;
     if (type === 'hammer') return <Hammer size={size} strokeWidth={strokeWidth} />;
-    return <Building2 size={size} strokeWidth={strokeWidth} />;
+    return <Users size={size} strokeWidth={strokeWidth} />;
 };
 
 // Den interaktive "Byg dit hold"-beregner (rolig, hvid stil — som "Hvad koster tilbud dig?").
@@ -49,13 +52,15 @@ function TeamCalculator({ onStart }) {
     const result = useMemo(() => computePrice(team), [team]);
 
     const ROWS = [
-        { key: 'mester', label: 'Mestre', hint: '1 × 249 inkl. · ekstra 149', min: 1 },
+        { key: 'mester', label: 'Mestre', hint: '1 inkl. i grundprisen', min: 1 },
         { key: 'pl', label: 'Projektledere', hint: '149 kr · kontor', min: 0 },
         { key: 'bog', label: 'Bogholdere', hint: '149 kr · kontor', min: 0 },
-        { key: 'svend', label: 'Svende', hint: '99 kr · felt', min: 0 },
-        { key: 'laer', label: 'Lærlinge', hint: '99 kr · felt', min: 0 },
+        { key: 'svend', label: 'Svende', hint: '129 kr', min: 0 },
+        { key: 'laer', label: 'Lærlinge', hint: '79 kr', min: 0 },
     ];
     const step = (key, d, min) => setTeam(t => ({ ...t, [key]: Math.max(min, Math.min(299, (t[key] || 0) + d)) }));
+
+    const planName = result.plan === 'hold' ? 'Hold' : 'Solo';
 
     return (
         <section className="w-full max-w-[1180px] mx-auto mb-[clamp(6rem,10vw,8rem)] relative z-10">
@@ -91,27 +96,35 @@ function TeamCalculator({ onStart }) {
                         <b className="text-[3rem] leading-none font-extrabold tracking-tight text-slate-900 dark:text-slate-100 tabular-nums">{formatKr(result.total)}</b>
                         <span className="text-base text-slate-500 font-semibold">kr/md · eks. moms</span>
                     </div>
-                    <span className="text-[0.85rem] text-slate-500 -mt-2">for {result.heads} bruger{result.heads > 1 ? 'e' : ''}</span>
+                    <span className="text-[0.85rem] text-slate-500 -mt-2">
+                        <b className="text-slate-700 dark:text-slate-300">{planName}</b> · {result.heads} bruger{result.heads > 1 ? 'e' : ''}
+                        {result.plan === 'hold' && result.freeExtraSeats > 0 && ` · ${result.usedIncluded} inkl.`}
+                    </span>
 
                     <div className="flex flex-col gap-1.5 text-[0.9rem] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3.5">
                         {result.lines.map(l => (
                             <div key={l.label} className="flex justify-between gap-3 text-slate-500 dark:text-slate-400">
-                                <span>{l.label} ({l.count})</span>
-                                <b className="text-slate-900 dark:text-slate-100 font-bold tabular-nums">{formatKr(l.amount)} kr</b>
+                                <span>{l.isBase ? `${l.label} (${l.count} bruger${l.count > 1 ? 'e' : ''} inkl.)` : `${l.label} (${l.count})`}</span>
+                                <b className="text-slate-900 dark:text-slate-100 font-bold tabular-nums">{l.amount > 0 ? `${formatKr(l.amount)} kr` : 'inkl.'}</b>
                             </div>
                         ))}
                     </div>
+
+                    {result.plan === 'solo' ? (
+                        <div className="flex items-start gap-2.5 text-[0.84rem] text-slate-600 dark:text-slate-300 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-2xl px-4 py-3">
+                            <Clock size={16} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" strokeWidth={2.4} />
+                            <span>Solo er uden timeregistrering. Tilføj bare én mere, så er du på <b>Hold</b> — med timeregistrering og 2 ekstra brugere inkluderet.</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 text-[0.84rem] text-emerald-800 dark:text-emerald-300/90 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-2xl px-4 py-3">
+                            <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={2.6} /> Timeregistrering er med · prisen falder ved bruger 11 og 51
+                        </div>
+                    )}
 
                     <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-2xl px-4 py-3">
                         <div className="flex items-center gap-2 text-[0.7rem] font-extrabold tracking-widest uppercase text-emerald-700 dark:text-emerald-400 mb-0.5"><CheckCircle2 size={14} strokeWidth={3} /> Gratis den første måned</div>
                         <p className="text-[0.86rem] text-emerald-800 dark:text-emerald-300/90 m-0">Du betaler først om 30 dage — og du skal ikke indtaste kort nu.</p>
                     </div>
-
-                    {result.isEnterprise && (
-                        <div className="text-[0.82rem] text-slate-500 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5">
-                            Over 40 ansatte? Så laver vi en fast entreprisepris til jer — <a href="mailto:kontakt@bisonframe.dk" className="text-blue-600 dark:text-blue-400 font-bold">kontakt os</a>.
-                        </div>
-                    )}
 
                     <button onClick={() => onStart(team)} className="flex items-center justify-center gap-2 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-2xl py-4 text-base font-extrabold shadow-[0_14px_30px_rgba(15,23,42,0.18)] hover:-translate-y-0.5 transition-transform">
                         Start 30 dages gratis prøve <ArrowRight size={18} />
@@ -167,17 +180,20 @@ export default function PricingPage({ setSession }) {
 
                     <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                         className="text-[clamp(1.125rem,1.5vw,1.25rem)] text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed mt-4">
-                        Betal kun for det, dine folk faktisk bruger. Din kontorbruger og din svend bruger ikke systemet ens — så de koster ikke det samme. Ingen skjulte gebyrer eller binding.
+                        To enkle grundpriser — og herfra betaler du kun for de folk, du faktisk har med. Din kontorbruger og din svend bruger ikke systemet ens, så de koster ikke det samme. Ingen skjulte gebyrer, ingen binding.
                     </motion.p>
                 </section>
 
-                {/* Rolle-kort */}
-                <section className="w-full max-w-[1180px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-[clamp(3rem,6vw,4.5rem)] relative z-10">
-                    {ROLE_CARDS.map((card, idx) => (
+                {/* Grundplaner + tillæg */}
+                <section className="w-full max-w-[1180px] grid grid-cols-1 lg:grid-cols-3 gap-6 mb-[clamp(3rem,6vw,4.5rem)] relative z-10 items-stretch">
+                    {PLAN_CARDS.map((card, idx) => (
                         <motion.div key={card.id} whileHover={{ y: -6 }}
                             initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.08 * (idx + 1), duration: 0.5 }} viewport={{ once: true, margin: '-50px' }}
-                            className="bg-white dark:bg-slate-900 rounded-[1.7rem] p-7 flex flex-col gap-4 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-100 dark:border-slate-800">
+                            className={`bg-white dark:bg-slate-900 rounded-[1.7rem] p-7 flex flex-col gap-4 relative overflow-hidden transition-shadow duration-300 ${card.featured ? 'shadow-lg ring-2 ring-blue-500/60 dark:ring-blue-400/50' : 'shadow-sm hover:shadow-md border border-slate-100 dark:border-slate-800'}`}>
+                            {card.featured && (
+                                <span className="absolute top-5 right-5 z-20 text-[0.62rem] font-extrabold tracking-widest uppercase bg-blue-600 text-white px-2.5 py-1 rounded-full">Mest populær</span>
+                            )}
                             <div className="absolute top-0 right-0 p-5 opacity-[0.05] dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100">
                                 <CardIcon type={card.icon} size={72} />
                             </div>
@@ -188,8 +204,8 @@ export default function PricingPage({ setSession }) {
                             </div>
 
                             <div className="flex items-baseline gap-1.5 relative z-10">
-                                <span className={`font-extrabold tracking-tight text-slate-900 dark:text-slate-100 tabular-nums ${card.contact ? 'text-2xl' : 'text-[2.7rem] leading-none'}`}>{card.price}</span>
-                                {card.per && <span className="text-sm text-slate-500 dark:text-slate-400">{card.per}</span>}
+                                <span className="font-extrabold tracking-tight text-slate-900 dark:text-slate-100 tabular-nums text-[2.7rem] leading-none">{card.price}</span>
+                                <span className="text-sm text-slate-500 dark:text-slate-400">{card.per}</span>
                             </div>
 
                             <ul className="flex flex-col gap-2.5 text-[0.9rem] text-slate-600 dark:text-slate-300 flex-grow relative z-10">
@@ -201,13 +217,45 @@ export default function PricingPage({ setSession }) {
                                 ))}
                             </ul>
 
-                            {card.contact ? (
-                                <a href="mailto:kontakt@bisonframe.dk" className="relative z-10 text-center rounded-full py-3 font-bold text-sm bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 transition-opacity">Kontakt os</a>
-                            ) : (
-                                <div className="relative z-10 text-[0.82rem] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5">{card.note}</div>
-                            )}
+                            <div className="relative z-10 text-[0.82rem] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5">{card.note}</div>
                         </motion.div>
                     ))}
+
+                    {/* Tillæg pr. ekstra bruger — gennemsigtig trappe */}
+                    <motion.div whileHover={{ y: -6 }}
+                        initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.24, duration: 0.5 }} viewport={{ once: true, margin: '-50px' }}
+                        className="bg-white dark:bg-slate-900 rounded-[1.7rem] p-7 flex flex-col gap-4 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-100 dark:border-slate-800">
+                        <div className="absolute top-0 right-0 p-5 opacity-[0.05] dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100">
+                            <CardIcon type="hammer" size={72} />
+                        </div>
+                        <div className="flex flex-col gap-1.5 relative z-10">
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Ekstra brugere</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Oven på Hold — pris pr. bruger fra nr. 4.</p>
+                        </div>
+
+                        <div className="flex flex-col gap-2 relative z-10 flex-grow">
+                            <div className="grid grid-cols-[1fr_auto] gap-x-3 text-[0.62rem] font-extrabold tracking-wider uppercase text-slate-400 dark:text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-800">
+                                <span>Rolle</span>
+                                <span className="text-right tabular-nums">4–10 · 11–50 · 51+</span>
+                            </div>
+                            {EXTRA_TIERS.map(t => (
+                                <div key={t.role} className="grid grid-cols-[1fr_auto] gap-x-3 items-center py-1.5">
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="font-bold text-[0.9rem] text-slate-900 dark:text-slate-100">{t.role}</span>
+                                        <span className="text-[0.72rem] text-slate-400 truncate">{t.sub}</span>
+                                    </div>
+                                    <span className="text-right font-bold tabular-nums text-slate-700 dark:text-slate-200 text-[0.9rem] whitespace-nowrap">
+                                        {t.steps[0]} <span className="text-slate-300 dark:text-slate-600">·</span> {t.steps[1]} <span className="text-slate-300 dark:text-slate-600">·</span> {t.steps[2]}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="relative z-10 text-[0.82rem] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5">
+                            Prisen pr. bruger falder automatisk ved bruger nr. 11 og nr. 51 — uanset rolle.
+                        </div>
+                    </motion.div>
                 </section>
 
                 {/* Beregner */}
@@ -240,10 +288,10 @@ export default function PricingPage({ setSession }) {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
                         {[
-                            ['01.', 'Betaler jeg pr. bruger?', 'Ja — du betaler kun for de folk, der faktisk er på systemet. Mester koster 249, kontor-brugere 149 og svende/lærlinge 99 pr. måned. Fra den 11. af samme type falder prisen automatisk.'],
-                            ['02.', 'Hvad sker der efter de 30 dage?', 'Du prøver alt gratis i 30 dage uden at indtaste kort. Når prøven slutter, beder vi om betalingskort — vil du ikke fortsætte, sker der ingenting.'],
-                            ['03.', 'Kan jeg tilføje og fjerne folk løbende?', 'Ja. Tilføjer du en medarbejder, lægges prisen oven på fra næste regning (prorateret). Stopper en, fjerner du sædet og betaler ikke for det næste måned.'],
-                            ['04.', 'Hvad hvis vi er mere end 40 ansatte?', 'Så laver vi en fast entreprisepris, der passer til jer — kontakt os, og vi giver et klart tilbud med onboarding inkluderet.'],
+                            ['01.', 'Hvad er forskellen på Solo og Hold?', 'Solo er 390 kr/md for dig alene — hele systemet, men uden timeregistrering. Hold er 890 kr/md og giver 3 brugere (dig + 2) samt timeregistrering. Så snart du har mere end én bruger, er du på Hold.'],
+                            ['02.', 'Hvad koster en ekstra bruger?', 'Fra bruger nr. 4 betaler du pr. bruger: kontor (projektleder/bogholder) 149, svend 129 og lærling 79 kr/md. Prisen falder automatisk ved bruger nr. 11 og igen ved nr. 51 — uanset rolle.'],
+                            ['03.', 'Hvad sker der efter de 30 dage?', 'Du prøver alt gratis i 30 dage uden at indtaste kort. Når prøven slutter, beder vi om betalingskort — vil du ikke fortsætte, sker der ingenting.'],
+                            ['04.', 'Kan jeg tilføje og fjerne folk løbende?', 'Ja. Tilføjer du en medarbejder, lægges prisen oven på fra næste regning (prorateret). Stopper en, fjerner du sædet og betaler ikke for det næste måned. Prisen er gennemsigtig hele vejen — også for store hold.'],
                         ].map(([num, q, a], i) => (
                             <motion.div key={num} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.1 * (i + 1) }} viewport={{ once: true, margin: '-50px' }} className="flex flex-col gap-3">

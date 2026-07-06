@@ -1,3 +1,5 @@
+import { computeSeats } from './pricing';
+
 // Branche-baserede funktioner (business_type på firmaet).
 //
 // KUN tømrere har prisberegner + materialer + Wizard-tilbud. Alle andre fag
@@ -65,7 +67,35 @@ export function getFeatures(businessType) {
         calculator: hasCalculator,   // prisberegner-fane, Wizard, "Tilbud fra bunden", AI-træning, timepris-onboarding
         materials: hasCalculator,    // materialer-fane (firma + på sagen)
         publicPortal: hasCalculator, // offentlig /:slug-beregnerportal
-        // Hurtigt tilbud, sager, timer, hold, chat, tegninger, kalender, bilag,
+        // Hurtigt tilbud, sager, hold, chat, tegninger, kalender, bilag,
         // aftalesedler, fakturering = altid tilgængeligt (ikke flag-styret).
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PLAN-BASEREDE FUNKTIONER (ny prismodel, juli 2026)
+// ───────────────────────────────────────────────────────────────────────────
+// Solo (1 bruger, 390) har IKKE timeregistrering. Hold (3 inkl., 890) + de
+// grandfatherede/exempt konti har det. Planen udledes af firmaets hold
+// (raw_data.team) — præcis samme kilde som pris-beregningen og seat-sync bruger.
+//   • Tilføjer man sin første medarbejder → heads ≥ 2 → Hold → timer låses op.
+//   • Ukendt/manglende hold → 'hold' (fail-open: lås ALDRIG en eksisterende
+//     konto ude ved tvivl).
+// ═══════════════════════════════════════════════════════════════════════════
+export function getPlan(company) {
+    if (!company) return 'hold';                                    // tvivl → fuld adgang
+    if (company.subscription_status === 'exempt') return 'hold';    // gratis/fuld adgang
+    if (company.raw_data?.legacy_pricing?.locked) return 'legacy';  // Tobias m.fl.
+    const team = company.raw_data?.team;
+    if (!team) return 'hold';                                       // ukendt hold → fail-open
+    return computeSeats(team).heads >= 2 ? 'hold' : 'solo';
+}
+
+// Funktions-flag der afhænger af abonnements-planen (ikke branchen).
+export function getPlanFeatures(company) {
+    const plan = getPlan(company);
+    return {
+        plan,                          // 'solo' | 'hold' | 'legacy'
+        timeTracking: plan !== 'solo', // Solo = uden timeregistrering
     };
 }

@@ -37,7 +37,7 @@ import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import CreateCaseForm from './CreateCaseForm';
 import CustomerLibrary from './CustomerLibrary';
-import { getFeatures } from '../../utils/features';
+import { getFeatures, getPlanFeatures } from '../../utils/features';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import MaterialListBuilder from './MaterialListBuilder';
 import Coachmark from './Coachmark';
@@ -2722,6 +2722,27 @@ const Dashboard = () => {
     const canCreateCase = !['worker', 'apprentice'].includes(effectiveRole);
     // Branche-baserede funktioner (kun tømrer = beregner/materialer). Læser FIRMAETS type.
     const features = getFeatures(carpenterProfile?.business_type);
+    // Plan-baserede funktioner (Solo = uden timeregistrering; Hold/legacy/exempt = med).
+    const planFeatures = getPlanFeatures(carpenterProfile);
+    const timeTrackingLocked = !planFeatures.timeTracking;
+
+    // Opgraderings-teaser vist i stedet for time-fanerne når man er på Solo.
+    const timeTrackingTeaser = (
+        <div className="tab-pane active" style={{ padding: '24px', height: '100%', overflowY: 'auto' }}>
+            <div style={{ maxWidth: '540px', margin: '48px auto', background: 'var(--surface-bg)', border: '1px solid var(--border-light)', borderRadius: '20px', padding: '36px', textAlign: 'center', boxShadow: '0 12px 40px rgba(15,23,42,0.07)' }}>
+                <div style={{ width: '58px', height: '58px', margin: '0 auto 18px', borderRadius: '16px', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 8px 22px rgba(37,99,235,0.35)' }}><Clock size={28} /></div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 10px', color: 'var(--text-primary)' }}>Timeregistrering følger med Hold</h2>
+                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 24px' }}>
+                    Du er på <b>Solo</b> (1 bruger). Timeregistrering, løn-overblik og “timer der bliver til løn” er en del af <b>Hold</b> — 890 kr/md med 3 brugere inkl. Tilføj din første medarbejder, så er du på Hold med det samme.
+                </p>
+                <button onClick={() => setActiveTab('team')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--text-primary)', color: 'var(--surface-bg)', border: 'none', borderRadius: '12px', padding: '13px 22px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s', boxShadow: '0 8px 20px rgba(15,23,42,0.15)' }}
+                    onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 26px rgba(15,23,42,0.22)'; }}
+                    onMouseOut={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(15,23,42,0.15)'; }}>
+                    <HardHat size={17} /> Tilføj medarbejder
+                </button>
+            </div>
+        </div>
+    );
 
     // --- SØGEFUNKTION & FILTRERING ---
     const roleFilteredLeads = leadsData.filter(l => {
@@ -3047,6 +3068,7 @@ const Dashboard = () => {
                         </button>
                         <button data-tour="nav-timesheet" className={activeTab === 'admin_timesheet' ? 'active' : ''} onClick={() => { setActiveTab('admin_timesheet'); setIsMobileMenuOpen(false); }}>
                             <FileText size={20} /> Løn & Timer
+                            {timeTrackingLocked && <Lock size={13} style={{ marginLeft: 'auto', opacity: 0.55 }} />}
                         </button>
                         </>
                     )}
@@ -3475,6 +3497,7 @@ const Dashboard = () => {
                     )}
 
                     {activeTab === 'worker_timesheet' && ['worker', 'apprentice', 'sales'].includes(effectiveRole) && (
+                        timeTrackingLocked ? timeTrackingTeaser : (
                         <TabErrorBoundary label="Timer" onRetry={refreshData}>
                         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
                         <WorkerTimesheet
@@ -3485,6 +3508,7 @@ const Dashboard = () => {
                         />
                         </Suspense>
                         </TabErrorBoundary>
+                        )
                     )}
 
                     {activeTab === 'worker_drafts' && ['worker', 'sales'].includes(effectiveRole) && (
@@ -3625,6 +3649,7 @@ const Dashboard = () => {
                         </div>
                     )}
                     {activeTab === 'admin_timesheet' && (
+                        timeTrackingLocked ? timeTrackingTeaser : (
                         <div className="tab-pane active " style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
                             <TabErrorBoundary label="Løn & timer" onRetry={refreshData}>
                             <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
@@ -3636,6 +3661,7 @@ const Dashboard = () => {
                             </Suspense>
                             </TabErrorBoundary>
                         </div>
+                        )
                     )}
                     {activeTab === 'customers' && (
                         <CustomerLibrary
