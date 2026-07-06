@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowRight, Send, Upload, FileText, CheckCircle2, ChevronDown, Plus, Banknote, Building2, User, Phone, Mail, MapPin, AlertCircle, Edit2, Save, Clock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Send, Upload, FileText, CheckCircle2, ChevronDown, Plus, Banknote, Building2, User, Phone, Mail, MapPin, AlertCircle, Edit2, Save, Clock, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
 import BilagManager from './BilagManager';
@@ -94,7 +94,7 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
     const vatAmount = isReverseCharge ? 0 : (currentAmountToBill - subtotalExVat);
     const totalInclVat = subtotalExVat + vatAmount;
 
-    const handleSendToDinero = () => {
+    const handleSendToDinero = (opts = {}) => {
         const amountToSend = getAmountToBill();
         if (invoiceType === 'aconto' && (isNaN(amountToSend) || amountToSend <= 0)) {
             toast.error('Indtast et gyldigt aconto beløb.');
@@ -116,7 +116,9 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
         }
 
         if (onSendToAccounting) {
-            onSendToAccounting(lead, 'draft', invoiceLines, isReverseCharge, editableCustomer);
+            // opts.forceManual: registrér kun beløbet på sagen (fakturering sker udenom
+            // systemet, fx rate-aftaler) — intet overføres til Dinero/e-conomic.
+            onSendToAccounting(lead, 'draft', invoiceLines, isReverseCharge, editableCustomer, opts);
         } else {
             toast.success(`Faktura-kladde på ${amountToSend.toLocaleString('da-DK')} kr. ville blive sendt!`);
         }
@@ -564,18 +566,30 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                 <FileText size={20} /> Se Faktura (Visuel)
                             </button>
                             
-                            <button 
-                                onClick={handleSendToDinero}
+                            <button
+                                onClick={() => handleSendToDinero()}
                                 style={{ flex: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#0f172a', color: 'white', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#1e293b'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#0f172a'; e.currentTarget.style.transform = 'translateY(0)'; }}
                             >
-                                <Send size={20} /> 
-                                {carpenterProfile?.dinero_api_key && carpenterProfile.dinero_api_key !== 'pending_authorization' ? 'Overfør som kladde til Dinero' : 
-                                 carpenterProfile?.economic_api_key && carpenterProfile.economic_api_key !== 'pending_authorization' ? 'Overfør som kladde til e-conomic' : 
+                                <Send size={20} />
+                                {carpenterProfile?.dinero_api_key && carpenterProfile.dinero_api_key !== 'pending_authorization' ? 'Overfør som kladde til Dinero' :
+                                 carpenterProfile?.economic_api_key && carpenterProfile.economic_api_key !== 'pending_authorization' ? 'Overfør som kladde til e-conomic' :
                                  'Overfør til Regnskab'}
                             </button>
                         </div>
+
+                        {/* Faktureret udenom systemet (fx rate-aftaler eller fakturering direkte i Dinero):
+                            registrér kun beløbet på sagen, så det økonomiske overblik stemmer. */}
+                        <button
+                            onClick={() => handleSendToDinero({ forceManual: true })}
+                            title="Registrér kun beløbet i sagens økonomi — intet overføres til regnskabsprogrammet"
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#fff', color: '#475569', border: '1px dashed #cbd5e1', padding: '14px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', marginTop: '12px' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.background = '#f8fafc'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#fff'; }}
+                        >
+                            <Receipt size={18} /> Registrér manuelt — faktureret udenom systemet
+                        </button>
                         
                         {/* FAKTURA HISTORIK */}
                         {lead.raw_data?.invoice_history && lead.raw_data.invoice_history.length > 0 && (
