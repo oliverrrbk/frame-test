@@ -811,14 +811,34 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const [csHourlyRate, setCsHourlyRate] = useState('');
     const [csFixedPrice, setCsFixedPrice] = useState('');
     const [csAllocatedHours, setCsAllocatedHours] = useState('');
+    const [csMaterialBudget, setCsMaterialBudget] = useState('');
     const [savingCaseSettings, setSavingCaseSettings] = useState(false);
+
+    // Dansk talformat i inputs: tusindtals-punktum løbende (6546466 → 6.546.466),
+    // komma som decimal. parseNum i saveCaseSettings fjerner punktummerne igen.
+    const formatThousandsInput = (raw) => {
+        const val = String(raw ?? '').replace(/[^0-9,]/g, '');
+        const parts = val.split(',');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return parts.slice(0, 2).join(',');
+    };
+    const numToDaInput = (n) => (n === undefined || n === null || n === '') ? '' : Number(n).toLocaleString('da-DK', { maximumFractionDigits: 2 });
 
     const openCaseSettings = () => {
         const rd = selectedCase?.raw_data || {};
         setCsBillingMode(rd.billing_mode || 'hourly');
-        setCsHourlyRate(rd.hourly_rate != null ? String(rd.hourly_rate) : '');
-        setCsFixedPrice(rd.fixed_price_ex_vat != null ? String(rd.fixed_price_ex_vat) : '');
+        setCsHourlyRate(rd.hourly_rate != null ? numToDaInput(rd.hourly_rate) : '');
+        setCsFixedPrice(rd.fixed_price_ex_vat != null ? numToDaInput(rd.fixed_price_ex_vat) : '');
         setCsAllocatedHours(rd.allocated_hours > 0 ? String(rd.allocated_hours) : '');
+        // Forudfyld med manuelt budget hvis sat, ellers tilbuddets tal (så man ser hvad der gælder).
+        const mb = rd.material_budget;
+        if (mb !== undefined && mb !== null && mb !== '') {
+            setCsMaterialBudget(numToDaInput(mb));
+        } else if (rd.calc_data?.materialCostBase !== undefined) {
+            setCsMaterialBudget(numToDaInput(parseFloat(rd.calc_data.materialCostBase) || 0));
+        } else {
+            setCsMaterialBudget('');
+        }
         setShowCaseSettings(true);
     };
 
@@ -840,6 +860,8 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
             }
             const alloc = parseNum(csAllocatedHours);
             patch.allocated_hours = alloc > 0 ? alloc : 0; // 0 = intet timebudget (vis kun brugte timer)
+            // Materialebudget (ekskl. moms): tomt felt = ryd override (tilbage til tilbuddets tal).
+            patch.material_budget = String(csMaterialBudget).trim() === '' ? null : parseNum(csMaterialBudget);
             await saveCaseDataToDb(patch);
             setShowCaseSettings(false);
             toast.success('Sagsindstillinger gemt.');
@@ -1990,23 +2012,32 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const progressPercent = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
     // Beregn tidsbudget overholdelse (inklusive godkendte aftalesedler)
-    // Eget hold (firmaets medarbejdere). Underleverandører/gæster er BEVIDST ikke med her,
-    // så deres timer ALDRIG blander sig med FORBRUG, timebudget eller løn for eget firma.
+    // Eget hold (firmaets medarbejdere). Underleverandører/gæster holdes adskilt i
+    // totalActualHours, så deres timer ALDRIG blander sig med løn eller timepris-fakturering —
+    // men de tæller med i sagens samlede forbrug (totalConsumedHours), da timebudgettet
+    // dækker det samlede planlagte arbejde på sagen.
     const ownTeamIds = new Set([profile?.id, ...team.map(t => t.id)].filter(Boolean).map(String));
     const isOwnTeamEntry = (e) => ownTeamIds.has(String(e.employeeId));
 
-    // FORBRUG = kun eget holds timer (mod eget timebudget).
+    // Eget holds timer (grundlag for løn og timepris-fakturering).
     const totalActualHours = timeEntries
         .filter(isOwnTeamEntry)
         .filter(item => ['worker', 'apprentice', 'sales', 'guest'].includes(profile?.role) ? item.employeeId === profile.id : true)
         .reduce((sum, item) => sum + item.hours, 0);
 
     // Underleverandør-timer: alt registreret på folk uden for eget hold (mester + svende
-    // via syntetiske id'er, eller en gæst der selv logger). Holdes 100% adskilt fra
-    // FORBRUG/løn — bruges kun til den lilla boks + fakturapris-kontrol pr. underleverandør.
+    // via syntetiske id'er, eller en gæst der selv logger). Indgår i samlet FORBRUG men
+    // aldrig i løn — bruges også til den lilla boks + fakturapris-kontrol pr. underleverandør.
     const subcontractorHours = timeEntries
         .filter(e => !isOwnTeamEntry(e))
         .reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
+
+    // FORBRUG = eget hold + indlejede timer, kvarter-afrundet mod float-støj.
+    const totalConsumedHours = Math.round((totalActualHours + subcontractorHours) * 4) / 4;
+    // Begrænsede roller ser kun egne timer — subcontractorHours ville for dem vise alle
+    // andres registreringer (deres ownTeamIds matcher ikke mesterens hold).
+    const hasRestrictedHoursView = ['worker', 'apprentice', 'sales', 'guest'].includes(profile?.role);
+    const displayHours = hasRestrictedHoursView ? totalActualHours : totalConsumedHours;
     const subcontractorBreakdown = (assignedSubs || []).map(sub => {
         const hours = timeEntries.filter(e => {
             const p = subPersonFromId(e.employeeId);
@@ -2059,7 +2090,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const totalExtraPrice = logsList.filter(l => l.isChangeOrder).reduce((sum, item) => sum + (item.extraPrice || 0), 0);
     
     const budgetedHours = baseBudgetedHours + totalExtraHours;
-    const hourBudgetRatio = budgetedHours > 0 ? (totalActualHours / budgetedHours) : 0;
+    const hourBudgetRatio = budgetedHours > 0 ? (totalConsumedHours / budgetedHours) : 0;
     
     // Anomali: Hvis timer overstiger 80% af budget, men fremskridt er under 50%
     const hasTimeAnomalies = hourBudgetRatio > 0.8 && progressPercent < 50;
@@ -2075,9 +2106,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     // Materiale-status beregning
     const defaultMarkup = profile?.settings?.material_markup || 1.15;
-    const originalBudget = selectedCase?.raw_data?.calc_data?.materialCostBase !== undefined
-        ? parseFloat(selectedCase.raw_data.calc_data.materialCostBase)
-        : Math.round((parseFloat(selectedCase?.raw_data?.calc_data?.materialCost) || 0) / defaultMarkup);
+    // Manuelt sat budget (sagsindstillinger/Materialer-kortet) vinder over tilbuddets tal —
+    // så budgettet kan sættes/rettes EFTER sagen er oprettet. 0 er en gyldig eksplicit værdi.
+    const manualMaterialBudget = selectedCase?.raw_data?.material_budget;
+    const originalBudget = (manualMaterialBudget !== undefined && manualMaterialBudget !== null && manualMaterialBudget !== '')
+        ? (parseFloat(manualMaterialBudget) || 0)
+        : (selectedCase?.raw_data?.calc_data?.materialCostBase !== undefined
+            ? parseFloat(selectedCase.raw_data.calc_data.materialCostBase)
+            : Math.round((parseFloat(selectedCase?.raw_data?.calc_data?.materialCost) || 0) / defaultMarkup));
     const supplierInvoices = selectedCase?.raw_data?.supplier_invoices || [];
     const totalSpent = supplierInvoices
         .filter(inv => inv.category === 'Materialer' || !inv.category)
@@ -2180,7 +2216,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     const totalToBill = baseTotalPrice > 0 ? (baseTotalPrice + totalExtraPrice) : (totalExtraPrice > 0 ? totalExtraPrice : 0);
     
     // Timer Totaler
-    const remainingHours = budgetedHours - totalActualHours;
+    const remainingHours = budgetedHours - totalConsumedHours;
     const isOvertime = remainingHours < 0;
 
     const handleLineChange = (id, field, value) => {
@@ -2691,6 +2727,18 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 </div>
                             )}
 
+                            {selectedCase.status === 'Historik' && (
+                                <div style={{ margin: '0 12px 16px 12px', backgroundColor: '#ecfdf5', border: '1px solid #86efac', padding: '16px', borderRadius: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                                    <div style={{ color: '#059669', display: 'flex', alignItems: 'center', marginTop: '2px' }}><CheckCircle size={24} /></div>
+                                    <div>
+                                        <h4 style={{ margin: '0 0 4px 0', color: '#065f46', fontSize: '1rem', fontWeight: 'bold' }}>Sagen er afsluttet</h4>
+                                        <p style={{ margin: 0, color: '#047857', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                                            Sagen ligger i Historik. Skal der arbejdes videre, kan den genoptages under Handlinger.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Dashboard Widgets (Små Bobler Række) */}
                             <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-start', padding: '20px 0', margin: '0 -16px' }}>
                                 {/* Time Bubble */}
@@ -2698,7 +2746,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fffbeb', border: '1px solid #fde68a', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                                         <Clock size={20} />
                                     </div>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569' }}>{totalActualHours} t.</span>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569' }}>{displayHours} t.</span>
                                 </div>
 
                                 {/* Material Bubble */}
@@ -2764,12 +2812,22 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     <Edit2 size={20} color="#3b82f6" /> Ret sagsnummer
                                                 </button>
                                             )}
+                                            {!['worker', 'apprentice'].includes(profile?.role) && (
+                                                <button onClick={() => { setShowActionSheet(false); openCaseSettings(); }} style={{ padding: '16px', background: '#f8fafc', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#0f172a', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <Settings size={20} color="#64748b" /> Sagsindstillinger
+                                                </button>
+                                            )}
                                             {['admin', 'accountant', 'boss', 'sales'].includes(profile?.role) && (
                                                 <button onClick={() => { setShowActionSheet(false); onOpenInvoice && onOpenInvoice(selectedCase.id); }} style={{ padding: '16px', background: '#f8fafc', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#0f172a', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <DollarSign size={20} color="#10b981" /> Opret Faktura
                                                 </button>
                                             )}
-                                            {['admin', 'sales'].includes(profile?.role) && selectedCase.status !== 'Afbrudt Sag' && (
+                                            {['admin', 'sales'].includes(profile?.role) && selectedCase.status === 'Historik' && (
+                                                <button onClick={() => { setShowActionSheet(false); handleStatusChange('Bekræftet opgave', true); toast.success('Sagen er genoptaget og aktiv igen.'); }} style={{ padding: '16px', background: '#ecfdf5', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#059669', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <RotateCcw size={20} color="#10b981" /> Genoptag Sag (Aktiv)
+                                                </button>
+                                            )}
+                                            {['admin', 'sales'].includes(profile?.role) && !['Afbrudt Sag', 'Historik'].includes(selectedCase.status) && (
                                                 selectedCase.status === 'Sæt i bero' ? (
                                                     <button onClick={() => { setShowActionSheet(false); handleStatusChange('Bekræftet opgave'); }} style={{ padding: '16px', background: '#ecfdf5', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#059669', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                         <CheckCircle size={20} color="#10b981" /> Genoptag Sag (Aktiv)
@@ -2780,7 +2838,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     </button>
                                                 )
                                             )}
-                                            {['admin', 'sales'].includes(profile?.role) && selectedCase.status !== 'Afbrudt Sag' && (
+                                            {['admin', 'sales'].includes(profile?.role) && !['Afbrudt Sag', 'Historik'].includes(selectedCase.status) && (
+                                                <button onClick={() => { setShowActionSheet(false); handleStatusChange('Historik'); }} style={{ padding: '16px', background: '#ecfdf5', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#059669', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <CheckCircle size={20} color="#10b981" /> Afslut sag (uden faktura)
+                                                </button>
+                                            )}
+                                            {['admin', 'sales'].includes(profile?.role) && !['Afbrudt Sag', 'Historik'].includes(selectedCase.status) && (
                                                 <button onClick={() => { setShowActionSheet(false); handleStatusChange('Afbrudt Sag'); }} style={{ padding: '16px', background: '#fef2f2', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '600', color: '#ef4444', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <AlertTriangle size={20} color="#ef4444" /> Afbryd Sag (Konkurs)
                                                 </button>
@@ -2805,8 +2868,18 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         
                                         {infoSheetType === 'time' && (
                                             <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center' }}>
-                                                <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{totalActualHours} <span style={{ fontSize: '1rem', color: '#94a3b8' }}>{hasHourBudget ? <>/ {budgetedHours} t.</> : 't.'}</span></h1>
-                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Registrerede timer af holdet</p>
+                                                <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>{displayHours} <span style={{ fontSize: '1rem', color: '#94a3b8' }}>{hasHourBudget ? <>/ {budgetedHours} t.</> : 't.'}</span></h1>
+                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Timer i alt på sagen</p>
+                                                {!hasRestrictedHoursView && subcontractorHours > 0 && (
+                                                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#475569', background: '#fff', padding: '8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                                            <span>Eget hold</span><span style={{ fontWeight: 700 }}>{totalActualHours} t.</span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#7c3aed', background: '#faf5ff', padding: '8px 12px', borderRadius: '10px', border: '1px solid #e9d5ff' }}>
+                                                            <span>Indlejede</span><span style={{ fontWeight: 700 }}>{subcontractorHours.toFixed(2).replace(/\.?0+$/, '')} t.</span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <button onClick={() => { setInfoSheetType(null); handleSubTabChange('timesheet'); }} style={{ marginTop: '16px', width: '100%', padding: '12px', background: '#d97706', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' }}>Gå til Timeregistrering</button>
                                             </div>
                                         )}
@@ -2827,7 +2900,19 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                     </>
                                                 )}
                                                 
-                                                <button onClick={() => { setInfoSheetType(null); handleSubTabChange('materials'); }} style={{ marginTop: '24px', width: '100%', padding: '14px', background: '#2563eb', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Gå til materialeliste</button>
+                                                {!['worker', 'apprentice'].includes(profile?.role) && (
+                                                    <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '10px 14px' }}>
+                                                        <div style={{ textAlign: 'left' }}>
+                                                            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Forbrugt / Budget</div>
+                                                            <div style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 700 }}>{totalSpent.toLocaleString('da-DK')} <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: '0.8rem' }}>/ {originalBudget.toLocaleString('da-DK')} kr.</span></div>
+                                                        </div>
+                                                        <button onClick={() => { setInfoSheetType(null); openCaseSettings(); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '10px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#2563eb', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
+                                                            <Edit2 size={13} /> Ret budget
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                <button onClick={() => { setInfoSheetType(null); handleSubTabChange('materials'); }} style={{ marginTop: '16px', width: '100%', padding: '14px', background: '#2563eb', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Gå til materialeliste</button>
                                                 
                                                 <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                                                     <div style={{ position: 'relative', flex: 1 }}>
@@ -3156,6 +3241,17 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             </div>
                         </div>
                     )}
+                    {selectedCase.status === 'Historik' && (
+                        <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.06)', border: '1px solid #34d399', borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', backdropFilter: 'blur(8px)', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.1)', marginBottom: '16px' }}>
+                            <div style={{ padding: '10px', background: '#10b981', color: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <CheckCircle size={28} />
+                            </div>
+                            <div>
+                                <h4 style={{ margin: '0 0 4px 0', color: '#065f46', fontSize: '1.15rem', fontWeight: 'bold' }}>Sagen er afsluttet</h4>
+                                <p style={{ margin: 0, color: '#047857', fontSize: '0.95rem' }}>Sagen ligger i Historik. Alt kan stadig ses, og sagen kan genoptages via "Skift Status", hvis der skal arbejdes videre.</p>
+                            </div>
+                        </div>
+                    )}
                     <div data-tour="case-detail-header" style={{ padding: '24px', backgroundColor: selectedCase.status === 'Afbrudt Sag' ? '#fef2f2' : '#ffffff', borderRadius: '16px', border: selectedCase.status === 'Afbrudt Sag' ? '1px solid #fca5a5' : '1px solid #e8e6e1', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                         <div>
                             <button
@@ -3394,7 +3490,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                     </button>
                                     {isStatusDropdownOpen && (
                                         <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '8px', zIndex: 50, minWidth: '220px' }}>
-                                            {selectedCase.status !== 'Afbrudt Sag' ? (
+                                            {selectedCase.status === 'Historik' ? (
+                                                <button
+                                                    onClick={() => { handleStatusChange('Bekræftet opgave', true); setIsStatusDropdownOpen(false); toast.success('Sagen er genoptaget og aktiv igen.'); }}
+                                                    style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#059669', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = '#ecfdf5'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    <RotateCcw size={16}/> Genoptag Sag (Aktiv)
+                                                </button>
+                                            ) : selectedCase.status !== 'Afbrudt Sag' ? (
                                                 <>
                                                     {selectedCase.status === 'Sæt i bero' ? (
                                                         <button 
@@ -3415,8 +3520,16 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                             Sæt i bero
                                                         </button>
                                                     )}
-                                                    <button 
-                                                        onClick={() => { 
+                                                    <button
+                                                        onClick={() => { handleStatusChange('Historik'); setIsStatusDropdownOpen(false); }}
+                                                        style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#10b981', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#ecfdf5'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                    >
+                                                        <CheckCircle size={16}/> Afslut sag (uden faktura)
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
                                                             handleStatusChange('Afbrudt Sag');
                                                             setIsStatusDropdownOpen(false);
                                                         }}
@@ -3440,6 +3553,18 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         </div>
                                     )}
                                 </div>
+                            )}
+
+                            {!['worker', 'apprentice'].includes(profile?.role) && (
+                                <button
+                                    onClick={openCaseSettings}
+                                    title="Redigér afregning, afsat tid og materialebudget"
+                                    style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', fontSize: '0.85rem', fontWeight: '600', color: '#1e293b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s ease' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.background = '#f8fafc'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; }}
+                                >
+                                    <Settings size={15} /> Sagsindstillinger
+                                </button>
                             )}
 
                             <div style={{ textAlign: 'right' }}>
@@ -3476,16 +3601,24 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
                                 <div>
                                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a1a1a' }}>
-                                        {totalActualHours} {hasHourBudget ? <span style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 'normal' }}>/ {budgetedHours} timer</span> : 'timer'}
+                                        {displayHours} {hasHourBudget ? <span style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 'normal' }}>/ {budgetedHours} timer</span> : 'timer'}
                                     </div>
                                 </div>
                                 {!['worker', 'apprentice'].includes(profile?.role) && hasHourBudget && <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: isOvertime ? '#ef4444' : '#10b981' }}>{Math.round(hourBudgetRatio * 100)}%</span>}
                             </div>
                             {!['worker', 'apprentice'].includes(profile?.role) && hasHourBudget && (
                                 <>
-                                    <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px' }}>
-                                        <div style={{ width: `${Math.min(100, hourBudgetRatio * 100)}%`, height: '100%', background: isOvertime ? '#ef4444' : '#10b981', transition: 'width 0.5s ease' }} />
+                                    <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px', display: 'flex' }}>
+                                        <div style={{ width: `${Math.min(100, (budgetedHours > 0 ? totalActualHours / budgetedHours : 0) * 100)}%`, height: '100%', background: isOvertime ? '#ef4444' : '#10b981', transition: 'width 0.5s ease' }} />
+                                        {subcontractorHours > 0 && (
+                                            <div style={{ width: `${Math.max(0, Math.min(100, hourBudgetRatio * 100) - Math.min(100, (budgetedHours > 0 ? totalActualHours / budgetedHours : 0) * 100))}%`, height: '100%', background: isOvertime ? '#f87171' : '#7c3aed', transition: 'width 0.5s ease' }} />
+                                        )}
                                     </div>
+                                    {!hasRestrictedHoursView && subcontractorHours > 0 && (
+                                        <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '10px' }}>
+                                            Eget hold {totalActualHours} t · <span style={{ color: '#7c3aed', fontWeight: 600 }}>Indlejet {subcontractorHours} t</span>
+                                        </div>
+                                    )}
                                     <div style={{ marginTop: 'auto', fontSize: '0.85rem', fontWeight: '500', color: isOvertime ? '#ef4444' : '#059669', display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isOvertime ? '#fef2f2' : '#ecfdf5', padding: '8px 12px', borderRadius: '8px' }}>
                                         {isOvertime ? (
                                             <>Advarsel: Budgettet er overskredet med {Math.abs(remainingHours)} timer!</>
@@ -3555,7 +3688,18 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             {(profile?.role !== 'worker' && profile?.role !== 'apprentice') && (
                                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Forbrugt / Budget</div>
+                                        <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            Forbrugt / Budget
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); openCaseSettings(); }}
+                                                title="Ret materialebudget"
+                                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', cursor: 'pointer', padding: 0, transition: 'all 0.15s ease' }}
+                                                onMouseEnter={(ev) => { ev.currentTarget.style.background = '#eff6ff'; ev.currentTarget.style.color = '#3b82f6'; ev.currentTarget.style.borderColor = '#bfdbfe'; }}
+                                                onMouseLeave={(ev) => { ev.currentTarget.style.background = '#f8fafc'; ev.currentTarget.style.color = '#64748b'; ev.currentTarget.style.borderColor = '#e2e8f0'; }}
+                                            >
+                                                <Edit2 size={12} />
+                                            </button>
+                                        </div>
                                         <div style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 'bold' }}>{totalSpent.toLocaleString('da-DK')} <span style={{ color: '#94a3b8', fontWeight: 'normal', fontSize: '0.8rem' }}>/ {originalBudget.toLocaleString('da-DK')} kr.</span></div>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
@@ -3574,7 +3718,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             <ShieldAlert size={24} />
                             <div>
                                 <strong style={{ display: 'block', fontSize: '0.9rem' }}>Advarsel: Timebudgettet skrider!</strong>
-                                <span style={{ fontSize: '0.8rem' }}>Sagen har brugt {totalActualHours} t ud af det estimerede budget på {budgetedHours} t ({Math.round(hourBudgetRatio * 100)}%), men bygge-to-do listen er kun {progressPercent}% færdig. Kontroller eventuelt tidsregistreringerne eller pladsen.</span>
+                                <span style={{ fontSize: '0.8rem' }}>Sagen har brugt {totalConsumedHours} t ud af det estimerede budget på {budgetedHours} t ({Math.round(hourBudgetRatio * 100)}%), men bygge-to-do listen er kun {progressPercent}% færdig. Kontroller eventuelt tidsregistreringerne eller pladsen.</span>
                             </div>
                         </div>
                     )}
@@ -4156,14 +4300,6 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         >
                                             <Edit2 size={16} /> Redigér delopgaver & timer
                                         </button>
-                                        <button
-                                            onClick={openCaseSettings}
-                                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(15,23,42,0.12)'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                                            style={{ flex: '1 1 220px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', padding: '12px', borderRadius: '12px', border: '1px dashed #cbd5e1', background: '#fff', color: '#334155', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', transition: 'all .15s' }}
-                                        >
-                                            <Settings size={16} /> Afregning & afsat tid
-                                        </button>
                                         {todoList.some(s => (s.subTasks || []).some(t => subManHours(t) > 0)) && (
                                             <button
                                                 onClick={() => setShowHourCompare(true)}
@@ -4281,7 +4417,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 onToggle={handleTodoToggle}
                                 onClose={() => setShowHourCompare(false)}
                                 hourlyRate={parseFloat(selectedCase?.raw_data?.calc_data?.hourlyRate) || parseFloat(selectedCase?.raw_data?.hourly_rate) || parseFloat(carpenterProfile?.hourly_rate) || parseFloat(carpenterProfile?.raw_data?.hourly_rate) || 550}
-                                actualHours={totalActualHours}
+                                actualHours={totalConsumedHours}
                             />
                         )}
 
@@ -4291,7 +4427,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(460px, 100%)', maxHeight: '92vh', overflowY: 'auto', background: 'linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.95))', borderRadius: 24, padding: '28px 26px 22px', boxShadow: '0 30px 80px rgba(15,23,42,0.45), inset 0 1px 0 rgba(255,255,255,0.9)', border: '1px solid rgba(255,255,255,0.6)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
                                         <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(16,185,129,0.12)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Settings size={22} /></div>
-                                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Afregning & afsat tid</h2>
+                                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Sagsindstillinger</h2>
                                     </div>
 
                                     {selectedCase?.raw_data?.is_manual_case && (
@@ -4310,7 +4446,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 <div style={{ marginBottom: '16px' }}>
                                                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Timepris <span style={{ fontWeight: 400, color: '#94a3b8' }}>(ekskl. moms)</span></label>
                                                     <div style={{ position: 'relative' }}>
-                                                        <input value={csHourlyRate} onChange={(e) => setCsHourlyRate(e.target.value.replace(/[^\d.,]/g, ''))} placeholder="Fx 550" inputMode="decimal"
+                                                        <input value={csHourlyRate} onChange={(e) => setCsHourlyRate(formatThousandsInput(e.target.value))} placeholder="Fx 550" inputMode="decimal"
                                                             style={{ width: '100%', padding: '12px 70px 12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', background: '#fff', color: '#0f172a' }} />
                                                         <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>kr/time</span>
                                                     </div>
@@ -4320,7 +4456,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                 <div style={{ marginBottom: '16px' }}>
                                                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Fast pris <span style={{ fontWeight: 400, color: '#94a3b8' }}>(ekskl. moms)</span></label>
                                                     <div style={{ position: 'relative' }}>
-                                                        <input value={csFixedPrice} onChange={(e) => setCsFixedPrice(e.target.value.replace(/[^\d.,]/g, ''))} placeholder="Fx 45.000" inputMode="decimal"
+                                                        <input value={csFixedPrice} onChange={(e) => setCsFixedPrice(formatThousandsInput(e.target.value))} placeholder="Fx 45.000" inputMode="decimal"
                                                             style={{ width: '100%', padding: '12px 42px 12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', background: '#fff', color: '#0f172a' }} />
                                                         <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>kr.</span>
                                                     </div>
@@ -4336,6 +4472,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>timer</span>
                                     </div>
                                     <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Antal timer du har sat af til projektet overordnet — så du kan se "brugt / afsat". Lad stå tomt, så vises kun de brugte timer.</p>
+
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', margin: '16px 0 6px' }}>Materialebudget <span style={{ fontWeight: 400, color: '#94a3b8' }}>(ekskl. moms, valgfrit)</span></label>
+                                    <div style={{ position: 'relative' }}>
+                                        <input value={csMaterialBudget} onChange={(e) => setCsMaterialBudget(formatThousandsInput(e.target.value))} placeholder="Fx 25.000" inputMode="decimal"
+                                            style={{ width: '100%', padding: '12px 42px 12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', background: '#fff', color: '#0f172a' }} />
+                                        <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>kr.</span>
+                                    </div>
+                                    <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Budget for materialer på sagen — kan sættes og rettes når som helst. Lad stå tomt for at bruge tilbuddets tal.</p>
 
                                     <div style={{ display: 'flex', gap: 12, marginTop: '22px' }}>
                                         <button type="button" onClick={() => setShowCaseSettings(false)} disabled={savingCaseSettings}
@@ -4656,7 +4800,10 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         </div>
                                                         <div style={{ textAlign: 'center' }}>
                                                             <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Forbrug</div>
-                                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: (hasHourBudget && totalActualHours > budgetedHours) ? '#ef4444' : '#0f172a' }}>{totalActualHours} <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>{hasHourBudget ? <>/ {budgetedHours} t</> : 't'}</span></div>
+                                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: (hasHourBudget && totalConsumedHours > budgetedHours) ? '#ef4444' : '#0f172a' }}>{totalConsumedHours} <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>{hasHourBudget ? <>/ {budgetedHours} t</> : 't'}</span></div>
+                                                            {subcontractorHours > 0 && (
+                                                                <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>Eget {totalActualHours} · <span style={{ color: '#7c3aed' }}>Indlejet {subcontractorHours.toFixed(2).replace(/\.?0+$/, '')}</span></div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     )}
@@ -4671,26 +4818,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                                         </div>
                                                     </div>
 
-                                                    {!isWorker && hasHourBudget && (
+                                                    {!isWorker && hasHourBudget && totalConsumedHours > budgetedHours && (
                                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                                                         <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff1f2', color: '#e11d48', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                             <TrendingUp size={22} />
                                                         </div>
                                                         <div style={{ textAlign: 'center' }}>
                                                             <div style={{ fontSize: '0.7rem', color: '#9f1239', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overforbrug</div>
-                                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#be123c' }}>+{Math.max(0, totalActualHours - budgetedHours).toFixed(1)} <span style={{ fontSize: '0.8rem', color: '#9f1239', fontWeight: '600' }}>t</span></div>
-                                                        </div>
-                                                    </div>
-                                                    )}
-
-                                                    {!isWorker && (assignedSubs.length > 0 || subcontractorHours > 0) && (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f5f3ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            <Store size={22} />
-                                                        </div>
-                                                        <div style={{ textAlign: 'center' }}>
-                                                            <div style={{ fontSize: '0.7rem', color: '#7c3aed', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Underlev. timer</div>
-                                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#7c3aed' }}>{subcontractorHours.toFixed(2)} <span style={{ fontSize: '0.8rem', color: '#a78bfa', fontWeight: '600' }}>t</span></div>
+                                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#be123c' }}>+{(totalConsumedHours - budgetedHours).toFixed(1)} <span style={{ fontSize: '0.8rem', color: '#9f1239', fontWeight: '600' }}>t</span></div>
                                                         </div>
                                                     </div>
                                                     )}
@@ -5304,8 +5439,24 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         </div>
 
                         {/* Action Footer */}
-                        <div style={{ marginTop: '80px', paddingTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-                            <button 
+                        <div style={{ marginTop: '80px', paddingTop: '24px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                            <button
+                                onClick={() => {
+                                    setShowInvoiceModal(false);
+                                    if (syncToAccounting) {
+                                        syncToAccounting(selectedCase, invoiceActionType, invoiceLines, isReverseCharge, null, { forceManual: true });
+                                    } else {
+                                        toast.error("Faktureringsmodulet er ikke tilgængeligt her.");
+                                    }
+                                }}
+                                title="Registrér kun beløbet i sagens økonomi — intet overføres til regnskabsprogrammet"
+                                style={{ padding: '16px 24px', borderRadius: '8px', backgroundColor: '#fff', color: '#475569', fontSize: '1rem', fontWeight: 'bold', border: '1px solid #cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.2s' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.background = '#f8fafc'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#fff'; }}
+                            >
+                                <Receipt size={18} /> Registrér manuelt (faktureret udenom)
+                            </button>
+                            <button
                                 onClick={() => {
                                     setShowInvoiceModal(false);
                                     if (syncToAccounting) {
@@ -5398,23 +5549,32 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
         )}
         {/* MODAL TIL BEKRÆFTELSE AF STATUS ÆNDRING */}
         {statusToChange && createPortal(
+            (() => {
+                // Udseende + tekst pr. status: pause (orange), afslut (grøn), stop/afbryd (rød).
+                const cfg = statusToChange === 'Sæt i bero'
+                    ? { bg: '#fff7ed', ring: 'rgba(234, 88, 12, 0.1)', color: '#ea580c', hover: '#c2410c', Icon: Pause, label: 'Sæt i bero', confirm: 'Ja, sæt i bero',
+                        text: <span>Dette vil sætte opgaven på pause. Du kan altid genoptage den senere ved at ændre statussen tilbage.</span> }
+                    : statusToChange === 'Historik'
+                    ? { bg: '#ecfdf5', ring: 'rgba(16, 185, 129, 0.12)', color: '#10b981', hover: '#059669', Icon: CheckCircle, label: 'Afsluttet (Historik)', confirm: 'Ja, afslut sagen',
+                        text: <span>Sagen arkiveres som <strong style={{ color: '#0f172a' }}>afsluttet</strong> — der oprettes <strong style={{ color: '#0f172a' }}>ikke</strong> nogen faktura. Fakturerer du udenom, kan du først registrere beløbet manuelt via "Opret Faktura". Sagen kan altid genoptages fra Historik.</span> }
+                    : { bg: '#fef2f2', ring: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', hover: '#dc2626', Icon: AlertTriangle, label: statusToChange === 'Afbrudt Sag' ? 'Afbrudt Sag (Konkurs / Aflyst)' : statusToChange, confirm: 'Ja, skift status',
+                        text: <span>Dette vil <strong style={{ color: '#0f172a' }}>stoppe al produktion</strong> øjeblikkeligt og fjerne sagen fra svendenes telefoner, så de ikke længere kan registrere timer på den.</span> };
+                const { Icon } = cfg;
+                return (
             <div className="dashboard-modal-overlay delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
                 <div className="dashboard-modal-panel" style={{ width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '24px', padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
-                    <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: statusToChange === 'Sæt i bero' ? '#fff7ed' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: statusToChange === 'Sæt i bero' ? '0 0 0 8px rgba(234, 88, 12, 0.1)' : '0 0 0 8px rgba(239, 68, 68, 0.1)' }}>
-                        {statusToChange === 'Sæt i bero' ? <Pause size={36} color="#ea580c" /> : <AlertTriangle size={36} color="#ef4444" />}
+                    <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: `0 0 0 8px ${cfg.ring}` }}>
+                        <Icon size={36} color={cfg.color} />
                     </div>
                     <h3 style={{ margin: '0 0 12px 0', fontSize: '1.4rem', color: '#0f172a', fontWeight: '800' }}>
                         Er du helt sikker?
                     </h3>
                     <p style={{ margin: '0 0 24px 0', color: '#475569', fontSize: '1rem', lineHeight: '1.5' }}>
-                        Du er ved at ændre statussen til <strong style={{ color: statusToChange === 'Sæt i bero' ? '#ea580c' : '#ef4444' }}>{statusToChange === 'Afbrudt Sag' ? 'Afbrudt Sag (Konkurs / Aflyst)' : statusToChange}</strong>.<br/><br/>
-                        {statusToChange === 'Afbrudt Sag' || statusToChange === 'Udgået opgave' 
-                            ? <span>Dette vil <strong style={{ color: '#0f172a' }}>stoppe al produktion</strong> øjeblikkeligt og fjerne sagen fra svendenes telefoner, så de ikke længere kan registrere timer på den.</span>
-                            : <span>Dette vil sætte opgaven på pause. Du kan altid genoptage den senere ved at ændre statussen tilbage.</span>
-                        }
+                        Du er ved at ændre statussen til <strong style={{ color: cfg.color }}>{cfg.label}</strong>.<br/><br/>
+                        {cfg.text}
                     </p>
                     <div style={{ display: 'flex', gap: '16px', width: '100%', marginTop: '8px' }}>
-                        <button 
+                        <button
                             onClick={() => setStatusToChange(null)}
                             style={{ flex: 1, padding: '14px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '14px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
                             onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
@@ -5422,20 +5582,22 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         >
                             Nej, annuller
                         </button>
-                        <button 
+                        <button
                             onClick={() => {
                                 handleStatusChange(statusToChange, true);
                                 setStatusToChange(null);
                             }}
-                            style={{ flex: 1, padding: '14px', background: statusToChange === 'Sæt i bero' ? '#ea580c' : '#ef4444', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: statusToChange === 'Sæt i bero' ? '0 4px 6px rgba(234, 88, 12, 0.2)' : '0 4px 6px rgba(239, 68, 68, 0.2)' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = statusToChange === 'Sæt i bero' ? '#c2410c' : '#dc2626'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = statusToChange === 'Sæt i bero' ? '0 6px 12px rgba(234, 88, 12, 0.3)' : '0 6px 12px rgba(239, 68, 68, 0.3)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = statusToChange === 'Sæt i bero' ? '#ea580c' : '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = statusToChange === 'Sæt i bero' ? '0 4px 6px rgba(234, 88, 12, 0.2)' : '0 4px 6px rgba(239, 68, 68, 0.2)'; }}
+                            style={{ flex: 1, padding: '14px', background: cfg.color, color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: `0 4px 6px ${cfg.ring}` }}
+                            onMouseEnter={e => { e.currentTarget.style.background = cfg.hover; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = cfg.color; e.currentTarget.style.transform = 'translateY(0)'; }}
                         >
-                            Ja, skift status
+                            {cfg.confirm}
                         </button>
                     </div>
                 </div>
-            </div>,
+            </div>
+                );
+            })(),
             document.body
         )}
 

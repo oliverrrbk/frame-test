@@ -47,7 +47,10 @@ export default function ManualMaterialsView({ lead, profile, onUpdate, onOpenBui
     const [saving, setSaving] = useState(false);
     const [bulkBusy, setBulkBusy] = useState(false);
 
-    const budget = Number(rd.calc_data?.materialCostBase ?? rd.manual_quote?.materialCost ?? 0);
+    // Manuelt sat budget (raw_data.material_budget, sagsindstillinger) vinder over tilbuddets tal.
+    const budget = (rd.material_budget !== undefined && rd.material_budget !== null && rd.material_budget !== '')
+        ? (Number(rd.material_budget) || 0)
+        : Number(rd.calc_data?.materialCostBase ?? rd.manual_quote?.materialCost ?? 0);
 
     // Materialeposter = bilag med kategori Materialer.
     const materialInvoices = (rd.supplier_invoices || []).filter(inv => inv.category === 'Materialer' || !inv.category);

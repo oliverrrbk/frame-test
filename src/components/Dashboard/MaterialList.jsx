@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck, Upload, FileText, ExternalLink, Calculator, Send, AlertTriangle, CheckCircle, Package, ArrowRight, Printer, Info, CreditCard, Minus, MapPin, Wallet, ShoppingCart, TrendingDown, TrendingUp, Calendar } from 'lucide-react';
+import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck, Upload, FileText, ExternalLink, Calculator, Send, AlertTriangle, CheckCircle, Package, ArrowRight, Printer, Info, CreditCard, Minus, MapPin, Wallet, ShoppingCart, TrendingDown, TrendingUp, Calendar, X, Receipt, CheckCircle2 } from 'lucide-react';
 import { generateMaterialList } from '../../utils/materialGenerator';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -485,11 +485,15 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
         toast.success('Email-skabelon åbnet!');
     };
 
-    // Budget Calculations
+    // Budget Calculations — manuelt sat budget (raw_data.material_budget, sagsindstillinger)
+    // vinder over tilbuddets tal, så tallet matcher sags-overblikket.
     const defaultMarkup = profile?.settings?.material_markup || 1.15;
-    const originalBudget = lead.raw_data?.calc_data?.materialCostBase !== undefined 
-        ? parseFloat(lead.raw_data.calc_data.materialCostBase)
-        : Math.round((parseFloat(lead.raw_data?.calc_data?.materialCost) || 0) / defaultMarkup);
+    const manualBudgetOverride = lead.raw_data?.material_budget;
+    const originalBudget = (manualBudgetOverride !== undefined && manualBudgetOverride !== null && manualBudgetOverride !== '')
+        ? (parseFloat(manualBudgetOverride) || 0)
+        : (lead.raw_data?.calc_data?.materialCostBase !== undefined
+            ? parseFloat(lead.raw_data.calc_data.materialCostBase)
+            : Math.round((parseFloat(lead.raw_data?.calc_data?.materialCost) || 0) / defaultMarkup));
     const supplierInvoices = lead.raw_data?.supplier_invoices || [];
     const totalSpent = supplierInvoices
         .filter(inv => inv.category === 'Materialer' || !inv.category)
@@ -503,6 +507,241 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
     const hasPhaseSections = materials.some(m => m.section && !sectionsList.includes(m.section));
     const isSplitByPhase = materialListsMeta.length > 1;
     const canManageLists = !isLead && profile?.role !== 'worker' && profile?.role !== 'apprentice';
+
+    // ---- Materialeliste som bilag (PDF + beløb) ----
+    // Upload af en færdig liste (fx fra Davidsen) sker som et RIGTIGT bilag i
+    // supplier_invoices med kategori 'Materialer': beløbet tæller i FORBRUGT/BUDGET,
+    // filen ligger også under Bilag-fanen, og posten har indkøbs-/leveringsstatus —
+    // præcis som "Tilføj materiale" på de manuelle sager og "Nyt bilag" under Bilag.
+    const MAT_STATUSES = ['Ikke bestilt', 'Bestilt', 'Leveret'];
+    const MAT_STATUS_STYLE = {
+        'Ikke bestilt': { color: '#64748b', bg: '#f1f5f9', dot: '#cbd5e1' },
+        'Bestilt': { color: '#2563eb', bg: '#eff6ff', dot: '#3b82f6' },
+        'Leveret': { color: '#166534', bg: '#f0fdf4', dot: '#22c55e' }
+    };
+    const formatAmountInput = (raw) => {
+        let val = String(raw).replace(/[^0-9,]/g, '');
+        let parts = val.split(',');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return parts.slice(0, 2).join(',');
+    };
+    const parseAmount = (formatted) => parseFloat(String(formatted).replace(/\./g, '').replace(',', '.')) || 0;
+    const trackedMaterialInvoices = supplierInvoices.filter(inv => (inv.category === 'Materialer' || !inv.category) && inv.delivery_status);
+    const [showAddMat, setShowAddMat] = useState(false);
+    const [matForm, setMatForm] = useState({ name: '', amount: '', file: null, file_name: '' });
+    const [savingMat, setSavingMat] = useState(false);
+    // Fetch-fresh-merge på KUN supplier_invoices, så samtidige ændringer ikke overskrives.
+    const persistInvoices = async (nextBuilder) => {
+        const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+        const cur = latest?.raw_data || lead.raw_data || {};
+        const merged = { ...cur, supplier_invoices: nextBuilder(cur.supplier_invoices || []) };
+        const { error } = await supabase.from('leads').update({ raw_data: merged }).eq('id', lead.id);
+        if (error) throw error;
+        onUpdate && onUpdate({ ...lead, raw_data: merged });
+    };
+    const handleSaveMatInvoice = async () => {
+        if (!matForm.name.trim()) { toast.error('Giv materialelisten et navn'); return; }
+        setSavingMat(true);
+        try {
+            let filePath = null, fileName = null;
+            if (matForm.file) {
+                const ext = (matForm.file.name.split('.').pop() || 'pdf').toLowerCase();
+                const fn = `bilag_${lead.id}_${Date.now()}.${ext}`;
+                const { error } = await supabase.storage.from('bilag').upload(fn, matForm.file, { cacheControl: '3600', upsert: false });
+                if (error) throw error;
+                filePath = fn;
+                fileName = matForm.file.name;
+            }
+            const newInv = {
+                id: `supp_${Date.now()}`,
+                name: matForm.name.trim(),
+                description: matForm.name.trim(),
+                amount: parseAmount(matForm.amount),
+                date: new Date().toISOString(),
+                uploaded_by: profile?.owner_name || profile?.email || 'Ukendt',
+                status: 'Godkendt',
+                category: 'Materialer',
+                file_path: filePath,
+                file_name: fileName,
+                material_list_id: null,
+                delivery_status: 'Ikke bestilt'
+            };
+            await persistInvoices(cur => [...cur, newInv]);
+            setMatForm({ name: '', amount: '', file: null, file_name: '' });
+            setShowAddMat(false);
+            toast.success('Materialeliste tilføjet — tæller i budgettet og ligger under Bilag');
+        } catch (e) {
+            toast.error(friendlyError(e, 'Kunne ikke gemme. Prøv igen.'));
+        } finally {
+            setSavingMat(false);
+        }
+    };
+    const cycleMatStatus = async (inv) => {
+        const nextStatus = MAT_STATUSES[(MAT_STATUSES.indexOf(inv.delivery_status || 'Ikke bestilt') + 1) % MAT_STATUSES.length];
+        try { await persistInvoices(cur => cur.map(i => i.id === inv.id ? { ...i, delivery_status: nextStatus } : i)); }
+        catch (e) { toast.error(friendlyError(e, 'Kunne ikke skifte status.')); }
+    };
+    const removeMatInvoice = async (inv) => {
+        try { await persistInvoices(cur => cur.filter(i => i.id !== inv.id)); toast.success('Materialepost fjernet'); }
+        catch (e) { toast.error(friendlyError(e, 'Kunne ikke fjerne posten.')); }
+    };
+    const openMatInvoice = async (inv) => {
+        if (inv.file_path) {
+            const newWindow = window.open('', '_blank');
+            const { data, error } = await supabase.storage.from('bilag').createSignedUrl(inv.file_path, 3600);
+            if (error || !data?.signedUrl) { if (newWindow) newWindow.close(); toast.error('Kunne ikke åbne filen'); return; }
+            if (newWindow) newWindow.location.href = data.signedUrl;
+            else window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+        } else if (inv.file_url || inv.file_data) {
+            window.open(inv.file_url || inv.file_data, '_blank', 'noopener,noreferrer');
+        } else {
+            toast('Ingen fil vedhæftet', { icon: '📄' });
+        }
+    };
+
+    // ---- Legacy: gamle PDF-uploads uden beløb (raw_data.material_pdfs) — bevares så intet forsvinder ----
+    const uploadedMaterialPdfs = lead.raw_data?.material_pdfs || [];
+    const removeMaterialPdf = async (id) => {
+        try {
+            const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const cur = latest?.raw_data || lead.raw_data || {};
+            const merged = { ...cur, material_pdfs: (cur.material_pdfs || []).filter(p => p.id !== id) };
+            const { error } = await supabase.from('leads').update({ raw_data: merged }).eq('id', lead.id);
+            if (error) throw error;
+            onUpdate && onUpdate({ ...lead, raw_data: merged });
+            toast.success('PDF fjernet');
+        } catch (e) {
+            toast.error(friendlyError(e, 'Kunne ikke fjerne PDF\'en.'));
+        }
+    };
+    const uploadedPdfSection = uploadedMaterialPdfs.length > 0 && (
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', background: '#fff', padding: '18px 20px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileText size={18} /></div>
+                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.98rem' }}>Uploadede materialelister (PDF)</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {uploadedMaterialPdfs.map(p => (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <FileText size={18} color="#dc2626" style={{ flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name || 'Materialeliste'}</div>
+                        <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '9px', background: '#eff6ff', color: '#2563eb', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none' }}><ExternalLink size={14} /> Åbn</a>
+                        {canManageLists && (
+                            <button onClick={() => removeMaterialPdf(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: '4px' }} onMouseEnter={e => e.currentTarget.style.color = '#ef4444'} onMouseLeave={e => e.currentTarget.style.color = '#cbd5e1'}><Trash2 size={16} /></button>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    // Materialeposter (bilag m. kategori Materialer + leveringsstatus): navn, beløb,
+    // status-cyklus, åbn fil, slet. Beløbene ER forbruget i FORBRUGT/BUDGET ovenfor.
+    const matRowsSection = trackedMaterialInvoices.length > 0 && (
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', background: '#fff', padding: '18px 20px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Receipt size={18} /></div>
+                <div>
+                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.98rem' }}>Materialelister & indkøb (bilag)</div>
+                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Beløbene tæller i forbruget — posterne ligger også under Bilag</div>
+                </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {trackedMaterialInvoices.map(inv => {
+                    const st = MAT_STATUS_STYLE[inv.delivery_status] || MAT_STATUS_STYLE['Ikke bestilt'];
+                    return (
+                        <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
+                            <Receipt size={18} color="#2563eb" style={{ flexShrink: 0 }} />
+                            <div style={{ flex: 1, minWidth: '140px' }}>
+                                <div style={{ fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis' }}>{inv.name || inv.description || 'Materiale'}</div>
+                                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{inv.amount ? `${(Number(inv.amount) || 0).toLocaleString('da-DK')} kr. ekskl. moms` : 'Beløb ikke angivet'}</div>
+                            </div>
+                            <button type="button" onClick={() => canManageLists && cycleMatStatus(inv)} title="Skift status (Ikke bestilt → Bestilt → Leveret)"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '999px', border: 'none', cursor: canManageLists ? 'pointer' : 'default', fontWeight: 700, fontSize: '0.82rem', color: st.color, background: st.bg }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: st.dot }} />
+                                {inv.delivery_status || 'Ikke bestilt'}
+                            </button>
+                            {(inv.file_path || inv.file_url || inv.file_data) && (
+                                <button onClick={() => openMatInvoice(inv)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer' }}>
+                                    <ExternalLink size={15} /> Åbn
+                                </button>
+                            )}
+                            {canManageLists && (
+                                <button onClick={() => removeMatInvoice(inv)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: '4px' }} onMouseEnter={e => e.currentTarget.style.color = '#ef4444'} onMouseLeave={e => e.currentTarget.style.color = '#cbd5e1'}><Trash2 size={16} /></button>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+
+    // Modal: Tilføj materialeliste som bilag — samme mønster som "Nyt bilag" under Bilag,
+    // blot med kategorien låst til Materialer.
+    const addMaterialModal = showAddMat && createPortal(
+        <div onClick={() => !savingMat && setShowAddMat(false)} style={{ position: 'fixed', inset: 0, zIndex: 100001, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: '#fff', width: '100%', maxWidth: '480px', maxHeight: '92vh', overflowY: 'auto', borderRadius: '24px', boxShadow: '0 24px 60px -12px rgba(15,23,42,0.4)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '24px 24px 0' }}>
+                    <div style={{ width: '46px', height: '46px', borderRadius: '13px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Receipt size={23} color="#2563eb" /></div>
+                    <div style={{ flex: 1 }}>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Tilføj materialeliste</h3>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Vedhæft PDF'en, giv den et navn og et beløb</p>
+                    </div>
+                    <button onClick={() => !savingMat && setShowAddMat(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', flexShrink: 0 }}><X size={18} /></button>
+                </div>
+                <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <label style={{ display: 'block', cursor: 'pointer' }}>
+                        <input type="file" accept="application/pdf,image/*" style={{ display: 'none' }}
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) setMatForm({ ...matForm, file: f, file_name: f.name }); e.target.value = ''; }} />
+                        <div style={{ border: `2px dashed ${matForm.file ? '#86efac' : '#cbd5e1'}`, background: matForm.file ? '#f0fdf4' : '#f8fafc', borderRadius: '14px', padding: '22px', textAlign: 'center', transition: 'all 0.2s' }}>
+                            {matForm.file ? (
+                                <>
+                                    <CheckCircle2 size={28} color="#22c55e" style={{ margin: '0 auto' }} />
+                                    <div style={{ marginTop: '8px', fontWeight: 700, color: '#0f172a', fontSize: '0.9rem', wordBreak: 'break-all' }}>{matForm.file_name}</div>
+                                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>Tryk for at skifte fil</div>
+                                </>
+                            ) : (
+                                <>
+                                    <Upload size={28} color="#94a3b8" style={{ margin: '0 auto' }} />
+                                    <div style={{ marginTop: '8px', fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>Vælg PDF eller billede</div>
+                                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>Valgfrit — fx listen fra Davidsen</div>
+                                </>
+                            )}
+                        </div>
+                    </label>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Navn</label>
+                        <input autoFocus value={matForm.name} onChange={(e) => setMatForm({ ...matForm, name: e.target.value })} placeholder="fx Materialeliste – Davidsen"
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '13px 14px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none' }}
+                            onFocus={e => e.target.style.borderColor = '#3b82f6'} onBlur={e => e.target.style.borderColor = '#cbd5e1'} />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Kategori</label>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontWeight: 700, fontSize: '0.9rem' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }} /> Materialer
+                        </div>
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Beløb <span style={{ textTransform: 'none', fontWeight: 500, color: '#94a3b8' }}>(ekskl. moms — tæller i materialebudgettet)</span></label>
+                        <div style={{ position: 'relative' }}>
+                            <input inputMode="numeric" value={matForm.amount} onChange={(e) => setMatForm({ ...matForm, amount: formatAmountInput(e.target.value) })} placeholder="0"
+                                style={{ width: '100%', boxSizing: 'border-box', padding: '13px 48px 13px 14px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none' }}
+                                onFocus={e => e.target.style.borderColor = '#3b82f6'} onBlur={e => e.target.style.borderColor = '#cbd5e1'} />
+                            <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontWeight: 700 }}>kr.</span>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                        <button onClick={() => setShowAddMat(false)} disabled={savingMat} style={{ flex: '0 0 auto', padding: '14px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
+                        <button onClick={handleSaveMatInvoice} disabled={savingMat || !matForm.name.trim()}
+                            style={{ flex: 1, padding: '14px', borderRadius: '12px', border: 'none', background: matForm.name.trim() ? '#0f172a' : '#cbd5e1', color: '#fff', fontWeight: 700, fontSize: '1rem', cursor: matForm.name.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                            {savingMat ? <Loader2 size={18} className="spin" /> : <Check size={18} />} Gem materialeliste
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
 
     // ---- SIMPEL VISNING ----
     // Bruges i forespørgsel + sag/ordrestyring: ingen per-vare-redigering. Man ser status
@@ -533,14 +772,25 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                             <Package size={28} />
                         </div>
                         <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>Du har ikke oprettet en materialliste endnu</div>
-                        <div style={{ fontSize: '0.9rem', color: '#64748b', maxWidth: '380px', lineHeight: 1.55 }}>Byg listen op med de materialer, opgaven kræver — og send den til leverandøren for en pris.</div>
-                        {onOpenBuilder && (
-                            <button className="ml-empty-btn" onClick={(e) => { e.stopPropagation(); onOpenBuilder(lead, { listId: 'default', listName: null }); }}
-                                style={{ marginTop: '12px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 24px', borderRadius: '13px', border: 'none', background: 'linear-gradient(145deg,#2563eb,#1d4ed8)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(37,99,235,0.28)' }}>
-                                <PlusCircle size={18} /> Opret materialliste
-                            </button>
-                        )}
+                        <div style={{ fontSize: '0.9rem', color: '#64748b', maxWidth: '380px', lineHeight: 1.55 }}>Byg listen op med de materialer, opgaven kræver — eller upload en PDF, hvis du allerede har listen liggende.</div>
+                        <div style={{ marginTop: '12px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                            {onOpenBuilder && (
+                                <button className="ml-empty-btn" onClick={(e) => { e.stopPropagation(); onOpenBuilder(lead, { listId: 'default', listName: null }); }}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 24px', borderRadius: '13px', border: 'none', background: 'linear-gradient(145deg,#2563eb,#1d4ed8)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(37,99,235,0.28)' }}>
+                                    <PlusCircle size={18} /> Opret materialliste
+                                </button>
+                            )}
+                            {canManageLists && (
+                                <button className="ml-empty-btn" onClick={(e) => { e.stopPropagation(); setShowAddMat(true); }}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 24px', borderRadius: '13px', border: '2px dashed #cbd5e1', background: '#fff', color: '#475569', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer' }}>
+                                    <Upload size={18} /> Upload PDF som materialeliste
+                                </button>
+                            )}
+                        </div>
                     </div>
+                    {matRowsSection}
+                    {uploadedPdfSection}
+                    {addMaterialModal}
                     <style dangerouslySetInnerHTML={{__html: `
                         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                         @keyframes mlFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
@@ -612,16 +862,34 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                     );
                 })}
 
-                {/* Lav ny materialeliste (efterbestilling) — kun på en sag, ikke på forespørgsel */}
-                {onOpenBuilder && !isLead && (
-                    <button
-                        onClick={() => onOpenBuilder(lead, { listId: `list_${Date.now()}`, listName: `Efterbestilling ${extraListCount + 1}` })}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#fff', border: '2px dashed #cbd5e1', color: '#475569', padding: '14px 18px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', width: '100%', fontSize: '0.95rem' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.color = '#1d4ed8'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569'; }}
-                    >
-                        <PlusCircle size={18} /> Lav ny materialeliste (efterbestilling)
-                    </button>
+                {/* Materialeposter (bilag) + gamle PDF-uploads */}
+                {!isLead && matRowsSection}
+                {!isLead && uploadedPdfSection}
+
+                {/* Lav ny materialeliste (efterbestilling) / tilføj færdig PDF — kun på en sag */}
+                {!isLead && (
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        {onOpenBuilder && (
+                            <button
+                                onClick={() => onOpenBuilder(lead, { listId: `list_${Date.now()}`, listName: `Efterbestilling ${extraListCount + 1}` })}
+                                style={{ flex: '1 1 260px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#fff', border: '2px dashed #cbd5e1', color: '#475569', padding: '14px 18px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.color = '#1d4ed8'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569'; }}
+                            >
+                                <PlusCircle size={18} /> Lav ny materialeliste (efterbestilling)
+                            </button>
+                        )}
+                        {canManageLists && (
+                            <button
+                                onClick={() => setShowAddMat(true)}
+                                style={{ flex: '1 1 260px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#fff', border: '2px dashed #cbd5e1', color: '#475569', padding: '14px 18px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.color = '#6d28d9'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569'; }}
+                            >
+                                <Upload size={18} /> Tilføj materialeliste (PDF + beløb)
+                            </button>
+                        )}
+                    </div>
                 )}
 
                 {/* Budget (kun i sagen, ikke på forespørgsel) */}
@@ -665,6 +933,8 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                     </div>,
                     document.body
                 )}
+
+                {addMaterialModal}
 
                 <style dangerouslySetInnerHTML={{__html: `@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}} />
             </div>

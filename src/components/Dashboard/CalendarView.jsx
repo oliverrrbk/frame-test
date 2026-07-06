@@ -131,6 +131,16 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [showEventModal, setShowEventModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [popoverLead, setPopoverLead] = useState(null);
+    // Vælg-ekstra-dage-tilstand: sagen der får ekstra dage ved klik på kalenderdage (desktop).
+    const [addDayLead, setAddDayLead] = useState(null);
+    // Mobil: bottom-sheet til at tilføje/fjerne ekstra dage med datovælger.
+    const [extraDaySheet, setExtraDaySheet] = useState(null); // { leadId, dateInput }
+    useEffect(() => {
+        if (!addDayLead) return;
+        const onKey = (e) => { if (e.key === 'Escape') setAddDayLead(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [addDayLead]);
     const [collisionWarning, setCollisionWarning] = useState(null); // { lead, day, daysDuration }
 
     // Sag-planlægning fra kalenderen (additivt — ny funktion)
@@ -161,6 +171,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
 
     const [searchTerm, setSearchTerm] = useState('');
     const [hoverTooltip, setHoverTooltip] = useState(null); // { x, y, content }
+    const [registeredPopover, setRegisteredPopover] = useState(null); // { x, y, registered } — klikbar liste over dagens timer pr. sag (virker også på touch)
 
     // Aftalen der vises/redigeres lige nu — bruges til rettigheds-tjek i modalen.
     const editingEvent = eventFormData.id ? (carpenterProfile?.raw_data?.calendar_events || []).find(ev => ev.id === eventFormData.id) : null;
@@ -396,6 +407,15 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         }
     };
 
+    // Ekstra arbejdsdage: enkeltdage ('YYYY-MM-DD', lokal tid) OVENI sagens
+    // start/slut-interval, så en sag kan planlægges fx mandag + fredag.
+    const leadExtraDays = (lead) => Array.isArray(lead?.raw_data?.extra_work_days) ? lead.raw_data.extra_work_days : [];
+    const isExtraDayFor = (lead, dateStr) => leadExtraDays(lead).includes(dateStr);
+    const toLocalDateStr = (date) => {
+        const d = new Date(date);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
     // Tjek overlaps for en given dag
     const getItemsForDay = (checkDate, { ignoreSearch = false } = {}) => {
         checkDate.setHours(0,0,0,0);
@@ -409,6 +429,9 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         const isHoliday = getDanishHolidays(checkDate.getFullYear()).has(dateStr);
 
         let leads = scheduledLeads.filter(lead => {
+            // Ekstra arbejdsdage (ikke-sammenhængende planlægning): en eksplicit tilføjet dag
+            // vises altid — også weekend/helligdag — den er et bevidst valg og slår flagene.
+            if (isExtraDayFor(lead, dateStr)) return true;
             const start = new Date(lead.raw_data.start_date); start.setHours(0,0,0,0);
             // Manuelt oprettede sager (uden tilbud) har kun start_date, ingen end_date.
             // Fald tilbage til start_date, så en endagssag stadig placeres på sin dag
@@ -788,11 +811,13 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         if (draggedEvent) handleDropEvent(targetDateObj);
     };
 
-    const confirmScheduleLead = async (lead, start, end, allowWeekends, allowHolidays, assignedWorkers) => {
+    const confirmScheduleLead = async (lead, start, end, allowWeekends, allowHolidays, assignedWorkers, extraDays) => {
         // Felter der altid gemmes ved planlægning. Holdet (assigned_workers) flettes kun
         // ind hvis det er angivet, så vi ikke nulstiller en eksisterende tildeling.
+        // Ekstra dage skrives kun når de eksplicit er givet (modalen) — drag-drop rører dem ikke.
         const scheduleFields = { start_date: start.toISOString(), end_date: end.toISOString(), include_weekends: allowWeekends, include_holidays: allowHolidays };
         if (Array.isArray(assignedWorkers)) scheduleFields.assigned_workers = assignedWorkers;
+        if (Array.isArray(extraDays)) scheduleFields.extra_work_days = extraDays;
 
         const updatedLead = { ...lead, raw_data: { ...lead.raw_data, ...scheduleFields } };
         setLeadsData(prev => prev.map(l => l.id === lead?.id ? updatedLead : l));
@@ -858,18 +883,40 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         }
         return false;
     };
+    // Arbejdsdagene i hovedperioden som datostrenge (samme skip-logik som endFromDuration) —
+    // bruges af mini-kalenderen i planlægnings-modalen til at vise/beskytte perioden.
+    const mainRangeDaysSet = (startStr, days, allowWeekends = false, allowHolidays = false) => {
+        const set = new Set();
+        const current = new Date(startStr + 'T00:00:00');
+        let added = 0;
+        let guard = 0;
+        while (added < Math.max(1, days) && guard < 400) {
+            const isWknd = current.getDay() === 0 || current.getDay() === 6;
+            const ds = toLocalDateStr(current);
+            const isHol = getDanishHolidays(current.getFullYear()).has(ds);
+            if (!((isWknd && !allowWeekends) || (isHol && !allowHolidays))) { set.add(ds); added++; }
+            current.setDate(current.getDate() + 1);
+            guard++;
+        }
+        return set;
+    };
     const openScheduleConfirm = (lead, startStr, days, mode = 'new') => {
         const allowWeekends = lead?.raw_data?.include_weekends === true;
         const allowHolidays = lead?.raw_data?.include_holidays === true;
         const assignedWorkers = (lead?.raw_data?.assigned_workers || []).map(String);
-        setScheduleConfirm({ lead, startDate: startStr, durationDays: Math.max(1, days), mode, allowWeekends, allowHolidays, assignedWorkers });
+        // Ekstra dage redigeres lokalt i modalen og gemmes først ved "Gem/Planlæg".
+        const extraDays = leadExtraDays(leadsData.find(l => l.id === lead?.id) || lead);
+        setScheduleConfirm({ lead, startDate: startStr, durationDays: Math.max(1, days), mode, allowWeekends, allowHolidays, assignedWorkers, extraDays, calMonth: startStr.slice(0, 7), extraInput: '' });
     };
     const saveSchedule = () => {
         if (!scheduleConfirm) return;
-        const { lead, startDate, durationDays, allowWeekends, allowHolidays, assignedWorkers } = scheduleConfirm;
+        const { lead, startDate, durationDays, allowWeekends, allowHolidays, assignedWorkers, extraDays } = scheduleConfirm;
         const start = new Date(startDate + 'T00:00:00');
         const end = endFromDuration(startDate, durationDays, allowWeekends, allowHolidays);
-        confirmScheduleLead(lead, start, end, allowWeekends, allowHolidays, assignedWorkers);
+        // Ekstra dage der falder på hovedperiodens arbejdsdage er overflødige — filtrér dem fra.
+        const mainDays = mainRangeDaysSet(startDate, durationDays, allowWeekends, allowHolidays);
+        const cleanExtra = [...new Set((extraDays || []).filter(d => !mainDays.has(d)))].sort();
+        confirmScheduleLead(lead, start, end, allowWeekends, allowHolidays, assignedWorkers, cleanExtra);
         setScheduleConfirm(null);
         setShowCasePicker(false);
     };
@@ -877,6 +924,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
         const localRaw = { ...lead.raw_data };
         delete localRaw.start_date;
         delete localRaw.end_date;
+        delete localRaw.extra_work_days;
         setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...lead, raw_data: localRaw } : l));
         setCaseActionSheet(null);
         try {
@@ -885,6 +933,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             const merged = { ...(latest?.raw_data || lead.raw_data || {}) };
             delete merged.start_date;
             delete merged.end_date;
+            delete merged.extra_work_days;
             await supabase.from('leads').update({ raw_data: merged }).eq('id', lead.id);
             toast.success('Sag fjernet fra kalender');
         } catch (error) {
@@ -895,21 +944,89 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const removeLeadFromCalendar = async () => {
         if (!popoverLead) return;
         const leadId = popoverLead?.lead?.id;
-        const localRaw = { ...popoverLead.raw_data };
+        const localRaw = { ...(popoverLead.lead?.raw_data || {}) };
         delete localRaw.start_date;
         delete localRaw.end_date;
+        delete localRaw.extra_work_days;
         setLeadsData(prev => prev.map(l => l.id === leadId ? { ...popoverLead.lead, raw_data: localRaw } : l));
         setPopoverLead(null);
         try {
             // Genhent frisk raw_data og fjern KUN datoerne, så intet andet overskrives.
             const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', leadId).single();
-            const merged = { ...(latest?.raw_data || popoverLead.raw_data || {}) };
+            const merged = { ...(latest?.raw_data || popoverLead.lead?.raw_data || {}) };
             delete merged.start_date;
             delete merged.end_date;
+            delete merged.extra_work_days;
             await supabase.from('leads').update({ raw_data: merged }).eq('id', leadId);
             toast.success('Sag fjernet fra kalender');
         } catch (error) {
             toast.error('Fejl');
+        }
+    };
+
+    // ---- Ekstra arbejdsdage (ikke-sammenhængende planlægning) ----
+    const isDayInMainRange = (lead, dateStr) => {
+        if (!lead?.raw_data?.start_date) return false;
+        const d = new Date(dateStr + 'T00:00:00');
+        const start = new Date(lead.raw_data.start_date); start.setHours(0, 0, 0, 0);
+        const end = new Date(lead.raw_data.end_date || lead.raw_data.start_date); end.setHours(23, 59, 59, 999);
+        return d >= start && d <= end;
+    };
+
+    const addExtraDayToLead = async (lead, dateStr) => {
+        if (!isManager || !lead?.id) return false;
+        if (isDayInMainRange(lead, dateStr)) {
+            toast('Dagen ligger allerede i sagens planlægning.', { icon: 'ℹ️' });
+            return false;
+        }
+        const nextDays = [...new Set([...leadExtraDays(lead), dateStr])].sort();
+        const updatedLead = { ...lead, raw_data: { ...lead.raw_data, extra_work_days: nextDays } };
+        setLeadsData(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
+        try {
+            // Genhent frisk raw_data og flet KUN extra_work_days ind (samme mønster som planlægning).
+            const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const latestRaw = latest?.raw_data || lead.raw_data || {};
+            const mergedDays = [...new Set([...(Array.isArray(latestRaw.extra_work_days) ? latestRaw.extra_work_days : []), dateStr])].sort();
+            await supabase.from('leads').update({ raw_data: { ...latestRaw, extra_work_days: mergedDays } }).eq('id', lead.id);
+            // Blød kollisions-advarsel: er der andet på dagen, siger vi det — men blokerer ikke.
+            const items = getItemsForDay(new Date(dateStr + 'T00:00:00'), { ignoreSearch: true });
+            const clash = items.leads.some(l => l.id !== lead.id) || items.absences.length > 0;
+            toast.success(`Ekstra dag tilføjet: ${format(new Date(dateStr + 'T00:00:00'), 'EEE d. MMM', { locale: da })}${clash ? ' (obs: der ligger allerede noget på dagen)' : ''}`);
+            return true;
+        } catch (error) {
+            toast.error('Kunne ikke tilføje dagen. Prøv igen.');
+            return false;
+        }
+    };
+
+    const removeExtraDayFromLead = async (lead, dateStr) => {
+        if (!isManager || !lead?.id) return;
+        const nextDays = leadExtraDays(lead).filter(d => d !== dateStr);
+        const localRaw = { ...lead.raw_data };
+        if (nextDays.length > 0) localRaw.extra_work_days = nextDays; else delete localRaw.extra_work_days;
+        setLeadsData(prev => prev.map(l => l.id === lead.id ? { ...lead, raw_data: localRaw } : l));
+        try {
+            const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
+            const latestRaw = latest?.raw_data || lead.raw_data || {};
+            const mergedDays = (Array.isArray(latestRaw.extra_work_days) ? latestRaw.extra_work_days : []).filter(d => d !== dateStr);
+            const merged = { ...latestRaw };
+            if (mergedDays.length > 0) merged.extra_work_days = mergedDays; else delete merged.extra_work_days;
+            await supabase.from('leads').update({ raw_data: merged }).eq('id', lead.id);
+            toast.success('Dag fjernet fra sagen');
+        } catch (error) {
+            toast.error('Kunne ikke fjerne dagen. Prøv igen.');
+        }
+    };
+
+    // Klik på en dag i vælg-ekstra-dage-tilstand: toggle (fejlklik retter sig selv).
+    const handleExtraDayClick = (checkDate) => {
+        if (!addDayLead) return;
+        const lead = leadsData.find(l => l.id === addDayLead.id) || addDayLead;
+        const dateStr = toLocalDateStr(checkDate);
+        if (isExtraDayFor(lead, dateStr)) {
+            removeExtraDayFromLead(lead, dateStr);
+        } else {
+            addExtraDayToLead(lead, dateStr);
         }
     };
 
@@ -1589,27 +1706,29 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         const checkDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
                         const isToday = new Date().getDate() === day && new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
                         const { isHoliday, leads, absences, events, registered } = getItemsForDay(checkDate);
+                        const cellDateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
                         return (
                             <div
                                 key={day}
-                                data-cal-day={`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
-                                onClick={() => openAddChooser(checkDate)}
-                                onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
-                                onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = isToday ? '#3b82f6' : '#e2e8f0'; }}
+                                data-cal-day={cellDateStr}
+                                onClick={() => addDayLead ? handleExtraDayClick(checkDate) : openAddChooser(checkDate)}
+                                onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = addDayLead ? '#7c3aed' : '#3b82f6'; }}
+                                onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = addDayLead ? '#c4b5fd' : (isToday ? '#3b82f6' : '#e2e8f0'); }}
                                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(226, 232, 240, 0.8)'; }}
                                 onDragLeave={(e) => { e.currentTarget.style.background = isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'); clearDragTimeout(); }}
                                 onDrop={(e) => { e.preventDefault(); e.currentTarget.style.background = isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'); handleDropOnDate(checkDate); }}
-                                style={{ 
-                                    background: isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'), 
-                                    borderRadius: '16px', 
-                                    border: isToday ? '2px solid #3b82f6' : '1px solid #e2e8f0', 
+                                style={{
+                                    background: isToday ? '#eff6ff' : (isHoliday ? '#f8fafc' : '#ffffff'),
+                                    borderRadius: '16px',
+                                    border: addDayLead ? '1px dashed #c4b5fd' : (isToday ? '2px solid #3b82f6' : '1px solid #e2e8f0'),
                                     padding: '12px',
                                     display: 'flex', flexDirection: 'column', gap: '8px',
                                     boxShadow: '0 2px 4px rgba(0,0,0,0.01)',
                                     transition: 'all 0.2s',
                                     opacity: isHoliday ? 0.7 : 1,
-                                    overflow: 'hidden'
+                                    overflow: 'hidden',
+                                    cursor: addDayLead ? 'copy' : undefined
                                 }}
                             >
                                 <span style={{ fontWeight: isToday ? '800' : '600', color: isToday ? '#2563eb' : (isHoliday ? '#94a3b8' : '#64748b'), fontSize: '1.1rem' }}>
@@ -1659,43 +1778,57 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     {leads.map(lead => {
                                         const colors = getStatusColor(lead.status);
                                         const isStartDay = new Date(lead.raw_data.start_date).getDate() === day;
+                                        const isExtra = isExtraDayFor(lead, cellDateStr);
                                         return (
-                                            <div 
+                                            <div
                                                 key={lead.id}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    if (addDayLead) { handleExtraDayClick(checkDate); return; }
                                                     const rect = e.currentTarget.getBoundingClientRect();
-                                                    setPopoverLead({ lead, x: rect.left, y: rect.top });
+                                                    setPopoverLead({ lead, x: rect.left, y: rect.top, dateStr: cellDateStr });
                                                 }}
-                                                onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: `Sag: ${lead.project_category} (${lead.case_number || 'Ny'})` }); }}
+                                                onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: `Sag: ${lead.project_category} (${lead.case_number || 'Ny'})${isExtra ? ' · Ekstra dag' : ''}` }); }}
                                                 onMouseLeave={() => setHoverTooltip(null)}
                                                 draggable={isManager}
                                                 onDragStart={() => setDraggedLead(lead)}
                                                 style={{
                                                     background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '6px 8px', fontSize: '0.75rem', fontWeight: '700', color: colors.text, cursor: 'pointer',
-                                                    borderLeft: isStartDay ? `4px solid ${colors.text}` : `1px solid ${colors.border}`,
+                                                    borderLeft: isExtra ? `4px dashed ${colors.text}` : (isStartDay ? `4px solid ${colors.text}` : `1px solid ${colors.border}`),
                                                     transition: 'all 0.2s'
                                                 }}
                                                 onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
                                                 onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
                                             >
                                                 <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {lead.case_number || String(lead.id).substring(0,6)}: {lead.raw_data?.project_title || lead.project_category}
+                                                    {isExtra && '＋ '}{lead.case_number || String(lead.id).substring(0,6)}: {lead.raw_data?.project_title || lead.project_category}
                                                 </div>
                                             </div>
                                         );
                                     })}
 
-                                    {/* REGISTREREDE TIMER (hvad dagen faktisk gik med, og på hvilken sag) */}
-                                    {registered && registered.total > 0 && (
+                                    {/* REGISTREREDE TIMER (hvad dagen faktisk gik med, og på hvilken sag).
+                                        Klik åbner popover med per-sag-listen (hover-tooltip virker ikke på touch). */}
+                                    {registered && registered.total > 0 && (() => {
+                                        const cases = Object.values(registered.byCase);
+                                        return (
                                         <div
-                                            onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: Object.values(registered.byCase).map(c => `${c.label}: ${c.hours.toFixed(2)} t`).join('  ·  ') }); }}
+                                            onClick={(evt) => { evt.stopPropagation(); setHoverTooltip(null); const rect = evt.currentTarget.getBoundingClientRect(); setRegisteredPopover({ x: rect.left + rect.width/2, y: rect.bottom, registered }); }}
+                                            onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: cases.map(c => `${c.label}: ${c.hours.toFixed(2)} t`).join('  ·  ') }); }}
                                             onMouseLeave={() => setHoverTooltip(null)}
-                                            style={{ background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: '8px', padding: '4px 8px', fontSize: '0.7rem', fontWeight: 800, color: '#0e7490', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                            style={{ background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: '8px', padding: '4px 8px', fontSize: '0.7rem', fontWeight: 800, color: '#0e7490', cursor: 'pointer' }}
                                         >
-                                            <Clock size={12} /> {registered.total.toFixed(2)} t registreret
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <Clock size={12} /> {registered.total.toFixed(2).replace(/\.?0+$/, '')} t registreret
+                                            </div>
+                                            {cases.length <= 2 && (
+                                                <div style={{ fontWeight: 600, color: '#155e75', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {cases.map(c => c.label).join(' · ')}
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         );
@@ -1719,16 +1852,16 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     const checkDate = new Date(startOfWeek);
                     checkDate.setDate(startOfWeek.getDate() + idx);
                     const isToday = new Date().getDate() === checkDate.getDate() && new Date().getMonth() === checkDate.getMonth();
-                    const { isHoliday, leads, absences, events } = getItemsForDay(checkDate);
+                    const { isHoliday, leads, absences, events, registered } = getItemsForDay(checkDate);
 
                     return (
-                        <div key={idx} onClick={() => openAddChooser(checkDate)}
+                        <div key={idx} onClick={() => addDayLead ? handleExtraDayClick(checkDate) : openAddChooser(checkDate)}
                             onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(226, 232, 240, 0.8)'; }}
                             onDragLeave={(e) => { e.currentTarget.style.background = isToday ? '#eff6ff' : '#fff'; clearDragTimeout(); }}
                             onDrop={(e) => { e.preventDefault(); e.currentTarget.style.background = isToday ? '#eff6ff' : '#fff'; handleDropOnDate(checkDate); }}
-                            style={{ background: isToday ? '#eff6ff' : '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: isManager ? 'pointer' : 'default', transition: 'all 0.2s' }}
-                            onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
-                            onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                            style={{ background: isToday ? '#eff6ff' : '#fff', borderRadius: '16px', border: addDayLead ? '1px dashed #c4b5fd' : '1px solid #e2e8f0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: addDayLead ? 'copy' : (isManager ? 'pointer' : 'default'), transition: 'all 0.2s' }}
+                            onMouseOver={e=> { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = addDayLead ? '#7c3aed' : '#3b82f6'; }}
+                            onMouseOut={e=> { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = addDayLead ? '#c4b5fd' : '#e2e8f0'; }}
                         >
                             <div style={{ textAlign: 'center', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
                                 <div style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>{['Man','Tir','Ons','Tor','Fre','Lør','Søn'][idx]}</div>
@@ -1768,11 +1901,11 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                 {events.map(e => {
                                     const style = getEventStyle(e.type);
                                     return (
-                                        <div key={e.id} 
+                                        <div key={e.id}
                                             draggable={isManager}
                                             onDragStart={() => setDraggedEvent(e)}
                                             onDragEnd={() => setDraggedEvent(null)}
-                                            onClick={(evt) => { evt.stopPropagation(); openModalForDate(null, e); }} 
+                                            onClick={(evt) => { evt.stopPropagation(); openModalForDate(null, e); }}
                                             style={{ background: style.bg, borderLeft: `4px solid ${style.leftBorder}`, borderRadius: '0 8px 8px 0', padding: '8px', fontSize: '0.8rem', cursor: isManager ? 'grab' : 'pointer' }}>
                                             <strong>{eventTimeLabel(e)}</strong><br/>{e.title}
                                             {e.location && <div style={{ marginTop: '4px', color: '#64748b' }}>{e.location}</div>}
@@ -1780,6 +1913,21 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                     )
                                 })}
                             </div>
+
+                            {/* Registrerede timer — inkl. hvilken sag de er registreret på */}
+                            {registered && registered.total > 0 && (
+                                <div style={{ marginTop: 'auto', background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: '10px', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', fontWeight: 800, color: '#0e7490' }}>
+                                        <Clock size={13} /> {registered.total.toFixed(2).replace(/\.?0+$/, '')} t registreret
+                                    </div>
+                                    {Object.values(registered.byCase).map((c, i) => (
+                                        <div key={i} style={{ fontSize: '0.72rem', color: '#155e75', display: 'flex', justifyContent: 'space-between', gap: '6px' }}>
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}{c.name ? ` — ${c.name}` : ''}</span>
+                                            <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{c.hours.toFixed(2).replace(/\.?0+$/, '')} t</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     );
                 })}
@@ -1918,21 +2066,12 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 4px' }}>
                         <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800' }}>Klar til planlægning</h3>
                         {pending.length > 0 && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '24px', height: '24px', padding: '0 7px', borderRadius: '999px', background: '#f59e0b', color: '#fff', fontSize: '0.8rem', fontWeight: 800, boxShadow: '0 2px 6px rgba(245,158,11,0.4)' }}>{pending.length}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '24px', height: '24px', padding: '0 7px', borderRadius: '999px', background: '#f1f5f9', color: '#64748b', fontSize: '0.8rem', fontWeight: 800, border: '1px solid #e2e8f0' }}>{pending.length}</span>
                         )}
                     </div>
                     <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: '#64748b' }}>
-                        {pending.length > 0 ? 'Træk ind i kalenderen — eller tryk Planlæg.' : 'Træk ind i kalenderen.'}
+                        {pending.length > 0 ? 'Træk ind i kalenderen — eller tryk Planlæg, når du er klar.' : 'Træk ind i kalenderen.'}
                     </p>
-
-                    {pending.length > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '12px 14px', marginBottom: '16px' }}>
-                            <AlertCircle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: '1px' }} />
-                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#92400e', lineHeight: 1.45 }}>
-                                {pending.length === 1 ? '1 bekræftet sag mangler at blive planlagt.' : `${pending.length} bekræftede sager mangler at blive planlagt.`}
-                            </p>
-                        </div>
-                    )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: calendarTourActive ? 'visible' : 'auto' }}>
                         {/* Under rundvisningen: en eksempel-sag (mockup). En spøgelses-kopi
@@ -1987,6 +2126,25 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 </div>
             )}
 
+            {/* VÆLG-EKSTRA-DAGE-TILSTAND: flydende glas-pille med instruktion + Færdig */}
+            {addDayLead && createPortal(
+                <div style={{ position: 'fixed', top: '18px', left: '50%', transform: 'translateX(-50%)', zIndex: 100001, display: 'flex', alignItems: 'center', gap: '14px', padding: '10px 12px 10px 20px', borderRadius: '999px', background: 'linear-gradient(135deg, rgba(124,58,237,0.95), rgba(109,40,217,0.92))', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', border: '1px solid rgba(255,255,255,0.35)', boxShadow: '0 16px 40px rgba(109,40,217,0.4)', color: '#fff', maxWidth: 'calc(100vw - 32px)' }}>
+                    <CalendarIcon size={18} style={{ flexShrink: 0 }} />
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        Vælg ekstra dage til sag {addDayLead.case_number || String(addDayLead.id).substring(0,6)} — tryk på dagene i kalenderen
+                    </div>
+                    <button
+                        onClick={() => setAddDayLead(null)}
+                        style={{ flexShrink: 0, padding: '8px 18px', borderRadius: '999px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(15,23,42,0.35)', transition: 'transform 0.15s ease' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                    >
+                        Færdig
+                    </button>
+                </div>,
+                document.body
+            )}
+
             {/* POPOVER TIL SAG I KALENDER */}
             {popoverLead && createPortal(
                 <div onClick={() => setPopoverLead(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999 }}>
@@ -1996,6 +2154,10 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                     >
                         <button onClick={() => { onCaseClick(popoverLead.lead); setPopoverLead(null); }} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#0f172a' }} onMouseOver={e=>e.currentTarget.style.background='#f1f5f9'} onMouseOut={e=>e.currentTarget.style.background='none'}>Gå til Ordrestyring</button>
                         {isManager && <button onClick={() => { const l = popoverLead.lead; setPopoverLead(null); const startStr = l.raw_data?.start_date ? new Date(l.raw_data.start_date).toISOString().substring(0,10) : new Date().toISOString().substring(0,10); openScheduleConfirm(l, startStr, estimerDage(l), 'edit'); }} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#2563eb' }} onMouseOver={e=>e.currentTarget.style.background='#eff6ff'} onMouseOut={e=>e.currentTarget.style.background='none'}>Redigér planlægning</button>}
+                        {isManager && <button onClick={() => { setAddDayLead(popoverLead.lead); setPopoverLead(null); }} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#7c3aed' }} onMouseOver={e=>e.currentTarget.style.background='#f5f3ff'} onMouseOut={e=>e.currentTarget.style.background='none'}>Tilføj ekstra dage</button>}
+                        {isManager && popoverLead.dateStr && isExtraDayFor(popoverLead.lead, popoverLead.dateStr) && (
+                            <button onClick={() => { removeExtraDayFromLead(popoverLead.lead, popoverLead.dateStr); setPopoverLead(null); }} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#ef4444' }} onMouseOver={e=>e.currentTarget.style.background='#fef2f2'} onMouseOut={e=>e.currentTarget.style.background='none'}>Fjern denne dag</button>
+                        )}
                         {isManager && <button onClick={removeLeadFromCalendar} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#ef4444' }} onMouseOver={e=>e.currentTarget.style.background='#fef2f2'} onMouseOut={e=>e.currentTarget.style.background='none'}>Fjern fra kalender</button>}
                     </div>
                 </div>,
@@ -2351,6 +2513,46 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                 )}
             </AnimatePresence>
 
+            {/* POPOVER: DAGENS REGISTREREDE TIMER PR. SAG (klik/touch) */}
+            {registeredPopover && createPortal(
+                <div onClick={() => setRegisteredPopover(null)} style={{ position: 'fixed', inset: 0, zIndex: 100000 }}>
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            position: 'fixed',
+                            left: Math.min(Math.max(registeredPopover.x, 140), (window.innerWidth || 320) - 140),
+                            top: registeredPopover.y + 8,
+                            transform: 'translateX(-50%)',
+                            width: '260px', maxHeight: '50vh', overflowY: 'auto',
+                            background: 'linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,255,255,0.92))',
+                            backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+                            border: '1px solid rgba(165,243,252,0.9)', borderRadius: '16px',
+                            boxShadow: '0 20px 40px rgba(15,23,42,0.18)', padding: '14px 16px',
+                            animation: 'fadeIn 0.15s ease-out'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 800, color: '#0e7490' }}>
+                                <Clock size={15} /> {registeredPopover.registered.total.toFixed(2).replace(/\.?0+$/, '')} t registreret
+                            </div>
+                            <button onClick={() => setRegisteredPopover(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px', display: 'flex' }}><X size={16} /></button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {Object.values(registeredPopover.registered.byCase).map((c, i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: '10px', padding: '8px 10px' }}>
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#155e75', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label}</div>
+                                        {c.name && <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>}
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0e7490', whiteSpace: 'nowrap' }}>{c.hours.toFixed(2).replace(/\.?0+$/, '')} t</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {/* MODAL: KOLLISION ADVARSEL */}
             {collisionWarning && createPortal(
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000 }}>
@@ -2466,7 +2668,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             {scheduleConfirm && createPortal(
                 <div onClick={() => setScheduleConfirm(null)} style={{ position: 'fixed', inset: 0, zIndex: 100001, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', padding: isMobile ? 0 : '20px' }}>
                     <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: isMobile ? 40 : 16, scale: isMobile ? 1 : 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                        style={{ background: '#fff', width: '100%', maxWidth: isMobile ? '100%' : '460px', borderRadius: isMobile ? '24px 24px 0 0' : '24px', padding: isMobile ? '24px 20px calc(env(safe-area-inset-bottom) + 24px)' : '28px', boxShadow: '0 24px 48px -12px rgba(15,23,42,0.35)' }}>
+                        style={{ background: '#fff', width: '100%', maxWidth: isMobile ? '100%' : '460px', maxHeight: isMobile ? '92vh' : '90vh', overflowY: 'auto', borderRadius: isMobile ? '24px 24px 0 0' : '24px', padding: isMobile ? '24px 20px calc(env(safe-area-inset-bottom) + 24px)' : '28px', boxShadow: '0 24px 48px -12px rgba(15,23,42,0.35)' }}>
                         {(() => {
                             const lead = scheduleConfirm.lead;
                             const startStr = scheduleConfirm.startDate;
@@ -2530,6 +2732,103 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                         </label>
                                     </div>
 
+                                    {/* EKSTRA DAGE — interaktiv mini-kalender: klik enkeltdage til/fra (fx man + fre),
+                                        eller vælg en dato manuelt. Gemmes først når man trykker Planlæg/Gem. */}
+                                    {(() => {
+                                        const extraDays = scheduleConfirm.extraDays || [];
+                                        const mainDays = mainRangeDaysSet(startStr, days, allowWknd, allowHol);
+                                        const anchor = new Date(`${scheduleConfirm.calMonth || startStr.slice(0, 7)}-01T00:00:00`);
+                                        const y = anchor.getFullYear(), m = anchor.getMonth();
+                                        const daysInM = new Date(y, m + 1, 0).getDate();
+                                        const firstDow = (new Date(y, m, 1).getDay() + 6) % 7; // mandag = 0
+                                        const todayStr = toLocalDateStr(new Date());
+                                        const shiftMonth = (delta) => setScheduleConfirm(s => {
+                                            const d = new Date(anchor); d.setMonth(d.getMonth() + delta);
+                                            return { ...s, calMonth: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` };
+                                        });
+                                        const toggleDay = (ds) => setScheduleConfirm(s => {
+                                            const cur = s.extraDays || [];
+                                            return { ...s, extraDays: cur.includes(ds) ? cur.filter(x => x !== ds) : [...cur, ds].sort() };
+                                        });
+                                        const addFromInput = () => {
+                                            const ds = scheduleConfirm.extraInput;
+                                            if (!ds) return;
+                                            if (mainDays.has(ds)) { toast('Dagen ligger allerede i hovedperioden.', { icon: 'ℹ️' }); return; }
+                                            if (extraDays.includes(ds)) { toast('Dagen er allerede tilføjet.', { icon: 'ℹ️' }); return; }
+                                            setScheduleConfirm(s => ({ ...s, extraDays: [...(s.extraDays || []), ds].sort(), extraInput: '', calMonth: ds.slice(0, 7) }));
+                                        };
+                                        const navBtn = { width: '32px', height: '32px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', flexShrink: 0 };
+                                        return (
+                                            <div style={{ marginTop: '18px' }}>
+                                                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Ekstra dage <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: '#94a3b8' }}>(valgfrit)</span></label>
+                                                <p style={{ margin: '0 0 10px', fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.45 }}>
+                                                    Tryk på dage i kalenderen for at planlægge enkeltdage udenfor perioden — fx mandag og fredag uden dagene imellem. <span style={{ color: '#2563eb', fontWeight: 600 }}>Blå</span> = hovedperioden, <span style={{ color: '#7c3aed', fontWeight: 600 }}>lilla</span> = dine ekstra dage.
+                                                </p>
+                                                <div style={{ border: '1px solid #e2e8f0', borderRadius: '14px', padding: '12px', background: '#fff' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                                        <button type="button" onClick={() => shiftMonth(-1)} style={navBtn} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}><ChevronLeft size={16} /></button>
+                                                        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem', textTransform: 'capitalize' }}>{format(anchor, 'MMMM yyyy', { locale: da })}</div>
+                                                        <button type="button" onClick={() => shiftMonth(1)} style={navBtn} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}><ChevronRight size={16} /></button>
+                                                    </div>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '4px' }}>
+                                                        {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((d, i) => (
+                                                            <div key={i} style={{ textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>{d}</div>
+                                                        ))}
+                                                    </div>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+                                                        {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
+                                                        {Array.from({ length: daysInM }).map((_, i) => {
+                                                            const dayNum = i + 1;
+                                                            const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                                                            const isMain = mainDays.has(ds);
+                                                            const isExtra = extraDays.includes(ds);
+                                                            const isToday = ds === todayStr;
+                                                            return (
+                                                                <button
+                                                                    key={ds}
+                                                                    type="button"
+                                                                    onClick={() => isMain ? toast('Dagen ligger allerede i hovedperioden.', { icon: 'ℹ️' }) : toggleDay(ds)}
+                                                                    title={isMain ? 'Hovedperiode' : (isExtra ? 'Fjern ekstra dag' : 'Tilføj som ekstra dag')}
+                                                                    style={{
+                                                                        height: '36px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 700,
+                                                                        border: isToday && !isMain && !isExtra ? '2px solid #93c5fd' : '1px solid transparent',
+                                                                        background: isMain ? '#2563eb' : (isExtra ? '#7c3aed' : '#f8fafc'),
+                                                                        color: (isMain || isExtra) ? '#fff' : '#475569',
+                                                                        cursor: isMain ? 'default' : 'pointer',
+                                                                        transition: 'all 0.12s ease',
+                                                                        padding: 0
+                                                                    }}
+                                                                    onMouseEnter={e => { if (!isMain && !isExtra) { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.color = '#6d28d9'; e.currentTarget.style.border = '1px solid #c4b5fd'; } }}
+                                                                    onMouseLeave={e => { if (!isMain && !isExtra) { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#475569'; e.currentTarget.style.border = isToday ? '2px solid #93c5fd' : '1px solid transparent'; } }}
+                                                                >
+                                                                    {dayNum}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                                {extraDays.length > 0 && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+                                                        {extraDays.map(d => (
+                                                            <span key={d} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f5f3ff', border: '1px dashed #c4b5fd', borderRadius: '999px', padding: '5px 7px 5px 11px', fontSize: '0.8rem', fontWeight: 700, color: '#6d28d9' }}>
+                                                                {format(new Date(d + 'T00:00:00'), 'EEE d. MMM', { locale: da })}
+                                                                <button type="button" onClick={() => toggleDay(d)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', borderRadius: '50%', border: 'none', background: '#ede9fe', color: '#7c3aed', cursor: 'pointer', padding: 0 }}><X size={11} /></button>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                                    <input type="date" value={scheduleConfirm.extraInput || ''} onChange={e => setScheduleConfirm(s => ({ ...s, extraInput: e.target.value }))}
+                                                        style={{ flex: 1, boxSizing: 'border-box', padding: '11px 12px', borderRadius: '11px', border: '1px solid #cbd5e1', fontSize: '16px', outline: 'none', color: '#0f172a' }} />
+                                                    <button type="button" onClick={addFromInput} disabled={!scheduleConfirm.extraInput}
+                                                        style={{ flexShrink: 0, padding: '11px 16px', borderRadius: '11px', border: 'none', background: scheduleConfirm.extraInput ? '#7c3aed' : '#e2e8f0', color: scheduleConfirm.extraInput ? '#fff' : '#94a3b8', fontWeight: 800, fontSize: '0.88rem', cursor: scheduleConfirm.extraInput ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <Plus size={15} /> Tilføj dag
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
                                     {isManager && assignableMembers.length > 0 && (() => {
                                         const selected = scheduleConfirm.assignedWorkers || [];
                                         const toggle = (id) => setScheduleConfirm(s => {
@@ -2588,6 +2887,7 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                             {[
                                 { Icon: Briefcase, label: 'Åbn sag', color: '#0f172a', onClick: () => { const l = caseActionSheet.lead; setCaseActionSheet(null); onCaseClick(l); } },
                                 ...(isManager ? [{ Icon: CalendarIcon, label: 'Redigér planlægning', color: '#2563eb', onClick: () => { const l = caseActionSheet.lead; setCaseActionSheet(null); const startStr = l.raw_data?.start_date ? new Date(l.raw_data.start_date).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10); openScheduleConfirm(l, startStr, estimerDage(l), 'edit'); } }] : []),
+                                ...(isManager ? [{ Icon: Plus, label: 'Tilføj ekstra dag', color: '#7c3aed', onClick: () => { const l = caseActionSheet.lead; setCaseActionSheet(null); setExtraDaySheet({ leadId: l.id, dateInput: toLocalDateStr(selectedMobileDate || new Date()) }); } }] : []),
                                 ...(isManager ? [{ Icon: Trash2, label: 'Fjern fra kalender', color: '#ef4444', onClick: () => unscheduleLead(caseActionSheet.lead) }] : [])
                             ].map((a, i) => {
                                 const Icon = a.Icon;
@@ -2602,6 +2902,55 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                         </div>
                     </motion.div>
                 </div>,
+                document.body
+            )}
+
+            {/* MODAL: EKSTRA DAGE (mobil) — datovælger + chips over sagens ekstra dage */}
+            {extraDaySheet && createPortal(
+                (() => {
+                    const sheetLead = leadsData.find(l => l.id === extraDaySheet.leadId);
+                    if (!sheetLead) return null;
+                    const days = leadExtraDays(sheetLead);
+                    return (
+                        <div onClick={() => setExtraDaySheet(null)} style={{ position: 'fixed', inset: 0, zIndex: 100001, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                            <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                                style={{ background: '#fff', width: '100%', maxWidth: '480px', borderRadius: '24px 24px 0 0', padding: '20px 20px calc(env(safe-area-inset-bottom) + 20px)', boxShadow: '0 -8px 32px rgba(15,23,42,0.18)' }}>
+                                <div style={{ width: '40px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', margin: '0 auto 18px auto' }} />
+                                <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Plus size={18} color="#7c3aed" /> Ekstra dage
+                                </h3>
+                                <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: '#64748b' }}>
+                                    Sag {sheetLead.case_number || String(sheetLead.id).substring(0, 6)} — planlæg enkeltdage udover den sammenhængende periode.
+                                </p>
+                                {days.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                                        {days.map(d => (
+                                            <span key={d} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f5f3ff', border: '1px dashed #c4b5fd', borderRadius: '999px', padding: '6px 8px 6px 12px', fontSize: '0.82rem', fontWeight: 700, color: '#6d28d9' }}>
+                                                {format(new Date(d + 'T00:00:00'), 'EEE d. MMM', { locale: da })}
+                                                <button onClick={() => removeExtraDayFromLead(sheetLead, d)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', border: 'none', background: '#ede9fe', color: '#7c3aed', cursor: 'pointer', padding: 0 }}><X size={12} /></button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input
+                                        type="date"
+                                        value={extraDaySheet.dateInput}
+                                        onChange={(e) => setExtraDaySheet(prev => ({ ...prev, dateInput: e.target.value }))}
+                                        style={{ flex: 1, padding: '13px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#0f172a', fontWeight: 600, fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                                    />
+                                    <button
+                                        onClick={() => { if (extraDaySheet.dateInput) addExtraDayToLead(sheetLead, extraDaySheet.dateInput); }}
+                                        style={{ flexShrink: 0, padding: '13px 20px', borderRadius: '12px', border: 'none', background: '#7c3aed', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 6px 16px rgba(124,58,237,0.3)' }}
+                                    >
+                                        Tilføj dag
+                                    </button>
+                                </div>
+                                <button onClick={() => setExtraDaySheet(null)} style={{ marginTop: '14px', width: '100%', padding: '14px', borderRadius: '14px', border: 'none', background: '#f1f5f9', color: '#475569', fontWeight: 700, cursor: 'pointer' }}>Færdig</button>
+                            </motion.div>
+                        </div>
+                    );
+                })(),
                 document.body
             )}
 

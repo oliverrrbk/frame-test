@@ -35,6 +35,9 @@ const getBasePriceInclVat = (lead) => {
         if (rd.billing_mode === 'hourly' && Number(rd.hourly_rate) > 0) {
             // Kun eget arbejde faktureres på din timepris — underleverandør-timer
             // (syntetiske 'sub:'-id'er) er IKKE dit eget firmas timer og tælles ikke med.
+            // OBS: Sagens FORBRUG (totalConsumedHours i CaseManagement) inkluderer sub-timer,
+            // men fakturering gør bevidst ikke — subs afregnes via leverandørfakturaer,
+            // ellers ville de blive dobbeltfaktureret på din timepris.
             const hours = (rd.time_entries || []).reduce((sum, e) => {
                 if (String(e.employeeId || '').startsWith('sub:')) return sum;
                 return sum + (Number(e.hours) || 0);

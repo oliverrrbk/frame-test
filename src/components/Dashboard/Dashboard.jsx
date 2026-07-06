@@ -1512,36 +1512,9 @@ const Dashboard = () => {
     // kalenderen. Vises tidligst dagen efter bekræftelsen (ikke straks, så det ikke
     // bliver irriterende) og kun én gang pr. dag. Push'en dækker når appen er lukket;
     // denne sikrer en venlig reminder næste gang man åbner appen.
-    useEffect(() => {
-        if (!myProfile || !Array.isArray(leadsData) || leadsData.length === 0) return;
-        const role = simulatedRole || myProfile.role;
-        if (!['admin', 'boss', 'accountant'].includes(role)) return;
-
-        const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD i lokal tid
-        const overdue = leadsData.filter(l => {
-            if ((l.status || '') !== 'Bekræftet opgave') return false;
-            if (l.raw_data?.start_date) return false;
-            const stamp = l.raw_data?.confirmed_at || l.created_at;
-            if (!stamp) return false;
-            return new Date(stamp).toLocaleDateString('en-CA') < todayStr; // mindst dagen efter
-        });
-        if (overdue.length === 0) return;
-
-        if (localStorage.getItem('bison_unplanned_reminder') === todayStr) return;
-
-        const timer = setTimeout(() => {
-            localStorage.setItem('bison_unplanned_reminder', todayStr);
-            const msg = overdue.length === 1
-                ? 'Hov — en bekræftet sag mangler stadig at blive lagt i kalenderen.'
-                : `Hov — ${overdue.length} bekræftede sager mangler stadig at blive lagt i kalenderen.`;
-            toast(msg, {
-                icon: '📅',
-                duration: 8000,
-                style: { background: '#0f172a', color: '#fff', fontWeight: 600 },
-            });
-        }, 2500);
-        return () => clearTimeout(timer);
-    }, [myProfile, leadsData, simulatedRole]);
+    // Dagligt "mangler planlægning"-toast FJERNET (Tobias-feedback juli 2026):
+    // notifikationer om uplanlagte sager stresser — overblikket findes i ro og mag
+    // i kalenderens "Klar til planlægning"-panel i stedet.
 
 
     const initProfileAndData = async (authUser) => {
@@ -2127,8 +2100,11 @@ const Dashboard = () => {
         return updatedLead;
     };
 
-    const syncToAccounting = async (lead, action = 'draft', invoiceLines = [], isReverseCharge = false, customerOverride = null) => {
+    const syncToAccounting = async (lead, action = 'draft', invoiceLines = [], isReverseCharge = false, customerOverride = null, opts = {}) => {
         if (!carpenterProfile) return;
+        // forceManual: registrér kun beløbet lokalt (fakturering sker udenom systemet,
+        // fx specielle rate-aftaler) — selvom Dinero/e-conomic er forbundet.
+        const { forceManual = false } = opts;
 
         // Beskyt mod dobbelt-overførsel: overførsel laver en kladde i regnskabsprogrammet,
         // men er sagen allerede overført før, bekræft at man bevidst laver én mere.
@@ -2177,6 +2153,12 @@ const Dashboard = () => {
         const totalAmountToBill = invoiceLines.reduce((sum, line) => sum + Number(line.priceExVat || 0), 0);
 
         try {
+            if (forceManual) {
+                const manualId = `MANUAL-${Date.now()}`;
+                await recordInvoiceLocally({ lead, leadForInvoice, totalAmountToBill, invoiceId: manualId, system: 'manual', action });
+                toast.success(`Faktura på ${(totalAmountToBill || 0).toLocaleString('da-DK')} kr. registreret manuelt — intet er overført til regnskabsprogrammet.`, { duration: 5000 });
+                return;
+            }
             // Hvis Dinero er forbundet (og ikke 'pending_authorization')
             if (carpenterProfile.dinero_api_key && carpenterProfile.dinero_api_key !== 'pending_authorization') {
                 console.log('--- DINERO BACKEND SYNC STARTER ---');
@@ -3033,16 +3015,8 @@ const Dashboard = () => {
                     {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
                         <button data-tour="nav-calendar" className={activeTab === 'calendar' ? 'active' : ''} onClick={() => { setActiveTab('calendar'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
                             <Calendar size={20} /> Kalender
-                            {(() => {
-                                // Bekræftede sager der endnu ikke er lagt i kalenderen (mangler planlægning).
-                                const isMgr = ['admin', 'boss', 'accountant'].includes(effectiveRole);
-                                if (!isMgr) return null;
-                                const unplanned = leadsData.filter(l => (l.status || '') === 'Bekræftet opgave' && !l.raw_data?.start_date).length;
-                                if (unplanned > 0) {
-                                    return <span className="notification-badge">{unplanned}</span>;
-                                }
-                                return null;
-                            })()}
+                            {/* Rødt uplanlagt-badge FJERNET (Tobias-feedback juli 2026) — overblikket
+                                over uplanlagte sager bor i kalenderens "Klar til planlægning"-panel. */}
                         </button>
                     )}
                     {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
@@ -5565,7 +5539,17 @@ const Dashboard = () => {
                                 </div>
                             
                             <div data-tour="map-canvas" className="map-canvas-panel" style={{ flex: 1, border: '1px solid #e8e6e1', borderRadius: '14px', overflow: 'hidden', marginTop: '16px', position: 'relative', zIndex: 0 }}>
-                                {(!isLoaded && (!isOnline || loadError)) ? (
+                                {/* Tom/manglende API-nøgle: Googles script "loader" fint men afviser ved runtime
+                                    med et grimt gråt overlay — fang det FØR og vis vores egen pæne fallback. */}
+                                {!import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '12px', padding: '48px 24px', height: '100%' }}>
+                                        <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(145deg,#e0e7ff,#c7d2fe)', color: '#4338ca', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 22px rgba(15,23,42,0.10)' }}>
+                                            <MapPin size={28} />
+                                        </div>
+                                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>Kortet er ikke konfigureret</div>
+                                        <div style={{ fontSize: '0.92rem', color: '#64748b', maxWidth: '380px', lineHeight: 1.55 }}>Google Maps-nøglen mangler i dette miljø. Dine sager og adresser er stadig tilgængelige under Sager & Ordrestyring.</div>
+                                    </div>
+                                ) : (!isLoaded && (!isOnline || loadError)) ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '12px', padding: '48px 24px', height: '100%' }}>
                                         <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(145deg,#fef3c7,#fde68a)', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 22px rgba(15,23,42,0.10)' }}>
                                             <MapPin size={28} />
