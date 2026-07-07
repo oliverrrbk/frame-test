@@ -37,11 +37,11 @@ export interface BisonBookingResult {
 }
 
 // Læs et påkrævet kontonummer fra miljøet. Kaster med en tydelig besked hvis
-// det mangler eller ikke er et tal — så en fejlkonfiguration stopper bogføringen
-// i stedet for at lave et skævt bilag.
-function requiredAccount(name: string): number {
+// det ikke er et tal. Kontiene er bekræftet af revisor (2026-07-07) og sat som
+// standard, men kan altid overstyres via en secret uden kodeændring.
+function accountFrom(name: string, fallback: number): number {
   const raw = Deno.env.get(name)
-  if (!raw) throw new Error(`Mangler kontonummer i servermiljøet: ${name}`)
+  if (!raw) return fallback
   const n = Number(raw)
   if (!Number.isFinite(n)) throw new Error(`${name} er ikke et gyldigt kontonummer: "${raw}"`)
   return n
@@ -55,13 +55,16 @@ export async function bookStripeIncomeToEconomic(b: BisonBooking): Promise<Bison
   if (!grantToken) throw new Error('Mangler BISON_ECONOMIC_GRANT_TOKEN (Bisons egen e-conomic-aftale)')
   if (!appSecretToken) throw new Error('Mangler E_CONOMIC_APP_SECRET i servermiljøet')
 
-  // Kontoplan + moms fra secrets. Alle er påkrævede undtagen moms-koden på gebyret.
-  const revenueAccount  = requiredAccount('BISON_ECONOMIC_REVENUE_ACCOUNT')   // omsætning
-  const vatAccount      = requiredAccount('BISON_ECONOMIC_VAT_ACCOUNT')       // salgsmoms
-  const feeAccount      = requiredAccount('BISON_ECONOMIC_FEE_ACCOUNT')       // Stripe-gebyr (udgift)
-  const clearingAccount = requiredAccount('BISON_ECONOMIC_CLEARING_ACCOUNT')  // Stripe-mellemregning
-  const feeVatCode      = Deno.env.get('BISON_ECONOMIC_FEE_VATCODE') || null  // fx 'I25' (omvendt betalingspligt)
-  const journalOverride = Deno.env.get('BISON_ECONOMIC_JOURNAL_NUMBER')       // valgfrit
+  // Kontoplan + moms — bekræftet af revisor Henrik Aaen (2026-07-07). Standardværdier
+  // her, men kan overstyres via secrets uden kodeændring.
+  const revenueAccount  = accountFrom('BISON_ECONOMIC_REVENUE_ACCOUNT', 1010)   // omsætning (U25 auto)
+  const feeAccount      = accountFrom('BISON_ECONOMIC_FEE_ACCOUNT', 1321)       // Stripe-gebyr (udgift)
+  const clearingAccount = accountFrom('BISON_ECONOMIC_CLEARING_ACCOUNT', 5650)  // Stripe tilgodehavende
+  // Salgsmoms håndteres automatisk via omsætningskontoens VAT-kode (U25).
+  const revenueVatCode  = Deno.env.get('BISON_ECONOMIC_REVENUE_VATCODE') || 'U25'
+  // Stripe fakturerer fra Irland → omvendt betalingspligt på EU-ydelse (IY25).
+  const feeVatCode      = Deno.env.get('BISON_ECONOMIC_FEE_VATCODE') || 'IY25'
+  const journalOverride = Deno.env.get('BISON_ECONOMIC_JOURNAL_NUMBER')          // valgfrit
 
   const baseHeaders = {
     'X-AppSecretToken': appSecretToken,
@@ -102,57 +105,46 @@ export async function bookStripeIncomeToEconomic(b: BisonBooking): Promise<Bison
   if (!accountingYear) throw new Error('Kunne ikke finde et regnskabsår der dækker fakturadatoen')
 
   const currency = { code: (b.currency || 'DKK').toUpperCase() }
-  const netRevenue = round2(b.gross - b.vat) // omsætning ekskl. moms
-  const vat = round2(b.vat)
+  const gross = round2(b.gross) // brutto inkl. moms — e-conomic splitter momsen selv via U25
   const fee = round2(b.fee)
   const label = b.number ? `Stripe ${b.number}` : `Stripe ${b.invoiceId}`
 
   // 3. Byg posteringerne som account/contraAccount-par (samme mønster som
-  //    economic-voucher, der er kendt at virke). Positivt beløb = DEBIT account,
-  //    CREDIT contraAccount. Alt posteres mod mellemregningskontoen.
+  //    economic-voucher, der er kendt at virke). vatAccount/vatCode får e-conomic
+  //    til selv at beregne og udskille momsen — revisor bekræftede "moms håndteres
+  //    automatisk via 1010's U25". Alt posteres mod mellemregningskontoen (5650).
   //
-  //    Nettoeffekt på mellemregningen = netRevenue + vat - fee = brutto - gebyr
-  //    = præcis det Stripe udbetaler til banken.
+  //    BEMÆRK: fortegns- og moms-mekanikken kan variere lidt mellem e-conomic-
+  //    opsætninger. Bilaget oprettes som KLADDE, så den FØRSTE rigtige postering
+  //    tjekkes manuelt i e-conomic før vi stoler blindt på den (se webhook-log).
   const financeVouchers: Record<string, unknown>[] = []
 
-  // 3a) Omsætning: DEBIT mellemregning, CREDIT omsætning (netto ekskl. moms).
-  if (netRevenue > 0) {
+  // 3a) Omsætning inkl. moms: KREDIT omsætning (1010, negativt beløb), DEBIT
+  //     mellemregning. U25-koden på 1010 får e-conomic til at udskille salgsmomsen.
+  if (gross > 0) {
     financeVouchers.push({
-      text: `${label} — omsætning`,
-      amount: netRevenue,
-      account: { accountNumber: clearingAccount },
-      contraAccount: { accountNumber: revenueAccount },
+      text: `${label} — abonnement`,
+      amount: -gross,
+      account: { accountNumber: revenueAccount },
+      contraAccount: { accountNumber: clearingAccount },
+      vatAccount: { vatCode: revenueVatCode },
       currency,
       date: b.date,
     })
   }
 
-  // 3b) Salgsmoms: DEBIT mellemregning, CREDIT momskonto.
-  if (vat > 0) {
-    financeVouchers.push({
-      text: `${label} — salgsmoms`,
-      amount: vat,
-      account: { accountNumber: clearingAccount },
-      contraAccount: { accountNumber: vatAccount },
-      currency,
-      date: b.date,
-    })
-  }
-
-  // 3c) Stripe-gebyr (udgift): DEBIT gebyrkonto, CREDIT mellemregning.
-  //     Sæt evt. omvendt-betalingspligt-momskode — den er momsneutral, så
-  //     bilaget balancerer stadig.
+  // 3b) Stripe-gebyr (udgift): DEBIT gebyrkonto (1321), CREDIT mellemregning.
+  //     IY25 = omvendt betalingspligt på EU-ydelse (momsneutral → bilaget balancerer).
   if (fee > 0) {
-    const feeEntry: Record<string, unknown> = {
+    financeVouchers.push({
       text: `${label} — Stripe-gebyr`,
       amount: fee,
       account: { accountNumber: feeAccount },
       contraAccount: { accountNumber: clearingAccount },
+      vatAccount: { vatCode: feeVatCode },
       currency,
       date: b.date,
-    }
-    if (feeVatCode) feeEntry.vatAccount = { vatCode: feeVatCode }
-    financeVouchers.push(feeEntry)
+    })
   }
 
   if (financeVouchers.length === 0) {
