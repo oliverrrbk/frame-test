@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { getFeatures } from '../../utils/features';
+import { getFeatures, isTabEnabled } from '../../utils/features';
 import { 
     Info, 
     TrendingUp, 
@@ -76,7 +76,9 @@ function CreateQuoteButton({ onClick, fullWidth = false, variant = 'solid' }) {
     );
 }
 
-export default function DashboardOverview({ leadsData, carpenterProfile, myProfile, setActiveTab, setSelectedLead, setTargetCaseId, onCreateQuote }) {
+export default function DashboardOverview({ leadsData, carpenterProfile, myProfile, modules, setActiveTab, setSelectedLead, setTargetCaseId, onCreateQuote }) {
+    // Hop kun til en fane hvis dens modul er tændt for firmaet (skræddersyet onboarding).
+    const goToTab = (tab) => { if (tab && isTabEnabled(tab, modules) && setActiveTab) setActiveTab(tab); };
     // Kun tømrere har en offentlig beregner-portal at dele → skjul del/kopiér-link-UI for andre fag.
     const canSharePortal = getFeatures(carpenterProfile?.business_type).publicPortal;
     const [timeframe, setTimeframe] = useState('30d'); // '7d', '30d', 'ytd', 'all'
@@ -298,12 +300,10 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                             borderTop: `4px solid ${m.color}`,
                             position: 'relative',
                             overflow: 'hidden',
-                            cursor: m.tab ? 'pointer' : 'default',
+                            cursor: (m.tab && isTabEnabled(m.tab, modules)) ? 'pointer' : 'default',
                             animationDelay: `${i * 70}ms`
                         }}
-                        onClick={() => {
-                            if (m.tab && setActiveTab) setActiveTab(m.tab);
-                        }}
+                        onClick={() => goToTab(m.tab)}
                     >
                         {/* Baggrundsikon (subtilt) */}
                         <m.icon className="kpi-bg-icon" size={120} style={{ position: 'absolute', right: '-20px', bottom: '-20px', color: m.color, opacity: 0.05 }} />
@@ -324,7 +324,8 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                 ))}
             </div>
 
-            {/* NY SEKTION: SAGER I DRIFT (GRID LAYOUT) */}
+            {/* NY SEKTION: SAGER I DRIFT (GRID LAYOUT) — skjules hvis Sager-modulet er slukket for firmaet */}
+            {isTabEnabled('cases', modules) && (
             <div>
                 <div className="cases-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px', gap: '12px' }}>
                     <div className="cases-header-text">
@@ -471,6 +472,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                     )}
                 </div>
             </div>
+            )}
 
             {/* SEKTION: GRAF (Fuld bredde) */}
             <div className="glass-panel graph-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column' }}>

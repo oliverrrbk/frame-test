@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { ArrowLeft, Shield, Users, Power, Lock, CheckCircle, ExternalLink, Copy, FileText, X, Trash2, ChevronDown, ChevronUp, LogOut, Upload, CalendarClock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Shield, Users, Power, Lock, CheckCircle, ExternalLink, Copy, FileText, X, Trash2, ChevronDown, ChevronUp, LogOut, Upload, CalendarClock, Loader2, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AiTrainingView from '../Dashboard/AiTrainingView';
 import ErrorLogPanel from './ErrorLogPanel';
+import { MODULES, getModules } from '../../utils/features';
 
 const AdminDashboard = () => {
     const [carpenters, setCarpenters] = useState([]);
@@ -19,6 +20,42 @@ const AdminDashboard = () => {
     const [extendTarget, setExtendTarget] = useState(null); // firma hvis prøveperiode forlænges
     const [extendDays, setExtendDays] = useState(14);
     const [extendBusy, setExtendBusy] = useState(false);
+
+    // Skræddersyet onboarding: hvilke moduler et firma kan se.
+    const [moduleTarget, setModuleTarget] = useState(null); // firma hvis moduler redigeres
+    const [moduleDisabled, setModuleDisabled] = useState([]); // arbejds-kopi af slukkede moduler
+    const [moduleBusy, setModuleBusy] = useState(false);
+
+    const openModuleEditor = (carp) => {
+        const current = getModules(carp); // { key: boolean }
+        setModuleDisabled(MODULES.filter(m => current[m.key] === false).map(m => m.key));
+        setModuleTarget(carp);
+    };
+
+    const toggleModule = (key) => {
+        setModuleDisabled(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+    };
+
+    const saveModules = async () => {
+        if (!moduleTarget) return;
+        setModuleBusy(true);
+        try {
+            // Bevar øvrige raw_data-nøgler; skriv KUN modules.disabled (blocklist).
+            const newRaw = {
+                ...(moduleTarget.raw_data || {}),
+                modules: { ...(moduleTarget.raw_data?.modules || {}), disabled: moduleDisabled },
+            };
+            const { error } = await supabase.from('carpenters').update({ raw_data: newRaw }).eq('id', moduleTarget.id);
+            if (error) throw error;
+            setCarpenters(prev => prev.map(c => c.id === moduleTarget.id ? { ...c, raw_data: newRaw } : c));
+            toast.success(moduleDisabled.length === 0 ? 'Alle moduler er tændt for firmaet.' : `${MODULES.length - moduleDisabled.length} af ${MODULES.length} moduler tændt.`);
+            setModuleTarget(null);
+        } catch (e) {
+            toast.error('Kunne ikke gemme moduler: ' + e.message);
+        } finally {
+            setModuleBusy(false);
+        }
+    };
 
     useEffect(() => {
         const loadAll = async () => {
@@ -285,6 +322,30 @@ const AdminDashboard = () => {
                                                             <CalendarClock size={16} /> Forlæng
                                                         </button>
                                                     )}
+                                                    <button
+                                                        onClick={() => openModuleEditor(carp)}
+                                                        title="Vælg hvilke moduler firmaet kan se (skræddersyet onboarding)"
+                                                        style={{
+                                                            background: '#0ea5e9',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            padding: '8px 16px',
+                                                            borderRadius: '6px',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            transition: 'transform 0.15s, filter 0.15s'
+                                                        }}
+                                                        onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.filter = 'brightness(1.1)'; }}
+                                                        onMouseOut={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.filter = 'none'; }}
+                                                    >
+                                                        {(() => {
+                                                            const off = (carp.raw_data?.modules?.disabled || []).filter(k => MODULES.some(m => m.key === k)).length;
+                                                            return <><SlidersHorizontal size={16} /> Moduler{off > 0 ? ` (${MODULES.length - off}/${MODULES.length})` : ''}</>;
+                                                        })()}
+                                                    </button>
                                                     <button
                                                         onClick={() => setSelectedCarpenterData(carp)}
                                                         style={{
@@ -689,6 +750,71 @@ const AdminDashboard = () => {
                             <button onClick={submitExtendTrial} disabled={extendBusy}
                                 style={{ padding: '11px 18px', borderRadius: '10px', border: 'none', background: '#7c3aed', color: 'white', fontWeight: 700, cursor: extendBusy ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                                 {extendBusy ? <Loader2 size={16} className="spin" /> : <CalendarClock size={16} />} Forlæng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Skræddersyet onboarding — vælg firmaets moduler */}
+            {moduleTarget && (
+                <div onClick={() => !moduleBusy && setModuleTarget(null)}
+                    style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div onClick={(e) => e.stopPropagation()}
+                        style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.6)', animation: 'slideUp 0.3s ease-out' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(14,165,233,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8' }}>
+                                <SlidersHorizontal size={22} />
+                            </div>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#f8fafc' }}>Moduler for {moduleTarget.company_name || 'firma'}</h3>
+                                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#94a3b8' }}>Tænd/sluk hvad firmaet ser. Slukket = kun skjult — data gemmes altid bagved.</p>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', margin: '18px 0' }}>
+                            <button onClick={() => setModuleDisabled([])}
+                                style={{ flex: 1, padding: '9px', borderRadius: '9px', border: '1px solid #334155', background: 'transparent', color: '#cbd5e1', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                                onMouseOver={e => e.currentTarget.style.background = '#334155'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                                Tænd alle
+                            </button>
+                            <button onClick={() => setModuleDisabled(MODULES.map(m => m.key))}
+                                style={{ flex: 1, padding: '9px', borderRadius: '9px', border: '1px solid #334155', background: 'transparent', color: '#cbd5e1', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                                onMouseOver={e => e.currentTarget.style.background = '#334155'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                                Sluk alle
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {MODULES.map(m => {
+                                const on = !moduleDisabled.includes(m.key);
+                                return (
+                                    <button key={m.key} onClick={() => toggleModule(m.key)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '14px', textAlign: 'left', width: '100%', padding: '12px 14px', borderRadius: '11px', border: `1px solid ${on ? 'rgba(16,185,129,0.35)' : '#334155'}`, background: on ? 'rgba(16,185,129,0.08)' : '#0f172a', cursor: 'pointer', transition: 'all 0.15s' }}
+                                        onMouseOver={e => e.currentTarget.style.borderColor = on ? 'rgba(16,185,129,0.6)' : '#475569'}
+                                        onMouseOut={e => e.currentTarget.style.borderColor = on ? 'rgba(16,185,129,0.35)' : '#334155'}>
+                                        {/* Custom toggle-switch (aldrig native) */}
+                                        <span style={{ flexShrink: 0, width: '40px', height: '22px', borderRadius: '999px', background: on ? '#10b981' : '#475569', position: 'relative', transition: 'background 0.2s' }}>
+                                            <span style={{ position: 'absolute', top: '2px', left: on ? '20px' : '2px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
+                                        </span>
+                                        <span style={{ flex: 1 }}>
+                                            <span style={{ display: 'block', fontWeight: 700, fontSize: '14px', color: '#f8fafc' }}>{m.label}</span>
+                                            <span style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>{m.description}</span>
+                                        </span>
+                                        <span style={{ flexShrink: 0, fontSize: '11px', fontWeight: 700, color: on ? '#34d399' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{on ? 'Tændt' : 'Slukket'}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '22px' }}>
+                            <button onClick={() => setModuleTarget(null)} disabled={moduleBusy}
+                                style={{ padding: '11px 18px', borderRadius: '10px', border: '1px solid #334155', background: 'transparent', color: '#f8fafc', fontWeight: 700, cursor: 'pointer' }}>
+                                Annuller
+                            </button>
+                            <button onClick={saveModules} disabled={moduleBusy}
+                                style={{ padding: '11px 18px', borderRadius: '10px', border: 'none', background: '#0ea5e9', color: 'white', fontWeight: 700, cursor: moduleBusy ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                {moduleBusy ? <Loader2 size={16} className="spin" /> : <CheckCircle size={16} />} Gem moduler
                             </button>
                         </div>
                     </div>

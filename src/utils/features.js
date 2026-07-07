@@ -99,3 +99,78 @@ export function getPlanFeatures(company) {
         timeTracking: plan !== 'solo', // Solo = uden timeregistrering
     };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODULER — "Skræddersyet onboarding" (per-firma synlighed)
+// ───────────────────────────────────────────────────────────────────────────
+// Filosofi: Alle firmaer får som standard HELE systemet. Efter prøvemåneden
+// holder vi et onboarding-møde og slukker KUN for de moduler kunden ikke vil
+// bruge — via Bizon Admin (skriver til carpenters.raw_data.modules.disabled).
+//
+// VIGTIGT — dette er et RENT VISNINGS-LAG:
+//   • At slukke et modul skjuler kun fanen/widgets. Data gemmes, registreres og
+//     ligger urørt bagved som før. Tænder man modulet igen, er ALT der straks
+//     (alle fakturaer, alle kalender-events, alle sager).
+//   • Rører ALDRIG hvordan data skrives/gemmes — kun hvad der vises.
+//   • Ligger OVEN PÅ plan (solo/hold) + rolle. Et modul kan skjules, men
+//     erstatter ikke plan/rolle-gating (fx solo har stadig ikke timeregistrering).
+//
+// BLOCKLIST, ikke allowlist: vi gemmer de SLUKKEDE moduler. Derfor er alt tændt
+// som default (tom liste = alt vist), og NYE moduler vi tilføjer senere er
+// AUTOMATISK tændt hos alle eksisterende firmaer — de skal aktivt slukkes,
+// aldrig aktivt tændes. Ingen mister en feature lydløst.
+// ═══════════════════════════════════════════════════════════════════════════
+export const MODULES = [
+    { key: 'customers',    label: 'Kunder',                description: 'Kunde-bibliotek med genbrugelige kundekort.' },
+    { key: 'quotes',       label: 'Tilbud & Forespørgsler', description: 'Indbakke, tilbud, forespørgsler og tilbudskladder.' },
+    { key: 'cases',        label: 'Sager & Ordrestyring',   description: 'Igangværende sager, byggepladser og opgaver.' },
+    { key: 'calendar',     label: 'Kalender',               description: 'Planlægning af sager og aftaler.' },
+    { key: 'chat',         label: 'Intern Chat',            description: 'Beskeder mellem medarbejdere.' },
+    { key: 'timesheet',    label: 'Tid & Løn',              description: 'Timeregistrering og løn-overblik (kræver Hold).' },
+    { key: 'finance',      label: 'Økonomi & Faktura',      description: 'Fakturering, økonomi-overblik og betalinger.' },
+    { key: 'map',          label: 'Kortvisning',            description: 'Sager og byggepladser på kort.' },
+    { key: 'drawings',     label: 'Skitser & Tegninger',    description: 'Tegne- og skitseværktøj.' },
+    { key: 'materials',    label: 'Materialer',             description: 'Materialebibliotek (kun fag med beregner).' },
+    { key: 'pricing',      label: 'Prisberegning',          description: 'Beregner-opsætning og priser (kun fag med beregner).' },
+    { key: 'integrations', label: 'Integrationer',          description: 'e-conomic, Dinero m.fl.' },
+    { key: 'team',         label: 'Team & Medarbejdere',    description: 'Håndtér medarbejdere og roller.' },
+];
+
+// Faner i dashboardet → deres modul. Faner der IKKE står her (overview,
+// superadmin) er altid tilgængelige og kan ikke slukkes.
+export const TAB_MODULE_MAP = {
+    customers:        'customers',
+    leads:            'quotes',
+    worker_drafts:    'quotes',
+    cases:            'cases',
+    calendar:         'calendar',
+    chat:             'chat',
+    worker_timesheet: 'timesheet',
+    admin_timesheet:  'timesheet',
+    finance:          'finance',
+    map:              'map',
+    drawings:         'drawings',
+    materials:        'materials',
+    settings:         'pricing',
+    integrations:     'integrations',
+    team:             'team',
+};
+
+// Returnerer { moduleKey: boolean } for et firma. Fail-open: intet gemt →
+// alt tændt; ukendt/nyt modul → tændt (kun eksplicit slukkede er false).
+export function getModules(company) {
+    const disabled = Array.isArray(company?.raw_data?.modules?.disabled)
+        ? company.raw_data.modules.disabled
+        : [];
+    const out = {};
+    for (const m of MODULES) out[m.key] = !disabled.includes(m.key);
+    return out;
+}
+
+// Er en dashboard-fane tilgængelig givet et moduler-objekt fra getModules()?
+// Faner uden modul (overview/superadmin) er altid true.
+export function isTabEnabled(tab, modules) {
+    const mod = TAB_MODULE_MAP[tab];
+    if (!mod) return true;
+    return modules ? modules[mod] !== false : true;
+}

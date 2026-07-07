@@ -37,7 +37,7 @@ import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import CreateCaseForm from './CreateCaseForm';
 import CustomerLibrary from './CustomerLibrary';
-import { getFeatures, getPlanFeatures } from '../../utils/features';
+import { getFeatures, getPlanFeatures, getModules, isTabEnabled } from '../../utils/features';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import MaterialListBuilder from './MaterialListBuilder';
 import Coachmark from './Coachmark';
@@ -905,7 +905,17 @@ const Dashboard = () => {
     
     // carpenterProfile er firmaet (Mester), som dataene tilhører
     const [carpenterProfile, setCarpenterProfile] = useState(null);
-    
+
+    // Modul-guard: hvis den aktive fane peger på et modul der er slukket for
+    // firmaet (fx via gammel localStorage eller direkte link), falder vi pænt
+    // tilbage til Oversigt. Oversigt/superadmin har intet modul og rammes aldrig.
+    useEffect(() => {
+        if (!carpenterProfile) return;
+        if (!isTabEnabled(activeTab, getModules(carpenterProfile))) {
+            setActiveTab('overview');
+        }
+    }, [carpenterProfile, activeTab]);
+
     const [isDashboardLoaded, setIsDashboardLoaded] = useState(false);
     const [isLeadsLoading, setIsLeadsLoading] = useState(false);
     const [isMaterialsLoading, setIsMaterialsLoading] = useState(false);
@@ -2719,6 +2729,10 @@ const Dashboard = () => {
     // Plan-baserede funktioner (Solo = uden timeregistrering; Hold/legacy/exempt = med).
     const planFeatures = getPlanFeatures(carpenterProfile);
     const timeTrackingLocked = !planFeatures.timeTracking;
+    // Per-firma moduler (skræddersyet onboarding). Default = alt tændt. Kun
+    // eksplicit slukkede moduler (sat i Bizon Admin) skjules. Rent visnings-lag
+    // OVEN PÅ rolle + plan — data gemmes altid bagved uanset.
+    const modules = getModules(carpenterProfile);
 
     // Opgraderings-teaser vist i stedet for time-fanerne når man er på Solo.
     const timeTrackingTeaser = (
@@ -2996,13 +3010,13 @@ const Dashboard = () => {
                         </button>
                     )}
 
-                    {['admin'].includes(effectiveRole) && (
+                    {['admin'].includes(effectiveRole) && modules.customers && (
                         <button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); setIsMobileMenuOpen(false); }}>
                             <Users size={20} /> Kunder
                         </button>
                     )}
 
-                    {['admin'].includes(effectiveRole) && (
+                    {['admin'].includes(effectiveRole) && modules.quotes && (
                         <button data-tour="nav-leads" className={activeTab === 'leads' ? 'active' : ''} onClick={() => { setActiveTab('leads'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
                             <FileText size={20} /> Tilbud & Forespørgsler
                             {(() => {
@@ -3019,71 +3033,75 @@ const Dashboard = () => {
                         </button>
                     )}
 
-                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
+                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && modules.cases && (
                         <button data-tour="nav-cases" className={activeTab === 'cases' ? 'active' : ''} onClick={() => { setActiveTab('cases'); setIsMobileMenuOpen(false); }}>
                             <Briefcase size={20} /> {['worker', 'apprentice'].includes(effectiveRole) ? 'Mine opgaver' : 'Sager & Ordrestyring'}
                         </button>
                     )}
-                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
+                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && modules.calendar && (
                         <button data-tour="nav-calendar" className={activeTab === 'calendar' ? 'active' : ''} onClick={() => { setActiveTab('calendar'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
                             <Calendar size={20} /> Kalender
                             {/* Rødt uplanlagt-badge FJERNET (Tobias-feedback juli 2026) — overblikket
                                 over uplanlagte sager bor i kalenderens "Klar til planlægning"-panel. */}
                         </button>
                     )}
-                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
+                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && modules.chat && (
                         <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => { setActiveTab('chat'); setIsMobileMenuOpen(false); }} style={{ position: 'relative' }}>
                             <MessageSquare size={20} /> Intern Chat
                             {chatUnreadCount > 0 && <span className="notification-badge">{chatUnreadCount}</span>}
                         </button>
                     )}
-                    {['worker', 'apprentice', 'sales'].includes(effectiveRole) && (
+                    {['worker', 'apprentice', 'sales'].includes(effectiveRole) && modules.timesheet && (
                         <button className={activeTab === 'worker_timesheet' ? 'active' : ''} onClick={() => { setActiveTab('worker_timesheet'); setIsMobileMenuOpen(false); }}>
                             <Clock size={20} /> Timeregistrering
                         </button>
                     )}
-                    {['worker', 'sales'].includes(effectiveRole) && (
+                    {['worker', 'sales'].includes(effectiveRole) && modules.quotes && (
                         <button className={activeTab === 'worker_drafts' ? 'active' : ''} onClick={() => { setActiveTab('worker_drafts'); setIsMobileMenuOpen(false); }}>
                             <PenTool size={20} /> Dine Tilbudskladder
                         </button>
                     )}
                     {['admin', 'accountant'].includes(effectiveRole) && (
                         <>
+                        {modules.finance && (
                         <button data-tour="nav-finance" className={activeTab === 'finance' ? 'active' : ''} onClick={() => { setActiveTab('finance'); setIsMobileMenuOpen(false); }}>
                             <Wallet size={20} /> Økonomi & Faktura
                         </button>
+                        )}
+                        {modules.timesheet && (
                         <button data-tour="nav-timesheet" className={activeTab === 'admin_timesheet' ? 'active' : ''} onClick={() => { setActiveTab('admin_timesheet'); setIsMobileMenuOpen(false); }}>
                             <FileText size={20} /> Løn & Timer
                             {timeTrackingLocked && <Lock size={13} style={{ marginLeft: 'auto', opacity: 0.55 }} />}
                         </button>
+                        )}
                         </>
                     )}
-                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && (
+                    {['admin', 'sales', 'worker', 'apprentice', 'accountant'].includes(effectiveRole) && modules.map && (
                         <button className={activeTab === 'map' ? 'active' : ''} onClick={() => { setActiveTab('map'); setIsMobileMenuOpen(false); }}>
                             <MapPin size={20} /> Kortvisning
                         </button>
                     )}
-                    {['admin', 'sales', 'worker', 'apprentice'].includes(effectiveRole) && (
+                    {['admin', 'sales', 'worker', 'apprentice'].includes(effectiveRole) && modules.drawings && (
                         <button className={activeTab === 'drawings' ? 'active' : ''} onClick={() => { setActiveTab('drawings'); setIsMobileMenuOpen(false); }}>
                             <PenTool size={20} /> Skitser & Tegninger
                         </button>
                     )}
-                    {['admin', 'sales'].includes(effectiveRole) && features.materials && (
+                    {['admin', 'sales'].includes(effectiveRole) && features.materials && modules.materials && (
                         <button className={activeTab === 'materials' ? 'active' : ''} onClick={() => { setActiveTab('materials'); setIsMobileMenuOpen(false); }}>
                             <Package size={20} /> Materialer
                         </button>
                     )}
-                    {['admin'].includes(effectiveRole) && features.calculator && (
+                    {['admin'].includes(effectiveRole) && features.calculator && modules.pricing && (
                         <button className={activeTab === 'settings' ? 'active' : ''} onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}>
                             <Sliders size={20} /> Prisberegning
                         </button>
                     )}
-                    {['admin', 'accountant'].includes(effectiveRole) && (
+                    {['admin', 'accountant'].includes(effectiveRole) && modules.integrations && (
                         <button className={activeTab === 'integrations' ? 'active' : ''} onClick={() => { setActiveTab('integrations'); setIsMobileMenuOpen(false); }}>
                             <Link size={20} /> Integrationer
                         </button>
                     )}
-                    {['admin', 'accountant'].includes(effectiveRole) && (
+                    {['admin', 'accountant'].includes(effectiveRole) && modules.team && (
                         <button className={activeTab === 'team' ? 'active' : ''} onClick={() => { setActiveTab('team'); setIsMobileMenuOpen(false); }}>
                             <HardHat size={20} /> Team & Medarbejdere
                         </button>
@@ -3473,6 +3491,7 @@ const Dashboard = () => {
                                 leadsData={roleFilteredLeads}
                                 carpenterProfile={{ ...carpenterProfile, role: effectiveRole }}
                                 myProfile={{ ...myProfile, role: effectiveRole }}
+                                modules={modules}
                                 setActiveTab={setActiveTab}
                                 setSelectedLead={setSelectedLead}
                                 setTargetCaseId={setTargetCaseId}
