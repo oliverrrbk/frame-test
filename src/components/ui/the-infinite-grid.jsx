@@ -7,64 +7,115 @@ import {
   AnimatePresence
 } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FileText, Clock, Users, Wallet, CalendarDays, Package, Calculator } from "lucide-react";
+import { FileText, Clock, Briefcase, Wallet, CalendarDays, Home, MapPin } from "lucide-react";
+import { Preview } from "../Landing/SystemWheelPreviews";
+import { MobilePreview } from "../Landing/SystemWheelMobilePreviews";
 
-// Feature-bånd i heroen: viser at Frame er meget mere end en beregner.
-// Chipsene popper staggered ind, og den "aktive" chip cykler roligt igennem —
-// glas-look med hover, jf. Bison Frame-designkravene.
-const HERO_FEATURES = [
-  { icon: FileText,     label: "Tilbud på stedet" },
-  { icon: Clock,        label: "Timeregistrering" },
-  { icon: Users,        label: "Kunder & sager" },
-  { icon: Wallet,       label: "Løn" },
-  { icon: CalendarDays, label: "Kalender" },
-  { icon: Package,      label: "Materialelister" },
-  { icon: Calculator,   label: "Regnskab" },
+// Udpluk i heroen: et hurtigt kig på hvordan systemet ser ud. Chipsene fungerer
+// som tabs (glas-look + hover, jf. Bison Frame-designkravene), og preview-ruden
+// under dem auto-skifter gennem de rigtige app-mockups fra Funktioner.
+// Rækkefølgen er valgt til at fange tømreren hurtigt: wow (overblik) → kerneværdi
+// (tilbud) → hverdagen → det visuelt flotte (kort) → payoff (økonomi).
+// Hver chip peger på en DISTINKT skærm, så man ikke ser den samme to gange.
+const HERO_SHOWCASE = [
+  { icon: Home,         label: "Oversigt",         id: "overview" },
+  { icon: FileText,     label: "Tilbud på stedet", id: "leads" },
+  { icon: Clock,        label: "Timeregistrering", id: "payroll" },
+  { icon: CalendarDays, label: "Kalender",         id: "calendar" },
+  { icon: Briefcase,    label: "Sager",            id: "cases" },
+  { icon: MapPin,       label: "Kort",             id: "map" },
+  { icon: Wallet,       label: "Økonomi",          id: "finance" },
 ];
 
-const HeroFeatureTicker = () => {
+// Roligt tempo — et "kig", ikke den fulde demo som på Funktioner-siden,
+// men lang nok til at nå at se hvad hver skærm er.
+const HERO_STEP_MS = 3400;
+
+const HeroShowcase = () => {
   const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const activeId = HERO_SHOWCASE[active].id;
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setActive((i) => (i + 1) % HERO_FEATURES.length);
-    }, 1800);
-    return () => clearInterval(t);
-  }, []);
+    if (paused) return;
+    const t = setTimeout(() => {
+      setActive((i) => (i + 1) % HERO_SHOWCASE.length);
+    }, HERO_STEP_MS);
+    return () => clearTimeout(t);
+  }, [active, paused]);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      className="flex flex-wrap justify-center gap-2.5 pt-6 max-w-3xl mx-auto pointer-events-auto"
+      transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      className="w-full max-w-4xl mx-auto flex flex-col items-center gap-6 pointer-events-auto"
     >
-      {HERO_FEATURES.map((f, idx) => {
-        const isActive = idx === active;
-        return (
-          <motion.div
-            key={f.label}
-            initial={{ opacity: 0, scale: 0.85, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 + idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
-            whileHover={{ y: -3, scale: 1.04 }}
-            style={{ WebkitTransform: "translateZ(0)" }}
-            className={`group flex items-center gap-2 rounded-full pl-3 pr-4 py-2 text-sm font-semibold backdrop-blur-md border transition-all duration-500 cursor-default select-none ${
-              isActive
-                ? "bg-white/90 dark:bg-slate-800/90 border-orange-500/40 text-slate-900 dark:text-slate-100 shadow-[0_8px_30px_-8px_rgba(234,88,12,0.45)]"
-                : "bg-white/40 dark:bg-slate-900/40 border-white/40 dark:border-slate-700/40 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-white/70 dark:hover:bg-slate-800/70"
-            }`}
-          >
-            <f.icon
-              size={16}
-              className={`transition-colors duration-500 ${
-                isActive ? "text-orange-600 dark:text-orange-400" : "text-slate-400 dark:text-slate-500 group-hover:text-orange-500"
+      {/* Chip-tabs */}
+      <div className="flex flex-wrap justify-center gap-2.5">
+        {HERO_SHOWCASE.map((f, idx) => {
+          const isActive = idx === active;
+          return (
+            <motion.button
+              key={f.id}
+              onClick={() => setActive(idx)}
+              initial={{ opacity: 0, scale: 0.85, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.45 + idx * 0.07, ease: [0.16, 1, 0.3, 1] }}
+              whileHover={{ y: -3, scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              style={{ WebkitTransform: "translateZ(0)" }}
+              className={`group flex items-center gap-2 rounded-full pl-3 pr-4 py-2 text-sm font-semibold backdrop-blur-md border transition-all duration-500 select-none ${
+                isActive
+                  ? "bg-white/90 dark:bg-slate-800/90 border-orange-500/40 text-slate-900 dark:text-slate-100 shadow-[0_8px_30px_-8px_rgba(234,88,12,0.45)]"
+                  : "bg-white/40 dark:bg-slate-900/40 border-white/40 dark:border-slate-700/40 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-white/70 dark:hover:bg-slate-800/70"
               }`}
-            />
-            {f.label}
-          </motion.div>
-        );
-      })}
+            >
+              <f.icon
+                size={16}
+                className={`transition-colors duration-500 ${
+                  isActive ? "text-orange-600 dark:text-orange-400" : "text-slate-400 dark:text-slate-500 group-hover:text-orange-500"
+                }`}
+              />
+              {f.label}
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* Preview-rude — rigtige app-mockups, hurtigt skiftende */}
+      <div className="w-full text-left">
+        {/* Desktop-mockup */}
+        <div className="hidden lg:block">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeId}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Preview id={activeId} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+        {/* Telefon-mockup (mobil/tablet) */}
+        <div className="lg:hidden max-w-sm mx-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeId}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3 }}
+            >
+              <MobilePreview id={activeId} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
     </motion.div>
   );
 };
@@ -101,7 +152,7 @@ export const TheInfiniteGrid = () => {
     <section
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="relative w-full h-[90svh] flex flex-col items-center justify-center bg-surface"
+      className="relative w-full min-h-[100svh] flex flex-col items-center justify-center bg-surface py-24 md:py-28"
     >
       <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}>
         <div className="absolute inset-0 z-0 opacity-[0.15]">
@@ -121,8 +172,8 @@ export const TheInfiniteGrid = () => {
         </div>
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center px-4 max-w-[1440px] mx-auto space-y-8 pointer-events-none">
-         <motion.div 
+      <div className="relative z-10 flex flex-col items-center text-center px-4 w-full max-w-[1440px] mx-auto space-y-10 md:space-y-12 pointer-events-none">
+         <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
@@ -135,14 +186,18 @@ export const TheInfiniteGrid = () => {
             Systemet der hjælper tømrere med at holde styr på deres forretning. På både mobil og computer.
           </p>
         </motion.div>
-        
-        <motion.div 
+
+        {/* Midten — hurtigt udpluk af hvordan systemet ser ud */}
+        <HeroShowcase />
+
+        {/* Nederst — de to CTA-knapper */}
+        <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-wrap justify-center gap-4 pt-4 pointer-events-auto"
+            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-wrap justify-center gap-4 pointer-events-auto"
         >
-          <motion.button 
+          <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}
@@ -152,7 +207,7 @@ export const TheInfiniteGrid = () => {
               Start din gratis prøveperiode
           </motion.button>
           <div className="relative z-50">
-            <motion.button 
+            <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/calculate')}
@@ -163,8 +218,6 @@ export const TheInfiniteGrid = () => {
             </motion.button>
           </div>
         </motion.div>
-
-        <HeroFeatureTicker />
       </div>
     </section>
   );
