@@ -8,6 +8,7 @@ import PageTransition from '../ui/PageTransition';
 import { ROICalculator } from '../ui/roi-calculator';
 import { Share2, Wallet, ShieldCheck, ArrowRight, MapPin } from 'lucide-react';
 import CustomerCalculatorDemo from './CustomerCalculatorDemo';
+import TuneCalculatorDemo from './TuneCalculatorDemo';
 
 export default function CalculatorPage({ setSession }) {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -26,10 +27,10 @@ export default function CalculatorPage({ setSession }) {
             <TopNavBar onLoginClick={() => setIsLoginOpen(true)} />
 
             {/* Main Content Canvas */}
-            <main className="flex-grow flex flex-col items-center w-full px-6 md:px-12 pt-16 pb-24 z-10 relative">
+            <main className="flex-grow flex flex-col items-center w-full px-6 md:px-12 pt-20 md:pt-24 pb-32 md:pb-40 z-10 relative">
 
                 {/* ═══ TOP (hero): Kundeberegneren — se hvordan det virker ═══ */}
-                <section className="w-full max-w-7xl mx-auto relative z-10 mt-8 mb-28">
+                <section className="w-full max-w-7xl mx-auto relative z-10 mt-10 md:mt-14 mb-36 md:mb-48">
                     {/* Decorative Background Glows */}
                     <div className="absolute -top-20 -left-48 w-[500px] h-[500px] bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-[120px] pointer-events-none z-[-1]"></div>
                     <div className="absolute top-24 -right-32 w-[400px] h-[400px] bg-orange-500/10 dark:bg-orange-400/10 rounded-full blur-[120px] pointer-events-none z-[-1]"></div>
@@ -108,18 +109,48 @@ export default function CalculatorPage({ setSession }) {
                     </div>
 
                     {/* Ærlig note */}
-                    <p className="text-center text-sm text-slate-400 dark:text-slate-500 max-w-2xl mx-auto mt-10 leading-relaxed">
+                    <p className="text-center text-sm text-slate-400 dark:text-slate-500 max-w-2xl mx-auto mt-14 md:mt-16 leading-relaxed">
                         Virker bedst til bestemte, gentagne opgavetyper — ikke alt kan sættes på formel, og det ved enhver god tømrer. Du styrer selv præcis hvad kunden kan regne på.
                     </p>
                 </section>
 
-                {/* ═══ MIDT: Beregn din profit (ROI) ═══ */}
-                <section className="w-full max-w-4xl mx-auto relative z-10 mb-28">
+                {/* ═══ MIDT-A: Sådan bliver det dit eget overslag (tuner-loop) ═══ */}
+                <section className="w-full max-w-5xl mx-auto relative z-10 mb-36 md:mb-48">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: "-50px" }}
-                        className="text-center mb-12"
+                        className="text-center mb-12 md:mb-16"
+                    >
+                        <div className="inline-flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-600 dark:text-slate-300 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-slate-200/50 dark:border-slate-700/50">
+                            <span className="w-2 h-2 rounded-full bg-orange-600 dark:bg-orange-400"></span>
+                            Kend dine tal
+                        </div>
+                        <h2 className="text-[clamp(2rem,4vw,3rem)] font-bold leading-tight tracking-[-0.03em] text-slate-900 dark:text-slate-50 mb-5">
+                            Det bliver helt <span className="text-orange-600 dark:text-orange-400 opacity-90">dit eget</span> overslag
+                        </h2>
+                        <p className="text-[clamp(1.05rem,1.5vw,1.25rem)] text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                            Skru på tempo, timepris, avance og materialepriser — så bygger beregneren prisen på præcis dine tal. Ikke en standard alle andre også får.
+                        </p>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 40 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <TuneCalculatorDemo />
+                    </motion.div>
+                </section>
+
+                {/* ═══ MIDT: Beregn din profit (ROI) ═══ */}
+                <section className="w-full max-w-4xl mx-auto relative z-10 mb-36 md:mb-48">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        className="text-center mb-16 md:mb-20"
                     >
                         <div className="inline-flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-600 dark:text-slate-300 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-slate-200/50 dark:border-slate-700/50">
                             <span className="w-2 h-2 rounded-full bg-orange-600 dark:bg-orange-400"></span>
@@ -144,7 +175,7 @@ export default function CalculatorPage({ setSession }) {
                 </section>
 
                 {/* ═══ BUND: Opret bruger-CTA ═══ */}
-                <section className="w-full max-w-6xl mx-auto relative z-10 mb-8">
+                <section className="w-full max-w-6xl mx-auto relative z-10 mb-12 md:mb-16">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         whileInView={{ opacity: 1, y: 0 }}
