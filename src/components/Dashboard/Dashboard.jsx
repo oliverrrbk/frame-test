@@ -3540,10 +3540,10 @@ const Dashboard = () => {
                     )}
                     
                     {activeTab === 'account_settings' && myProfile && (
-                        <div className="space-y-8" style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', overflowY: 'auto', padding: '24px' }}>
+                        <div style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
                             {/* Vis kun firma-indstillinger hvis brugeren er ejer af firmaet (admin) */}
                             {myProfile.role === 'admin' && carpenterProfile ? (
-                                <AccountSettingsView 
+                                <AccountSettingsView
                                     carpenterProfile={carpenterProfile}
                                     setCarpenterProfile={setCarpenterProfile}
                                     handleProfileSave={handleProfileSave}
@@ -3555,6 +3555,7 @@ const Dashboard = () => {
                                     isUploadingLogo={isUploadingLogo}
                                     isUploadingPortrait={isUploadingPortrait}
                                     session={session}
+                                    onNavigate={setActiveTab}
                                 />
                             ) : (
                                 <div style={{ maxWidth: '600px', margin: '60px auto', background: '#fff', borderRadius: '24px', padding: '48px', textAlign: 'center', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px -15px rgba(0,0,0,0.05)' }}>

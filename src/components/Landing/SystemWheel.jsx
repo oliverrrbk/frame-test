@@ -81,25 +81,22 @@ const FEATURES = [
 ];
 
 
-// Fremdrifts-ring: fyldes lineært over loop-varigheden og nulstilles ved modulskift
-// (visualiserer at hjulet snart hopper videre). `restartKey` genstarter animationen.
-function LoopRing({ size, stroke = 2.5, restartKey, duration, paused, className }) {
-    const r = (size - stroke) / 2;
-    const circ = 2 * Math.PI * r;
+// Fremdrifts-streg: en tynd blå linje øverst på preview'et der fyldes lineært
+// over loop-varigheden og nulstilles ved modulskift (viser hvor lang tid der er
+// til hjulet hopper videre). `restartKey` genstarter animationen.
+function TopProgressBar({ restartKey, duration, paused, className = '' }) {
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={className} style={{ transform: 'rotate(-90deg)' }}>
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeOpacity="0.1" strokeWidth={stroke} />
+        <div className={`relative h-1 w-full rounded-full bg-slate-200/70 dark:bg-slate-800 overflow-hidden ${className}`}>
             {!paused && (
-                <motion.circle
+                <motion.div
                     key={restartKey}
-                    cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round"
-                    strokeDasharray={circ}
-                    initial={{ strokeDashoffset: circ }}
-                    animate={{ strokeDashoffset: 0 }}
+                    className="absolute inset-y-0 left-0 rounded-full bg-blue-500 dark:bg-blue-400"
+                    initial={{ width: '0%' }}
+                    animate={{ width: '100%' }}
                     transition={{ duration: duration / 1000, ease: 'linear' }}
                 />
             )}
-        </svg>
+        </div>
     );
 }
 
@@ -189,7 +186,6 @@ export default function SystemWheel() {
 
                 {/* Center — viser det aktive moduls titel + beskrivelse (skifter når man hopper) */}
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56">
-                    <LoopRing size={240} stroke={3} restartKey={active} duration={loopMs} paused={paused} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 dark:text-blue-400 pointer-events-none" />
                     <div className="w-full h-full rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col items-center justify-center text-center px-7 relative overflow-hidden">
                         <div className="absolute inset-0 rounded-full bg-blue-600/5 blur-xl pointer-events-none"></div>
                         <AnimatePresence mode="wait">
@@ -222,6 +218,8 @@ export default function SystemWheel() {
 
             {/* ─── DETALJE-PANEL: desktop-mockup (lg+) vs. telefon (mobil) ─── */}
             <div className="hidden lg:block w-full lg:flex-1">
+                {/* Blå fremdrifts-streg øverst — viser hvor lang tid hvert modul tager */}
+                <TopProgressBar restartKey={active} duration={loopMs} paused={paused} className="mb-3" />
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeFeature.id}
@@ -236,6 +234,8 @@ export default function SystemWheel() {
             </div>
 
             <div className="lg:hidden w-full">
+                {/* Blå fremdrifts-streg øverst — aligned med telefon-preview'et */}
+                <TopProgressBar restartKey={active} duration={loopMs} paused={paused} className="mb-3 max-w-[280px] mx-auto" />
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeFeature.id}
@@ -307,7 +307,6 @@ function MobileWheel({ active, setActive, activeFeature, setPaused, goto, loopMs
 
                 {/* Centrum — aktivt modul */}
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[132px] h-[132px]">
-                    <LoopRing size={144} stroke={3} restartKey={active} duration={loopMs} paused={paused} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 dark:text-blue-400 pointer-events-none" />
                     <div className="w-full h-full rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col items-center justify-center text-center px-4 relative overflow-hidden">
                         <div className="absolute inset-0 rounded-full bg-blue-600/5 blur-xl pointer-events-none" />
                         <AnimatePresence mode="wait">

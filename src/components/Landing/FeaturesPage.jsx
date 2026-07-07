@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
 import TopNavBar from './TopNavBar';
-import { Ruler, DollarSign, ArrowRight, Compass, Send, Wallet, HardHat, Phone } from 'lucide-react';
+import { ArrowRight, Compass, Send, Wallet, HardHat, Phone, Boxes, SlidersHorizontal, Sparkles, FileText, Users, Clock, CalendarDays, Receipt, MapPin, PenTool, Calculator, Lock } from 'lucide-react';
 import PageTransition from '../ui/PageTransition';
 import SystemWheel from './SystemWheel';
 
@@ -25,6 +25,21 @@ export default function FeaturesPage({ setSession }) {
         // Scroll restoration handled globally
     }, []);
 
+    // Klikbar demo af "byg dit dashboard" — ren illustration (gemmes ikke).
+    // Kerne-moduler (tilbud + kunder) er altid tændt; resten vælger man selv.
+    const DASH_MODULES = [
+        { key: 'tilbud', icon: FileText, label: 'Tilbud på stedet', color: 'text-blue-600 dark:text-blue-400', core: true },
+        { key: 'kunder', icon: Users, label: 'Kunder & sager', color: 'text-orange-600 dark:text-orange-400', core: true },
+        { key: 'beregner', icon: Calculator, label: 'Prisberegner & materialer', color: 'text-indigo-600 dark:text-indigo-400' },
+        { key: 'timer', icon: Clock, label: 'Timeregistrering', color: 'text-slate-600 dark:text-slate-300', badge: 'Hold' },
+        { key: 'kalender', icon: CalendarDays, label: 'Kalender', color: 'text-blue-600 dark:text-blue-400' },
+        { key: 'regnskab', icon: Receipt, label: 'Regnskab & faktura', color: 'text-emerald-600 dark:text-emerald-400' },
+        { key: 'kort', icon: MapPin, label: 'Kortvisning', color: 'text-slate-600 dark:text-slate-300' },
+        { key: 'skitser', icon: PenTool, label: 'Skitser & tegninger', color: 'text-slate-600 dark:text-slate-300' },
+    ];
+    const [dashMods, setDashMods] = useState({ tilbud: true, kunder: true, beregner: true, timer: true, kalender: true, regnskab: true, kort: false, skitser: false });
+    const toggleMod = (key, core) => { if (!core) setDashMods((m) => ({ ...m, [key]: !m[key] })); };
+
     return (
         <PageTransition className="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col relative overflow-hidden">
             {/* Infinite Grid Overlay */}
@@ -34,10 +49,10 @@ export default function FeaturesPage({ setSession }) {
             <TopNavBar onLoginClick={() => setIsLoginOpen(true)} />
 
             {/* Main Content Canvas */}
-            <main className="flex-grow flex flex-col items-center w-full px-6 md:px-12 pt-16 pb-24 z-10 relative">
+            <main className="flex-grow flex flex-col items-center w-full px-6 md:px-12 pt-20 md:pt-28 pb-32 md:pb-40 z-10 relative">
 
                 {/* Hero Section */}
-                <header className="text-center w-full max-w-4xl mx-auto mb-[clamp(2.5rem,5vw,4rem)] mt-12 relative z-10">
+                <header className="text-center w-full max-w-4xl mx-auto mb-[clamp(4rem,7vw,6rem)] mt-16 md:mt-24 relative z-10">
                     {/* Decorative Background Glows */}
                     <div className="absolute -top-20 -left-48 md:-left-64 w-[500px] h-[500px] bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-[120px] pointer-events-none z-[-1]"></div>
                     <div className="absolute top-24 -right-32 w-[400px] h-[400px] bg-orange-500/10 dark:bg-orange-400/10 rounded-full blur-[120px] pointer-events-none z-[-1]"></div>
@@ -71,12 +86,124 @@ export default function FeaturesPage({ setSession }) {
                 </header>
 
                 {/* System Wheel — hele systemet, interaktivt */}
-                <section className="mb-40 w-full max-w-[1440px] relative z-10">
+                <section className="mb-56 w-full max-w-[1440px] relative z-10">
                     <SystemWheel />
                 </section>
 
+                {/* Skræddersyet — kun det du har brug for */}
+                <section className="mb-56 w-full max-w-[1440px] px-8 mx-auto relative z-10">
+                    <div className="flex flex-col md:flex-row gap-14 md:gap-16 items-center">
+                        {/* Venstre: budskab + 3 pointer */}
+                        <div className="md:w-1/2">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-50px" }}
+                                className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-6 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700"
+                            >
+                                <span className="w-2 h-2 rounded-full bg-orange-600 dark:bg-orange-400"></span>
+                                Skræddersyet
+                            </motion.div>
+                            <motion.h2
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-50px" }}
+                                className="text-[clamp(2rem,3.5vw,3rem)] font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-50 mb-5"
+                            >
+                                Kun det du har brug for
+                            </motion.h2>
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                whileInView={{ opacity: 1 }}
+                                transition={{ delay: 0.1 }}
+                                viewport={{ once: true }}
+                                className="text-[clamp(1.05rem,1.5vw,1.2rem)] text-slate-500 dark:text-slate-400 leading-relaxed mb-10"
+                            >
+                                Du får hele værktøjskassen — men du bestemmer, hvad der fylder på dit dashboard. Slå fra det, du ikke bruger, så du kun ser dine ting. Ingen støj.
+                            </motion.p>
+
+                            <div className="flex flex-col gap-7">
+                                {[
+                                    { icon: Boxes, color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10', title: 'Få det hele', text: 'Alle moduler er med fra dag ét. Brug lige så meget, du vil — der er ingen tillægspakker at jagte.' },
+                                    { icon: SlidersHorizontal, color: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10', title: 'Skru til og fra', text: 'Sluk det, du ikke bruger. Dashboardet viser kun dine ting, så du kommer hurtigere til det, der betyder noget.' },
+                                    { icon: Sparkles, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10', title: 'Mangler du noget?', text: 'Ønsk nye funktioner — vi bygger videre sammen med rigtige tømrere, så systemet passer til jeres hverdag.' },
+                                ].map((p, i) => (
+                                    <motion.div
+                                        key={p.title}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: i * 0.1 }}
+                                        viewport={{ once: true, margin: "-40px" }}
+                                        className="flex gap-4 items-start group"
+                                    >
+                                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform duration-300 ${p.color}`}>
+                                            <p.icon size={20} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">{p.title}</h3>
+                                            <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 leading-relaxed">{p.text}</p>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Højre: dashboard med moduler du slår til/fra */}
+                        <motion.div
+                            initial={{ opacity: 0, x: 40 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.6 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            className="md:w-1/2 w-full bg-white dark:bg-slate-900 rounded-[2rem] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden"
+                        >
+                            <div className="absolute top-0 right-0 w-56 h-56 bg-blue-600/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                            <div className="flex items-center justify-between mb-6 relative z-10">
+                                <div>
+                                    <div className="text-[0.65rem] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-1">Dit dashboard</div>
+                                    <div className="font-bold text-slate-900 dark:text-slate-100 text-lg tracking-tight">Vælg dine moduler</div>
+                                </div>
+                                <span className="text-[0.65rem] font-bold tracking-widest uppercase text-emerald-600 dark:text-emerald-400">Kun det du bruger</span>
+                            </div>
+
+                            <div className="flex flex-col gap-2.5 relative z-10">
+                                {DASH_MODULES.map((m) => {
+                                    const on = dashMods[m.key];
+                                    return (
+                                        <button
+                                            key={m.key}
+                                            type="button"
+                                            onClick={() => toggleMod(m.key, m.core)}
+                                            aria-pressed={on}
+                                            className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border transition-all duration-300 text-left ${m.core ? 'cursor-default' : 'cursor-pointer hover:border-slate-300 dark:hover:border-slate-600'} ${on ? 'bg-white dark:bg-slate-900 border-slate-150 dark:border-slate-800 shadow-sm' : 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-100/70 dark:border-slate-800/50 opacity-55'}`}
+                                        >
+                                            <div className={on ? m.color : 'text-slate-400 dark:text-slate-600'}><m.icon size={18} /></div>
+                                            <span className={`font-semibold text-sm flex-1 ${on ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'}`}>{m.label}</span>
+                                            {m.badge && (
+                                                <span className="text-[0.58rem] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400">{m.badge}</span>
+                                            )}
+                                            {m.core ? (
+                                                <span className="flex items-center gap-1 text-[0.58rem] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500 shrink-0">
+                                                    <Lock size={11} /> Kerne
+                                                </span>
+                                            ) : (
+                                                <span className={`relative w-9 h-5 rounded-full shrink-0 transition-colors duration-300 ${on ? 'bg-blue-500 dark:bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                                                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-300 ${on ? 'left-[18px]' : 'left-0.5'}`}></span>
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-5 relative z-10 leading-relaxed">
+                                Prøv at trykke — det er din menu, du bygger. <strong className="text-slate-500 dark:text-slate-400">Kerne-moduler</strong> er der altid; timeregistrering & løn kræver et <strong className="text-slate-500 dark:text-slate-400">Hold-abonnement</strong>.
+                            </p>
+                        </motion.div>
+                    </div>
+                </section>
+
                 {/* The Journey — Byd ind → Vind → Udfør → Afregn */}
-                <section className="mb-40 w-full max-w-6xl relative z-10">
+                <section className="mb-56 w-full max-w-6xl relative z-10">
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -127,92 +254,8 @@ export default function FeaturesPage({ setSession }) {
                     </div>
                 </section>
 
-                {/* Technical Spec Sheet: The Logic Engine */}
-                <section className="mb-40 w-full max-w-[1440px] px-8 mx-auto relative z-10 mt-12">
-                    <div className="flex flex-col md:flex-row gap-16 items-start">
-                        <div className="md:w-1/3 relative z-20 sticky top-32">
-                            <div className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-6 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700">
-                                Ét modul
-                            </div>
-                            <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-50 mb-6">
-                                Tilbudsmotoren.
-                            </h2>
-                            <p className="text-[clamp(1rem,1.25vw,1.125rem)] text-slate-500 dark:text-slate-400 leading-relaxed mb-8">
-                                Vi bruger ikke blot grove skøn. Vores teknologi udregner præcist profitten ud fra din timesats, kørsel, benzin og bilens slitage.
-                            </p>
-                        </div>
-                        <motion.div
-                            initial={{ opacity: 0, x: 50 }}
-                            whileInView={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.6 }}
-                            viewport={{ once: true, margin: "-50px" }}
-                            className="md:w-2/3 w-full bg-white dark:bg-slate-900 rounded-[2rem] p-8 md:p-12 border border-slate-100 dark:border-slate-800 shadow-sm relative z-10 overflow-hidden" style={{ WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
-                        >
-                            <div className="border-b border-slate-100 dark:border-slate-800 pb-6 mb-8 flex justify-between items-end">
-                                <div>
-                                    <div className="text-[0.65rem] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-1">Modul</div>
-                                    <div className="font-bold text-slate-900 dark:text-slate-100 text-lg tracking-tight">Beregning af tillæg</div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-[0.65rem] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-1">Status</div>
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse"></span>
-                                        Aktiv
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="space-y-8 relative z-20 font-body">
-                                {/* Timesats Block */}
-                                <div className="group/item flex gap-6 items-start pb-8 border-b border-slate-100 dark:border-slate-800/80 transition-all duration-300">
-                                    <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400 shrink-0 group-hover/item:scale-110 transition-transform duration-300 shadow-sm">
-                                        <DollarSign size={22} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 group-hover/item:text-orange-600 dark:group-hover/item:text-orange-400 transition-colors duration-300">
-                                            Din Timesats
-                                        </h3>
-                                        <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 leading-relaxed">
-                                            Sæt din ønskede timesats og beregn nemt fortjeneste, uanset hvor lang tid et projekt forventes at tage med den givne arbejdsbyrde.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Kørsel & Slid Block */}
-                                <div className="group/item flex gap-6 items-start pb-8 border-b border-slate-100 dark:border-slate-800/80 transition-all duration-300">
-                                    <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 group-hover/item:scale-110 transition-transform duration-300 shadow-sm">
-                                        <Compass size={22} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400 transition-colors duration-300">
-                                            Kørsel & Slid
-                                        </h3>
-                                        <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 leading-relaxed">
-                                            Regner fuldautomatisk ud præcist, hvad det koster dig at køre dertil, bl.a. ud fra benzinpriser samt dækslip, så det lægges på toppen.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Materialer Block */}
-                                <div className="group/item flex gap-6 items-start transition-all duration-300">
-                                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 group-hover/item:scale-110 transition-transform duration-300 shadow-sm">
-                                        <Ruler size={22} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors duration-300">
-                                            Materialer & Avance
-                                        </h3>
-                                        <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 leading-relaxed">
-                                            Udregner totalprisen for materialer, hvorefter du tilføjer din ønskede avanceprocent. Derefter kan et specificeret tilbud skabes og sendes afsted med det samme.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                </section>
-
                 {/* Personal CTA — ring os */}
-                <section className="w-full max-w-[1440px] px-8 mx-auto mb-40 relative z-10">
+                <section className="w-full max-w-[1440px] px-8 mx-auto mb-56 relative z-10">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         whileInView={{ opacity: 1, y: 0 }}
