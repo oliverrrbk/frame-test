@@ -4,8 +4,9 @@ import toast from 'react-hot-toast';
 import { friendlyError } from '../../utils/friendlyError';
 import { QUESTIONS } from './questionsConfig';
 import { generateTaskDescription } from '../../utils/taskDescription';
+import SimulatorTuner from './SimulatorTuner';
 
-const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard, nextStep, carpenter, isManualCreation = false, onComplete = null, editProject, isTestMode = false }) => {
+const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard, nextStep, carpenter, isManualCreation = false, onComplete = null, editProject, isTestMode = false, dbSettings = null, dbMaterials = null }) => {
     const categoryMap = {
         windows: 'Nye Vinduer',
         doors: 'Nye Døre',
@@ -23,6 +24,7 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
     };
 
     const [wantsQuote, setWantsQuote] = useState(false);
+    const [isTunerOpen, setIsTunerOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [selectedDays, setSelectedDays] = useState([]);
     const [selectedTime, setSelectedTime] = useState('Hele dagen');
@@ -459,21 +461,47 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                 <div className="result-actions" style={{ marginTop: '40px', display: 'flex', gap: '16px', flexDirection: 'column' }}>
                     {isTestMode ? (
                         <>
-                            <button 
-                                style={{ 
-                                    width: '100%', 
-                                    justifyContent: 'center', 
-                                    padding: '18px', 
-                                    fontSize: '1.2rem', 
-                                    background: '#3b82f6', 
-                                    color: 'white', 
-                                    border: 'none', 
-                                    borderRadius: '12px', 
-                                    fontWeight: 'bold', 
-                                    cursor: 'pointer', 
+                            {!needsPhysicalInspection && projectData.calc_data && dbSettings && (
+                                <button
+                                    style={{
+                                        width: '100%',
+                                        justifyContent: 'center',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        padding: '18px',
+                                        fontSize: '1.2rem',
+                                        background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 10px 25px rgba(15, 23, 42, 0.3)',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                    onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                    onClick={() => setIsTunerOpen(true)}
+                                >
+                                    ⚙️ Tilpas til min virksomhed
+                                </button>
+                            )}
+                            <button
+                                style={{
+                                    width: '100%',
+                                    justifyContent: 'center',
+                                    padding: '18px',
+                                    fontSize: '1.2rem',
+                                    background: '#3b82f6',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
                                     boxShadow: '0 10px 25px rgba(59, 130, 246, 0.3)',
                                     transition: 'all 0.2s'
-                                }} 
+                                }}
                                 onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                                 onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                                 onClick={onComplete}
@@ -654,6 +682,17 @@ const StepResult = ({ projectData, notes, priceRange, breakdownArr, resetWizard,
                         </p>
                     )}
                 </div>
+            )}
+
+            {isTunerOpen && (
+                <SimulatorTuner
+                    projectData={projectData}
+                    dbSettings={dbSettings}
+                    dbMaterials={dbMaterials}
+                    carpenter={carpenter}
+                    onClose={() => setIsTunerOpen(false)}
+                    onSaved={() => { /* gemte priser gælder fremover; simulator kan lukkes af brugeren */ }}
+                />
             )}
         </section>
     );

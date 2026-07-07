@@ -818,7 +818,7 @@ const Wizard = ({ carpenter, isManualCreation = false, onComplete = null, isTest
             )}
             {currentStep === 2 && <Step2Dynamic category={projectData.category} details={projectData.details} updateDetails={updateDetails} nextStep={nextStep} prevStep={prevStep} quickRecalculate={projectData.customerDetails ? handleQuickRecalculate : null} onAddAnotherProject={projectData.category !== 'special' ? handleAddAnotherProject : null} projects={projects} />}
             {currentStep === 3 && <Step4Contact calculateEstimate={calculateEstimate} prevStep={prevStep} prefillData={projectData.customerDetails} isTestMode={isTestMode} isManualCreation={isManualCreation} />}
-            {currentStep === 4 && <StepResult projectData={projectData} notes={projectData.details?.notes || ''} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} isTestMode={isTestMode} draftCreator={draftCreator} />}
+            {currentStep === 4 && <StepResult projectData={projectData} notes={projectData.details?.notes || ''} priceRange={priceRange} breakdownArr={breakdownArr} resetWizard={resetWizard} nextStep={nextStep} carpenter={carpenter} isManualCreation={isManualCreation} onComplete={onComplete} editProject={() => goToStep(projectData.category === 'special' ? 'special_chat' : 2)} isTestMode={isTestMode} draftCreator={draftCreator} dbSettings={dbSettings} dbMaterials={dbMaterials} />}
             {currentStep === 5 && <Step5Success resetWizard={resetWizard} carpenter={carpenter} />}
 
             <AiSupportWidget 

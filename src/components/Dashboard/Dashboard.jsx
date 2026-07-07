@@ -2489,12 +2489,24 @@ const Dashboard = () => {
         if (!settingsData) return;
         setIsSaving(true);
         const { id, ...updatePayload } = settingsData;
-        
-        const { error } = await supabase
+
+        let { error } = await supabase
             .from('settings')
             .update(updatePayload)
             .eq('id', settingsData.id);
-            
+
+        // Bagudkompatibelt: hvis speed_factor-kolonnen endnu ikke er kørt (migration
+        // setup_speed_factor.sql), så gem resten uden at hele opdateringen fejler.
+        if (error && 'speed_factor' in updatePayload && /speed_factor/.test(error.message || '')) {
+            const { speed_factor: _omit, ...rest } = updatePayload;
+            ({ error } = await supabase.from('settings').update(rest).eq('id', settingsData.id));
+            if (!error) {
+                setIsSaving(false);
+                toast('Gemt — men kør SQL-scriptet setup_speed_factor.sql for at aktivere arbejdstempo.', { icon: '⚠️' });
+                return;
+            }
+        }
+
         setIsSaving(false);
         if(!error) {
             toast.success('Indstillingerne blev gemt med succes.');
@@ -5767,6 +5779,46 @@ const Dashboard = () => {
                                             <Play size={16} /> Åbn Simulator
                                         </button>
                                     </div>
+
+                                    {settingsData && (() => {
+                                        const AMP = 0.5;
+                                        const sf = Math.max(0.5, Math.min(1.5, Number(settingsData.speed_factor) || 1.0));
+                                        const sliderVal = Math.max(0, Math.min(100, 50 - ((sf - 1.0) / AMP) * 50));
+                                        const effectPct = Math.round((1 - sf) * 100);
+                                        const setSpeed = (s) => {
+                                            const next = Math.max(0.5, Math.min(1.5, 1.0 + ((50 - s) / 50) * AMP));
+                                            setSettingsData(prev => ({ ...prev, speed_factor: Number(next.toFixed(3)) }));
+                                        };
+                                        return (
+                                            <div style={{ marginTop: '16px', padding: '20px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(15,23,42,0.04), rgba(0,122,255,0.05))', border: '1px solid rgba(15,23,42,0.08)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px', marginBottom: '4px' }}>
+                                                    <strong style={{ fontSize: '1rem', color: '#0f172a' }}>Hvor hurtigt laver du opgaven?</strong>
+                                                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                                                        {effectPct === 0 ? 'Neutral' : (effectPct > 0 ? `${effectPct}% hurtigere` : `${Math.abs(effectPct)}% langsommere`)}
+                                                    </span>
+                                                </div>
+                                                <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                                                    Dit generelle arbejdstempo. Justerer arbejdsløn, buffer og kørsel i alle tilbud — aldrig materialepriser. Træk til højre hvis du er hurtigere end en gennemsnitlig tømrer.
+                                                </p>
+                                                <input
+                                                    type="range" min={0} max={100} step={1} value={sliderVal}
+                                                    onChange={(e) => setSpeed(parseFloat(e.target.value))}
+                                                    style={{ width: '100%', accentColor: '#0f172a', cursor: 'pointer', height: '8px' }}
+                                                />
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: '4px' }}>
+                                                    <span>Langsommere</span>
+                                                    <span>Hurtigere</span>
+                                                </div>
+                                                <button
+                                                    onClick={handleSave}
+                                                    disabled={isSaving}
+                                                    style={{ marginTop: '14px', padding: '10px 20px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: isSaving ? 'default' : 'pointer', opacity: isSaving ? 0.6 : 1 }}
+                                                >
+                                                    {isSaving ? 'Gemmer…' : 'Gem tempo'}
+                                                </button>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 

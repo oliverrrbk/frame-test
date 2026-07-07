@@ -15,12 +15,40 @@ import { supabase } from '../supabaseClient';
 const GLOBAL_PRIOR_WEIGHT = 10; // antal "fiktive" globale tilbud som prior
 const FACTOR_MIN = 0.6;          // sikkerhedsnet — accepter ikke vilde værdier
 const FACTOR_MAX = 1.8;
+const SPEED_MIN = 0.5;           // manuelt arbejdstempo — samme spænd som DB-CHECK
+const SPEED_MAX = 2.0;
+const COMBINED_MIN = 0.4;        // auto × manuelt tempo må ikke løbe løbsk
+const COMBINED_MAX = 2.2;
+
+/**
+ * Manuelt arbejdstempo fra tømrerens indstillinger (settings.speed_factor).
+ * Egen try/catch så en manglende kolonne (før migration) ALDRIG slår auto-
+ * kalibreringen ihjel — falder lydløst tilbage til 1.0 (neutral).
+ */
+const fetchSpeedFactor = async (carpenterId) => {
+    if (!carpenterId) return 1.0;
+    try {
+        const { data, error } = await supabase
+            .from('settings')
+            .select('speed_factor')
+            .eq('carpenter_id', carpenterId)
+            .maybeSingle();
+        if (error || !data || data.speed_factor == null) return 1.0;
+        const raw = Number(data.speed_factor);
+        if (!Number.isFinite(raw)) return 1.0;
+        return Math.max(SPEED_MIN, Math.min(SPEED_MAX, raw));
+    } catch {
+        return 1.0;
+    }
+};
 
 export const fetchCalibrationFactor = async (carpenterId, category) => {
-    if (!carpenterId || !category) return { factor: 1.0, source: 'none', sampleSize: 0 };
+    if (!carpenterId || !category) {
+        return { factor: 1.0, autoFactor: 1.0, speedFactor: 1.0, source: 'none', sampleSize: 0 };
+    }
 
     try {
-        const [carpRes, globalRes] = await Promise.all([
+        const [carpRes, globalRes, speedFactor] = await Promise.all([
             supabase
                 .from('carpenter_calibration')
                 .select('factor, sample_size')
@@ -32,6 +60,7 @@ export const fetchCalibrationFactor = async (carpenterId, category) => {
                 .select('factor, sample_size')
                 .eq('category', category)
                 .maybeSingle(),
+            fetchSpeedFactor(carpenterId),
         ]);
 
         const carp = carpRes.data;
@@ -56,11 +85,17 @@ export const fetchCalibrationFactor = async (carpenterId, category) => {
             source = 'none';
         }
 
-        // Sikkerhedsnet
-        blended = Math.max(FACTOR_MIN, Math.min(FACTOR_MAX, blended));
+        // Sikkerhedsnet på auto-delen
+        const autoFactor = Math.max(FACTOR_MIN, Math.min(FACTOR_MAX, blended));
+
+        // Manuelt arbejdstempo ganges oveni auto-kalibreringen og gælder dermed
+        // universelt i alle tilbud (Wizard sender .factor videre til beregneren).
+        const combined = Math.max(COMBINED_MIN, Math.min(COMBINED_MAX, autoFactor * speedFactor));
 
         return {
-            factor: Number(blended.toFixed(4)),
+            factor: Number(combined.toFixed(4)),
+            autoFactor: Number(autoFactor.toFixed(4)),
+            speedFactor: Number(speedFactor.toFixed(4)),
             source,
             sampleSize: indN,
             globalSampleSize: globN,
@@ -69,7 +104,7 @@ export const fetchCalibrationFactor = async (carpenterId, category) => {
         };
     } catch (err) {
         console.warn('Calibration fetch failed, using factor 1.0', err);
-        return { factor: 1.0, source: 'error', sampleSize: 0 };
+        return { factor: 1.0, autoFactor: 1.0, speedFactor: 1.0, source: 'error', sampleSize: 0 };
     }
 };
 
@@ -78,7 +113,10 @@ export const fetchCalibrationFactor = async (carpenterId, category) => {
  */
 export const describeCalibration = (calib) => {
     if (!calib || calib.source === 'none' || calib.source === 'error') return null;
-    const pct = ((calib.factor - 1.0) * 100).toFixed(0);
+    // Beskriver kun AUTO-læringen — det manuelle tempo (speedFactor) hører til
+    // tømrerens egne indstillinger og skal ikke tilskrives "dine tilbud".
+    const describeBase = calib.autoFactor ?? calib.factor;
+    const pct = ((describeBase - 1.0) * 100).toFixed(0);
     if (Math.abs(Number(pct)) < 2) return null;
     const sign = Number(pct) > 0 ? '+' : '';
     if (calib.source === 'individual') {

@@ -212,7 +212,14 @@ const AnimatedRoutes = ({ session, setSession }) => {
         lenisRef.current.destroy();
         lenisRef.current = null;
     }
-    
+
+    // Start altid i toppen når ruten skifter (Lenis genbruges på tværs af
+    // marketing-sider, så den ellers beholder den forrige scroll-position).
+    if (lenisRef.current) {
+        lenisRef.current.scrollTo(0, { immediate: true });
+    }
+    window.scrollTo(0, 0);
+
     return () => {
        // Only cleanup when AnimatedRoutes unmounts
        // we don't want to destroy on every pathname change, only if it leaves marketing

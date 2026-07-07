@@ -31,6 +31,7 @@ afløser/supplerer hinanden.
 | `supabase/add_case_number.sql` | Sekvens + `case_number` (starter ved 1000) |
 | `setup_profile_fields.sql` | Profilfelter på `carpenters` |
 | `setup_business_type.sql` | `business_type` på `carpenters` (default `'tomrer'`). Branche valgt ved oprettelse. KUN `'tomrer'` har prisberegner/materialer/Wizard — alle andre fag (inkl. entreprenør) laver kun Hurtigt tilbud. Gating sker i klienten (`src/utils/features.js`); låste beregner-filer røres ikke. |
+| `setup_speed_factor.sql` | `speed_factor` på `settings` (default `1.0`, CHECK 0.5–2.0). Universelt arbejdstempo på beregneren: multiplikator på IKKE-materiale-delen (timer+buffer+kørsel). Sættes i simulatorens "Tilpas beregning" + "Hvor hurtigt laver du opgaven?"-kortet; anvendes overalt via `fetchCalibrationFactor()` i `src/utils/calibration.js`. Materialepriser røres aldrig. |
 
 ### 2) Tabeller & features
 | Fil | Formål |
