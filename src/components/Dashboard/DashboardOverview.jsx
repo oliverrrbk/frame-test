@@ -43,6 +43,21 @@ import { toast } from 'react-hot-toast';
 import CalculatorWorkflowSteps from './CalculatorWorkflowSteps';
 import { computeCaseFinance } from '../../utils/caseFinance';
 
+// Kompakt dansk beløbsvisning til KPI-boksene — passer ALTID i boksen, uanset om
+// omsætningen er 64.778 kr. eller 12,5 mio. kr. (før knækkede " DKK" over flere
+// linjer ved store beløb). Det præcise beløb vises som tooltip på kortet.
+function formatCompactDKK(value) {
+    const v = Number(value) || 0;
+    const abs = Math.abs(v);
+    if (abs >= 1_000_000_000) {
+        return { text: (v / 1_000_000_000).toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), suffix: 'mia. kr.' };
+    }
+    if (abs >= 1_000_000) {
+        return { text: (v / 1_000_000).toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), suffix: 'mio. kr.' };
+    }
+    return { text: Math.round(v).toLocaleString('da-DK'), suffix: 'kr.' };
+}
+
 // "Lav et tilbud" — Bison-glas-knap, der åbner tilbudstype-vælgeren. Bruges både på
 // desktop (kompakt, ved siden af overblik-teksten) og mobil (fuld bredde).
 function CreateQuoteButton({ onClick, fullWidth = false, variant = 'solid' }) {
@@ -316,9 +331,9 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                                 {m.label}
                             </h3>
                         </div>
-                        <div className="kpi-value" style={{ fontSize: '2.1rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                            {m.format === 'currency' ? m.value.toLocaleString('da-DK') : m.value}
-                            <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>{m.suffix}</span>
+                        <div className="kpi-value" title={m.format === 'currency' ? `${Math.round(m.value).toLocaleString('da-DK')} kr.` : undefined} style={{ fontSize: '2.1rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '4px', whiteSpace: 'nowrap' }}>
+                            {m.format === 'currency' ? formatCompactDKK(m.value).text : m.value}
+                            <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: '600', whiteSpace: 'nowrap' }}>{m.format === 'currency' ? formatCompactDKK(m.value).suffix : m.suffix}</span>
                         </div>
                     </div>
                 ))}
@@ -560,7 +575,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', padding: '12px 16px' }}
                                 itemStyle={{ color: activeColor, fontWeight: 'bold', fontSize: '1.1rem' }}
                                 labelStyle={{ color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}
-                                formatter={(value) => [metrics[selectedMetric].format === 'currency' ? value.toLocaleString('da-DK') + ' DKK' : value + metrics[selectedMetric].suffix, metrics[selectedMetric].label]}
+                                formatter={(value) => [metrics[selectedMetric].format === 'currency' ? value.toLocaleString('da-DK') + ' kr.' : value + metrics[selectedMetric].suffix, metrics[selectedMetric].label]}
                             />
                             <Area 
                                 type="monotone" 
