@@ -1,3 +1,9 @@
+// Stripe-webhook med to ansvar:
+//   1) Abonnements-livscyklus → spejler status på carpenters (trialing/active/…).
+//   2) invoice.paid → automatisk bogføring af Bisons EGNE Stripe-indtægter som
+//      kladde-bilag i Bisons eget e-conomic (se _shared/bisonEconomicVoucher.ts).
+// Bogføringen bruger de bekræftede konti 1010/1321-IY25/5650 som standard i den
+// delte modul — eneste påkrævede secret er BISON_ECONOMIC_GRANT_TOKEN.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
 import Stripe from 'https://esm.sh/stripe@14.10.0?target=deno'
