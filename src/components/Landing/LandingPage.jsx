@@ -131,7 +131,7 @@ const LandingPage = ({ setSession }) => {
                             viewport={{ once: true }}
                             className="text-slate-500 dark:text-slate-400 text-[clamp(1.125rem,2vw,1.25rem)] max-w-2xl leading-relaxed mb-[clamp(5.5rem,8vw,7rem)]"
                         >
-                            Frame samler hele hverdagen ét sted, så du bruger tiden på håndværk i stedet for papirarbejde.
+                            Fremstå professionel i dine tilbud og din kundehåndtering. Når du har styr på dit eget, kan kunder og samarbejdspartnere mærke det — og du vinder flere opgaver.
                         </motion.p>
                     </div>
 
@@ -141,8 +141,8 @@ const LandingPage = ({ setSession }) => {
                                 icon: FileText,
                                 color: "text-blue-600 dark:text-blue-400",
                                 glow: "bg-blue-600/5 group-hover:bg-blue-600/10",
-                                title: "Tilbud på stedet",
-                                text: "Lav professionelle, brandede PDF-tilbud mens du står ude hos kunden. Kørsel og slid er regnet med automatisk.",
+                                title: "Tilbud der vinder opgaven",
+                                text: "Send professionelle, brandede PDF-tilbud, der ser ud af noget. Kunden kan mærke forskellen på et gennemarbejdet tilbud og en hurtig mail — og det er tit dét, der afgør, hvem der får opgaven.",
                             },
                             {
                                 icon: Clock,
@@ -156,7 +156,7 @@ const LandingPage = ({ setSession }) => {
                                 color: "text-orange-600 dark:text-orange-400",
                                 glow: "bg-orange-600/5 group-hover:bg-orange-600/10",
                                 title: "Styr på kunder og sager",
-                                text: "Alle dine kunder, tilbud og igangværende sager samlet ét sted — på både mobil og computer. Ét simpelt overblik, der giver ro i maven.",
+                                text: "Alle kunder, tilbud og igangværende sager samlet ét sted — på mobil og computer. Du svarer hurtigt og præcist, og kunderne oplever en tømrer, der har styr på tingene.",
                             },
                             {
                                 icon: Wallet,
