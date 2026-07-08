@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
 import TopNavBar from './TopNavBar';
-import { X, Check, Calculator, ArrowRight, ArrowLeft, Heart, Star, Clock, Users, Wallet, FileText, ShieldCheck, MapPin, Unlock, Headset, WifiOff, Hammer, StickyNote, Table2, Receipt, PenLine, Layers } from 'lucide-react';
+import { X, Check, Calculator, ArrowRight, ArrowLeft, Heart, Star, Clock, Users, Wallet, FileText, ShieldCheck, MapPin, Unlock, Headset, WifiOff, Hammer, StickyNote, Table2, Receipt, PenLine, Layers, Handshake } from 'lucide-react';
 import { TheInfiniteGrid } from '../ui/the-infinite-grid';
 import { AnimatedTestimonials } from '../ui/animated-testimonials';
 import { StaggerTestimonials } from '../ui/stagger-testimonials';
@@ -75,6 +75,9 @@ const LandingPage = ({ setSession }) => {
                             <h2 className="font-headline text-[clamp(1.75rem,3.5vw,3rem)] font-bold tracking-tight text-slate-900 dark:text-slate-100">
                                 Skabt sammen med rigtige tømrere
                             </h2>
+                            <p className="mt-4 text-slate-500 dark:text-slate-400 text-[clamp(1rem,1.8vw,1.125rem)] leading-relaxed">
+                                Frame er bygget med tømrere fra virkeligheden — og vi videreudvikler det sammen med dig.
+                            </p>
                         </motion.div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -100,6 +103,51 @@ const LandingPage = ({ setSession }) => {
                                 </motion.div>
                             ))}
                         </div>
+
+                        {/* No-brainer-panelet: vi sætter det hele op — kvit og frit — og følger det til dørs.
+                            Ærligt om prisen: gratis den første måned, derefter almindelig pris, ingen binding. */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 24 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-40px" }}
+                            style={{ WebkitTransform: "translateZ(0)" }}
+                            className="relative overflow-hidden mt-6 md:mt-8 rounded-[2rem] p-8 md:p-12 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/60 shadow-sm hover:shadow-lg transition-all duration-500 group"
+                        >
+                            <div className="absolute -top-16 -right-16 w-64 h-64 bg-orange-500/5 group-hover:bg-orange-500/10 rounded-full blur-3xl transition-all pointer-events-none"></div>
+                            <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                            <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8 lg:gap-14">
+                                <div className="flex-1 text-center lg:text-left">
+                                    <div className="flex items-center justify-center lg:justify-start gap-3 mb-4">
+                                        <div className="w-11 h-11 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
+                                            <Handshake size={22} />
+                                        </div>
+                                        <h3 className="font-headline text-[clamp(1.35rem,2.4vw,1.9rem)] font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                                            Vi sætter det hele op for dig — kvit og frit
+                                        </h3>
+                                    </div>
+                                    <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-[clamp(0.98rem,1.6vw,1.1rem)] max-w-2xl mx-auto lg:mx-0">
+                                        Du skal ikke selv rode med opsætningen. Vi kommer ud til dig, sætter Frame op sammen med dig og tilpasser det præcis til din forretning — og vi følger det til dørs, indtil det kører. Det koster ikke en krone ekstra, og den første måned er gratis, så du kan mærke efter i ro og mag.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-col items-center lg:items-end gap-3 shrink-0">
+                                    <motion.button
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => navigate('/register')}
+                                        style={{ WebkitTransform: "translateZ(0)" }}
+                                        className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-8 py-5 rounded-full font-bold text-[clamp(1rem,1.5vw,1.1rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl flex items-center gap-3 group/cta"
+                                    >
+                                        Opret din bruger — så ringer vi dig op
+                                        <ArrowRight className="w-5 h-5 group-hover/cta:translate-x-1 transition-transform" />
+                                    </motion.button>
+                                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 text-center lg:text-right">
+                                        Gratis den første måned · Derefter fra 390 kr./md. · Ingen binding
+                                    </span>
+                                </div>
+                            </div>
+                        </motion.div>
                     </section>
                 )}
 
