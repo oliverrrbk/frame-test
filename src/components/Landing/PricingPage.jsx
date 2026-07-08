@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useMotionTemplate, useSpring } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
@@ -16,9 +16,12 @@ const PLAN_CARDS = [
         features: [
             'Hele systemet — tilbud, ordrestyring, tegneprogram, økonomi & faktura',
             'Fuldt økonomisk overblik over din forretning',
-            'Gratis hjælp til opstart — vi følger dig hele vejen',
+            'Gratis hjælp — altid, ikke kun ved opstart. Vi tilpasser systemet til din forretning, til det spiller',
         ],
         note: '1 bruger · uden timeregistrering (du er jo alene)',
+        cta: 'Kom gratis i gang som Solo',
+        // Klik → oprettelse forudfyldt som Solo (1 mester, heads=1 → plan 'solo').
+        signupTeam: { mester: 1, pl: 0, bog: 0, svend: 0, laer: 0 },
     },
     {
         id: 'hold', name: 'Hold', sub: 'Dig og dit hold.', icon: 'users', featured: true,
@@ -27,9 +30,13 @@ const PLAN_CARDS = [
             'Alt i Solo — plus timeregistrering',
             '3 brugere inkl. (mester + 2)',
             'Timer i marken der bliver til løn — let samspil med dit lønsystem',
-            'Gratis hjælp til opstart',
+            'Gratis hjælp — altid, ikke kun ved opstart. Vi tilpasser systemet til din forretning, til det spiller',
         ],
         note: 'Flere med? Tilføj brugere til fast pris — se herunder',
+        cta: 'Kom gratis i gang som Hold',
+        // Klik → oprettelse forudfyldt som Hold (mester + 1 svend, heads=2 → plan 'hold',
+        // stadig 890 da svenden er dækket af de 3 inkluderede pladser).
+        signupTeam: { mester: 1, pl: 0, bog: 0, svend: 1, laer: 0 },
     },
 ];
 
@@ -45,6 +52,92 @@ const CardIcon = ({ type, size = 80, strokeWidth = 1 }) => {
     if (type === 'hammer') return <Hammer size={size} strokeWidth={strokeWidth} />;
     return <Users size={size} strokeWidth={strokeWidth} />;
 };
+
+// Klikbart grundplan-kort. Hele kortet fører til oprettelse forudfyldt med planen.
+// Hover følger musen (glød + let 3D-tilt) og bruger en snappy fjeder, så det føles
+// responsivt — IKKE den langsomme entrance-timing. Vigtigt: framers transform (tilt/
+// lift) og CSS må ikke slås om samme egenskab, derfor transition KUN på skygge/kant.
+function PlanCard({ card, idx, onSelect }) {
+    // Rå museposition (0..1 relativt til kortet) → blødgjort med fjeder.
+    const px = useMotionValue(0.5);
+    const py = useMotionValue(0.5);
+    const sx = useSpring(px, { stiffness: 300, damping: 30, mass: 0.5 });
+    const sy = useSpring(py, { stiffness: 300, damping: 30, mass: 0.5 });
+
+    // Glød der følger cursoren.
+    const glowX = useTransform(sx, v => `${v * 100}%`);
+    const glowY = useTransform(sy, v => `${v * 100}%`);
+    const glow = useMotionTemplate`radial-gradient(420px circle at ${glowX} ${glowY}, rgba(59,130,246,0.16), transparent 65%)`;
+
+    // Let 3D-tilt mod musen (maks ~5deg).
+    const rotX = useTransform(sy, [0, 1], [5, -5]);
+    const rotY = useTransform(sx, [0, 1], [-5, 5]);
+
+    const handleMove = (e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        px.set((e.clientX - r.left) / r.width);
+        py.set((e.clientY - r.top) / r.height);
+    };
+    const handleLeave = () => { px.set(0.5); py.set(0.5); };
+
+    return (
+        <motion.div
+            role="button" tabIndex={0}
+            onClick={() => onSelect(card.signupTeam)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(card.signupTeam); } }}
+            onMouseMove={handleMove}
+            onMouseLeave={handleLeave}
+            aria-label={`${card.cta} — ${card.price} ${card.per}`}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0, transition: { delay: 0.08 * (idx + 1), duration: 0.5 } }}
+            viewport={{ once: true, margin: '-50px' }}
+            whileHover={{ y: -10, transition: { type: 'spring', stiffness: 400, damping: 20, mass: 0.5 } }}
+            whileTap={{ scale: 0.98, transition: { type: 'spring', stiffness: 600, damping: 30 } }}
+            style={{ rotateX: rotX, rotateY: rotY, transformPerspective: 900, transformStyle: 'preserve-3d' }}
+            className={`group cursor-pointer bg-white dark:bg-slate-900 rounded-[1.7rem] p-7 flex flex-col gap-4 relative overflow-hidden transition-[box-shadow,border-color,ring-color] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 ${card.featured ? 'shadow-lg ring-2 ring-blue-500/60 dark:ring-blue-400/50 hover:ring-blue-500 hover:shadow-2xl hover:shadow-blue-500/25' : 'shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-2xl hover:border-blue-300 dark:hover:border-blue-500/60'}`}>
+
+            {/* Musefølgende glød — ligger under indholdet, tændes blødt på hover. */}
+            <motion.div aria-hidden className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style={{ background: glow }} />
+
+            {card.featured && (
+                <span className="absolute top-5 right-5 z-20 text-[0.62rem] font-extrabold tracking-widest uppercase bg-blue-600 text-white px-2.5 py-1 rounded-full">Mest populær</span>
+            )}
+            <div className="absolute top-0 right-0 p-5 opacity-[0.05] dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100 transition-transform duration-500 ease-out group-hover:scale-110 group-hover:-rotate-6">
+                <CardIcon type={card.icon} size={72} />
+            </div>
+
+            <div className="flex flex-col gap-1.5 relative z-10">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{card.name}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{card.sub}</p>
+            </div>
+
+            <div className="flex items-baseline gap-1.5 relative z-10">
+                <span className="font-extrabold tracking-tight text-slate-900 dark:text-slate-100 tabular-nums text-[2.7rem] leading-none">{card.price}</span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">{card.per}</span>
+            </div>
+
+            <ul className="flex flex-col gap-2.5 text-[0.9rem] text-slate-600 dark:text-slate-300 flex-grow relative z-10">
+                {card.features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" size={17} />
+                        <span>{f}</span>
+                    </li>
+                ))}
+            </ul>
+
+            <div className="relative z-10 text-[0.82rem] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5">{card.note}</div>
+
+            {/* Klik-affordance: hele kortet fører til oprettelse med den valgte plan. */}
+            <div className={`relative z-10 mt-1 flex flex-col items-center gap-1 rounded-xl py-3 transition-colors duration-200 ${card.featured ? 'bg-blue-600 text-white group-hover:bg-blue-500' : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 group-hover:bg-slate-800 dark:group-hover:bg-slate-100'}`}>
+                <span className="flex items-center gap-2 text-[0.95rem] font-extrabold">
+                    {card.cta}
+                    <ArrowRight size={18} className="transition-transform duration-200 ease-out group-hover:translate-x-1.5" />
+                </span>
+                <span className={`text-[0.72rem] font-semibold ${card.featured ? 'text-blue-100' : 'text-white/70 dark:text-slate-900/60'}`}>30 dage gratis · intet kort</span>
+            </div>
+        </motion.div>
+    );
+}
 
 // Den interaktive "Byg dit hold"-beregner (rolig, hvid stil — som "Hvad koster tilbud dig?").
 function TeamCalculator({ onStart }) {
@@ -187,38 +280,7 @@ export default function PricingPage({ setSession }) {
                 {/* Grundplaner — kun Solo + Hold, centreret over beregneren */}
                 <section className="w-full max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 mb-[clamp(3rem,6vw,4.5rem)] relative z-10 items-stretch">
                     {PLAN_CARDS.map((card, idx) => (
-                        <motion.div key={card.id} whileHover={{ y: -6 }}
-                            initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.08 * (idx + 1), duration: 0.5 }} viewport={{ once: true, margin: '-50px' }}
-                            className={`bg-white dark:bg-slate-900 rounded-[1.7rem] p-7 flex flex-col gap-4 relative overflow-hidden transition-shadow duration-300 ${card.featured ? 'shadow-lg ring-2 ring-blue-500/60 dark:ring-blue-400/50' : 'shadow-sm hover:shadow-md border border-slate-100 dark:border-slate-800'}`}>
-                            {card.featured && (
-                                <span className="absolute top-5 right-5 z-20 text-[0.62rem] font-extrabold tracking-widest uppercase bg-blue-600 text-white px-2.5 py-1 rounded-full">Mest populær</span>
-                            )}
-                            <div className="absolute top-0 right-0 p-5 opacity-[0.05] dark:opacity-10 pointer-events-none text-slate-900 dark:text-slate-100">
-                                <CardIcon type={card.icon} size={72} />
-                            </div>
-
-                            <div className="flex flex-col gap-1.5 relative z-10">
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{card.name}</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">{card.sub}</p>
-                            </div>
-
-                            <div className="flex items-baseline gap-1.5 relative z-10">
-                                <span className="font-extrabold tracking-tight text-slate-900 dark:text-slate-100 tabular-nums text-[2.7rem] leading-none">{card.price}</span>
-                                <span className="text-sm text-slate-500 dark:text-slate-400">{card.per}</span>
-                            </div>
-
-                            <ul className="flex flex-col gap-2.5 text-[0.9rem] text-slate-600 dark:text-slate-300 flex-grow relative z-10">
-                                {card.features.map((f, i) => (
-                                    <li key={i} className="flex items-start gap-2.5">
-                                        <CheckCircle2 className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" size={17} />
-                                        <span>{f}</span>
-                                    </li>
-                                ))}
-                            </ul>
-
-                            <div className="relative z-10 text-[0.82rem] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5">{card.note}</div>
-                        </motion.div>
+                        <PlanCard key={card.id} card={card} idx={idx} onSelect={startTrial} />
                     ))}
                 </section>
 
