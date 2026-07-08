@@ -183,7 +183,7 @@ export const TheInfiniteGrid = () => {
             Lavet i samarbejde med tømrere — til tømrere.
           </h1>
           <p className="text-[clamp(1.125rem,2vw,1.375rem)] text-on-surface-variant max-w-[65ch] mx-auto text-balance leading-relaxed">
-            Systemet der hjælper tømrere med at holde styr på deres forretning. På både mobil og computer.
+            Styr på det hele — fra pladsen til kontoret. Uden bøvl, på både computer og telefon. Simpelt, ærligt og overskueligt.
           </p>
         </motion.div>
 
@@ -210,7 +210,7 @@ export const TheInfiniteGrid = () => {
             <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/calculate')}
+                onClick={() => navigate('/features')}
                 style={{ WebkitTransform: "translateZ(0)", willChange: "transform" }}
                 className="bg-surface-container-high text-on-surface rounded-full px-8 py-4 font-medium hover:bg-surface-container-highest transition-colors shadow-sm border border-outline-variant/10"
             >

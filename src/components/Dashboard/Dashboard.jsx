@@ -38,6 +38,7 @@ import CreateLeadSelector from './CreateLeadSelector';
 import CreateCaseForm from './CreateCaseForm';
 import CustomerLibrary from './CustomerLibrary';
 import { getFeatures, getPlanFeatures, getModules, isTabEnabled } from '../../utils/features';
+import TimesheetTrialBanner from './TimesheetTrialBanner';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import MaterialListBuilder from './MaterialListBuilder';
 import Coachmark from './Coachmark';
@@ -712,6 +713,19 @@ const Dashboard = () => {
     useEffect(() => {
         localStorage.setItem('dashboard_active_tab', activeTab);
     }, [activeTab]);
+
+    // Åbn en bestemt fane hvis URL'en beder om det (fx retur fra Stripe-checkout
+    // ?activeTab=team&upgraded=hold). Kør én gang ved mount.
+    useEffect(() => {
+        const p = new URLSearchParams(window.location.search);
+        const tab = p.get('activeTab');
+        if (tab) setActiveTab(tab);
+        if (p.get('upgraded') === 'hold') {
+            toast.success('Du er nu på Hold — tilføj op til 2 medarbejdere.');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const [settingsData, setSettingsData] = useState(null);
     const [materialsData, setMaterialsData] = useState([]);
     const [disabledCategories, setDisabledCategories] = useState([]);
@@ -3504,6 +3518,7 @@ const Dashboard = () => {
                     {activeTab === 'worker_timesheet' && ['worker', 'apprentice', 'sales'].includes(effectiveRole) && (
                         timeTrackingLocked ? timeTrackingTeaser : (
                         <TabErrorBoundary label="Timer" onRetry={refreshData}>
+                        <div style={{ padding: '0 4px' }}><TimesheetTrialBanner carpenterProfile={carpenterProfile} /></div>
                         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
                         <WorkerTimesheet
                             leadsData={roleFilteredLeads}
@@ -3657,6 +3672,7 @@ const Dashboard = () => {
                     {activeTab === 'admin_timesheet' && (
                         timeTrackingLocked ? timeTrackingTeaser : (
                         <div className="tab-pane active " style={{ height: '100%', overflowY: 'auto', padding: '24px' }}>
+                            <TimesheetTrialBanner carpenterProfile={carpenterProfile} />
                             <TabErrorBoundary label="Løn & timer" onRetry={refreshData}>
                             <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%' }} /></div>}>
                             <AdminTimesheet

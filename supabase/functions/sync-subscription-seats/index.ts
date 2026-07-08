@@ -94,11 +94,14 @@ serve(async (req) => {
             LAERLING_51: Deno.env.get('STRIPE_PRICE_LAERLING_51'),
         }
         const legacy = !!(owner.raw_data && owner.raw_data.legacy_pricing && owner.raw_data.legacy_pricing.locked)
+        // Eksplicit Hold-flag (opgraderet Solo) fastholder Hold-grundpris selv med
+        // kun mester — så seat-sync aldrig nedgraderer en opgraderet konto til Solo.
+        const wantsHold = !!(owner.raw_data && owner.raw_data.plan === 'hold')
         const heads = 1 + kontorSeats + svendSeats + laerSeats
         let baseKey: string, included: number
         if (legacy) { baseKey = 'MESTER'; included = 1 }
-        else if (heads <= 1) { baseKey = 'SOLO'; included = 1 }
-        else { baseKey = 'HOLD'; included = HOLD_INCLUDED }
+        else if (wantsHold || heads >= 2) { baseKey = 'HOLD'; included = HOLD_INCLUDED }
+        else { baseKey = 'SOLO'; included = 1 }
 
         const roleOrder: string[] = []
         for (let i = 0; i < kontorSeats; i++) roleOrder.push('kontor')

@@ -42,14 +42,16 @@ serve(async (req) => {
         
     if (!carpenter) throw new Error("Firma findes ikke i systemet");
 
-    // Læs eventuel targetTier fra body
+    // Læs eventuel targetTier + ønsket plan fra body
     let targetTier = null;
+    let requestedPlan = null;   // 'hold' → opgradér Solo→Hold (890) selv med kun mester
     try {
         const reqClone = req.clone();
         const bodyText = await reqClone.text();
         if (bodyText) {
             const body = JSON.parse(bodyText);
             targetTier = body.targetTier;
+            requestedPlan = body.plan;
         }
     } catch(e) {
         console.log("Ingen gyldig body fundet (standard fallback bruges)");
@@ -95,10 +97,22 @@ serve(async (req) => {
     const laerSeats = nn(rawTeam.laer);
     const heads = 1 + kontorSeats + svendSeats + laerSeats;
 
+    // Eksplicit Hold-ønske (opgradering fra Solo) tvinger Hold-grundpris selv med
+    // kun mester (890, 3 inkl.) — ellers udledes planen af holdets størrelse.
+    const wantsHold = requestedPlan === 'hold' || !!(carpenter.raw_data && carpenter.raw_data.plan === 'hold');
     let baseKey: string, included: number;
     if (legacy) { baseKey = 'MESTER'; included = 1; }
-    else if (heads <= 1) { baseKey = 'SOLO'; included = 1; }
-    else { baseKey = 'HOLD'; included = HOLD_INCLUDED; }
+    else if (wantsHold || heads >= 2) { baseKey = 'HOLD'; included = HOLD_INCLUDED; }
+    else { baseKey = 'SOLO'; included = 1; }
+
+    // Persistér Hold-planen på firmaet, så appen straks afspejler den (og seat-sync
+    // ikke nedgraderer til Solo igen). Trial-fuld-adgang + paywall efter prøve gør
+    // det sikkert at sætte flaget her — en ubetalt konto låses ude ved prøve-slut.
+    if (wantsHold && !legacy && carpenter.raw_data?.plan !== 'hold') {
+        await supabaseClient.from('carpenters')
+            .update({ raw_data: { ...(carpenter.raw_data || {}), plan: 'hold' } })
+            .eq('id', carpenter.id);
+    }
 
     const roleOrder: string[] = [];
     for (let i = 0; i < kontorSeats; i++) roleOrder.push('kontor');
@@ -190,7 +204,7 @@ serve(async (req) => {
             address: 'auto',
             name: 'auto'
         },
-        success_url: `${req.headers.get('origin')}/dashboard?activeTab=account_settings&success=true`,
+        success_url: `${req.headers.get('origin')}/dashboard?activeTab=${wantsHold ? 'team&upgraded=hold' : 'account_settings&success=true'}`,
         cancel_url: `${req.headers.get('origin')}/dashboard?activeTab=account_settings&canceled=true`,
         allow_promotion_codes: true, // Giver mulighed for rabatkoder
         billing_address_collection: 'required',

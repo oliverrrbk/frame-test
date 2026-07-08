@@ -86,17 +86,27 @@ export function getPlan(company) {
     if (!company) return 'hold';                                    // tvivl → fuld adgang
     if (company.subscription_status === 'exempt') return 'hold';    // gratis/fuld adgang
     if (company.raw_data?.legacy_pricing?.locked) return 'legacy';  // Tobias m.fl.
+    if (company.raw_data?.plan === 'hold') return 'hold';           // eksplicit opgraderet til Hold
     const team = company.raw_data?.team;
     if (!team) return 'hold';                                       // ukendt hold → fail-open
     return computeSeats(team).heads >= 2 ? 'hold' : 'solo';
 }
 
+// Er firmaets gratis prøveperiode stadig aktiv? (Prøve = fuld adgang til alt.)
+export function isTrialActive(company) {
+    if (!company || company.subscription_status !== 'trialing') return false;
+    const ends = company.trial_ends_at ? new Date(company.trial_ends_at).getTime() : 0;
+    return ends > Date.now();
+}
+
 // Funktions-flag der afhænger af abonnements-planen (ikke branchen).
+// Under prøven har man fuld adgang — også timeregistrering på Solo — så man kan
+// mærke hele systemet. Data gemmes bagved og er der stadig ved en opgradering.
 export function getPlanFeatures(company) {
     const plan = getPlan(company);
     return {
-        plan,                          // 'solo' | 'hold' | 'legacy'
-        timeTracking: plan !== 'solo', // Solo = uden timeregistrering
+        plan,                                                  // 'solo' | 'hold' | 'legacy'
+        timeTracking: plan !== 'solo' || isTrialActive(company), // Solo uden timer — medmindre man er på prøve
     };
 }
 
