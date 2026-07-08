@@ -142,9 +142,6 @@ const LandingPage = ({ setSession }) => {
                                         Opret din bruger — så ringer vi dig op
                                         <ArrowRight className="w-5 h-5 group-hover/cta:translate-x-1 transition-transform" />
                                     </motion.button>
-                                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 text-center lg:text-right">
-                                        Gratis den første måned · Derefter fra 390 kr./md. · Ingen binding
-                                    </span>
                                 </div>
                             </div>
                         </motion.div>
