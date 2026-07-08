@@ -247,16 +247,16 @@ export default function FeaturesPage({ setSession }) {
                                     Kom i gang, så finder vi ud af, hvad der passer jer bedst. Vi hjælper med hele opsætningen — helt gratis — og følger jer hele vejen, indtil systemet passer præcis til jeres hverdag og bare giver mening.
                                 </p>
                             </div>
-                            <div className="flex flex-col items-center gap-3 shrink-0">
+                            <div className="flex flex-col items-center gap-3 w-full md:w-auto md:shrink-0">
                                 <motion.button
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => navigate('/register')}
                                     style={{ WebkitTransform: "translateZ(0)" }}
-                                    className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-8 py-4 rounded-full font-bold text-[clamp(1rem,1.5vw,1.125rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl flex items-center gap-3 group/cta whitespace-nowrap"
+                                    className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 w-full md:w-auto px-6 md:px-8 py-4 rounded-full font-bold text-[clamp(1rem,1.5vw,1.125rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl flex items-center justify-center text-center gap-2.5 group/cta"
                                 >
                                     Opret din bruger — så ringer vi dig op
-                                    <ArrowRight className="w-5 h-5 group-hover/cta:translate-x-1 transition-transform" />
+                                    <ArrowRight className="w-5 h-5 shrink-0 group-hover/cta:translate-x-1 transition-transform" />
                                 </motion.button>
                                 <span className="text-sm text-slate-500 dark:text-slate-400 text-center">Gratis den første måned · Ingen binding</span>
                             </div>

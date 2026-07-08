@@ -131,16 +131,16 @@ const LandingPage = ({ setSession }) => {
                                     </p>
                                 </div>
 
-                                <div className="flex flex-col items-center lg:items-end gap-3 shrink-0">
+                                <div className="flex flex-col items-center lg:items-end gap-3 w-full lg:w-auto lg:shrink-0">
                                     <motion.button
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => navigate('/register')}
                                         style={{ WebkitTransform: "translateZ(0)" }}
-                                        className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-8 py-5 rounded-full font-bold text-[clamp(1rem,1.5vw,1.1rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl flex items-center gap-3 group/cta"
+                                        className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 w-full lg:w-auto px-6 lg:px-8 py-4 lg:py-5 rounded-full font-bold text-[clamp(1rem,1.5vw,1.1rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl flex items-center justify-center text-center gap-2.5 group/cta"
                                     >
                                         Opret din bruger — så ringer vi dig op
-                                        <ArrowRight className="w-5 h-5 group-hover/cta:translate-x-1 transition-transform" />
+                                        <ArrowRight className="w-5 h-5 shrink-0 group-hover/cta:translate-x-1 transition-transform" />
                                     </motion.button>
                                 </div>
                             </div>
