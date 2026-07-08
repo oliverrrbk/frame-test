@@ -18,7 +18,7 @@ const SHOW_TESTIMONIALS = false;
 // Ærlige løfter der bygger tillid indtil rigtige anmeldelser er på plads.
 const TRUST_POINTS = [
     { icon: Hammer,      title: "Lavet med tømrere",   text: "Bygget hånd i hånd med rigtige tømrere — ikke af folk der aldrig har stået på en plads." },
-    { icon: MapPin,      title: "Dansk system",         text: "Dansk sprog, danske regler og dansk support. Ingen oversat halvbagt software." },
+    { icon: MapPin,      title: "Dansk system",         text: "Dansk sprog, danske regler og dansk support. Ærligt og nemt — bygget til danske tømrere." },
     { icon: ShieldCheck, title: "Data i EU",            text: "Dine og dine kunders data ligger sikkert på EU-servere efter GDPR." },
     { icon: Unlock,      title: "Ingen binding",        text: "Prøv gratis i en måned. Sig op med et klik — vi holder ikke på dig med kontrakter." },
     { icon: WifiOff,     title: "Virker på pladsen",    text: "Lav tilbud og registrér timer selvom mobilnettet er væk. Alt synker når du er online igen." },

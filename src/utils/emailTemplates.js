@@ -99,7 +99,13 @@ const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
             </div>
             <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8; font-style: italic;">Denne e-mail indeholder persondata. Ønsker du at gøre brug af din ret til at få slettet dine oplysninger (GDPR), kan du blot besvare denne e-mail direkte til virksomheden.</p>
           `
-        : `<p style="margin: 0 0 8px 0;">Denne e-mail er sendt via Bison Frame - Din professionelle tilbudsplatform.</p>
+        : `<div style="text-align: center; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
+                <div style="font-size: 16px; font-weight: 800; letter-spacing: 0.5px; color: #0f172a;">Bison Company</div>
+                <div style="width: 28px; height: 2px; background-color: #0f172a; margin: 10px auto; border-radius: 2px;"></div>
+                <p style="margin: 0; font-size: 14px; font-style: italic; color: #475569;">Med ærlighed kommer man længst</p>
+                <p style="margin: 8px 0 0 0; font-size: 11px; letter-spacing: 0.04em; color: #94a3b8;">CVR 45899713</p>
+           </div>
+           <p style="margin: 0 0 8px 0;">Denne e-mail er sendt via Bison Frame - Din professionelle tilbudsplatform.</p>
            <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8; font-style: italic;">Denne e-mail indeholder persondata. Ønsker du at gøre brug af din ret til at få slettet dine oplysninger (GDPR), kan du blot besvare denne e-mail direkte til virksomheden.</p>`;
 
     // Copyright: tømrerens eget navn til kunden, ellers Bison (interne mails).
@@ -371,12 +377,17 @@ export const getCarpenterWelcomeTemplate = (companyName, loginUrl) => {
         <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Velkommen til Bison Frame, ${companyName}!</h2>
         <p style="color: #334155; font-size: 16px; line-height: 1.6;">Vi er super glade for at have dig ombord. Dit nye tømrer-system er nu oprettet. Vi har bygget systemet for at gøre din hverdag nemmere, spare dig for kontortid og give dine kunder en professionel oplevelse fra første klik til færdig opgave.</p>
         
+        <div style="background-color: #eff6ff; padding: 24px; border-radius: 8px; margin: 32px 0; border: 1px solid #dbeafe; border-left: 4px solid #3b82f6;">
+            <h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 16px;">Vi sætter det op sammen med jer</h3>
+            <p style="margin: 0; color: #334155; font-size: 15px; line-height: 1.65;">Du skal ikke stå alene med opsætningen. Vi kommer gerne ud — eller mødes online — og sætter Frame op sammen med jer, og vi bliver ved, indtil det passer til jeres virksomhed og bare kører. Vil du hellere selv i gang, klarer de tre trin herunder det meste — og vi hjælper med det hele, hvis der er bøvl.</p>
+        </div>
+
         <div style="background-color: #f8fafc; padding: 24px; border-radius: 8px; margin: 32px 0; border: 1px solid #e2e8f0; border-left: 4px solid #10b981;">
-            <h3 style="margin: 0 0 16px 0; color: #0f172a; font-size: 16px;">Kom godt fra start i 3 nemme trin:</h3>
+            <h3 style="margin: 0 0 16px 0; color: #0f172a; font-size: 16px;">Kom godt fra start i 3 trin:</h3>
             <ol style="margin: 0; color: #475569; font-size: 15px; line-height: 1.8; padding-left: 20px;">
                 <li style="margin-bottom: 12px;"><strong>Tilpas din profil:</strong> Indstil din timepris og upload dit logo i kontrolpanelet.</li>
-                <li style="margin-bottom: 12px;"><strong>Kopiér din beregner:</strong> Sæt linket på din hjemmeside eller send det direkte til kunden.</li>
-                <li style="margin-bottom: 0;"><strong>Styr dine sager:</strong> Administrer tilbud, bilag og aftalesedler ét og samme sted.</li>
+                <li style="margin-bottom: 12px;"><strong>Byg dit hold:</strong> Opret dit hold under Team &amp; Medarbejdere og tilføj de medarbejdere, du har valgt. Du kan altid tilføje flere senere.</li>
+                <li style="margin-bottom: 0;"><strong>Tilføj kunder &amp; sager:</strong> Gå ind under Kunder og opret dine nuværende kunder og sager.</li>
             </ol>
         </div>
 

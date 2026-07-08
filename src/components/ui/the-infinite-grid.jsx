@@ -19,7 +19,7 @@ import { MobilePreview } from "../Landing/SystemWheelMobilePreviews";
 // Hver chip peger på en DISTINKT skærm, så man ikke ser den samme to gange.
 const HERO_SHOWCASE = [
   { icon: Home,         label: "Oversigt",         id: "overview" },
-  { icon: FileText,     label: "Tilbud på stedet", id: "leads" },
+  { icon: FileText,     label: "Kunder og tilbud", id: "leads" },
   { icon: Clock,        label: "Timeregistrering", id: "payroll" },
   { icon: CalendarDays, label: "Kalender",         id: "calendar" },
   { icon: Briefcase,    label: "Sager",            id: "cases" },

@@ -40,6 +40,12 @@ const userNudgeHtml = (firstName) => `
           <a href="https://bisonframe.dk/dashboard?activeTab=account_settings" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:600;">Tilknyt betalingskort</a>
         </div>
         <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0;">Har I spørgsmål, eller er der noget der driller? Ring til os på <a href="tel:+4540265002" style="color:#2563eb;font-weight:700;text-decoration:none;">40 26 50 02</a> — vi hjælper gerne.</p>
+        <div style="text-align:center;border-top:1px solid #e2e8f0;margin-top:28px;padding-top:20px;">
+          <div style="font-size:15px;font-weight:800;letter-spacing:0.5px;color:#0f172a;">Bison Company</div>
+          <div style="width:26px;height:2px;background:#0f172a;margin:9px auto;border-radius:2px;"></div>
+          <p style="margin:0;font-size:13px;font-style:italic;color:#475569;">Med ærlighed kommer man længst</p>
+          <p style="margin:7px 0 0;font-size:11px;letter-spacing:0.04em;color:#94a3b8;">CVR 45899713</p>
+        </div>
       </div>
     </div>
   </div>`;

@@ -156,7 +156,7 @@ function TeamCalculator({ onStart }) {
     const planName = result.plan === 'hold' ? 'Hold' : 'Solo';
 
     return (
-        <section className="w-full max-w-[1180px] mx-auto mb-[clamp(6rem,10vw,8rem)] relative z-10">
+        <section className="w-full max-w-[1180px] mx-auto mb-[clamp(8rem,13vw,11rem)] relative z-10">
             <div className="bg-white dark:bg-slate-900 rounded-[1.9rem] border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-[clamp(1.5rem,3.5vw,2.6rem)] grid md:grid-cols-2 gap-[clamp(1.4rem,3vw,2.6rem)]">
                 {/* Venstre: holdet */}
                 <div>
@@ -253,10 +253,10 @@ export default function PricingPage({ setSession }) {
 
             <TopNavBar onLoginClick={() => setIsLoginOpen(true)} />
 
-            <main className="flex-grow flex flex-col items-center justify-start w-full px-6 md:px-12 pt-16 pb-24 z-10 relative">
+            <main className="flex-grow flex flex-col items-center justify-start w-full px-6 md:px-12 pt-24 pb-36 z-10 relative">
 
                 {/* Hero */}
-                <section className="w-full max-w-4xl mx-auto flex flex-col items-center text-center gap-6 mt-12 mb-[clamp(4rem,8vw,6rem)] relative z-10">
+                <section className="w-full max-w-4xl mx-auto flex flex-col items-center text-center gap-8 mt-16 mb-[clamp(6rem,11vw,9rem)] relative z-10">
                     <div className="absolute -top-20 -left-48 md:-left-64 w-[500px] h-[500px] bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-[120px] pointer-events-none z-[-1]"></div>
                     <div className="absolute top-24 -right-12 md:-right-32 w-[400px] h-[400px] bg-orange-500/10 dark:bg-orange-400/10 rounded-full blur-[120px] pointer-events-none z-[-1]"></div>
 
@@ -273,12 +273,12 @@ export default function PricingPage({ setSession }) {
 
                     <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                         className="text-[clamp(1.125rem,1.5vw,1.25rem)] text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed mt-4">
-                        To enkle grundpriser — og herfra betaler du kun for de folk, du faktisk har med. Din kontorbruger og din svend bruger ikke systemet ens, så de koster ikke det samme. Ingen skjulte gebyrer, ingen binding.
+                        To enkle grundpriser — herfra betaler du kun for de folk, du faktisk har med. Ingen skjulte gebyrer, ingen binding. Og vi kommer ud og sætter det hele op gratis — og følger jer i mål, indtil det spiller præcis til jeres virksomhed.
                     </motion.p>
                 </section>
 
                 {/* Grundplaner — kun Solo + Hold, centreret over beregneren */}
-                <section className="w-full max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 mb-[clamp(3rem,6vw,4.5rem)] relative z-10 items-stretch">
+                <section className="w-full max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 mb-[clamp(5rem,9vw,7rem)] relative z-10 items-stretch">
                     {PLAN_CARDS.map((card, idx) => (
                         <PlanCard key={card.id} card={card} idx={idx} onSelect={startTrial} />
                     ))}
@@ -288,7 +288,7 @@ export default function PricingPage({ setSession }) {
                 <TeamCalculator onStart={startTrial} />
 
                 {/* Ekstra brugere — forklaring UNDER beregneren */}
-                <section className="w-full max-w-[1180px] mx-auto mb-[clamp(6rem,10vw,8rem)] relative z-10">
+                <section className="w-full max-w-[1180px] mx-auto mb-[clamp(8rem,13vw,11rem)] relative z-10">
                     <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }} viewport={{ once: true, margin: '-60px' }}
                         className="bg-white dark:bg-slate-900 rounded-[1.9rem] border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-[clamp(1.5rem,3.5vw,2.6rem)]">
@@ -335,32 +335,13 @@ export default function PricingPage({ setSession }) {
                     </motion.div>
                 </section>
 
-                {/* Integration Value Proposition */}
-                <section className="w-full max-w-4xl mx-auto mb-[clamp(6rem,10vw,8rem)] relative z-10">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-8 md:p-12 border border-slate-200/60 dark:border-slate-700/50 flex flex-col items-center text-center">
-                        <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-6">
-                            Altid Inkluderet
-                        </div>
-                        <h2 className="text-[clamp(1.5rem,2.5vw,2rem)] font-bold text-slate-900 dark:text-slate-100 mb-4 tracking-tight">
-                            Meget mere end bare en tilbudsberegner
-                        </h2>
-                        <p className="text-slate-600 dark:text-slate-400 max-w-2xl text-[clamp(1rem,1.2vw,1.125rem)] leading-relaxed mb-8">
-                            Det kan være svært at holde styr på alle de tilbud, man har ude. Bison Frame samler det hele ét sted, så du aldrig misser en besked eller glemmer at følge op. Du får et dejligt overblik over dine kunder – og når opgaven er i hus, overføres sagen automatisk direkte til dit foretrukne regnskabsprogram med ét klik.
-                        </p>
-                        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
-                            <span className="font-bold text-xl text-slate-700 dark:text-slate-300">e-conomic</span>
-                            <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Dinero</span>
-                        </div>
-                    </div>
-                </section>
-
-                {/* FAQ */}
-                <section className="w-full max-w-5xl flex flex-col gap-12 pt-16 border-t border-slate-200/50 dark:border-slate-800/50 relative z-10 mb-[clamp(6rem,10vw,8rem)]">
+                {/* FAQ — lige efter priserne, så tvivl besvares med det samme */}
+                <section className="w-full max-w-5xl flex flex-col gap-16 pt-24 border-t border-slate-200/50 dark:border-slate-800/50 relative z-10 mb-[clamp(8rem,13vw,11rem)]">
                     <div className="flex items-center gap-4">
                         <span className="text-orange-600 dark:text-orange-400 font-bold text-[0.65rem] uppercase tracking-widest px-2 py-1 bg-orange-100/50 dark:bg-orange-500/20 border border-orange-200 dark:border-orange-500/30 rounded">Dok. Ref. FAQ-01</span>
                         <h2 className="text-[clamp(1.5rem,2vw,1.75rem)] font-bold text-slate-900 dark:text-slate-100">Ofte Stillede Spørgsmål</h2>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-16">
                         {[
                             ['01.', 'Hvad er forskellen på Solo og Hold?', 'Solo er 390 kr/md for dig alene — hele systemet, men uden timeregistrering. Hold er 890 kr/md og giver 3 brugere (dig + 2) samt timeregistrering. Så snart du har mere end én bruger, er du på Hold.'],
                             ['02.', 'Hvad koster en ekstra bruger?', 'Fra bruger nr. 4 betaler du pr. bruger: kontor (projektleder/bogholder) 149, svend 129 og lærling 79 kr/md. Prisen falder automatisk efter bruger nr. 10 og igen efter nr. 50 — uanset rolle.'],
@@ -379,8 +360,27 @@ export default function PricingPage({ setSession }) {
                     </div>
                 </section>
 
+                {/* Integration Value Proposition — efter FAQ */}
+                <section className="w-full max-w-4xl mx-auto mb-[clamp(8rem,13vw,11rem)] relative z-10">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-8 md:p-12 border border-slate-200/60 dark:border-slate-700/50 flex flex-col items-center text-center">
+                        <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-6">
+                            Altid Inkluderet
+                        </div>
+                        <h2 className="text-[clamp(1.5rem,2.5vw,2rem)] font-bold text-slate-900 dark:text-slate-100 mb-4 tracking-tight">
+                            Meget mere end bare en tilbudsberegner
+                        </h2>
+                        <p className="text-slate-600 dark:text-slate-400 max-w-2xl text-[clamp(1rem,1.2vw,1.125rem)] leading-relaxed mb-8">
+                            Det kan være svært at holde styr på alle de tilbud, man har ude. Bison Frame samler det hele ét sted, så du aldrig misser en besked eller glemmer at følge op. Du får et dejligt overblik over dine kunder – og når opgaven er i hus, overføres sagen automatisk direkte til dit foretrukne regnskabsprogram med ét klik.
+                        </p>
+                        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+                            <span className="font-bold text-xl text-slate-700 dark:text-slate-300">e-conomic</span>
+                            <span className="font-bold text-xl text-slate-700 dark:text-slate-300">Dinero</span>
+                        </div>
+                    </div>
+                </section>
+
                 {/* Final CTA */}
-                <section ref={ctaRef} className="w-full max-w-[1440px] px-8 mx-auto mb-20 relative z-10">
+                <section ref={ctaRef} className="w-full max-w-[1440px] px-8 mx-auto mb-28 relative z-10">
                     <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 30 }} viewport={{ once: true }}
                         style={{ WebkitTransform: 'translateZ(0)', WebkitBackfaceVisibility: 'hidden', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}

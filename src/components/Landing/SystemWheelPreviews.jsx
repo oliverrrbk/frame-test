@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Home, Users, FileText, Briefcase, Calendar, MessageSquare, Wallet, MapPin,
     PenTool, Link as LinkIcon, HardHat, Search, Phone, ChevronRight, CheckCircle,
-    Send, Inbox, TrendingUp, Wrench, ChevronDown, Plus, ArrowRight, Copy, Mic, Calculator, X, Mail, Sparkles, Pencil, Trash2, Eye, Clock, CheckCircle2, AlertCircle, AlertTriangle, Download, Lock, Folder, UserPlus, Building2,
+    Send, Inbox, TrendingUp, Wrench, ChevronDown, Plus, ArrowRight, Copy, Mic, Calculator, X, Mail, Sparkles, Pencil, Trash2, Eye, Clock, CheckCircle2, AlertCircle, AlertTriangle, Download, Upload, Package, Lock, Folder, UserPlus, Building2,
 } from 'lucide-react';
 
 /*
@@ -144,26 +144,40 @@ function HurtigtTilbudScreen({ sendRef, sent }) {
                 <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400"><X size={13} /></span>
             </div>
             <div className="flex-1 grid grid-cols-3 gap-2.5 p-3 min-h-0 text-[0.55rem] overflow-hidden">
-                {/* Kol 1 — rediger */}
-                <div className="space-y-1.5">
+                {/* Kol 1 — rediger (1:1 med den rigtige skærm, hele vejen ned til Materialer) */}
+                <div className="space-y-1 overflow-hidden">
                     <div className="text-[0.5rem] font-bold uppercase tracking-wider text-blue-500 flex items-center gap-1"><PenTool size={9} /> Rediger tilbuddet</div>
-                    <div className="rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300 font-bold flex items-center justify-center gap-1 py-1.5"><Mic size={11} /> Udfyld med stemme (AI)</div>
-                    <div className="text-[0.5rem] text-slate-400 leading-snug text-center">Fortæl frit om kunden og opgaven — Frame udfylder felterne.</div>
-                    <div className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 pt-0.5"><Users size={10} /> Kunde</div>
-                    <div className="flex items-center justify-between rounded-md border border-slate-200 dark:border-slate-800 px-1.5 py-1 text-slate-400"><span>Genbrug en eksisterende kunde…</span><ChevronDown size={10} /></div>
+                    <div className="rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300 font-bold flex items-center justify-center gap-1 py-1"><Mic size={10} /> Udfyld med stemme (AI)</div>
+                    <div className="text-[0.44rem] text-slate-400 leading-snug text-center">Fortæl frit om kunden og opgaven — Frame udfylder felterne, og du retter til bagefter.</div>
+                    <div className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1"><Users size={10} /> Kunde</div>
+                    <div className="text-[0.44rem] font-bold text-slate-600 dark:text-slate-300">Vælg fra dit kunde-bibliotek</div>
+                    <div className="flex items-center justify-between rounded-md border border-slate-200 dark:border-slate-800 px-1.5 py-0.5 text-slate-400"><span>Genbrug en eksisterende kunde…</span><ChevronDown size={9} /></div>
                     <div className="inline-flex gap-0.5 p-0.5 rounded-md bg-slate-100 dark:bg-slate-800 w-full">
                         <span className="flex-1 text-center py-0.5 rounded bg-white dark:bg-slate-900 font-bold text-slate-700 dark:text-slate-200">Privat</span>
                         <span className="flex-1 text-center py-0.5 rounded text-slate-400">Erhverv</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 gap-1">
                         <div><div className={lbl}>Navn *</div><div className={field}>&nbsp;</div></div>
                         <div><div className={lbl}>Telefon</div><div className={field}>+45 12 34 56 78</div></div>
                         <div><div className={lbl}>Email</div><div className={field}>&nbsp;</div></div>
                         <div><div className={lbl}>Adresse</div><div className={field}>&nbsp;</div></div>
+                        <div><div className={lbl}>Postnummer</div><div className={field}>&nbsp;</div></div>
+                        <div><div className={lbl}>By</div><div className={field}>&nbsp;</div></div>
+                    </div>
+                    <div><div className={lbl}>Opgavetitel</div><div className={field}>F.eks. 'Nyt tag på Nørrevænget 1'</div></div>
+                    <div><div className={lbl}>Tilbuddet er gyldigt i (dage)</div><div className={field}>14</div></div>
+                    <div className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 pt-0.5"><Package size={10} /> Materialer</div>
+                    <div className="grid grid-cols-2 gap-1">
+                        <div><div className={lbl}>Indkøbspris</div><div className={field}>&nbsp;</div></div>
+                        <div><div className={lbl}>Avance %</div><div className={field}>10</div></div>
+                    </div>
+                    <div className="flex items-center justify-between rounded-md bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-1.5 py-1"><span className="text-slate-500">Materialer i tilbud</span><span className="font-bold text-slate-900 dark:text-slate-100">0,00 kr</span></div>
+                    <div><div className={lbl}>Materialeliste (PDF)</div>
+                        <div className="rounded-md border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 flex items-center justify-center gap-1 py-1"><Upload size={9} /> Vedhæft PDF</div>
                     </div>
                 </div>
                 {/* Kol 2 — PDF */}
-                <div className="space-y-1.5 min-w-0">
+                <div className="space-y-1 min-w-0 overflow-hidden">
                     <div className="flex items-center justify-between">
                         <div className="text-[0.5rem] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1"><FileText size={9} /> Sådan ser PDF'en ud</div>
                         <span className="text-[0.45rem] font-bold text-slate-500 border border-slate-200 dark:border-slate-700 rounded px-1 py-0.5">⤢ Forstør</span>
@@ -185,20 +199,29 @@ function HurtigtTilbudScreen({ sendRef, sent }) {
                         <div className="flex justify-between text-[0.45rem] text-slate-500"><span>I alt ekskl. moms</span><span>0,00 kr</span></div>
                         <div className="flex justify-between text-[0.45rem] text-slate-400"><span>Moms (25%)</span><span>0,00 kr</span></div>
                         <div className="flex justify-between border-t border-slate-300 dark:border-slate-700 pt-1 mt-1 font-bold text-slate-900 dark:text-slate-100 text-[0.5rem]"><span>I ALT INKL. MOMS</span><span>0,00 kr</span></div>
-                        <div className="text-[0.42rem] font-bold text-slate-600 dark:text-slate-400 mt-1.5">Tak for tilliden. Dette tilbud er gældende i 14 dage.</div>
+                        <div className="text-[0.42rem] font-bold text-slate-600 dark:text-slate-400 mt-1.5">Tak for tilliden. Dette tilbud er gældende i 14 dage fra ovenstående dato.</div>
+                        <div className="text-[0.4rem] text-slate-400 leading-snug mt-1">Arbejdet udføres i henhold til AB Forbruger (Almindelige Betingelser for byggearbejder). Eventuelle uforudsete forhindringer (skjult råd, svamp, asbest) er ikke inkluderet og udbedres i samråd til gældende timepris.</div>
                     </div>
                     <div className="text-[0.5rem] font-bold text-blue-600 dark:text-blue-400">Åbn i nyt vindue ›</div>
                 </div>
-                {/* Kol 3 — mail */}
-                <div className="space-y-1.5 min-w-0">
+                {/* Kol 3 — mail (hele vejen ned: knapper + gyldighed + spørgsmål) */}
+                <div className="space-y-1 min-w-0 overflow-hidden">
                     <div className="text-[0.5rem] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1"><MessageSquare size={9} /> Mailen til kunden</div>
-                    <div className="text-[0.5rem] text-slate-500">Personlig besked i mailen</div>
-                    <div className="rounded-md border border-slate-200 dark:border-slate-800 p-1.5 text-slate-500 leading-snug text-[0.5rem]">Tak for en god snak. Her er det tilbud, vi aftalte — du kan se og bekræfte det via knappen herunder.<br /><br />Sig endelig til, hvis du har spørgsmål.</div>
+                    <div className="text-[0.48rem] text-slate-500">Personlig besked i mailen</div>
+                    <div className="rounded-md border border-slate-200 dark:border-slate-800 p-1.5 text-slate-500 leading-snug text-[0.48rem]">Tak for en god snak. Her er det tilbud, vi aftalte — du kan se og bekræfte det via knappen herunder.<br /><br />Sig endelig til, hvis du har spørgsmål.</div>
                     <div className="rounded-lg bg-gradient-to-b from-blue-50 to-white dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800 p-2 text-center">
                         <div className="w-6 h-6 mx-auto rounded bg-slate-900 mb-1" />
-                        <div className="font-bold text-slate-800 dark:text-slate-200 text-[0.55rem] mb-1">Thomas Byg</div>
-                        <div className="font-extrabold text-slate-900 dark:text-slate-100 text-[0.7rem] mb-1">Dit tilbud er klar!</div>
-                        <div className="text-slate-500 leading-snug text-[0.48rem]">Hej kunde, tak for en god snak. Her er det tilbud, vi aftalte…</div>
+                        <div className="font-bold text-slate-800 dark:text-slate-200 text-[0.52rem] mb-1">Thomas Byg</div>
+                        <div className="font-extrabold text-slate-900 dark:text-slate-100 text-[0.66rem] mb-1">Dit tilbud er klar!</div>
+                        <div className="text-slate-500 leading-snug text-[0.46rem] mb-1.5">Hej kunde, tak for en god snak. Her er det tilbud, vi aftalte…</div>
+                        <div className="inline-flex mx-auto px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-[0.46rem]">Se som PDF</div>
+                        <div className="rounded-md bg-emerald-500 text-white font-bold py-1 text-[0.5rem] mt-1 flex items-center justify-center gap-1"><CheckCircle size={9} /> Bekræft tilbud her</div>
+                        <div className="text-[0.42rem] text-slate-400 italic leading-snug mt-1">Linket fører til en sikker portal, hvor kunden kan læse hele tilbuddet og bekræfte opgaven.</div>
+                        <div className="text-[0.42rem] text-slate-400 mt-1">Tilbuddet er gyldigt i <b className="text-slate-600 dark:text-slate-300">14 dage</b> fra dato.</div>
+                    </div>
+                    <div className="rounded-md border-l-2 border-blue-500 bg-blue-50/60 dark:bg-blue-500/10 px-1.5 py-1">
+                        <div className="font-bold text-blue-700 dark:text-blue-300 text-[0.46rem]">Har du spørgsmål eller ændringer?</div>
+                        <div className="text-slate-500 leading-snug text-[0.42rem]">Er der noget, vi skal rette, kan du blot besvare denne e-mail — så sender vi en opdateret version.</div>
                     </div>
                 </div>
             </div>
@@ -1325,17 +1348,11 @@ function IntegrationsScreen() {
             <h2 className="text-base font-extrabold text-slate-900 dark:text-slate-100">Integrationer</h2>
             <p className="text-[0.62rem] text-slate-500 dark:text-slate-400 mb-4">Forbind din profil automatisk til dit foretrukne regnskabsprogram for let overførsel.</p>
             <div className="space-y-2.5">
-                {/* Dinero */}
-                <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 p-3 flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-blue-100 dark:bg-blue-500/20 text-blue-600"><LinkIcon size={16} /></span>
-                    <div className="flex-1 min-w-0"><div className="font-bold text-slate-900 dark:text-slate-100 text-[0.7rem]">Dinero Regnskab</div><div className="text-[0.55rem] text-slate-400">Overfør tilbud som fakturakladder</div></div>
-                    {connBadge}<ChevronDown size={13} className="text-slate-300" />
-                </div>
-                {/* e-conomic (foldbar) */}
+                {/* Dinero (foldbar — her vises selve forbind-flowet: fold ud → log ind → Forbundet) */}
                 <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 overflow-hidden">
                     <div ref={cardRef} className="p-3 flex items-center gap-3">
-                        <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600"><LinkIcon size={16} /></span>
-                        <div className="flex-1 min-w-0"><div className="font-bold text-slate-900 dark:text-slate-100 text-[0.7rem]">e-conomic</div><div className="text-[0.55rem] text-slate-400">Danmarks mest brugte regnskabsprogram</div></div>
+                        <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-blue-100 dark:bg-blue-500/20 text-blue-600"><LinkIcon size={16} /></span>
+                        <div className="flex-1 min-w-0"><div className="font-bold text-slate-900 dark:text-slate-100 text-[0.7rem]">Dinero Regnskab</div><div className="text-[0.55rem] text-slate-400">Overfør tilbud som fakturakladder</div></div>
                         {connected && connBadge}
                         <ChevronDown size={13} className={`text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
                     </div>
@@ -1343,18 +1360,24 @@ function IntegrationsScreen() {
                         {expanded && !connected && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
                                 <div className="px-3 pb-3 pt-0 border-t border-slate-100 dark:border-slate-800">
-                                    <p className="text-[0.58rem] text-slate-500 dark:text-slate-400 leading-relaxed my-2.5">Når du har bekræftet en opgave, kan du med ét klik overføre kunden og opgaven til dit e-conomic regnskab som en fakturakladde. Tryk på knappen for at godkende adgangen.</p>
-                                    <div ref={loginRef} className="rounded-lg bg-emerald-500 text-white text-center py-2 font-bold text-[0.66rem]">Log ind med e-conomic</div>
+                                    <p className="text-[0.58rem] text-slate-500 dark:text-slate-400 leading-relaxed my-2.5">Når du har bekræftet en opgave, kan du med ét klik overføre kunden og opgaven til dit Dinero regnskab som en fakturakladde. Tryk på knappen for at godkende adgangen.</p>
+                                    <div ref={loginRef} className="rounded-lg text-white text-center py-2 font-bold text-[0.66rem]" style={{ background: '#0ea5e9' }}>Log ind med Dinero</div>
                                 </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
-                {/* SMTP */}
+                {/* e-conomic — det ANDET regnskabsprogram (ikke forbundet; man vælger ét, ikke begge) */}
+                <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 p-3 flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600"><LinkIcon size={16} /></span>
+                    <div className="flex-1 min-w-0"><div className="font-bold text-slate-900 dark:text-slate-100 text-[0.7rem]">e-conomic</div><div className="text-[0.55rem] text-slate-400">Danmarks mest brugte regnskabsprogram</div></div>
+                    <ChevronDown size={13} className="text-slate-300" />
+                </div>
+                {/* SMTP — separat e-mail-mulighed (ikke forbundet endnu) */}
                 <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 p-3 flex items-center gap-3">
                     <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-rose-100 dark:bg-rose-500/20 text-rose-600"><Mail size={16} /></span>
                     <div className="flex-1 min-w-0"><div className="font-bold text-slate-900 dark:text-slate-100 text-[0.7rem]">Egen E-mail (SMTP)</div><div className="text-[0.55rem] text-slate-400">Send tilbud via din egen e-mailadresse</div></div>
-                    {connBadge}<ChevronDown size={13} className="text-slate-300" />
+                    <ChevronDown size={13} className="text-slate-300" />
                 </div>
             </div>
             <DemoCursor x={pos.x} y={pos.y} clicking={clicking} />
@@ -1463,7 +1486,8 @@ function TeamScreen() {
                     <div className="flex items-center gap-2 mb-2.5"><span className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center"><UserPlus size={13} /></span><div className="text-[0.66rem] font-bold text-slate-900 dark:text-slate-100">Tilføj Medarbejder</div></div>
                     <div className="space-y-2">
                         <div><div className="text-[0.5rem] font-bold text-slate-500 mb-0.5">FULDE NAVN</div><div className={`${field} text-slate-800 dark:text-slate-200`}>Mikkel Sørensen</div></div>
-                        <div><div className="text-[0.5rem] font-bold text-slate-500 mb-0.5">E-MAIL</div><div className={`${field} text-slate-400`}>mikkel@firma.dk</div></div>
+                        <div><div className="text-[0.5rem] font-bold text-slate-500 mb-0.5">E-MAIL ADRESSE</div><div className={`${field} text-slate-400`}>mikkel@firma.dk</div></div>
+                        <div><div className="text-[0.5rem] font-bold text-slate-500 mb-0.5">TELEFON</div><div className={`${field} flex items-center gap-1.5 text-slate-400`}><Phone size={10} className="text-slate-400" /><span className="font-bold text-slate-500">+45</span> 40 12 34 56</div></div>
                         <div className="relative">
                             <div className="text-[0.5rem] font-bold text-slate-500 mb-0.5">ROLLE</div>
                             <div ref={roleRef} className={`${field} flex items-center justify-between text-slate-800 dark:text-slate-200 font-bold`}>Svend <ChevronDown size={12} className={`text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} /></div>
@@ -1477,6 +1501,7 @@ function TeamScreen() {
                                 )}
                             </AnimatePresence>
                         </div>
+                        <div className="text-[0.46rem] text-slate-400 leading-snug">Projektledere ser kun egne leads. Bogholdere ser kun bekræftede opgaver. Svende og lærlinge kan registrere timer og se byggechecklister på sager.</div>
                         <div className="text-[0.5rem] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-500/10 rounded-md px-2 py-1">$ Gratis — I betaler ikke pr. bruger.</div>
                         <div ref={createRef} className="rounded-lg bg-slate-900 text-white text-center py-2 font-bold text-[0.62rem] flex items-center justify-center gap-1"><UserPlus size={12} /> Opret Medarbejder</div>
                     </div>
@@ -1503,12 +1528,32 @@ function TeamScreen() {
                         </div>
                     </div>
                     <div className={`${glass} rounded-xl p-3`}>
-                        <div className="flex items-center gap-1.5 text-[0.56rem] font-bold uppercase tracking-wide text-violet-500 mb-2"><Building2 size={12} /> Eksterne underleverandører (2)</div>
-                        <div className="space-y-2">
-                            {[['Madsen Byg', 'Tømrer'], ['Hansen El', 'Elektriker']].map(([n, r]) => (
-                                <div key={n} className="flex items-center justify-between rounded-lg border border-violet-100 dark:border-violet-500/20 bg-violet-50/40 dark:bg-violet-500/5 px-2.5 py-1.5">
-                                    <div><div className="text-[0.58rem] font-bold text-slate-800 dark:text-slate-200">{n}</div><div className="text-[0.5rem] text-violet-600 dark:text-violet-400 font-semibold">{r}</div></div>
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[0.5rem] font-bold"><Send size={9} /> Send gæste-login</span>
+                        <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-6 h-6 rounded-lg flex items-center justify-center text-white shrink-0" style={{ background: 'linear-gradient(135deg,#7c3aed,#9333ea)' }}><Building2 size={12} /></span>
+                                <span className="text-[0.6rem] font-bold text-slate-900 dark:text-slate-100">Underleverandører (2)</span>
+                            </div>
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-white text-[0.5rem] font-bold shadow-sm" style={{ background: 'linear-gradient(135deg,#7c3aed,#9333ea)' }}><Plus size={9} /> Tilføj underleverandør</span>
+                        </div>
+                        <div className="text-[0.46rem] text-slate-400 leading-snug mb-2">Eksterne partnere (elektriker, VVS, m.m.) uden login. Gemte underleverandører kan tilføjes direkte til en sag under "Holdet på sagen".</div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {[['Madsen Byg', 'Tømrer', 'Mads Madsen', '45 40 26 50'], ['Hansen El', 'Elektriker', 'Marius Hansen', '12 32 34 56']].map(([n, r, mester, phone]) => (
+                                <div key={n} className="rounded-lg border border-violet-100 dark:border-violet-500/20 bg-violet-50/40 dark:bg-violet-500/5 p-2 flex flex-col gap-1.5">
+                                    <div className="flex items-start justify-between gap-1">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="w-6 h-6 rounded-md bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 flex items-center justify-center shrink-0"><Building2 size={11} /></span>
+                                            <div className="min-w-0">
+                                                <div className="text-[0.55rem] font-bold text-slate-800 dark:text-slate-200 leading-tight truncate">{n}</div>
+                                                <span className="inline-flex items-center gap-0.5 mt-0.5 text-[0.42rem] font-bold text-violet-600 dark:text-violet-300 bg-violet-100 dark:bg-violet-500/20 px-1 py-0.5 rounded-full"><Wrench size={7} /> {r}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-0.5 text-slate-300 dark:text-slate-600 shrink-0"><Pencil size={10} /><Trash2 size={10} /></div>
+                                    </div>
+                                    <div className="flex flex-col gap-0.5 pt-1 border-t border-violet-100 dark:border-violet-500/20 text-[0.44rem] text-slate-500">
+                                        <span className="flex items-center gap-1 truncate"><HardHat size={8} className="text-slate-400 shrink-0" /> {mester} <span className="text-slate-400">(mester)</span></span>
+                                        <span className="flex items-center gap-1"><Phone size={8} className="text-slate-400 shrink-0" /> {phone}</span>
+                                    </div>
+                                    <div className="rounded-md text-[0.48rem] font-bold py-1 text-center text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-500/20 flex items-center justify-center gap-1"><Send size={8} /> Send gæste-login</div>
                                 </div>
                             ))}
                         </div>

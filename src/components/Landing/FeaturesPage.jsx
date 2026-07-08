@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Login from '../Auth/Login';
 import Footer from './Footer';
 import TopNavBar from './TopNavBar';
-import { ArrowRight, Compass, Send, Wallet, HardHat, Phone, Boxes, SlidersHorizontal, Sparkles, FileText, Users, Clock, CalendarDays, Receipt, MapPin, PenTool, Calculator, Lock } from 'lucide-react';
+import { ArrowRight, Compass, Send, Wallet, HardHat, Boxes, SlidersHorizontal, Sparkles, FileText, Users, Clock, CalendarDays, MapPin, PenTool, Calculator, Lock, Briefcase, MessageSquare, Package, Link as LinkIcon, LayoutGrid, Video } from 'lucide-react';
 import PageTransition from '../ui/PageTransition';
 import SystemWheel from './SystemWheel';
 
@@ -25,19 +25,25 @@ export default function FeaturesPage({ setSession }) {
         // Scroll restoration handled globally
     }, []);
 
-    // Klikbar demo af "byg dit dashboard" — ren illustration (gemmes ikke).
-    // Kerne-moduler (tilbud + kunder) er altid tændt; resten vælger man selv.
+    // Klikbar demo af "Tilpas dashboard" — 1:1 med skærmen inde i systemet
+    // (samme moduler, labels, beskrivelser, ikoner og accent-farver som MODULES/META).
+    // Ren illustration (gemmes ikke). Kerne-moduler (tilbud + sager) er altid tændt.
     const DASH_MODULES = [
-        { key: 'tilbud', icon: FileText, label: 'Tilbud på stedet', color: 'text-blue-600 dark:text-blue-400', core: true },
-        { key: 'kunder', icon: Users, label: 'Kunder & sager', color: 'text-orange-600 dark:text-orange-400', core: true },
-        { key: 'beregner', icon: Calculator, label: 'Prisberegner & materialer', color: 'text-indigo-600 dark:text-indigo-400' },
-        { key: 'timer', icon: Clock, label: 'Timeregistrering', color: 'text-slate-600 dark:text-slate-300', badge: 'Hold' },
-        { key: 'kalender', icon: CalendarDays, label: 'Kalender', color: 'text-blue-600 dark:text-blue-400' },
-        { key: 'regnskab', icon: Receipt, label: 'Regnskab & faktura', color: 'text-emerald-600 dark:text-emerald-400' },
-        { key: 'kort', icon: MapPin, label: 'Kortvisning', color: 'text-slate-600 dark:text-slate-300' },
-        { key: 'skitser', icon: PenTool, label: 'Skitser & tegninger', color: 'text-slate-600 dark:text-slate-300' },
+        { key: 'customers',    icon: Users,         label: 'Kunder',                 desc: 'Kunde-bibliotek med genbrugelige kundekort.',          accent: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-500/10' },
+        { key: 'quotes',       icon: FileText,      label: 'Tilbud & Forespørgsler', desc: 'Indbakke, tilbud, forespørgsler og tilbudskladder.',   accent: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-500/10', core: true },
+        { key: 'cases',        icon: Briefcase,     label: 'Sager & Ordrestyring',   desc: 'Igangværende sager, byggepladser og opgaver.',         accent: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10', core: true },
+        { key: 'calendar',     icon: CalendarDays,  label: 'Kalender',               desc: 'Planlægning af sager og aftaler.',                     accent: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-500/10' },
+        { key: 'chat',         icon: MessageSquare, label: 'Intern Chat',            desc: 'Beskeder mellem medarbejdere.',                        accent: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-500/10' },
+        { key: 'timesheet',    icon: Clock,         label: 'Tid & Løn',              desc: 'Timeregistrering og løn-overblik (kræver Hold).',      accent: 'text-slate-700 bg-slate-100 dark:text-slate-300 dark:bg-slate-800', badge: 'Hold' },
+        { key: 'finance',      icon: Wallet,        label: 'Økonomi & Faktura',      desc: 'Fakturering, økonomi-overblik og betalinger.',         accent: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10' },
+        { key: 'map',          icon: MapPin,        label: 'Kortvisning',            desc: 'Sager og byggepladser på kort.',                       accent: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10' },
+        { key: 'drawings',     icon: PenTool,       label: 'Skitser & Tegninger',    desc: 'Tegne- og skitseværktøj.',                             accent: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-500/10' },
+        { key: 'materials',    icon: Package,       label: 'Materialer',             desc: 'Materialebibliotek (kun fag med beregner).',           accent: 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-500/10' },
+        { key: 'pricing',      icon: Calculator,    label: 'Prisberegning',          desc: 'Beregner-opsætning og priser (kun fag med beregner).', accent: 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-500/10' },
+        { key: 'integrations', icon: LinkIcon,      label: 'Integrationer',          desc: 'e-conomic, Dinero m.fl.',                              accent: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-500/10' },
+        { key: 'team',         icon: HardHat,       label: 'Team & Medarbejdere',    desc: 'Håndtér medarbejdere og roller.',                      accent: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-500/10' },
     ];
-    const [dashMods, setDashMods] = useState({ tilbud: true, kunder: true, beregner: true, timer: true, kalender: true, regnskab: true, kort: false, skitser: false });
+    const [dashMods, setDashMods] = useState({ customers: true, quotes: true, cases: true, calendar: true, chat: true, timesheet: true, finance: true, map: false, drawings: false, materials: true, pricing: true, integrations: true, team: true });
     const toggleMod = (key, core) => { if (!core) setDashMods((m) => ({ ...m, [key]: !m[key] })); };
 
     return (
@@ -156,50 +162,132 @@ export default function FeaturesPage({ setSession }) {
                             viewport={{ once: true, margin: "-50px" }}
                             className="md:w-1/2 w-full bg-white dark:bg-slate-900 rounded-[2rem] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden"
                         >
-                            <div className="absolute top-0 right-0 w-56 h-56 bg-blue-600/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                            <div className="flex items-center justify-between mb-6 relative z-10">
-                                <div>
-                                    <div className="text-[0.65rem] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-1">Dit dashboard</div>
-                                    <div className="font-bold text-slate-900 dark:text-slate-100 text-lg tracking-tight">Vælg dine moduler</div>
+                            <div className="absolute -top-16 -right-16 w-56 h-56 bg-blue-600/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                            {/* Header — 1:1 med "Tilpas dashboard" inde i systemet */}
+                            <div className="flex items-start gap-3.5 mb-6 relative z-10">
+                                <div className="w-11 h-11 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 flex items-center justify-center shrink-0 shadow-sm">
+                                    <LayoutGrid size={20} />
                                 </div>
-                                <span className="text-[0.65rem] font-bold tracking-widest uppercase text-emerald-600 dark:text-emerald-400">Kun det du bruger</span>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">Tilpas dashboard</h3>
+                                    <p className="text-[0.82rem] text-slate-500 dark:text-slate-400 leading-relaxed mt-0.5">Det er din menu — vælg hvilke moduler der vises. At slå et modul fra skjuler kun menupunktet; alle data bevares.</p>
+                                </div>
                             </div>
 
-                            <div className="flex flex-col gap-2.5 relative z-10">
+                            {/* Moduler — 2-kolonne grid med ikon-badge, titel, beskrivelse og toggle */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 relative z-10">
                                 {DASH_MODULES.map((m) => {
                                     const on = dashMods[m.key];
+                                    const interactive = !m.core;
                                     return (
-                                        <button
+                                        <motion.button
                                             key={m.key}
                                             type="button"
                                             onClick={() => toggleMod(m.key, m.core)}
+                                            whileHover={interactive ? { y: -2 } : undefined}
+                                            whileTap={interactive ? { scale: 0.99 } : undefined}
                                             aria-pressed={on}
-                                            className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border transition-all duration-300 text-left ${m.core ? 'cursor-default' : 'cursor-pointer hover:border-slate-300 dark:hover:border-slate-600'} ${on ? 'bg-white dark:bg-slate-900 border-slate-150 dark:border-slate-800 shadow-sm' : 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-100/70 dark:border-slate-800/50 opacity-55'}`}
+                                            className={`group w-full flex items-center gap-3 rounded-2xl px-3.5 py-3 border text-left transition-all duration-300 ${interactive ? 'cursor-pointer hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600' : 'cursor-default'} ${on ? 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-sm' : 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-100 dark:border-slate-800/60 opacity-60'}`}
                                         >
-                                            <div className={on ? m.color : 'text-slate-400 dark:text-slate-600'}><m.icon size={18} /></div>
-                                            <span className={`font-semibold text-sm flex-1 ${on ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'}`}>{m.label}</span>
-                                            {m.badge && (
-                                                <span className="text-[0.58rem] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400">{m.badge}</span>
-                                            )}
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 ${interactive ? 'group-hover:scale-110' : ''} ${on ? m.accent : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600'}`}>
+                                                <m.icon size={17} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className={`font-bold text-[0.82rem] leading-tight ${on ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'}`}>{m.label}</div>
+                                                <div className="text-[0.68rem] text-slate-400 dark:text-slate-500 truncate">{m.desc}</div>
+                                            </div>
                                             {m.core ? (
-                                                <span className="flex items-center gap-1 text-[0.58rem] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500 shrink-0">
-                                                    <Lock size={11} /> Kerne
-                                                </span>
+                                                <span className="flex items-center gap-1 text-[0.55rem] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500 shrink-0"><Lock size={10} /> Kerne</span>
                                             ) : (
-                                                <span className={`relative w-9 h-5 rounded-full shrink-0 transition-colors duration-300 ${on ? 'bg-blue-500 dark:bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}>
-                                                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-300 ${on ? 'left-[18px]' : 'left-0.5'}`}></span>
-                                                </span>
+                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                    {m.badge && <span className="text-[0.5rem] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400">{m.badge}</span>}
+                                                    <span className={`relative w-9 h-5 rounded-full transition-colors duration-300 ${on ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                                                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-300 ${on ? 'left-[18px]' : 'left-0.5'}`}></span>
+                                                    </span>
+                                                </div>
                                             )}
-                                        </button>
+                                        </motion.button>
                                     );
                                 })}
                             </div>
 
                             <p className="text-xs text-slate-400 dark:text-slate-500 mt-5 relative z-10 leading-relaxed">
-                                Prøv at trykke — det er din menu, du bygger. <strong className="text-slate-500 dark:text-slate-400">Kerne-moduler</strong> er der altid; timeregistrering & løn kræver et <strong className="text-slate-500 dark:text-slate-400">Hold-abonnement</strong>.
+                                <strong className="text-slate-500 dark:text-slate-400">Kerne-moduler</strong> (tilbud + sager) er der altid, så systemet aldrig går i stykker. Timeregistrering & løn kræver et <strong className="text-slate-500 dark:text-slate-400">Hold-abonnement</strong>.
                             </p>
                         </motion.div>
                     </div>
+                </section>
+
+                {/* Personlig opsætning & hjælp — kommer lige efter "Kun det du har brug for" */}
+                <section className="w-full max-w-[1440px] px-8 mx-auto mb-56 relative z-10">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        style={{ WebkitTransform: "translateZ(0)", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
+                        className="bg-white dark:bg-slate-900 rounded-[2rem] p-[clamp(2.5rem,5vw,4rem)] flex flex-col gap-10 relative overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800"
+                    >
+                        {/* Decorative technical marks */}
+                        <div className="absolute top-6 left-6 w-5 h-5 border-t-2 border-l-2 border-slate-200 dark:border-slate-800 pointer-events-none z-0"></div>
+                        <div className="absolute bottom-6 right-6 w-5 h-5 border-b-2 border-r-2 border-slate-200 dark:border-slate-800 pointer-events-none z-0"></div>
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+
+                        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 relative z-10">
+                            <div className="flex flex-col gap-3 max-w-2xl text-center md:text-left">
+                                <span className="inline-flex items-center gap-2 self-center md:self-start bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700">
+                                    <span className="w-2 h-2 rounded-full bg-orange-600 dark:bg-orange-400"></span>
+                                    Vi hjælper jer i gang
+                                </span>
+                                <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
+                                    Skal vi sætte det op sammen med jer?
+                                </h2>
+                                <p className="text-[clamp(1rem,1.5vw,1.125rem)] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    Kom i gang, så finder vi ud af, hvad der passer jer bedst. Vi hjælper med hele opsætningen — helt gratis — og følger jer hele vejen, indtil systemet passer præcis til jeres hverdag og bare giver mening.
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-center gap-3 shrink-0">
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => navigate('/register')}
+                                    style={{ WebkitTransform: "translateZ(0)" }}
+                                    className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-8 py-4 rounded-full font-bold text-[clamp(1rem,1.5vw,1.125rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl flex items-center gap-3 group/cta whitespace-nowrap"
+                                >
+                                    Opret din bruger — så ringer vi dig op
+                                    <ArrowRight className="w-5 h-5 group-hover/cta:translate-x-1 transition-transform" />
+                                </motion.button>
+                                <span className="text-sm text-slate-500 dark:text-slate-400 text-center">Gratis den første måned · Ingen binding</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 relative z-10">
+                            {[
+                                { icon: MapPin, title: 'Vi kører ud til jer', text: 'Vi kommer forbi og sætter det hele op på stedet — sammen med jer.' },
+                                { icon: Video, title: 'Eller et online møde', text: 'Passer det bedre, tager vi det over skærmen. Lige så grundigt.' },
+                                { icon: Sparkles, title: 'Eller gå selv i gang', text: 'Vil I bare i gang, så kør — vi står klar, hver gang I har brug for os.' },
+                            ].map((o, i) => (
+                                <motion.div
+                                    key={o.title}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: i * 0.08, duration: 0.4 }}
+                                    viewport={{ once: true, margin: '-40px' }}
+                                    whileHover={{ y: -4 }}
+                                    className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-5 flex flex-col gap-2 hover:shadow-md hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-300"
+                                >
+                                    <span className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-sm"><o.icon size={20} /></span>
+                                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-[1.05rem]">{o.title}</h3>
+                                    <p className="text-slate-500 dark:text-slate-400 text-[0.9rem] leading-relaxed">{o.text}</p>
+                                </motion.div>
+                            ))}
+                        </div>
+
+                        <p className="text-sm text-slate-400 dark:text-slate-500 relative z-10 text-center md:text-left">
+                            Gratis opsætning og løbende hjælp — helt uforpligtende. Vi tager det stille og roligt i jeres tempo, så det passer til jeres virksomhed.
+                        </p>
+                    </motion.div>
                 </section>
 
                 {/* The Journey — Byd ind → Vind → Udfør → Afregn */}
@@ -252,42 +340,6 @@ export default function FeaturesPage({ setSession }) {
                             </motion.div>
                         ))}
                     </div>
-                </section>
-
-                {/* Personal CTA — ring os */}
-                <section className="w-full max-w-[1440px] px-8 mx-auto mb-56 relative z-10">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        viewport={{ once: true, margin: "-50px" }}
-                        style={{ WebkitTransform: "translateZ(0)", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
-                        className="bg-white dark:bg-slate-900 rounded-[2rem] p-[clamp(2.5rem,5vw,4rem)] flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800"
-                    >
-                        {/* Decorative technical marks */}
-                        <div className="absolute top-6 left-6 w-5 h-5 border-t-2 border-l-2 border-slate-200 dark:border-slate-800 pointer-events-none z-0"></div>
-                        <div className="absolute bottom-6 right-6 w-5 h-5 border-b-2 border-r-2 border-slate-200 dark:border-slate-800 pointer-events-none z-0"></div>
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-
-                        <div className="flex flex-col gap-3 relative z-10 max-w-xl text-center md:text-left">
-                            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
-                                Vil du se det med dine egne øjne?
-                            </h2>
-                            <p className="text-[clamp(1rem,1.5vw,1.125rem)] text-slate-500 dark:text-slate-400 leading-relaxed">
-                                Ring, så går vi et af systemerne igennem sammen — helt uforpligtende. Vi taler tømrer, ikke tech.
-                            </p>
-                        </div>
-
-                        <div className="relative z-10 flex-shrink-0">
-                            <a
-                                href="tel:+4540265002"
-                                className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-8 py-4 rounded-full font-bold text-[clamp(1.125rem,1.5vw,1.375rem)] hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors duration-300 shadow-xl flex items-center gap-3 whitespace-nowrap"
-                            >
-                                <Phone className="w-5 h-5" />
-                                40 26 50 02
-                            </a>
-                        </div>
-                    </motion.div>
                 </section>
 
                 {/* Final CTA */}
