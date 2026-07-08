@@ -945,11 +945,14 @@ const Dashboard = () => {
 
     // Venligt "Få Frame som app"-tilbud på mobil — kun når onboarding/password er overstået,
     // appen ikke allerede er installeret, og man ikke har trykket "Mind mig senere" for nylig.
+    // VIGTIGT: kræver en RIGTIG telefon (user agent), ikke bare et smalt vindue — ellers
+    // auto-poppede desktop-varianten (QR-koden) i smalle browservinduer, hvilket var meningsløst.
     useEffect(() => {
         if (installAutoShownRef.current) return;
         if (!carpenterProfile || carpenterProfile.requires_password_change) return;
         if (showOnboarding || showSetPassword) return;
-        if (!isMobile || isStandalonePWA()) return;
+        const uaIsPhone = typeof navigator !== 'undefined' && /iphone|ipad|ipod|android/i.test(navigator.userAgent);
+        if (!isMobile || !uaIsPhone || isStandalonePWA()) return;
         try {
             const until = parseInt(localStorage.getItem('bison_install_snooze_until') || '0', 10);
             if (Date.now() < until) return;
