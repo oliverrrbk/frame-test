@@ -39,9 +39,18 @@ export default async function handler(req, res) {
         if (!callerProfile) return res.status(403).json({ error: 'Profil ikke fundet.' });
         const callerCompanyId = callerProfile.company_id || callerProfile.id;
 
-        // Guardrail: kun aktive/prøve-konti må sprede gæste-logins (en udløbet konto skal ikke kunne blive ved).
-        const subStatus = callerProfile.subscription_status || 'trialing';
-        if (!['active', 'trialing'].includes(subStatus)) {
+        // Guardrail: kun firmaer med gyldigt abonnement må sprede gæste-logins (en udløbet
+        // konto skal ikke kunne blive ved). Vi tjekker FIRMAETS (ejerens) status — ikke den
+        // enkelte medarbejders — og 'exempt' (gratis test-/partner-konti som Bison + Skovbo)
+        // behandles som fuldt aktive, præcis som paywall'en i appen.
+        let ownerStatus = callerProfile.subscription_status;
+        if (callerProfile.company_id) {
+            const { data: owner } = await supabase
+                .from('carpenters').select('subscription_status').eq('id', callerCompanyId).single();
+            if (owner) ownerStatus = owner.subscription_status;
+        }
+        const subStatus = ownerStatus || 'trialing';
+        if (!['active', 'trialing', 'exempt'].includes(subStatus)) {
             return res.status(402).json({ error: 'Dit abonnement er ikke aktivt. Forny for at sende gæste-logins.' });
         }
 
