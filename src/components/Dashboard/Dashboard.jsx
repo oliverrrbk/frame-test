@@ -38,6 +38,7 @@ import CreateLeadSelector from './CreateLeadSelector';
 import CreateCaseForm from './CreateCaseForm';
 import CustomerLibrary from './CustomerLibrary';
 import SupplierLibrary from './SupplierLibrary';
+import { SubcontractorManager } from './Subcontractors';
 import { getFeatures, getPlanFeatures, getModules, isTabEnabled } from '../../utils/features';
 import TimesheetTrialBanner from './TimesheetTrialBanner';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
