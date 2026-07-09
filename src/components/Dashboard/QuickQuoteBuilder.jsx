@@ -948,16 +948,20 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const [front, setFront] = useState(0);
     const frontRef = useRef(0);
     const slotUrlsRef = useRef([null, null]);
+    const swapTimerRef = useRef(null);
     useEffect(() => { frontRef.current = front; }, [front]);
     useEffect(() => { slotUrlsRef.current = slotUrls; }, [slotUrls]);
     const frontUrl = slotUrls[front];
-    // Når baggrunds-laget er færdig-loadet, skiftes der over til det.
-    const onSlotLoaded = (idx) => {
+    // Skift over til et lag (annullér samtidig den evt. ventende sikkerheds-timer).
+    const swapTo = (idx) => {
+        if (swapTimerRef.current) { clearTimeout(swapTimerRef.current); swapTimerRef.current = null; }
         if (idx !== frontRef.current && slotUrlsRef.current[idx]) {
             frontRef.current = idx;
             setFront(idx);
         }
     };
+    // Når baggrunds-laget er færdig-loadet, skiftes der over til det.
+    const onSlotLoaded = (idx) => swapTo(idx);
     const dateStr = new Date().toLocaleDateString('da-DK');
 
     const emailHtml = useMemo(() => {
@@ -976,14 +980,25 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             try {
                 const { blob } = await buildQuotePdf(buildQuoteObj(), carpenter, customerForPdf(), { title, dateStr });
                 if (cancelled) return;
-                const back = 1 - frontRef.current;
                 const newUrl = URL.createObjectURL(blob);
+                // Er der overhovedet vist en PDF endnu? Hvis ikke, så skriv den direkte i FRONT-laget
+                // og vis den med det samme — så preview'et aldrig hænger permanent hvidt hvis iframens
+                // onLoad ikke fyrer (visse browsere/WebViews viser ikke PDF inline, eller fyrer upålideligt).
+                const firstEver = !slotUrlsRef.current[frontRef.current];
+                const target = firstEver ? frontRef.current : (1 - frontRef.current);
                 setSlotUrls(prev => {
                     const next = [...prev];
-                    if (next[back]) URL.revokeObjectURL(next[back]); // det skjulte (2 generationer gamle) lag
-                    next[back] = newUrl;
+                    // Frigiv kun det lag vi overskriver (det skjulte, 2 generationer gamle) — aldrig det synlige.
+                    if (target !== frontRef.current && next[target]) URL.revokeObjectURL(next[target]);
+                    next[target] = newUrl;
                     return next;
                 });
+                // Sikkerhedsnet: hvis baggrunds-lagets onLoad aldrig fyrer, så tving skiftet efter kort tid.
+                // En blob-PDF renderer normalt på få hundrede ms, så denne timer rammer kun når onLoad svigter.
+                if (!firstEver) {
+                    if (swapTimerRef.current) clearTimeout(swapTimerRef.current);
+                    swapTimerRef.current = setTimeout(() => { if (!cancelled) swapTo(target); }, 1500);
+                }
             } catch { /* ignore preview-fejl */ }
             finally { if (!cancelled) setRegenerating(false); }
         }, 350);
@@ -991,7 +1006,10 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [quoteSig]);
 
-    useEffect(() => () => { slotUrlsRef.current.forEach(u => u && URL.revokeObjectURL(u)); }, []);
+    useEffect(() => () => {
+        if (swapTimerRef.current) clearTimeout(swapTimerRef.current);
+        slotUrlsRef.current.forEach(u => u && URL.revokeObjectURL(u));
+    }, []);
 
     // ---- Auto-gem af en allerede gemt kladde ----
     // Når man redigerer et tilbud der ALLEREDE er gemt som kladde (initialLead.id), gemmes
