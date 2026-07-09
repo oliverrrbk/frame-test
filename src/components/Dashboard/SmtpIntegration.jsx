@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import AudioPlayerButton from '../Wizard/AudioPlayerButton';
 import { sendEmail } from '../../utils/sendEmail';
+import { getDnsHelpRequestTemplate } from '../../utils/emailTemplates';
+import { getDnsProviderGuide } from '../../utils/dnsGuides';
 
 // Bisons support-mail — modtager gratis-hjælp-anmodninger til DNS/leverbarhed.
 const BISON_SUPPORT_EMAIL = 'mbc@bisoncompany.dk';
@@ -227,14 +229,17 @@ const DelivRow = ({ title, check }) => {
             setTimeout(() => setCopied(false), 1800);
         } catch { /* ignorér — clipboard kan være blokeret */ }
     };
+    // OK-rækker foldes sammen til én linje (titel + badge) — mindre tekst, mere overblik.
+    // Kun rækker der kræver handling (Anbefales/Mangler) viser forklaring + DNS-record.
+    const isCompact = check?.status === 'pass';
     return (
-        <div style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: '12px', padding: '12px 14px' }}>
+        <div style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: '12px', padding: isCompact ? '10px 14px' : '12px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>{title}</span>
+                <span style={{ fontWeight: 700, color: isCompact ? s.color : '#0f172a', fontSize: '0.9rem' }}>{title}</span>
                 <span style={{ fontSize: '11px', fontWeight: 800, color: s.color, background: '#fff', border: `1px solid ${s.border}`, padding: '3px 9px', borderRadius: '999px', whiteSpace: 'nowrap' }}>{s.label}</span>
             </div>
-            <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: s.color, lineHeight: 1.5 }}>{check?.message}</p>
-            {check?.suggestion && (
+            {!isCompact && <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: s.color, lineHeight: 1.5 }}>{check?.message}</p>}
+            {!isCompact && check?.suggestion && (
                 <div style={{ marginTop: '10px' }}>
                     <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Indsæt denne DNS-record hos din udbyder:</div>
                     <div style={{ display: 'flex', alignItems: 'stretch', gap: '6px' }}>
@@ -409,40 +414,11 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
         const phone = carpenterProfile?.phone || carpenterProfile?.owner_phone || '';
         const domain = delivResult.domain || (email.split('@')[1] || '');
 
-        const rows = [
-            ['SPF', delivResult.checks.spf],
-            ['DMARC', delivResult.checks.dmarc],
-            ['MX', delivResult.checks.mx],
-            ['DKIM', delivResult.checks.dkim],
-        ];
-        const statusText = (c) => ({ pass: 'OK', warn: 'Anbefales', fail: 'Mangler', info: 'Info' }[c?.status] || 'Ukendt');
-
-        const rowsHtml = rows.map(([label, c]) => `
-            <tr>
-              <td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:700">${label}</td>
-              <td style="padding:6px 10px;border-bottom:1px solid #eee">${statusText(c)}</td>
-              <td style="padding:6px 10px;border-bottom:1px solid #eee">${(c?.suggestion || '—').replace(/</g, '&lt;')}</td>
-            </tr>`).join('');
-
-        const html = `
-          <div style="font-family:Arial,sans-serif;color:#0f172a">
-            <h2 style="margin:0 0 8px">Anmodning om gratis DNS/leverbarheds-hjælp</h2>
-            <p style="margin:0 0 12px">En Bison Frame-bruger vil gerne have hjælp til at sætte SPF/DMARC op, så tilbud ikke ender i spam.</p>
-            <p style="margin:0 0 4px"><b>Firma:</b> ${firm}${ownerName ? ` (${ownerName})` : ''}</p>
-            <p style="margin:0 0 4px"><b>Domæne:</b> ${domain || '—'}</p>
-            <p style="margin:0 0 4px"><b>E-mail:</b> ${email || '—'}</p>
-            <p style="margin:0 0 12px"><b>Telefon:</b> ${phone || '—'}</p>
-            <table style="border-collapse:collapse;width:100%;font-size:13px">
-              <thead><tr>
-                <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ddd">Record</th>
-                <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ddd">Status</th>
-                <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ddd">Foreslået DNS-record</th>
-              </tr></thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
-          </div>`;
+        // Trin-for-trin-guide tilpasset den gættede udbyder (ud fra SMTP-serveren).
+        const guide = getDnsProviderGuide(settings.smtp_host, email);
 
         const subject = `Gratis DNS-hjælp ønskes — ${firm}${domain ? ` (${domain})` : ''}`;
+        const html = getDnsHelpRequestTemplate({ firm, ownerName, domain, email, phone, checks: delivResult.checks, guide });
 
         try {
             const res = await sendEmail({ to: BISON_SUPPORT_EMAIL, subject, html, replyTo: email || undefined });
@@ -452,6 +428,8 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
         } catch (_e) {
             // Fallback: åbn brugerens mail-app med forudfyldt anmodning, så intet går tabt.
             setHelpState('error');
+            const statusText = (c) => ({ pass: 'OK', warn: 'Anbefales', fail: 'Mangler', info: 'Info' }[c?.status] || 'Ukendt');
+            const rows = [['SPF', delivResult.checks.spf], ['DMARC', delivResult.checks.dmarc], ['MX', delivResult.checks.mx], ['DKIM', delivResult.checks.dkim]];
             const body = `Hej Bison\n\nJeg vil gerne have hjælp til at sætte min mail op, så tilbud ikke ender i spam.\n\nFirma: ${firm}\nDomæne: ${domain}\nE-mail: ${email}\nTelefon: ${phone}\n\n${rows.map(([l, c]) => `${l}: ${statusText(c)}${c?.suggestion ? ` — ${c.suggestion}` : ''}`).join('\n')}`;
             window.location.href = `mailto:${BISON_SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         }
@@ -847,7 +825,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                                                             <div style={{ minWidth: 0 }}>
                                                                 <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', marginBottom: '2px' }}>Skal vi hjælpe dig — helt gratis?</div>
                                                                 <div style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.55 }}>
-                                                                    Det ser tricky ud, men det er hurtigt fikset. Vi sætter det op for dig uden beregning, så alle dine tilbud lander i indbakken i stedet for spam.
+                                                                    Det ser tricky ud, men det er hurtigt fikset. Tryk her, så ringer eller skriver vi til dig og sætter det op sammen — helt uden beregning, så dine tilbud lander i indbakken.
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -859,8 +837,11 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                                                             onMouseOver={(e) => { if (helpState !== 'sending') { e.currentTarget.style.background = '#1d4ed8'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
                                                             onMouseOut={(e) => { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.transform = 'translateY(0)'; }}
                                                         >
-                                                            <Mail size={16} /> {helpState === 'sending' ? 'Sender…' : 'Ja tak — hjælp mig gratis'}
+                                                            <Mail size={16} /> {helpState === 'sending' ? 'Sender…' : 'Ja tak — kontakt mig gratis'}
                                                         </button>
+                                                        <p style={{ margin: '10px 2px 0', fontSize: '12px', color: '#64748b', lineHeight: 1.5, textAlign: 'center' }}>
+                                                            Eller kontakt os direkte: <a href={`mailto:${BISON_SUPPORT_EMAIL}`} style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}>{BISON_SUPPORT_EMAIL}</a>
+                                                        </p>
                                                         {helpState === 'error' && (
                                                             <p style={{ margin: '8px 2px 0', fontSize: '12px', color: '#92400e', lineHeight: 1.5 }}>
                                                                 Vi åbnede din mail-app med anmodningen — send den, eller skriv til {BISON_SUPPORT_EMAIL}.

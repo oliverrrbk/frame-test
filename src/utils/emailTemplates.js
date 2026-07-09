@@ -140,6 +140,60 @@ const getBaseTemplate = (title, content, preheader = "", carpenter = null) => {
 `;
 };
 
+// Intern anmodning til Bison om gratis hjælp til DNS/leverbarhed (SPF/DMARC).
+// Bison Frame-brandet (carpenter = null) — lækker, overskuelig skabelon, selvom
+// den er til os selv. Viser firma-kort, KUN de records der mangler (med den konkrete
+// DNS-record) og en trin-for-trin-guide til den gættede udbyder.
+// data = { firm, ownerName, domain, email, phone, checks, guide }
+export const getDnsHelpRequestTemplate = (data = {}) => {
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const { firm, ownerName, domain, email, phone, checks = {}, guide } = data;
+
+    const labelFor = (k) => ({ spf: 'SPF', dmarc: 'DMARC', mx: 'MX (mailserver)', dkim: 'DKIM' }[k] || k);
+    const statusText = (st) => ({ pass: 'OK', warn: 'Anbefales', fail: 'Mangler', info: 'Info' }[st] || 'Ukendt');
+    const statusColor = (st) => ({ pass: '#16a34a', warn: '#b45309', fail: '#b91c1c', info: '#64748b' }[st] || '#64748b');
+
+    // Kun de records der kræver handling (warn/fail) — med den konkrete DNS-record.
+    const todo = Object.entries(checks).filter(([, c]) => c && (c.status === 'warn' || c.status === 'fail'));
+    const todoHtml = todo.length ? todo.map(([k, c]) => `
+        <div style="border:1px solid #fde68a;background:#fffbeb;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong style="color:#0f172a;">${labelFor(k)}</strong>
+                <span style="font-size:12px;font-weight:700;color:${statusColor(c.status)};">${statusText(c.status)}</span>
+            </div>
+            <div style="font-size:13px;color:#92400e;margin-top:4px;">${esc(c.message)}</div>
+            ${c.suggestion ? `<div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#0f172a;color:#e2e8f0;padding:8px 10px;border-radius:8px;word-break:break-all;">${esc(c.suggestion)}</div>` : ''}
+        </div>`).join('') : `<p style="color:#334155;">Alt ser umiddelbart fint ud — brugeren vil bare gerne have det gennemgået.</p>`;
+
+    const stepsHtml = guide?.steps?.length ? `
+        <h3 style="margin:24px 0 6px;color:#0f172a;font-size:16px;">Sådan sætter man det op — ${esc(guide.label)}</h3>
+        ${guide.intro ? `<p style="color:#475569;font-size:13px;margin:0 0 8px;">${esc(guide.intro)}</p>` : ''}
+        <ol style="margin:0;padding-left:20px;color:#334155;font-size:14px;line-height:1.7;">
+            ${guide.steps.map(s => `<li style="margin-bottom:4px;">${esc(s)}</li>`).join('')}
+        </ol>` : '';
+
+    const content = `
+        <h2 style="margin-top:0;color:#0f172a;font-size:20px;">Anmodning om gratis hjælp</h2>
+        <p style="color:#334155;">En Bison Frame-bruger vil gerne have hjælp til at sætte SPF/DMARC op, så tilbud ikke ender i spam.</p>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;margin:18px 0;">
+            <table style="width:100%;font-size:14px;color:#334155;border-collapse:collapse;">
+                <tr><td style="padding:3px 0;color:#64748b;width:90px;">Firma</td><td style="padding:3px 0;font-weight:600;color:#0f172a;">${esc(firm)}${ownerName ? ` (${esc(ownerName)})` : ''}</td></tr>
+                <tr><td style="padding:3px 0;color:#64748b;">Domæne</td><td style="padding:3px 0;font-weight:600;color:#0f172a;">${esc(domain) || '—'}</td></tr>
+                <tr><td style="padding:3px 0;color:#64748b;">E-mail</td><td style="padding:3px 0;"><a href="mailto:${esc(email)}" style="color:#2563eb;">${esc(email) || '—'}</a></td></tr>
+                <tr><td style="padding:3px 0;color:#64748b;">Telefon</td><td style="padding:3px 0;">${phone ? `<a href="tel:${esc(phone).replace(/\s/g, '')}" style="color:#2563eb;">${esc(phone)}</a>` : '—'}</td></tr>
+            </table>
+        </div>
+
+        <h3 style="margin:20px 0 8px;color:#0f172a;font-size:16px;">Hvad mangler</h3>
+        ${todoHtml}
+        ${stepsHtml}
+
+        <p style="color:#334155;margin-top:24px;">Svar direkte på denne mail eller ring til brugeren og hjælp dem gratis i gang.</p>
+    `;
+    return getBaseTemplate('Anmodning om gratis DNS-hjælp', content, `Gratis DNS-hjælp ønskes — ${firm || ''}`, null);
+};
+
 export const getCustomerRequestReceivedTemplate = (customerName, categoryName, carpenter, projectDetailsHtml = '') => {
     const carpenterCompanyName = carpenter?.company_name || 'Tømreren';
     const signatureName = getCarpenterSenderName(carpenter);
