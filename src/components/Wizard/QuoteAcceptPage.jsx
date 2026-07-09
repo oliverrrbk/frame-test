@@ -397,7 +397,7 @@ const QuoteAcceptPage = () => {
                                 </div>
                                 {mq.laborMode === 'hourly' && (
                                     <p style={{ margin: '4px 4px 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.5 }}>
-                                        Dette tilbud er baseret på timepris. Beløbet er et estimat ud fra forventet tidsforbrug — den endelige pris afregnes efter faktisk medgået tid til den aftalte timepris og kan blive både højere og lavere. Materialer afregnes til kostpris med tillæg af sædvanlig avance.
+                                        Dette tilbud er baseret på timepris. Beløbet er et estimat ud fra forventet tidsforbrug — den endelige pris afregnes efter faktisk medgået tid til den aftalte timepris og kan blive både højere og lavere.
                                     </p>
                                 )}
                             </div>

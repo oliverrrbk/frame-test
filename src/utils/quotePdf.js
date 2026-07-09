@@ -395,11 +395,11 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
 
     // Timepris (efter regning): prisen er et ESTIMAT. Skriv det formelt og juridisk klart,
     // så kunden ved at den endelige pris opgøres efter faktisk medgået tid (kan blive både
-    // højere og lavere), og hvordan materialer afregnes. Fast pris = bindende, intet forbehold.
+    // højere og lavere). Fast pris = bindende, intet forbehold.
+    // VIGTIGT: kunden må ALDRIG se avance/materiale-kostpris-estimat — kun estimat-forbeholdet.
     const laborHours = Number(quote?.laborHours) || 0;
     const isHourlyQuote = quote?.laborMode === 'hourly';
     const laborRate = Number(quote?.laborRate) || 0;
-    const materialSell = Number(quote?.materialSell) || 0;
 
     if (isHourlyQuote) {
         const estParts = [`ca. ${laborHours.toLocaleString('da-DK')} timer`];
@@ -408,13 +408,6 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
         const estimateLines = pdf.splitTextToSize(estimateText, right - left);
         pdf.text(estimateLines, left, y);
         y += estimateLines.length * 5 + 1;
-
-        if (materialSell > 0) {
-            const matText = `Materialer afregnes til dokumenteret kostpris med tillæg af sædvanlig avance, estimeret til ${kr(materialSell)} kr. ekskl. moms.`;
-            const matLines = pdf.splitTextToSize(matText, right - left);
-            pdf.text(matLines, left, y);
-            y += matLines.length * 5 + 1;
-        }
     }
 
     pdf.setFont('helvetica', 'normal');
