@@ -952,6 +952,10 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     useEffect(() => { frontRef.current = front; }, [front]);
     useEffect(() => { slotUrlsRef.current = slotUrls; }, [slotUrls]);
     const frontUrl = slotUrls[front];
+    // Er der nogensinde blevet vist en PDF inline? (iframens onLoad er fyret mindst én gang.)
+    // Bruges til at afgøre om vi skal vise et brugbart fallback-kort i stedet for et hvidt felt.
+    const [pdfRendered, setPdfRendered] = useState(false);
+    const [pdfGiveUp, setPdfGiveUp] = useState(false);
     // Skift over til et lag (annullér samtidig den evt. ventende sikkerheds-timer).
     const swapTo = (idx) => {
         if (swapTimerRef.current) { clearTimeout(swapTimerRef.current); swapTimerRef.current = null; }
@@ -960,8 +964,30 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             setFront(idx);
         }
     };
-    // Når baggrunds-laget er færdig-loadet, skiftes der over til det.
-    const onSlotLoaded = (idx) => swapTo(idx);
+    // Når baggrunds-laget er færdig-loadet: markér at PDF'en faktisk kan vises, og skift over.
+    const onSlotLoaded = (idx) => { setPdfRendered(true); setPdfGiveUp(false); swapTo(idx); };
+    // Sidste sikkerhedsnet: har vi en PDF-URL men ingen inline-visning efter et par sekunder,
+    // så kan browseren (fx en in-app-browser / iOS-WebView) ikke vise PDF inline. Vis et
+    // brugbart fallback-kort med "Åbn PDF" i stedet for et permanent hvidt felt.
+    useEffect(() => {
+        if (!frontUrl || pdfRendered) { setPdfGiveUp(false); return; }
+        const g = setTimeout(() => setPdfGiveUp(true), 3000);
+        return () => clearTimeout(g);
+    }, [frontUrl, pdfRendered]);
+    // Fælles fallback-kort (bruges både på desktop og mobil).
+    const pdfFallbackCard = (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', textAlign: 'center', padding: '24px', background: '#f1f5f9', borderRadius: '14px' }}>
+            <FileText size={34} color="#94a3b8" />
+            <div style={{ color: '#475569', fontSize: '0.9rem', maxWidth: '300px', lineHeight: 1.5 }}>
+                Din browser kan ikke vise PDF'en her. Åbn den i en ny fane — tilbuddet er dannet og klar.
+            </div>
+            {frontUrl && (
+                <a href={frontUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '999px', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}>
+                    <Maximize2 size={15} /> Åbn PDF i ny fane
+                </a>
+            )}
+        </div>
+    );
     const dateStr = new Date().toLocaleDateString('da-DK');
 
     const emailHtml = useMemo(() => {
@@ -1855,8 +1881,10 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                             <iframe key={i} title={`Tilbud PDF ${i}`} src={viewerSrc(slotUrls[i])} onLoad={() => onSlotLoaded(i)}
                                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: '1px solid #e2e8f0', borderRadius: '14px', background: '#fff', opacity: front === i ? 1 : 0, transition: 'opacity .18s ease', pointerEvents: (resizing || front !== i) ? 'none' : 'auto' }} />
                         ) : null)}
-                        {!frontUrl && (
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>Genererer…</div>
+                        {!pdfRendered && (
+                            pdfGiveUp
+                                ? pdfFallbackCard
+                                : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>Genererer…</div>
                         )}
                     </div>
                     <a className="qqb-link" href={frontUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '12px', color: pdfFocus ? '#93c5fd' : '#3b82f6', fontWeight: 600, fontSize: '0.9rem', alignSelf: pdfFocus ? 'center' : 'flex-start' }}>Åbn i nyt vindue ▸</a>
@@ -2355,11 +2383,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                                 Opdaterer…
                                             </div>
                                         )}
-                                        <div style={{ flex: 1, minHeight: 0, width: '100%', maxWidth: 760, borderRadius: 14, background: '#fff', boxShadow: '0 24px 60px rgba(0,0,0,0.45)', overflow: 'hidden' }}>
-                                            {frontUrl ? (
-                                                <iframe title="Arbejdsbeskrivelse PDF" src={viewerSrc(frontUrl)} style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }} />
-                                            ) : (
-                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>Genererer…</div>
+                                        <div style={{ position: 'relative', flex: 1, minHeight: 0, width: '100%', maxWidth: 760, borderRadius: 14, background: '#fff', boxShadow: '0 24px 60px rgba(0,0,0,0.45)', overflow: 'hidden' }}>
+                                            {frontUrl && (
+                                                <iframe title="Arbejdsbeskrivelse PDF" src={viewerSrc(frontUrl)} onLoad={() => { setPdfRendered(true); setPdfGiveUp(false); }} style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }} />
+                                            )}
+                                            {!pdfRendered && (
+                                                pdfGiveUp
+                                                    ? pdfFallbackCard
+                                                    : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>Genererer…</div>
                                             )}
                                         </div>
                                         <a className="qqb-link" href={frontUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 12, color: '#93c5fd', fontWeight: 600, fontSize: '0.88rem' }}>Åbn i nyt vindue ▸</a>
