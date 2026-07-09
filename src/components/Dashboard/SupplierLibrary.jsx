@@ -49,13 +49,18 @@ function SupplierAvatar({ supplier: s, size = 44, radius = 13 }) {
 
 export default function SupplierLibrary({ carpenter, isMobile = false }) {
     const companyId = carpenter?.id;
-    const [suppliers, setSuppliers] = useState(() => cacheGet(`bf:suppliers:${companyId}`) || []);
+    const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [editing, setEditing] = useState(null); // supplier-objekt eller {} for ny
 
     const fetchSuppliers = useCallback(async () => {
         if (!companyId) return;
+        // Offline-først: vis cachet liste med det samme (cacheGet er ASYNK — skal awaites).
+        try {
+            const cached = await cacheGet(`bf:suppliers:${companyId}`);
+            if (Array.isArray(cached)) { setSuppliers(cached); setLoading(false); }
+        } catch { /* cache er best-effort */ }
         try {
             const { data, error } = await supabase
                 .from('suppliers')
@@ -63,7 +68,7 @@ export default function SupplierLibrary({ carpenter, isMobile = false }) {
                 .eq('carpenter_id', companyId)
                 .order('name', { ascending: true });
             if (error) throw error;
-            setSuppliers(data || []);
+            setSuppliers(Array.isArray(data) ? data : []);
             cacheSet(`bf:suppliers:${companyId}`, data || []);
         } catch (e) {
             console.error('Kunne ikke hente leverandører:', e);
