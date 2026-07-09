@@ -111,6 +111,20 @@ const mapContainerStyle = {
 };
 const defaultCenter = { lat: 56.2639, lng: 9.5018 }; // Midten af Danmark
 
+// Vedvarende geokode-cache (adresse → {lat,lng}) i localStorage. Uden den blev
+// ALLE adresser geokodet forfra hver eneste session → ramte let Google-kvoten,
+// hvorefter kortet stod tomt ("0 / N"). Med cachen kaldes API'et stort set kun
+// første gang en ny adresse ses.
+const GEOCODE_CACHE_KEY = 'frame_geocode_cache_v1';
+const loadGeocodeCache = () => {
+    try { return JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY)) || {}; }
+    catch { return {}; }
+};
+const saveGeocodeCache = (cache) => {
+    try { localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache)); }
+    catch { /* localStorage fuld/blokeret — ignorér, cachen er kun en optimering */ }
+};
+
 const FormattedNumberInput = ({ value, onChange, placeholder, style }) => {
     const [displayValue, setDisplayValue] = useState(value != null ? new Intl.NumberFormat('da-DK').format(value) : '');
 
@@ -712,6 +726,8 @@ const Dashboard = () => {
     });
     // Underfane på Kunder-siden: 'customers' | 'suppliers' (leverandør-bibliotek).
     const [customersSubTab, setCustomersSubTab] = useState('customers');
+    // Under "Leverandører": 'materials' (materialeleverandører) | 'subcontractors' (underentreprenører).
+    const [suppliersSubTab, setSuppliersSubTab] = useState('materials');
 
     useEffect(() => {
         localStorage.setItem('dashboard_active_tab', activeTab);
@@ -1053,6 +1069,7 @@ const Dashboard = () => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [mapFilters, setMapFilters] = useState({ showNew: true, showSent: true, showConfirmed: true, showOnHold: true });
     const [selectedMapLead, setSelectedMapLead] = useState(null); // lead vist i info-boblen på kortet
+    const [mapAuthFailed, setMapAuthFailed] = useState(false); // Google afviste nøglen ved runtime (referrer/billing/API/kvote)
 
     // Hvilke sager vises på kortet — én fælles, autoritativ liste (whitelist) brugt af
     // både prikker og tælleren, så de altid stemmer overens med filter-knapperne.
@@ -1112,6 +1129,19 @@ const Dashboard = () => {
         libraries: MAP_LIBRARIES
     });
     const isOnline = useOnlineStatus();
+
+    // Google Maps kalder denne globale funktion, HVIS nøglen afvises ved runtime
+    // (forkert HTTP-referrer, API ikke aktiveret, manglende billing eller kvote sprængt).
+    // Uden en handler blev kortet bare en tavs hvid boks — nu fanger vi det og viser
+    // en tydelig, handlingsanvisende fejl i stedet.
+    useEffect(() => {
+        const prev = window.gm_authFailure;
+        window.gm_authFailure = () => {
+            console.error('Google Maps: nøglen blev afvist (referrer/billing/API/kvote).');
+            setMapAuthFailed(true);
+        };
+        return () => { window.gm_authFailure = prev; };
+    }, []);
 
     useEffect(() => {
         setIsProfileMenuOpen(false);
@@ -1274,56 +1304,63 @@ const Dashboard = () => {
         const performGeocoding = async () => {
             const geocoder = new window.google.maps.Geocoder();
             let updated = {...geocodedLeads};
-            
-            // Lokalt cache-objekt for at spare på Google Maps kald ved ens adresser
-            const addressCache = {};
-            
+
+            // Vedvarende adresse-cache (på tværs af sessioner) + løbende ændringer i denne kørsel.
+            const persistent = loadGeocodeCache();
+            let cacheChanged = false;
+
             for (const lead of toGeocode) {
                 try {
                     let baseLocation = null;
-                    
-                    // Tjek om vi allerede har slået denne adresse op i dette loop
-                    if (addressCache[lead.customer_address]) {
-                        baseLocation = addressCache[lead.customer_address];
+                    const addr = lead.customer_address;
+
+                    // 1) Genbrug fra vedvarende cache → INGEN API-kald, intet delay.
+                    if (persistent[addr]) {
+                        baseLocation = persistent[addr];
                     } else {
-                        // Kald Google's geocoder
-                        const response = await geocoder.geocode({ 
-                            address: lead.customer_address,
+                        // 2) Cache-miss: kald Google's geocoder.
+                        const response = await geocoder.geocode({
+                            address: addr,
                             componentRestrictions: { country: "DK" }
                         });
-                        
+
                         if (response.results && response.results.length > 0) {
-                            baseLocation = response.results[0].geometry.location;
-                            addressCache[lead.customer_address] = baseLocation;
+                            const loc = response.results[0].geometry.location;
+                            baseLocation = { lat: loc.lat(), lng: loc.lng() };
+                            persistent[addr] = baseLocation; // gem i cachen til næste gang
+                            cacheChanged = true;
                         }
-                        
+
                         // Delay kun når vi reelt rammer API'et (4 requests pr. sekund)
                         await new Promise(r => setTimeout(r, 250));
                     }
-                    
+
                     if (baseLocation) {
-                        // Tilføj en minimal "jitter" (ca. 10-20 meter) så leads på samme adresse ikke ligger oveni hinanden 100%
+                        // Minimal "jitter" (~10-20 m) så leads på samme adresse ikke ligger 100% oveni hinanden.
                         const jitterLat = (Math.random() - 0.5) * 0.0003;
                         const jitterLng = (Math.random() - 0.5) * 0.0003;
-                        
-                        // Håndtér forskellen på rigtigt Google objekt vs vores locale cache objekt (som måske kun er lat/lng tal hvis vi udvidede den senere)
                         const lat = typeof baseLocation.lat === 'function' ? baseLocation.lat() : baseLocation.lat;
                         const lng = typeof baseLocation.lng === 'function' ? baseLocation.lng() : baseLocation.lng;
-                        
-                        updated[lead.id] = { lat: lat + jitterLat, lng: lng + jitterLng }; 
+                        updated[lead.id] = { lat: lat + jitterLat, lng: lng + jitterLng };
                     } else {
-                        updated[lead.id] = null; // Markerer som null, hvis adr er fuldstændig uforståelig
+                        updated[lead.id] = null; // Adressen kunne ikke forstås
                     }
                 } catch (err) {
                     console.error("Google Geocoder fejl:", err);
-                    if (err?.code === 'OVER_QUERY_LIMIT') {
-                        console.warn("Ramte Google Maps Rate Limit. Stopper geocoding batch.");
-                        break; // Stop løkken, lad systemet prøve igen senere uden at gemme null
-                    } else {
-                        updated[lead.id] = null;
+                    // REQUEST_DENIED = nøgle-/konfigurationsfejl (samme rod som en tavs hvid boks).
+                    // Vis den tydelige fejl i stedet for at markere adresser som "uforståelige".
+                    if (err?.code === 'REQUEST_DENIED') {
+                        setMapAuthFailed(true);
+                        break;
                     }
+                    if (err?.code === 'OVER_QUERY_LIMIT') {
+                        console.warn("Ramte Google Maps Rate Limit. Stopper batch (prøver igen senere).");
+                        break; // Gem IKKE null → systemet prøver igen senere
+                    }
+                    updated[lead.id] = null;
                 }
             }
+            if (cacheChanged) saveGeocodeCache(persistent);
             setGeocodedLeads(prev => ({...prev, ...updated}));
         };
         performGeocoding();
@@ -3708,7 +3745,25 @@ const Dashboard = () => {
                             })}
                         </div>
                     {customersSubTab === 'suppliers' ? (
-                        <SupplierLibrary carpenter={carpenterProfile} isMobile={isMobile} />
+                        <div>
+                            {/* Andet-niveau: Materialeleverandører | Underentreprenører */}
+                            <div style={{ display: 'inline-flex', gap: '4px', background: '#eef2f7', padding: '4px', borderRadius: '12px', marginBottom: '18px' }}>
+                                {[{ k: 'materials', t: 'Materialeleverandører' }, { k: 'subcontractors', t: 'Underentreprenører' }].map(o => {
+                                    const on = suppliersSubTab === o.k;
+                                    return (
+                                        <button key={o.k} onClick={() => setSuppliersSubTab(o.k)}
+                                            style={{ padding: '8px 16px', borderRadius: '9px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.86rem', background: on ? '#fff' : 'transparent', color: on ? '#0f172a' : '#64748b', boxShadow: on ? '0 2px 6px rgba(15,23,42,0.10)' : 'none', transition: 'all 0.18s' }}
+                                            onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = '#0f172a'; }}
+                                            onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = '#64748b'; }}>
+                                            {o.t}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {suppliersSubTab === 'subcontractors'
+                                ? <SubcontractorManager profile={carpenterProfile} leadsData={leadsData} isMobile={isMobile} />
+                                : <SupplierLibrary carpenter={carpenterProfile} isMobile={isMobile} />}
+                        </div>
                     ) : (
                         <CustomerLibrary
                             carpenter={carpenterProfile}
@@ -5638,6 +5693,19 @@ const Dashboard = () => {
                                     </div>
                                 ) : !isLoaded ? (
                                     <div style={{ padding: '40px', textAlign: 'center' }}>Henter Google Maps HD miljøet...</div>
+                                ) : mapAuthFailed ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '12px', padding: '48px 24px', height: '100%' }}>
+                                        <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(145deg,#fee2e2,#fecaca)', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 22px rgba(15,23,42,0.10)' }}>
+                                            <MapPin size={28} />
+                                        </div>
+                                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>Kortet kunne ikke indlæses</div>
+                                        <div style={{ fontSize: '0.92rem', color: '#64748b', maxWidth: '400px', lineHeight: 1.55 }}>
+                                            Google Maps afviste adgangen. Det skyldes typisk API-nøglens opsætning (tilladte domæner, aktiverede API'er, fakturering eller kvote) — ikke selve appen. Dine sager og adresser er stadig tilgængelige under Sager & Ordrestyring.
+                                        </div>
+                                        <button onClick={() => window.location.reload()} style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '11px 20px', borderRadius: '12px', border: 'none', background: 'linear-gradient(145deg,#2563eb,#1d4ed8)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(37,99,235,0.28)' }}>
+                                            <RefreshCw size={16} /> Prøv igen
+                                        </button>
+                                    </div>
                                 ) : (
                                     <GoogleMap
                                       mapContainerStyle={mapContainerStyle}
@@ -5657,11 +5725,11 @@ const Dashboard = () => {
                                                         const coords = geocodedLeads[lead.id];
                                                         if (!coords) return null; // Adresse ikke geokodet endnu
                                                         const s = lead.status || 'Ny forespørgsel';
-                                                        let iconUrl = 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
-                                                        if (s === 'Sendt tilbud') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
-                                                        else if (s === 'Bekræftet opgave') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
-                                                        else if (s === 'Sæt i bero') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/orange-dot.png';
-                                                        else if (s === 'Historik') iconUrl = 'http://maps.google.com/mapfiles/ms/icons/ltblue-dot.png';
+                                                        let iconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+                                                        if (s === 'Sendt tilbud') iconUrl = 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
+                                                        else if (s === 'Bekræftet opgave') iconUrl = 'https://maps.google.com/mapfiles/ms/icons/green-dot.png';
+                                                        else if (s === 'Sæt i bero') iconUrl = 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png';
+                                                        else if (s === 'Historik') iconUrl = 'https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png';
                                                         return (
                                                             <Marker
                                                                 key={lead.id}
