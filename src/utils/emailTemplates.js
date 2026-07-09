@@ -814,15 +814,17 @@ export const getEmployeeInviteTemplate = (employeeName, loginEmail, loginPasswor
 // adgangskode + godkender vilkår via det personlige link (actionLink).
 export const getGuestInviteTemplate = (firstName, inviterCompanyName, projectTitle, actionLink) => {
     const content = `
-        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Hej ${firstName || 'der'},</h2>
-        <p style="color: #334155;"><strong>${inviterCompanyName || 'En virksomhed'}</strong> har tilføjet dig som underentreprenør på projektet <strong>${projectTitle || 'et byggeprojekt'}</strong> i Bison Frame.</p>
-        <p style="color: #334155;">Du får adgang til projektets tegninger, beskrivelse og bygge-to-do — og kan nemt registrere dine egne timer direkte fra mobilen. Det er <strong>gratis</strong> for dig.</p>
+        <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Velkommen til Bison Frame, ${firstName || 'og god arbejdslyst'} 👋</h2>
+        <p style="color: #334155;"><strong>${inviterCompanyName || 'En virksomhed'}</strong> har oprettet dig som underleverandør på <strong>${projectTitle || 'et byggeprojekt'}</strong>, så du nemt kan registrere dine timer på projektet — direkte fra mobilen.</p>
+        <p style="color: #334155;">Vi er glade for, at du bruger Bison Frame. Det er helt <strong>gratis</strong> for dig som underleverandør, og du skal ikke sætte dig ind i noget stort — du logger ind, ser dit projekt og fører dine timer.</p>
 
         <div style="margin: 32px 0; text-align: center;">
-            <a href="${actionLink}" style="${buttonStyle}">Opret adgang &amp; vælg adgangskode</a>
+            <a href="${actionLink}" style="${buttonStyle}">Vælg din adgangskode &amp; kom i gang</a>
         </div>
+
+        <p style="color: #334155;">Vil du høre mere om, hvad Bison Frame kan? Du er velkommen til at læse med på <a href="https://bisonframe.dk" style="color: #2563eb; text-decoration: none; font-weight: 600;">bisonframe.dk</a> — men der er ingen forpligtelser. Det vigtigste lige nu er bare, at du kan komme i gang med dit projekt.</p>
 
         <p style="color: #64748b; font-size: 13px; text-align: center;">Linket er personligt. Når du klikker, vælger du din egen adgangskode og godkender vilkårene. Har du ikke forventet denne mail, kan du roligt ignorere den.</p>
     `;
-    return getBaseTemplate(`Du er tilføjet på ${projectTitle || 'et projekt'}`, content, `${inviterCompanyName || ''} har tilføjet dig i Bison Frame.`, null);
+    return getBaseTemplate(`Velkommen til Bison Frame`, content, `${inviterCompanyName || 'En virksomhed'} har oprettet dig som underleverandør — kom nemt i gang.`, null);
 };

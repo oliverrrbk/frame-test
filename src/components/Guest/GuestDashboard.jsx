@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
     Home, Briefcase, Clock, Menu, X, Sparkles, MapPin, ChevronRight,
-    Plus, CheckCircle2, ListChecks, FileText, Hammer, Rocket, Building2
+    Plus, CheckCircle2, ListChecks, FileText, Hammer, Rocket, Building2, Mail, HardHat
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -37,6 +37,14 @@ function hoursBetween(start, end) {
 const leadTitle = (l) => l?.raw_data?.project_title || l?.project_category || 'Projekt';
 const leadAddress = (l) => l?.customer_address || l?.raw_data?.customerDetails?.address || '';
 const leadNo = (l) => l?.case_number || String(l?.id || '').substring(0, 6);
+
+// Fordelene ved at få sin egen Frame — genbruges i både "Frame"-fanen og NudgeModal.
+const FRAME_FEATURES = [
+    { icon: FileText, title: 'Send tilbud', text: 'Professionelle tilbud på minutter — direkte til kunden.' },
+    { icon: Hammer, title: 'Byg priser', text: 'Pris-generator der regner materialer og timer ud for dig.' },
+    { icon: ListChecks, title: 'Styr dine sager', text: 'Tegninger, to-do, timer og dokumentation samlet ét sted.' },
+    { icon: Building2, title: 'Dit eget firma', text: 'Din egen Bison Frame — fuldstændig adskilt fra alle andre.' },
+];
 
 export default function GuestDashboard({ myProfile }) {
     const [view, setView] = useState('home');          // 'home' | 'cases' | 'time'
@@ -110,7 +118,7 @@ export default function GuestDashboard({ myProfile }) {
 
     const NudgeCard = ({ compact }) => (
         <div
-            onClick={() => setShowNudge(true)}
+            onClick={() => setView('frame')}
             style={{
                 cursor: 'pointer', borderRadius: '24px', padding: compact ? '18px 20px' : '24px',
                 background: 'linear-gradient(135deg, #2563eb, #1e3a8a)', color: '#fff',
@@ -118,19 +126,19 @@ export default function GuestDashboard({ myProfile }) {
             }}
         >
             <div style={{ position: 'absolute', right: -20, top: -20, opacity: 0.18 }}>
-                <Rocket size={120} />
+                <Sparkles size={120} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.9 }}>
-                <Sparkles size={15} /> Gratis i 30 dage
+                <Sparkles size={15} /> Din egen Frame
             </div>
             <h3 style={{ margin: '8px 0 4px', fontSize: compact ? '1.15rem' : '1.35rem', fontWeight: 900, lineHeight: 1.2 }}>
-                Få din egen Bison Frame
+                Vil du selv bruge Frame?
             </h3>
-            <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.92, maxWidth: '320px' }}>
-                Træt af Excel? Send tilbud, byg priser, tegn og styr dine egne sager.
+            <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.92, maxWidth: '340px' }}>
+                Du er med her som underleverandør. Vil du selv sende tilbud og styre dine egne sager, kan du prøve Frame — helt når du har lyst.
             </p>
             <div style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.18)', padding: '8px 14px', borderRadius: '999px', fontWeight: 700, fontSize: '0.9rem' }}>
-                Se hvad du får <ChevronRight size={16} />
+                Læs mere <ChevronRight size={16} />
             </div>
         </div>
     );
@@ -284,6 +292,7 @@ export default function GuestDashboard({ myProfile }) {
                 {view === 'home' && HomeView}
                 {view === 'cases' && CasesView}
                 {view === 'time' && TimeView}
+                {view === 'frame' && <FrameView profile={myProfile} onStartConvert={() => setShowNudge(true)} />}
             </div>
 
             {/* Bottom nav */}
@@ -292,6 +301,7 @@ export default function GuestDashboard({ myProfile }) {
                     { id: 'home', label: 'Oversigt', icon: Home },
                     { id: 'cases', label: 'Sager', icon: Briefcase },
                     { id: 'time', label: 'Timer', icon: Clock },
+                    { id: 'frame', label: 'Frame', icon: Sparkles },
                 ].map(({ id, label, icon: Icon }) => (
                     <button key={id} onClick={() => setView(id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '4px 14px', color: view === id ? '#2563eb' : '#94a3b8', fontWeight: 700 }}>
@@ -458,6 +468,84 @@ function TimeFormModal({ leads, profile, onClose, onSaved }) {
     );
 }
 
+// "Frame"-fanen: blidt, fag-bevidst tilbud om at få sin egen Bison Frame.
+// Frame er lige nu bygget til tømrere (ENABLED_SIGNUP_TRADES=['tomrer']), så
+// tømrere kan prøve direkte, mens andre fag inviteres til at kontakte os.
+function FrameView({ profile, onStartConvert }) {
+    const [who, setWho] = useState(null);   // null | 'tomrer' | 'other'
+
+    const contactHref = `mailto:info@bisonframe.dk?subject=${encodeURIComponent('Interesse i Bison Frame')}&body=${encodeURIComponent(`Hej Bison Frame,\n\nJeg bruger Frame som underleverandør, og kunne godt tænke mig at bruge det i min egen forretning.\n\nMit fag er: \nFirma: ${profile?.company_name || ''}\n\nVenlig hilsen\n${profile?.owner_name || ''}`)}`;
+
+    const choiceBtn = (active) => ({
+        flex: 1, padding: '16px', borderRadius: '16px', cursor: 'pointer', fontWeight: 800, fontSize: '0.95rem',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center',
+        border: active ? '2px solid #2563eb' : '1px solid #e2e8f0',
+        background: active ? '#eff6ff' : '#fff', color: active ? '#1e3a8a' : '#334155',
+        transition: 'all 0.15s',
+    });
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div>
+                <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 900, color: '#0f172a' }}>Vil du selv bruge Frame?</h1>
+                <p style={{ margin: '6px 0 0', color: '#64748b', lineHeight: 1.55 }}>
+                    Du er med her som underleverandør. Vil du selv sende tilbud og styre dine egne sager, kan du prøve Frame — helt når du har lyst. Intet pres.
+                </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {FRAME_FEATURES.map(({ icon: Icon, title, text }) => (
+                    <div key={title} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', ...GLASS, background: '#fff', borderRadius: '16px', padding: '15px' }}>
+                        <div style={{ flexShrink: 0, width: 42, height: 42, borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon size={20} color="#2563eb" /></div>
+                        <div>
+                            <h4 style={{ margin: '0 0 3px', color: '#0f172a', fontWeight: 800, fontSize: '0.98rem' }}>{title}</h4>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.88rem', lineHeight: 1.5 }}>{text}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div style={{ ...GLASS, background: '#fff', borderRadius: '20px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1.05rem' }}>Hvad er dit fag?</div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <button onClick={() => setWho('tomrer')} style={choiceBtn(who === 'tomrer')}>
+                        <HardHat size={24} color={who === 'tomrer' ? '#2563eb' : '#94a3b8'} />
+                        Jeg er tømrer
+                    </button>
+                    <button onClick={() => setWho('other')} style={choiceBtn(who === 'other')}>
+                        <Building2 size={24} color={who === 'other' ? '#2563eb' : '#94a3b8'} />
+                        Jeg er et andet fag
+                    </button>
+                </div>
+
+                {who === 'tomrer' && (
+                    <>
+                        <p style={{ margin: 0, color: '#475569', fontSize: '0.9rem', lineHeight: 1.55 }}>
+                            Frame er lige nu bygget til tømrere — perfekt til dig. Du beholder adgangen til dine nuværende sager og får din egen Frame oveni.
+                        </p>
+                        <button onClick={onStartConvert}
+                            style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #2563eb, #1e3a8a)', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: 900, fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 14px 30px -8px rgba(37,99,235,0.5)' }}>
+                            Opret mit firma — gratis i 30 dage
+                        </button>
+                    </>
+                )}
+
+                {who === 'other' && (
+                    <>
+                        <p style={{ margin: 0, color: '#475569', fontSize: '0.9rem', lineHeight: 1.55 }}>
+                            Frame er lige nu bygget til tømrere. Er du et andet fag og kan se det i din forretning, så skriv til os — så finder vi en løsning sammen.
+                        </p>
+                        <a href={contactHref}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '16px', background: '#0f172a', color: '#fff', textDecoration: 'none', borderRadius: '16px', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            <Mail size={18} /> Kontakt os
+                        </a>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function NudgeModal({ profile, onClose }) {
     const [step, setStep] = useState('pitch');   // 'pitch' | 'form'
     const [companyName, setCompanyName] = useState(profile?.company_name && profile.company_name !== 'Underentreprenør' ? profile.company_name : '');
@@ -466,12 +554,7 @@ function NudgeModal({ profile, onClose }) {
     const [phone, setPhone] = useState(profile?.phone || '');
     const [saving, setSaving] = useState(false);
 
-    const features = [
-        { icon: FileText, title: 'Send tilbud', text: 'Professionelle tilbud på minutter — direkte til kunden.' },
-        { icon: Hammer, title: 'Byg priser', text: 'Pris-generator der regner materialer og timer ud for dig.' },
-        { icon: ListChecks, title: 'Styr dine sager', text: 'Tegninger, to-do, timer og dokumentation samlet ét sted.' },
-        { icon: Building2, title: 'Dit eget firma', text: 'Din egen Bison Frame — fuldstændig adskilt fra alle andre.' },
-    ];
+    const features = FRAME_FEATURES;
 
     const convert = async () => {
         if (!companyName.trim()) { toast.error('Skriv dit firmanavn.'); return; }
@@ -536,7 +619,7 @@ function NudgeModal({ profile, onClose }) {
             <div style={{ borderRadius: '20px', padding: '22px', background: 'linear-gradient(135deg, #2563eb, #1e3a8a)', color: '#fff', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', right: -10, top: -10, opacity: 0.18 }}><Rocket size={110} /></div>
                 <Sparkles size={22} />
-                <h3 style={{ margin: '10px 0 6px', fontSize: '1.4rem', fontWeight: 900 }}>Træt af at styre alt i Excel?</h3>
+                <h3 style={{ margin: '10px 0 6px', fontSize: '1.4rem', fontWeight: 900 }}>Din egen Bison Frame</h3>
                 <p style={{ margin: 0, opacity: 0.92 }}>Prøv hele Bison Frame gratis i 30 dage. Intet kort, ingen binding.</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

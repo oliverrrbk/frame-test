@@ -1631,7 +1631,23 @@ const Dashboard = () => {
         // GÆST: stop her. Gæsten rendres af GuestDashboard (tidlig return i render),
         // og skal ALDRIG ramme mester-flows: ingen trial, ingen onboarding-popup,
         // ingen team-/firma-datakald. Gæste-adgang er gratis for evigt.
-        if (myDbProfile?.role === 'guest') {
+        // Vi tjekker BÅDE profilens rolle OG auth-metadata ('role: guest' sættes af
+        // invite-guest) — så en gæst aldrig kan falde igennem til mester-fallbacken
+        // med admin-profil + trial, heller ikke hvis DB-profilen mangler.
+        if (myDbProfile?.role === 'guest' || authUser?.user_metadata?.role === 'guest') {
+            // Skulle gæste-profilen mod forventning ikke være landet i DB endnu,
+            // dan en minimal profil ud fra metadata, så gæsten stadig får sin app.
+            if (!myDbProfile) {
+                const md = authUser?.user_metadata || {};
+                setMyProfile({
+                    id: userId,
+                    role: 'guest',
+                    owner_name: md.owner_name || '',
+                    company_name: md.company_name || 'Underentreprenør',
+                    email: md.email || authUser?.email || '',
+                    phone: md.phone || '',
+                });
+            }
             return;
         }
 
@@ -2983,6 +2999,12 @@ const Dashboard = () => {
                 <GuestDashboard myProfile={myProfile} />
             </Suspense>
         );
+    }
+
+    // Er sessionen en gæst, men profilen ikke landet endnu? Vis en let loader i
+    // stedet for at blinke hele mester-skallen frem et split-sekund.
+    if (!myProfile && session?.user?.user_metadata?.role === 'guest') {
+        return <div style={{ minHeight: '100dvh', background: '#f8fafc' }} />;
     }
 
     if (!isDashboardLoaded) {

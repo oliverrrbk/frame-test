@@ -735,6 +735,7 @@ export function SubcontractorManager({ profile, isMobile = false, leadsData = []
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState(null);
     const [guestDialogSc, setGuestDialogSc] = useState(null);   // underleverandør til send-login-dialog
+    const [guestStatus, setGuestStatus] = useState({});         // email(lowercase) -> 'active' | 'invited'
 
     // Bekræftede sager til gæste-login-vælgeren — genbruger den allerede indlæste
     // leadsData (samme kilde som resten af appen), så listen altid er korrekt.
@@ -751,7 +752,29 @@ export function SubcontractorManager({ profile, isMobile = false, leadsData = []
         setIsLoading(false);
     };
 
-    useEffect(() => { fetchList(); }, [companyId]);
+    // Hvem af underleverandørernes folk har fået et gæste-login? project_members
+    // holder attributionen (invited_by_company_id = mesterens firma). Vi mapper pr.
+    // e-mail, så hvert firmakort kan vise hvem der har login — og at det hører til
+    // netop dét firma. RLS-politikken "Firma styrer egne projekt-medlemmer" tillader
+    // opslaget; fejler den (fx SQL ikke kørt endnu) degraderer vi pænt til ingen chips.
+    const fetchGuestStatus = async () => {
+        const { data } = await supabase
+            .from('project_members')
+            .select('email, status')
+            .eq('invited_by_company_id', companyId);
+        if (!Array.isArray(data)) return;
+        const rank = { active: 2, invited: 1, ghost: 1 };
+        const map = {};
+        data.forEach(m => {
+            const key = (m.email || '').trim().toLowerCase();
+            if (!key) return;
+            const status = m.status === 'active' ? 'active' : 'invited';
+            if (!map[key] || (rank[status] || 0) > (rank[map[key]] || 0)) map[key] = status;
+        });
+        setGuestStatus(map);
+    };
+
+    useEffect(() => { fetchList(); fetchGuestStatus(); }, [companyId]);
 
     const handleSaved = (saved) => {
         setList(prev => {
@@ -863,6 +886,33 @@ export function SubcontractorManager({ profile, isMobile = false, leadsData = []
                                     </div>
                                 )); })()}
 
+                                {(() => {
+                                    // Folkene på firmaet (mester + svende) med et gæste-login → vis status,
+                                    // så du kan se hvem der er koblet på, og at det hører til dette firma.
+                                    const people = [
+                                        ...(sc.contact_email ? [{ name: sc.contact_name || sc.company_name, email: sc.contact_email, roleLabel: 'Mester' }] : []),
+                                        ...((sc.workers || []).filter(w => w.email).map(w => ({ name: w.name, email: w.email, roleLabel: w.role || 'Svend' }))),
+                                    ]
+                                        .map(p => ({ ...p, status: guestStatus[(p.email || '').trim().toLowerCase()] }))
+                                        .filter(p => p.status);
+                                    if (people.length === 0) return null;
+                                    return (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', paddingTop: '10px', borderTop: '1px solid var(--border-light)' }}>
+                                            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gæste-logins</div>
+                                            {people.map(p => (
+                                                <div key={p.email} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {p.name || p.email} <span style={{ color: '#94a3b8' }}>· {p.roleLabel}</span>
+                                                    </span>
+                                                    <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 9px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, background: p.status === 'active' ? '#ecfdf5' : '#fffbeb', color: p.status === 'active' ? '#059669' : '#b45309', border: `1px solid ${p.status === 'active' ? '#a7f3d0' : '#fde68a'}` }}>
+                                                        <CheckCircle size={11} /> {p.status === 'active' ? 'Gæste-login' : 'Inviteret'}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
+
                                 <button
                                     onClick={() => setGuestDialogSc(sc)}
                                     style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '11px', borderRadius: '12px', border: '1px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.15s' }}
@@ -878,7 +928,7 @@ export function SubcontractorManager({ profile, isMobile = false, leadsData = []
 
             <SubcontractorModal
                 open={modalOpen}
-                onClose={() => setModalOpen(false)}
+                onClose={() => { setModalOpen(false); fetchGuestStatus(); }}
                 companyId={companyId}
                 initial={editing}
                 onSaved={handleSaved}
@@ -891,7 +941,7 @@ export function SubcontractorManager({ profile, isMobile = false, leadsData = []
                     sc={guestDialogSc}
                     invitedByCompanyId={companyId}
                     selectableLeads={activeLeads}
-                    onClose={() => setGuestDialogSc(null)}
+                    onClose={() => { setGuestDialogSc(null); fetchGuestStatus(); }}
                 />
             )}
         </div>
