@@ -91,6 +91,78 @@ function CreateQuoteButton({ onClick, fullWidth = false, variant = 'solid' }) {
     );
 }
 
+// KPI-kort. For beløbs-kort (Omsætning) vises tallet kompakt (fx "6,55 mio. kr."),
+// men hover (desktop) eller tryk (mobil) folder et lækkert Bison-display ud med det
+// PRÆCISE beløb — så man altid kan se den reelle omsætning, ikke bare det afrundede.
+function KpiCard({ m, i, modules, goToTab }) {
+    const [reveal, setReveal] = useState(false);
+    const isCurrency = m.format === 'currency';
+    const clickable = !!(m.tab && isTabEnabled(m.tab, modules));
+    const compact = isCurrency ? formatCompactDKK(m.value) : null;
+    const exact = `${Math.round(Number(m.value) || 0).toLocaleString('da-DK')} kr.`;
+
+    const handleClick = () => {
+        if (clickable) { goToTab(m.tab); return; }
+        if (isCurrency) setReveal(r => !r); // mobil: tryk for at vise/skjule præcist beløb
+    };
+
+    return (
+        <div
+            className="glass-panel kpi-card"
+            style={{
+                padding: '22px', display: 'flex', flexDirection: 'column', gap: '12px',
+                borderTop: `4px solid ${m.color}`, position: 'relative',
+                cursor: (clickable || isCurrency) ? 'pointer' : 'default',
+                animationDelay: `${i * 70}ms`,
+            }}
+            onClick={handleClick}
+            onMouseEnter={() => { if (isCurrency) setReveal(true); }}
+            onMouseLeave={() => { if (isCurrency) setReveal(false); }}
+        >
+            {/* Baggrundsikon i egen clip-wrapper, så exact-displayet frit kan folde ud over kortet. */}
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 'inherit', pointerEvents: 'none' }}>
+                <m.icon className="kpi-bg-icon" size={120} style={{ position: 'absolute', right: '-20px', bottom: '-20px', color: m.color, opacity: 0.05 }} />
+            </div>
+
+            <div className="kpi-label-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="kpi-chip" style={{ padding: '6px', borderRadius: '8px', background: `${m.color}15`, color: m.color, display: 'flex' }}>
+                    <m.icon size={18} />
+                </div>
+                <h3 className="kpi-label" style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {m.label}
+                </h3>
+            </div>
+
+            <div className="kpi-value" style={{ fontSize: '2.1rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '4px', whiteSpace: 'nowrap' }}>
+                {isCurrency ? compact.text : m.value}
+                <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: '600', whiteSpace: 'nowrap' }}>{isCurrency ? compact.suffix : m.suffix}</span>
+            </div>
+
+            {/* Bison exact-display — det reelle beløb, folder ud ved hover/tryk. */}
+            {isCurrency && (
+                <div
+                    style={{
+                        position: 'absolute', left: '18px', bottom: 'calc(100% - 4px)', zIndex: 50,
+                        width: 'max-content', maxWidth: '260px',
+                        opacity: reveal ? 1 : 0,
+                        transform: reveal ? 'translateY(0)' : 'translateY(6px)',
+                        pointerEvents: 'none', transition: 'opacity .18s ease, transform .18s ease',
+                    }}
+                >
+                    <div style={{ background: 'rgba(15,23,42,0.97)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: '#fff', borderRadius: '14px', padding: '12px 16px', boxShadow: '0 18px 40px rgba(15,23,42,0.35)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '3px' }}>
+                            <m.icon size={13} style={{ color: m.color }} /> Faktisk {String(m.label).toLowerCase()}
+                        </div>
+                        <div style={{ fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.01em' }}>{exact}</div>
+                        <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>Bogført omsætning ekskl. moms</div>
+                    </div>
+                    <div style={{ width: '12px', height: '12px', background: 'rgba(15,23,42,0.97)', position: 'absolute', left: '28px', bottom: '-5px', transform: 'rotate(45deg)', borderRight: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function DashboardOverview({ leadsData, carpenterProfile, myProfile, modules, setActiveTab, setSelectedLead, setTargetCaseId, onCreateQuote }) {
     // Hop kun til en fane hvis dens modul er tændt for firmaet (skræddersyet onboarding).
     const goToTab = (tab) => { if (tab && isTabEnabled(tab, modules) && setActiveTab) setActiveTab(tab); };
@@ -304,38 +376,7 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
                     metrics.new_leads,
                     metrics.conversion_rate
                 ].map((m, i) => (
-                    <div
-                        key={i}
-                        className="glass-panel kpi-card"
-                        style={{
-                            padding: '22px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '12px',
-                            borderTop: `4px solid ${m.color}`,
-                            position: 'relative',
-                            overflow: 'hidden',
-                            cursor: (m.tab && isTabEnabled(m.tab, modules)) ? 'pointer' : 'default',
-                            animationDelay: `${i * 70}ms`
-                        }}
-                        onClick={() => goToTab(m.tab)}
-                    >
-                        {/* Baggrundsikon (subtilt) */}
-                        <m.icon className="kpi-bg-icon" size={120} style={{ position: 'absolute', right: '-20px', bottom: '-20px', color: m.color, opacity: 0.05 }} />
-
-                        <div className="kpi-label-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div className="kpi-chip" style={{ padding: '6px', borderRadius: '8px', background: `${m.color}15`, color: m.color, display: 'flex' }}>
-                                <m.icon size={18} />
-                            </div>
-                            <h3 className="kpi-label" style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                {m.label}
-                            </h3>
-                        </div>
-                        <div className="kpi-value" title={m.format === 'currency' ? `${Math.round(m.value).toLocaleString('da-DK')} kr.` : undefined} style={{ fontSize: '2.1rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', gap: '4px', whiteSpace: 'nowrap' }}>
-                            {m.format === 'currency' ? formatCompactDKK(m.value).text : m.value}
-                            <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: '600', whiteSpace: 'nowrap' }}>{m.format === 'currency' ? formatCompactDKK(m.value).suffix : m.suffix}</span>
-                        </div>
-                    </div>
+                    <KpiCard key={i} m={m} i={i} modules={modules} goToTab={goToTab} />
                 ))}
             </div>
 
