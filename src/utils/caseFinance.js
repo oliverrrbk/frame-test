@@ -64,15 +64,24 @@ const getBasePriceInclVat = (lead) => {
     return parseInt(firstPricePart.replace(/[^0-9]/g, '')) || 0;
 };
 
-// Materialebilag (kostpris) der faktureres til kunden PÅ TIMEPRIS-sager (efter regning).
-// Beløbene indtastes EKSKL. moms; momsen lægges på her ved visning. På FAST PRIS er
-// materialer indeholdt i prisen og lægges IKKE oveni (returnerer 0). Matcher InvoiceEditor.
+// Materialebilag der lægges oveni fakturaen med en justerbar avance.
+// Beløbene indtastes EKSKL. moms (kostpris); avancen ganges på, og momsen lægges på her
+// ved visning. Styres af raw_data.invoice_materials = { included, markupPct }:
+//  * included: er materialelisten aktivt lagt oveni fakturaen (knap i InvoiceEditor).
+//    Bagud-kompatibel default: TIMEPRIS-sager medtager materialer (som før), fast pris ikke.
+//  * markupPct: avance i procent oveni kostprisen (default 0 = ren kostpris som hidtil).
+// Matcher InvoiceEditor. Gælder nu BÅDE timepris og fast pris (opt-in via knappen).
 const getBillableMaterialsInclVat = (lead) => {
     const rd = lead?.raw_data || {};
-    if (!(rd.is_manual_case && rd.billing_mode === 'hourly')) return 0;
-    const exVat = (rd.supplier_invoices || [])
+    if (!rd.is_manual_case) return 0;
+    const cfg = rd.invoice_materials || {};
+    const included = cfg.included != null ? cfg.included : (rd.billing_mode === 'hourly');
+    if (!included) return 0;
+    const markupPct = Number(cfg.markupPct) || 0;
+    const costExVat = (rd.supplier_invoices || [])
         .filter(inv => inv.category === 'Materialer' || !inv.category)
         .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+    const exVat = costExVat * (1 + markupPct / 100);
     return isReverseChargeLead(lead) ? Math.round(exVat) : Math.round(exVat * 1.25);
 };
 

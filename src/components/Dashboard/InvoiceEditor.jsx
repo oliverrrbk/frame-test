@@ -26,6 +26,28 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
     const [newSupplierInvoice, setNewSupplierInvoice] = useState({ amount: '', description: '', category: 'Materialer', file_data: null, file_name: '' });
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
 
+    // Materialer oveni fakturaen med avance. Styres af raw_data.invoice_materials.
+    // Default: timepris-sager medtager materialer (bagud-kompatibelt), fast pris ikke.
+    // Avance-forslag = firmaets standard-materialeavance (material_markup, fx 1,15 → 15%).
+    const materialsCfg = lead.raw_data?.invoice_materials || {};
+    const firmMarkupPct = Math.round(((Number(carpenterProfile?.settings?.material_markup) || 1.15) - 1) * 100);
+    const [materialsIncluded, setMaterialsIncludedState] = useState(
+        materialsCfg.included != null ? materialsCfg.included : (lead.raw_data?.billing_mode === 'hourly')
+    );
+    const [materialMarkupPct, setMaterialMarkupPctState] = useState(
+        materialsCfg.markupPct != null ? Number(materialsCfg.markupPct) : firmMarkupPct
+    );
+    // Gem valget på sagen, så Økonomi-oversigt (caseFinance) og genåbning er konsistente.
+    const persistMaterialsCfg = (included, markupPct) => {
+        if (!onUpdateLead) return;
+        onUpdateLead({
+            ...lead,
+            raw_data: { ...(lead.raw_data || {}), invoice_materials: { included, markupPct } },
+        });
+    };
+    const setMaterialsIncluded = (val) => { setMaterialsIncludedState(val); persistMaterialsCfg(val, materialMarkupPct); };
+    const setMaterialMarkupPct = (val) => { setMaterialMarkupPctState(val); persistMaterialsCfg(materialsIncluded, val); };
+
     const isB2B = !!(lead.raw_data?.customerDetails?.cvr);
     // Standard er ALTID med moms — også for erhverv. Omvendt betalingspligt er kun slået
     // til, hvis det aktivt er valgt (reverse_charge === true). Man kan stadig skifte her.
@@ -65,14 +87,16 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
         ? Math.round(manualBaseExVat * vatMult)
         : (lead.finance?.caseTotal || 0) - extraPrice;
 
-    // Materialer på TIMEPRIS-sager (efter regning): materialebilagene lægges oveni
-    // fakturaen til KOSTPRIS (indtastet EKSKL. moms). Momsen lægges på til sidst sammen
-    // med resten. På FAST PRIS er materialer indeholdt i prisen og lægges IKKE oveni.
-    const isHourlyBilling = isManualCase && lead.raw_data?.billing_mode === 'hourly';
-    const billableMaterialsExVat = isHourlyBilling
-        ? (supplierInvoices || [])
-            .filter(inv => inv.category === 'Materialer' || !inv.category)
-            .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0)
+    // Materialer lægges oveni fakturaen med avance (opt-in via knappen nedenfor).
+    // Bilagene er indtastet EKSKL. moms (kostpris); avancen ganges på, momsen lægges på
+    // til sidst sammen med resten. Virker på BÅDE timepris og fast pris.
+    const materialLineItems = (supplierInvoices || [])
+        .filter(inv => inv.category === 'Materialer' || !inv.category);
+    const materialsCostExVat = materialLineItems
+        .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+    const markupMult = 1 + (Number(materialMarkupPct) || 0) / 100;
+    const billableMaterialsExVat = materialsIncluded
+        ? Math.round(materialsCostExVat * markupMult)
         : 0;
     const materialsInclVat = Math.round(billableMaterialsExVat * vatMult);
 
@@ -110,8 +134,11 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
         } else {
             invoiceLines.push({ description: baseLineDescription, priceExVat: (basePrice / (isReverseCharge ? 1 : 1.25)) });
             if (extraPrice > 0) invoiceLines.push({ description: 'Ekstra Aftalesedler', priceExVat: (extraPrice / (isReverseCharge ? 1 : 1.25)) });
-            // Timepris: materialer faktureres til kostpris (allerede ekskl. moms).
-            if (billableMaterialsExVat > 0) invoiceLines.push({ description: 'Materialer', priceExVat: billableMaterialsExVat });
+            // Materialer lægges oveni som én samlet linje (kostpris + avance, ekskl. moms).
+            if (billableMaterialsExVat > 0) {
+                const matDesc = materialMarkupPct > 0 ? 'Materialer (inkl. avance)' : 'Materialer';
+                invoiceLines.push({ description: matDesc, priceExVat: billableMaterialsExVat });
+            }
             if (invoiced > 0) invoiceLines.push({ description: 'Tidligere Aconto betalt', priceExVat: -(invoiced / (isReverseCharge ? 1 : 1.25)) });
         }
 
@@ -442,15 +469,90 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                 </div>
                             )}
 
-                            {billableMaterialsExVat > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1rem' }}>Materialer</div>
-                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Materialebilag (kostpris) — lægges oveni på timepris-sager</div>
+                            {materialLineItems.length > 0 && (
+                                <div style={{
+                                    padding: '16px',
+                                    background: materialsIncluded ? 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)' : '#f8fafc',
+                                    borderRadius: '12px',
+                                    border: `1px solid ${materialsIncluded ? '#bfdbfe' : '#f1f5f9'}`,
+                                    boxShadow: materialsIncluded ? '0 2px 8px -2px rgba(59,130,246,0.15)' : 'none',
+                                    transition: 'all 0.2s'
+                                }}>
+                                    {/* Overskrift + knap til at lægge materialelisten oveni */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '12px', flexDirection: isMobile ? 'column' : 'row' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1rem' }}>Materialer</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                                {materialLineItems.length} {materialLineItems.length === 1 ? 'bilag' : 'bilag'} · kostpris {materialsCostExVat.toLocaleString('da-DK')} kr. ekskl. moms
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setMaterialsIncluded(!materialsIncluded)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', flexShrink: 0, transition: 'all 0.2s',
+                                                border: `1px solid ${materialsIncluded ? '#3b82f6' : '#cbd5e1'}`,
+                                                background: materialsIncluded ? '#3b82f6' : '#fff',
+                                                color: materialsIncluded ? '#fff' : '#475569',
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px -2px rgba(15,23,42,0.15)'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                                        >
+                                            {materialsIncluded ? <><CheckCircle2 size={16} /> Lagt oveni fakturaen</> : <><Plus size={16} /> Læg materialeliste oveni</>}
+                                        </button>
                                     </div>
-                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#10b981' }}>
-                                        + {materialsInclVat.toLocaleString('da-DK')} kr.
-                                    </div>
+
+                                    {materialsIncluded && (
+                                        <div style={{ marginTop: '14px', animation: 'fadeIn 0.25s ease-out' }}>
+                                            {/* Materialelisten — hvert bilag som en linje */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingBottom: '12px', borderBottom: '1px dashed #e2e8f0' }}>
+                                                {materialLineItems.map((inv, idx) => (
+                                                    <div key={inv.id || idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '0.9rem', color: '#475569' }}>
+                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.description || inv.name || 'Materiale'}</span>
+                                                        <span style={{ fontWeight: '600', color: '#0f172a', flexShrink: 0 }}>{(Number(inv.amount) || 0).toLocaleString('da-DK')} kr.</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Avance-vælger (custom stepper — ikke native select) */}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 0', flexWrap: 'wrap' }}>
+                                                <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#334155' }}>Avance oveni kostpris</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '4px' }}>
+                                                    <button
+                                                        onClick={() => setMaterialMarkupPct(Math.max(0, (Number(materialMarkupPct) || 0) - 5))}
+                                                        style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: '#f1f5f9', color: '#475569', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#e2e8f0'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                                    >−</button>
+                                                    <div style={{ position: 'relative', width: '64px' }}>
+                                                        <input
+                                                            type="text"
+                                                            inputMode="numeric"
+                                                            value={materialMarkupPct}
+                                                            onChange={(e) => setMaterialMarkupPct(Math.max(0, parseInt(e.target.value.replace(/[^0-9]/g, '') || '0', 10)))}
+                                                            style={{ width: '100%', textAlign: 'center', padding: '6px 20px 6px 8px', border: 'none', outline: 'none', fontSize: '1rem', fontWeight: 'bold', color: '#0f172a', background: 'transparent', boxSizing: 'border-box' }}
+                                                        />
+                                                        <span style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontWeight: 'bold', pointerEvents: 'none' }}>%</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setMaterialMarkupPct((Number(materialMarkupPct) || 0) + 5)}
+                                                        style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: '#f1f5f9', color: '#475569', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#e2e8f0'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                                    >+</button>
+                                                </div>
+                                            </div>
+
+                                            {/* Materialer i alt (kostpris + avance) */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px dashed #e2e8f0' }}>
+                                                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem' }}>
+                                                    Materialer i alt {isReverseCharge ? 'ekskl.' : 'inkl.'} moms
+                                                </div>
+                                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#10b981' }}>
+                                                    + {materialsInclVat.toLocaleString('da-DK')} kr.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

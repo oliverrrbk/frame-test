@@ -393,8 +393,31 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     pdf.text(`Tak for tilliden. Dette tilbud er gældende i ${validityDays} dage fra ovenstående dato.`, left, y);
     y += 6;
 
-    // Estimeret varighed vises kun når der er angivet timer (timepris-tilbud).
+    // Timepris (efter regning): prisen er et ESTIMAT. Skriv det formelt og juridisk klart,
+    // så kunden ved at den endelige pris opgøres efter faktisk medgået tid (kan blive både
+    // højere og lavere), og hvordan materialer afregnes. Fast pris = bindende, intet forbehold.
     const laborHours = Number(quote?.laborHours) || 0;
+    const isHourlyQuote = quote?.laborMode === 'hourly';
+    const laborRate = Number(quote?.laborRate) || 0;
+    const materialSell = Number(quote?.materialSell) || 0;
+
+    if (isHourlyQuote) {
+        const estParts = [`ca. ${laborHours.toLocaleString('da-DK')} timer`];
+        if (laborRate > 0) estParts.push(`à ${kr(laborRate)} kr./time ekskl. moms`);
+        const estimateText = `Dette tilbud er baseret på timepris. Det angivne beløb er et estimat ud fra forventet tidsforbrug (${estParts.join(' ')}). Den endelige pris afregnes efter faktisk medgået tid til den aftalte timepris og kan derfor blive både højere og lavere end estimatet.`;
+        const estimateLines = pdf.splitTextToSize(estimateText, right - left);
+        pdf.text(estimateLines, left, y);
+        y += estimateLines.length * 5 + 1;
+
+        if (materialSell > 0) {
+            const matText = `Materialer afregnes til dokumenteret kostpris med tillæg af sædvanlig avance, estimeret til ${kr(materialSell)} kr. ekskl. moms.`;
+            const matLines = pdf.splitTextToSize(matText, right - left);
+            pdf.text(matLines, left, y);
+            y += matLines.length * 5 + 1;
+        }
+    }
+
+    // Estimeret varighed vises kun når der er angivet timer (timepris-tilbud).
     if (laborHours > 0) {
         const weeks = Math.max(1, Math.ceil(laborHours / 37));
         const durText = `Estimeret varighed for udførelse: Ca. ${weeks} arbejdsuger. Den præcise opstartsdato aftales nærmere, når tilbuddet er bekræftet.`;
